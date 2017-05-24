@@ -1,0 +1,156 @@
+This directory contains software from the BUFR decoding and encoding update
+library.
+
+bbuprs0.F	 	Print BUFR section 0 (?)
+bbuprs1.F	 	Print BUFR section 1 (?)
+bbuprs2.F	 	Print BUFR section 2 (?)
+bbuprs3.F	 	Print BUFR section 3 (?)
+bbuprt.F	 	Print BUFR (?)
+bbuprtbox.F	 	Print BUFR box (?)
+
+buaug.F		 	Update augmented Bufr table B.
+bubox.F		 	??
+bucomp.F	 	Pack number of subsets in a compressed form.
+bucrkey.F	 	Extract elements needed for RDB key definition(update).
+bucrekey.F	 	Extract elements needed for RDB key definition.
+buedd.F		 	Expand section 3 of Bufr message
+buens0.F	 	Pack section 0 of Bufrsage.
+buens1.F	 	Pack section 1 of Bufr message.
+buens2.F	 	Pack section 2 of Bufr message.
+buens3.F	 	Pack section 3 of Bufr message.
+buens4.F	 	Pack preliminary items/data of sect.4 of Bufr message.
+buens5.F	 	Pack sect.5 of Bufr message.
+buepmrk.F	 	Process marker operator, replace with table B descriptor
+buepmrkc.F	 	Process marker operator, replace with table B descriptor
+buepwt.F	 	Updates working tables (name,unit,scale,ref,data width)
+buepwtc.F	 	Updates working tables (name,unit,scale,ref,data width)
+buerr.F		 	Print error code.
+buetab.F	 	Load Bufr table B, D and C according to Bufr code.
+buetd.F		 	Expand sect.3 of Bufr message.
+buetdr.F	 	Solve Bufr table D reference.
+buevar.F	 	Initialize constants and variables.
+buexs0.F	 	Expands sect.0 of Bufr message.
+buexs1.F	 	Expands sect.1 of Bufr message.
+buexs2.F	 	Expands sect.2 of Bufr message.
+buexs3.F	 	Expand sect.3 of Bufr message.
+buexs3p.F	 	Expand sect.3 of Bufr message. (preliminary items)
+buexs4.F	 	Expand sect.4 of Bufr message.
+buexs5.F	 	Expands sect.5 of Bufr message.
+bufren.F	 	Encode Bufr message.
+bufrex.F	 	Decode Bufr message into fully expanded form
+bugbts.F	 	Load Bufr table B, D and C according to Bufr code.
+bugetbm.F	 	Create bit map to resolve marker operators.
+buivar.F	 	Initialize constants and variables.
+bunexs.F	 	Sets word/bit pointers at the start of next Bufr sect.
+bunpck.F	 	Unpack bit string
+bunpks.F	 	Unpack bit string of KSIZE bits.
+buoctn.F	 	Calculate number of octets from bit position.
+buoper.F	 	Process Bufr operator.
+buoperc.F	 	Process Bufr operator.
+bupck.F		 	Pack value *KS* in *KSI* bits
+bupkey.F	 	Pack local ECMWF information (rdb key)
+bupks.F		 	Pack bit string of KSIZE bits
+bupmrk.F	 	Process marker operator, relace with table B descriptor.
+buprco.F	 	Process Bufr operator.
+buprq.F		 	Sets variable KPMISS,KPRUS into common block.
+buprs0.F	 	Print sect.0 of Bufr message.
+buprs1.F	 	Print sect.1 of bufr message.
+buprs2.F	 	Print sect.2 of bufr message (expanded RDB key).
+buprs3.F	 	Print sect.3 of Bufr message.
+buprt.F		 	Print expanded Bufr message.
+buprtbox.F	 	Print boxed expanded bufr message.
+burep.F		 	Resolve data descriptor replication problem.
+burepc.F		 	Resolve data descriptor replication problem.
+burqc.F		 	Create parameters needed for partial expansion of Bufr
+burquc.F	 	Create parameters needed for partial expansion of Bufr
+bus012.F	 	Expands sect.0,1 AND 2 of Bufr message.
+busel.F		 	Returns Data Descriptors as in Section 3  of Bufr
+buset.F		 	Set flags in common block (?)
+busrp.F		 	Resolve data descriptor replication problem.
+busrq.F		 	Set Bufr table B references for partial expansion.
+bustdr.F	 	Solve Bufr table D reference.
+buuatb.F	 	Update augmented Bufr table B.
+buukey.F	 	Expands local ECMWF information from sect.2.
+buunp.F		 	Unpack bit string of KSIZE bits
+buunps.F	 	Unpack bit string of KSIZE bits
+buupwt.F	 	Updates working tables (name,unit,scale,ref,data width)
+buxdes.F	 	Expand data descriptors to show user's template
+fmmh.F		 	Find max/min latitude/longitude.
+mbbuprs0.F  	 	Mars version of routine (without leading m)
+mbbuprs1.F  	 	Mars version of routine (without leading m)
+mbbuprs2.F  	 	Mars version of routine (without leading m)
+mbbuprs3.F  	 	Mars version of routine (without leading m)
+mbbuprt.F   	 	Mars version of routine (without leading m)
+mbbuprtbox.F 	 	Mars version of routine (without leading m)
+mbuaug.F    	 	Mars version of routine (without leading m)
+mbubox.F    	 	Mars version of routine (without leading m)
+mbucomp.F   	 	Mars version of routine (without leading m)
+mbucrekey.F 	 	Mars version of routine (without leading m)
+mbucrkey.F  	 	Mars version of routine (without leading m)
+mbuedd.F    	 	Mars version of routine (without leading m)
+mbuens0.F   	 	Mars version of routine (without leading m)
+mbuens1.F   	 	Mars version of routine (without leading m)
+mbuens2.F   	 	Mars version of routine (without leading m)
+mbuens3.F   	 	Mars version of routine (without leading m)
+mbuens4.F   	 	Mars version of routine (without leading m)
+mbuens5.F   	 	Mars version of routine (without leading m)
+mbuepmrk.F  	 	Mars version of routine (without leading m)
+mbuepmrkc.F 	 	Mars version of routine (without leading m)
+mbuepwt.F   	 	Mars version of routine (without leading m)
+mbuepwtc.F  	 	Mars version of routine (without leading m)
+mbuerr.F    	 	Mars version of routine (without leading m)
+mbuetab.F   	 	Mars version of routine (without leading m)
+mbuetd.F    	 	Mars version of routine (without leading m)
+mbuetdr.F   	 	Mars version of routine (without leading m)
+mbuevar.F   	 	Mars version of routine (without leading m)
+mbuexs0.F   	 	Mars version of routine (without leading m)
+mbuexs1.F   	 	Mars version of routine (without leading m)
+mbuexs2.F   	 	Mars version of routine (without leading m)
+mbuexs3.F   	 	Mars version of routine (without leading m)
+mbuexs3p.F  	 	Mars version of routine (without leading m)
+mbuexs4.F   	 	Mars version of routine (without leading m)
+mbuexs5.F   	 	Mars version of routine (without leading m)
+mbufr_mars_filter.F  	 	Mars version of routine (without leading m)
+mbufren.F   	 	Mars version of routine (without leading m)
+mbufrex.F   	 	Mars version of routine (without leading m)
+mbugbts.F   	 	Mars version of routine (without leading m)
+mbugetbm.F  	 	Mars version of routine (without leading m)
+mbuivar.F   	 	Mars version of routine (without leading m)
+mbunexs.F   	 	Mars version of routine (without leading m)
+mbunpck.F   	 	Mars version of routine (without leading m)
+mbunpks.F   	 	Mars version of routine (without leading m)
+mbuoctn.F   	 	Mars version of routine (without leading m)
+mbuoper.F   	 	Mars version of routine (without leading m)
+mbuoperc.F  	 	Mars version of routine (without leading m)
+mbupck.F    	 	Mars version of routine (without leading m)
+mbupkey.F   	 	Mars version of routine (without leading m)
+mbupks.F    	 	Mars version of routine (without leading m)
+mbupmrk.F   	 	Mars version of routine (without leading m)
+mbuprco.F   	 	Mars version of routine (without leading m)
+mbuprq.F    	 	Mars version of routine (without leading m)
+mbuprs0.F   	 	Mars version of routine (without leading m)
+mbuprs1.F   	 	Mars version of routine (without leading m)
+mbuprs2.F   	 	Mars version of routine (without leading m)
+mbuprs3.F   	 	Mars version of routine (without leading m)
+mbuprt.F    	 	Mars version of routine (without leading m)
+mbuprtbox.F 	 	Mars version of routine (without leading m)
+mburep.F    	 	Mars version of routine (without leading m)
+mburepc.F   	 	Mars version of routine (without leading m)
+mburqc.F    	 	Mars version of routine (without leading m)
+mburquc.F   	 	Mars version of routine (without leading m)
+mbus012.F   	 	Mars version of routine (without leading m)
+mbusel.F    	 	Mars version of routine (without leading m)
+mbuset.F    	 	Mars version of routine (without leading m)
+mbusrp.F    	 	Mars version of routine (without leading m)
+mbusrq.F    	 	Mars version of routine (without leading m)
+mbustdr.F   	 	Mars version of routine (without leading m)
+mbuuatb.F   	 	Mars version of routine (without leading m)
+mbuukey.F   	 	Mars version of routine (without leading m)
+mbuunp.F    	 	Mars version of routine (without leading m)
+mbuunps.F   	 	Mars version of routine (without leading m)
+mbuupwt.F   	 	Mars version of routine (without leading m)
+mbuxdes.F   	 	Mars version of routine (without leading m)
+mfmmh.F     	 	Mars version of routine (without leading m)
+msetlalo.F  	 	Mars version of routine (without leading m)
+setlalo.F	    	Return indices for latitude and longitude.
+sources	        	Sources

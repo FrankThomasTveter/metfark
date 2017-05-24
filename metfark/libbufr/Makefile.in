@@ -1,0 +1,35 @@
+#
+#                                 Makefile for bufrdc
+#
+A64 = %plat%
+R64 = %reals%
+ARCH = %arch%
+CNAME = %comp%
+LIB = %depl%
+#
+LIBRARY = ../lib$(LIB)$(R64).a
+#
+include ../config/config.$(ARCH)$(CNAME)$(R64)$(A64)
+#
+include ../options/options_$(ARCH)
+#
+TARGETS      = all clean
+#
+include sources
+#
+OBJECTS.F    = $(SOURCES.F:.F=.o) 
+OBJECTS.f    = $(SOURCES.f:.f=.o)
+OBJECTS.c    = $(SOURCES.c:.c=.o)
+OBJECTS      = $(OBJECTS.F) $(OBJECTS.f) $(OBJECTS.c)
+#
+#
+.PRECIOUS: $(LIBRARY)
+
+all: $(LIBRARY)
+
+$(LIBRARY): $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
+
+clean:
+	\rm -f $(OBJECTS)

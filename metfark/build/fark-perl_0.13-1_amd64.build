@@ -1,0 +1,170 @@
+ dpkg-buildpackage -rfakeroot -D -us -uc -i -b
+dpkg-buildpackage: source package fark-perl
+dpkg-buildpackage: source version 0.13-1
+dpkg-buildpackage: source distribution ubuntu
+dpkg-buildpackage: source changed by Frank Tveter <frank.tveter@met.no>
+ dpkg-source -i --before-build fark
+dpkg-buildpackage: host architecture amd64
+ fakeroot debian/rules clean
+dh_testdir
+dh_testroot
+dh_clean build-stamp install-stamp
+# Add commands to clean up after the build process here
+[ ! -f Makefile ] || /usr/bin/make realclean
+make[1]: Entering directory `/home/www/fark-perl_0.15/fark'
+rm -f \
+	  core core.[0-9][0-9] \
+	  perl fark.def \
+	  libfark.def core.[0-9][0-9][0-9][0-9][0-9] \
+	  Makefile.aperl perl.exe \
+	  *.a fark.bso \
+	  mon.out perlmain.c \
+	  tmon.out core.[0-9] \
+	  perl core.*perl.*.? \
+	  fark.exp blib/arch/auto/fark/extralibs.all \
+	  fark.bs MYMETA.json \
+	  fark.c fark.x \
+	  *perl.core *.o \
+	  blibdirs.ts pm_to_blib \
+	  pm_to_blib.ts core.[0-9][0-9][0-9] \
+	  MYMETA.yml core.[0-9][0-9][0-9][0-9] \
+	  blib/arch/auto/fark/extralibs.ld so_locations 
+rm -rf \
+	  blib 
+mv Makefile Makefile.old > /dev/null 2>&1
+rm -f \
+	  Makefile Makefile.old \
+	  fark.o 
+rm -rf \
+	  fark-0.13 
+make[1]: Leaving directory `/home/www/fark-perl_0.15/fark'
+ debian/rules build
+dh_testdir
+# As this is a architecture dependent package, we are not
+# supposed to install stuff to /usr/share. MakeMaker creates
+# the dirs, we prevent this by setting the INSTALLVENDORARCH
+# and VENDORARCHEXP environment variables.
+# Add commands to compile the package here
+/usr/bin/perl Makefile.PL INSTALLDIRS=vendor \
+		INSTALLVENDORARCH=/usr/lib/perl5/ \
+		VENDORARCHEXP=/usr/lib/perl5/
+Checking if your kit is complete...
+Looks good
+WARNING: Setting ABSTRACT via file 'lib/fark.pm' failed
+ at /usr/share/perl/5.18/ExtUtils/MakeMaker.pm line 611.
+Warning: -Llib changed to -L/home/www/fark-perl_0.15/fark/lib
+Writing Makefile for fark
+Writing MYMETA.yml and MYMETA.json
+/usr/bin/make OPTIMIZE="-Wall -g -O2" LD_RUN_PATH=""
+make[1]: Entering directory `/home/www/fark-perl_0.15/fark'
+cp lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod
+cp lib/xmlparse.mod blib/lib/xmlparse.mod
+cp lib/observations.mod blib/lib/observations.mod
+cp farkobs.pl blib/lib/farkobs.pl
+cp lib/parameters.mod blib/lib/parameters.mod
+cp fark.pl blib/lib/fark.pl
+cp lib/libcoloc.a blib/lib/libcoloc.a
+cp lib/libbufr.a blib/lib/libbufr.a
+cp lib/libbufrc.a blib/lib/libbufrc.a
+cp lib/farkdata.pm blib/lib/farkdata.pm
+cp 2015.06.17_fark.pl blib/lib/2015.06.17_fark.pl
+cp lib/libmodel.a blib/lib/libmodel.a
+cp lib/fark.pm blib/lib/fark.pm
+cp lib/libgenc.a blib/lib/libgenc.a
+cp lib/fparser.mod blib/lib/fparser.mod
+cp fark2.pl blib/lib/fark2.pl
+cp lib/libfparse.a blib/lib/libfparse.a
+cp lib/libobs.a blib/lib/libobs.a
+cp t.pl blib/lib/t.pl
+cp lib/colocation.mod blib/lib/colocation.mod
+cp lib/model.mod blib/lib/model.mod
+/usr/bin/perl /usr/share/perl/5.18/ExtUtils/xsubpp  -typemap /usr/share/perl/5.18/ExtUtils/typemap  fark.xs > fark.xsc && mv fark.xsc fark.c
+Please specify prototyping behavior for fark.xs (see perlxs manual)
+cc -c  -I. -Ilib -D_REENTRANT -D_GNU_SOURCE -DDEBIAN -fstack-protector -fno-strict-aliasing -pipe -I/usr/local/include -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -g -O2   -DVERSION=\"0.13\" -DXS_VERSION=\"0.13\" -fPIC "-I/usr/lib/perl/5.18/CORE"   fark.c
+Running Mkbootstrap for fark ()
+chmod 644 fark.bs
+rm -f blib/arch/auto/fark/fark.so
+cc  -shared -L/usr/local/lib -fstack-protector fark.o  -o blib/arch/auto/fark/fark.so 	\
+	   -L/home/www/fark-perl_0.15/fark/lib -lobs -lmodel -lcoloc -lfparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff  	\
+	  
+chmod 755 blib/arch/auto/fark/fark.so
+cp fark.bs blib/arch/auto/fark/fark.bs
+chmod 644 blib/arch/auto/fark/fark.bs
+Manifying blib/man3/fark.3pm
+Manifying blib/man3/farkdata.3pm
+make[1]: Leaving directory `/home/www/fark-perl_0.15/fark'
+/usr/bin/make test
+make[1]: Entering directory `/home/www/fark-perl_0.15/fark'
+PERL_DL_NONLAZY=1 /usr/bin/perl "-MExtUtils::Command::MM" "-e" "test_harness(0, 'blib/lib', 'blib/arch')" t/*.t
+Subroutine saveModelData redefined at /home/www/fark-perl_0.15/fark/blib/lib/fark.pm line 556.
+t/fark.t .. ok
+All tests successful.
+Files=1, Tests=1,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.02 cusr  0.03 csys =  0.06 CPU)
+Result: PASS
+make[1]: Leaving directory `/home/www/fark-perl_0.15/fark'
+touch build-stamp
+ fakeroot debian/rules binary
+dh_testdir
+dh_testroot
+dh_clean -k
+dh_clean: dh_clean -k is deprecated; use dh_prep instead
+# Add commands to install the package into debian/ACKAGE_NAME here
+/usr/bin/make install DESTDIR=/home/www/fark-perl_0.15/fark/debian/fark-perl PREFIX=/usr
+make[1]: Entering directory `/home/www/fark-perl_0.15/fark'
+Files found in blib/arch: installing files in blib/lib into architecture dependent library tree
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/auto/fark/fark.bs
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/auto/fark/fark.so
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/read_xml_primitives.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/observations.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/xmlparse.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libcoloc.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libbufr.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/parameters.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/model.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libgenc.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libfparse.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/colocation.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/farkobs.pl
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libobs.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libbufrc.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/fark.pm
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/farkdata.pm
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/fark.pl
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/fark2.pl
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/fparser.mod
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/libmodel.a
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/t.pl
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/lib/perl5/2015.06.17_fark.pl
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/share/man/man3/farkdata.3pm
+Installing /home/www/fark-perl_0.15/fark/debian/fark-perl/usr/share/man/man3/fark.3pm
+make[1]: Leaving directory `/home/www/fark-perl_0.15/fark'
+touch install-stamp
+dh_testdir
+dh_testroot
+dh_installexamples 
+dh_installdocs README
+dh_installchangelogs Changes
+dh_shlibdeps
+dh_strip
+dh_perl
+dh_compress
+dh_fixperms
+dh_installdeb
+dh_gencontrol
+dh_md5sums
+dh_builddeb
+dpkg-deb: building package `fark-perl' in `../fark-perl_0.13-1_amd64.deb'.
+ dpkg-genchanges -b >../fark-perl_0.13-1_amd64.changes
+dpkg-genchanges: binary-only upload - not including any source code
+ dpkg-source -i --after-build fark
+dpkg-buildpackage: binary only upload (no source included)
+Now running lintian...
+E: fark-perl changes: bad-distribution-in-changes-file ubuntu
+W: fark-perl: new-package-should-close-itp-bug
+W: fark-perl: copyright-contains-dh-make-perl-boilerplate
+W: fark-perl: copyright-without-copyright-notice
+W: fark-perl: description-contains-dh-make-perl-template
+W: fark-perl: manpage-has-errors-from-man usr/share/man/man3/fark.3pm.gz 463: warning [p 5, 1.3i]: can't break line
+W: fark-perl: manpage-has-bad-whatis-entry usr/share/man/man3/farkdata.3pm.gz
+W: fark-perl: manpage-has-errors-from-pod2man usr/share/man/man3/farkdata.3pm.gz:258
+Finished running lintian.

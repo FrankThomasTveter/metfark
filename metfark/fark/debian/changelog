@@ -1,0 +1,7 @@
+fark-perl (0.13-1) ubuntu; urgency=low
+
+  * Initial Release.
+  * Added BUFR data.
+  * Added session cache.
+
+ -- Frank Tveter <frank.tveter@met.no>  Wed, 7 Oct 2015 10:00:00 +0100

@@ -1,0 +1,657 @@
+
+        /cc/od/metapps/src/lib/emos/pbio/README
+
+
+   i)   FORTRAN
+        -------
+
+        This file describes a number of subroutines which can be called
+        from FORTRAN to handle an unblocked binary file:
+
+        PBGRIB          to read GRIB products
+        PBBUFR          to read BUFR products
+        PBOPEN          to open the file (must be used before the other
+                                          routines are called)
+        PBCLOSE         to close the file
+        PBSEEK          to position the file (optional)
+        PBREAD          to read from the file
+        PBREAD2         to read from the file (different behaviour on hitting
+                                               end-of-file)
+        PBWRITE         to write to the file
+
+        The subroutines are written in C and use standard library functions
+        for file handling (fopen, fclose, fseek, fread and fwrite).
+
+
+
+  ii)   C
+        _
+
+        There are three additional C functions to handle unblocked binary files:
+
+        readgrib        to read GRIB products
+        readbufr        to read BUFR products
+        readnext        to read any mixture of products
+
+        These functions  are written in C and use standard library functions
+        for file handling (fopen, fclose, fseek, fread and fwrite).
+
+
+
+
+
+ iii)   LIBRARIES
+        ---------
+
+        A library (libemos.a) has been made for the BUFR and GRIB binary
+	file reading and writing routines.  It is planned to put future 
+	software updates into libemos.a and make no changes to the original 
+	emoslib.a.
+
+        The original emoslib.a library ( /home/ecmwf/emos_sms/lib/emoslib.a )
+        still exists and still contains the original BUFR/GRIB handling 
+	routines.
+
+
+        One set of the binary read/write sources is maintained, hard-linked 
+	into the three directories:
+
+                /home/ecmwf/emos_sms/src/libemos/sun4
+
+                /home/ecmwf/emos_sms/src/libemos/sgimips
+
+                /home/ecmwf/emos_sms/src/libemos/unicos
+
+
+        An object library containing the routines has been made for CRAY, 
+	SGI and SUN:
+
+                /usr/local/lib/libemos.a 
+
+
+        The library names follow the normal UNIX convention and can be 
+        specified in the compile/link command using the standard ld 
+        convention, for example:
+
+        cc -o program program.c  -lemos
+
+
+
+
+
+        PBGRIB
+        ------
+
+        A subroutine which can be called from FORTRAN to retrieve GRIB 
+        products from an unblocked binary file.  The subroutine is an 
+        interface to a set of C routines which handle the binary file 
+        as a stream of bytes.
+
+        The GRIB products are delivered one per call to a user array.  The
+        format and arguments for the subroutine are as follows:
+
+        
+        SUBROUTINE PBGRIB(KUNIT,KARRAY,KINLEN,KOUTLEN,KRET)
+
+        where:
+
+
+        Input parameters are INTEGERs:
+        -----
+
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+        KARRAY =        FORTRAN array big enough to hold the GRIB product.
+
+        KINLEN =        size in BYTES of the FORTRAN array.
+
+
+        Output parameters are INTEGERs:
+        ------
+
+        KOUTLEN =       actual size in BYTES of the GRIB product read into
+                        KARRAY. 
+
+        KRET =           0  if a GRIB product has been successfully read.
+
+                        -1  if end-of-file is hit before a GRIB product is read.
+                            (Note that EOF does not cause a program fail, so
+                             this value must be explicitly caught by the caller
+                             to avoid looping at the EOF)
+
+                        -2  if there is an error in the file-handling (eg. if
+                            the file contains a truncated GRIB product).
+
+                        -3  if the size of KARRAY is not sufficient for the 
+                            GRIB product.
+
+
+
+
+
+
+
+        PBBUFR
+        ------
+
+        A subroutine which can be called from FORTRAN to retrieve BUFR 
+        products from an unblocked binary file.  The subroutine is an 
+        interface to a set of C routines which handle the binary file 
+        as a stream of bytes.
+
+        The BUFR products are delivered one per call to a user array.  The
+        format and arguments for the subroutine are as follows:
+
+        
+        SUBROUTINE PBBUFR(KUNIT,KARRAY,KINLEN,KOUTLEN,KRET)
+
+        where:
+
+
+        Input parameters are INTEGERs:
+        -----
+
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+        KARRAY =        FORTRAN array big enough to hold the BUFR product.
+
+        KINLEN =        size in BYTES of the FORTRAN array.
+
+
+        Output parameters are INTEGERs:
+        ------
+
+        KOUTLEN =       actual size in BYTES of the BUFR product read into
+                        KARRAY. 
+
+        KRET =           0  if a BUFR product has been successfully read.
+
+                        -1  if end-of-file is hit before a BUFR product is read.
+                            (Note that EOF does not cause a program fail, so
+                             this value must be explicitly caught by the caller
+                             to avoid looping at the EOF)
+
+                        -2  if there is an error in the file-handling (eg. if
+                            the file contains a truncated BUFR product).
+
+                        -3  if the size of KARRAY is not sufficient for the 
+                            BUFR product.
+
+
+
+
+
+
+
+
+        readgrib
+        --------
+
+        A C function which can be invoked to retrieve GRIB products from 
+        an unblocked binary file.  
+
+        The GRIB products are delivered one per call to a user array.  The
+        format and arguments for the function are as follows:
+
+
+        long readgrib(FILE * file, char * buffer, long * grib_prod_len)
+ 
+
+        file          =  file pointer returned from PBOPEN
+
+        buffer        = buffer big enough to hold the GRIB product
+
+        grib_prod_len = size of the buffer on input, becomes size in BYTES of 
+                        the GRIB product read.  If the end-of-file is hit, the
+                        value is returned unchanged (ie. when the function 
+                        return code is -1).
+
+
+        Function returns:
+
+        0  if a GRIB product has been successfully read
+
+       -1  if end-of-file is hit before a GRIB product is read
+           (Note that EOF does not cause a program fail, so
+           this value must be explicitly caught by the caller
+           to avoid looping at the EOF)
+
+       -2  if there is an error in the file-handling 
+           (eg. if the file contains a truncated GRIB product)
+
+       -3  if the size of buffer is not sufficient for the GRIB product.
+           In this case, the buffer is filled with bytes from the product
+           and the file is positioned at the beginning of the following
+           product, if any.
+
+       -4  if the user buffer is too small to allow any processing of the
+           product at all (eg. less than 8 bytes long)
+
+
+        If the second parameter is a NULL pointer, the function will pass
+        back the length of the next product and will position the file on
+        the byte following the end of the product.
+
+
+
+
+        readbufr
+        --------
+
+        A C function which can be invoked to retrieve BUFR products from 
+        an unblocked binary file.  
+
+        The BUFR products are delivered one per call to a user array.  The
+        format and arguments for the function are as follows:
+
+
+        long readbufr(FILE * file, char * buffer, long * bufr_prod_len)
+ 
+
+        file          =  file pointer returned from PBOPEN
+
+        buffer        = buffer big enough to hold the BUFR product
+
+        bufr_prod_len = size of the buffer on input, becomes size in BYTES of 
+                        the BUFR product read.  If the end-of-file is hit, the
+                        value is returned unchanged (ie. when the function 
+                        return code is -1).
+
+
+        Function returns:
+
+        0  if a BUFR product has been successfully read
+
+       -1  if end-of-file is hit before a BUFR product is read
+           (Note that EOF does not cause a program fail, so
+           this value must be explicitly caught by the caller
+           to avoid looping at the EOF)
+
+       -2  if there is an error in the file-handling 
+           (eg. if the file contains a truncated BUFR product)
+
+       -3  if the size of buffer is not sufficient for the BUFR product.
+           In this case, the buffer is filled with bytes from the product
+           and the file is positioned at the beginning of the following
+           product, if any.
+
+       -4  if the user buffer is too small to allow any processing of the
+           product at all (eg. less than 8 bytes long)
+
+
+        If the second parameter is a NULL pointer, the function will pass
+        back the length of the next product and will position the file on
+
+
+
+
+        readnext
+        --------
+
+        A C function which can be invoked to retrieve GRIB or BUFR products 
+        from an unblocked binary file.  
+
+        The products are delivered one per call to a user array.  The
+        format and arguments for the function are as follows:
+
+
+        long readnext(char * buffer, long * prod_len, 
+              long (*read_func)(char *, long , void *), void * stream)
+
+    Where:
+    ------
+
+    buffer        = buffer big enough to hold the GRIB product.
+                    If buffer = NULL, the function will create its own 
+                    internal buffer and will return the length of the
+                    product, but not the product itself.
+
+    prod_len =      size of the buffer on input, becomes size in BYTES of 
+                    the product read.  If the end-of-file is hit, this
+                    value is returned unchanged (ie. when the function 
+                    return code is -1).
+
+    read_func     = function to read input stream
+
+    stream        = data for read_function, eg. file pointer returned 
+                    from PBOPEN
+
+
+        If the second parameter is a NULL pointer, the function will pass
+        back the length of the next product and will position the file on
+        the byte following the end of the product.
+
+
+
+    Function returns:
+
+        0  if a product has been successfully read
+
+       -1  if end-of-file is hit before a product is read
+
+       -3  if the size of buffer is not sufficient for the product
+
+       -4  if the user buffer is too small to start processing product
+
+
+
+
+
+        PBOPEN
+        ------
+
+        A subroutine which can be called from FORTRAN to open an unblocked 
+        binary file and return a suitable unit number for use in calls to 
+        PBGRIB, PBBUFR, PBSEEK, PBREAD, PBREAD2 and PBWRITE.
+
+        The format and arguments for the subroutine are as follows:
+
+        SUBROUTINE PBOPEN(KUNIT,FILENAME,MODE,KRET)
+
+        where:
+
+
+        Input parameters are CHARACTERs:
+        -----
+ 
+        FILENAME =      a character string describing the file
+
+        MODE     =      a character string describing the mode of
+                        access to the file:
+                                r       for read
+                                w       for write
+                                a       for append
+
+
+
+        Output parameters are INTEGERs:
+        ------
+
+        KUNIT =         unit number for the file - it is a C FILE pointer
+                        and not a FORTRAN unit number.
+
+        KRET     =      -1 = Could not open file.
+                        -2 = Invalid file name.
+                        -3 = Invalid open mode specified
+                         0 = OK.
+
+
+
+
+
+
+
+
+        PBCLOSE
+        -------
+
+        A subroutine which can be called from FORTRAN to close an unblocked 
+        binary file previously opened with PBOPEN.
+
+        The format and arguments for the subroutine are as follows:
+
+        SUBROUTINE PBCLOSE(KUNIT,KRET)
+
+        where:
+
+
+        Input parameter is an INTEGER:
+        -----
+ 
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+
+
+        Output parameter is an INTEGER:
+        ------
+
+        KRET     =      -1 error in handling the file.
+                         0 = OK.
+
+
+
+
+
+
+        PBSEEK
+        ------
+
+        A subroutine which can be called from FORTRAN to position an 
+        unblocked binary file at any desired byte position.
+
+        The format and arguments for the subroutine are as follows:
+
+        SUBROUTINE PBSEEK(KUNIT,KOFFSET,KSTART,KRET)
+
+        where:
+
+
+        Input parameters are INTEGERs:
+        -----
+
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+        KOFFSET =       number of bytes to offset the file; this is used
+                        as either an absolute or relative offset depending
+                        on the value of KSTART.
+
+        KSTART  =       0       if KOFFSET is an absolute count from the
+                                beginning of the file,
+
+                        1       if KOFFSET is a relative offset from the
+                                current byte position in the file,
+
+                        2       if KOFFSET is an absolute offset from the
+                                end of file.
+
+
+        Output parameter is an INTEGER:
+        ------
+
+        KRET    =       -2      if there is an error in handling the file
+
+                        -1      if end-of-file is encountered
+                                (Note that EOF does not cause a program fail, 
+                                so this value must be explicitly caught by 
+                                the caller to avoid looping at the EOF)
+
+                        >= 0    byte offset from the start of file after
+                                positioning.
+
+
+
+
+
+
+
+        PBREAD
+        ------
+
+        A subroutine which can be called from FORTRAN to read a block of 
+        bytes from an unblocked binary file.  ( Note that this routine
+        behaves differently from PBREAD2 on hitting end-of-file. )
+
+        The format and arguments for the subroutine are as follows:
+
+        SUBROUTINE PBREAD(KUNIT,KARRAY,KOUNT,KRET)
+
+        where:
+
+
+        Input parameters are INTEGERs:
+        -----
+
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+        KOUNT   =       number of BYTES to read from the file.
+
+
+
+        Output parameters are INTEGERs:
+        ------
+
+        KARRAY =        an INTEGER array to accept the bytes from the read.
+
+        KRET    =       -2      if there is an error in handling the file
+
+                        -1      if end-of-file is encountered
+                                (Note that EOF does not cause a program fail, 
+                                so this value must be explicitly caught by 
+                                the caller to avoid looping at the EOF)
+
+                        >= 0    number of BYTES read from the file.
+
+
+
+
+
+
+
+        PBREAD2
+        -------
+
+        A subroutine which can be called from FORTRAN to read a block of 
+        bytes from an unblocked binary file.  ( Note that this routine
+        behaves differently from PBREAD on hitting end-of-file. )
+
+        The format and arguments for the subroutine are as follows:
+
+        SUBROUTINE PBREAD2(KUNIT,KARRAY,KOUNT,KRET)
+
+        where:
+
+
+        Input parameters are INTEGERs:
+        -----
+
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+        KOUNT   =       number of BYTES to read from the file.
+
+
+
+        Output parameters are INTEGERs:
+        ------
+
+        KARRAY =        an INTEGER array to accept the bytes from the read.
+
+        KRET    =       -2      if there is an error in handling the file
+
+                        >= 0    number of BYTES read from the file.
+                                If end-of-file is encountered, KRET returns
+                                the number of bytes actually read.  The
+                                caller must check this value against the
+                                number of bytes requested to detect EOF.
+
+
+
+
+        PBWRITE
+        -------
+
+        A subroutine which can be called from FORTRAN to write a block of 
+        bytes to an unblocked binary file.
+
+        The format and arguments for the subroutine are as follows:
+
+        SUBROUTINE PBWRITE(KUNIT,KARRAY,KOUNT,KRET)
+
+        where:
+
+
+        Input parameters are INTEGERs:
+        -----
+
+        KUNIT =         unit number for the file; this must have been
+                        obtained by calling PBOPEN (see below) - it is
+                        a C FILE pointer and not a FORTRAN unit number.
+
+        KARRAY =        an INTEGER array holding the bytes for the write.
+
+        KOUNT   =       number of BYTES to write to the file.
+
+
+
+        Output parameter is an INTEGER:
+        ------
+
+        KRET    =       -1      if there is an error in writing to the file
+
+                        >= 0    number of BYTES written to the file.
+
+
+
+
+
+
+
+C
+C       A sample FORTRAN program
+C
+
+        program test3 
+C
+        integer iret
+        integer length
+        integer buff(50000)
+        integer buflen
+        data buflen/200000/
+        character*1 moder,modew,modea
+        data moder/'r'/,modew/'w'/,modea/'a'/
+        character*24 filename
+        data filename/'bufr.u'/
+        character*24 newfilename
+        data newfilename/'bufr.ext'/
+
+C open - for read
+        call pbopen(iunit1,filename,moder,iret)
+        write(*,*) 'After PBOPEN, iret = ', iret
+        if ( iret .ne. 0 ) stop 'open failed'
+
+C open - for write
+        call pbopen(iunit2,newfilename,modew,iret)
+        write(*,*) 'After PBOPEN, iret = ', iret
+        if ( iret .ne. 0 ) stop 'open failed'
+
+        do loop =1,500
+C Get the next BUFR product
+                call pbbufr(iunit1, buff, buflen, length, iret)
+                write (*,*) 'BUFR product number= ', loop
+                write (*,*) 'Length of BUFR product = ', length
+                write (*,*) 'iret = ', iret
+
+                if (iret .eq. -1 ) stop 'EOF'
+                if (iret .eq. -2 ) stop 'file handling problem'
+                if (iret .eq. -3 ) stop 'array too small for product'
+
+C Write product to new file 
+C               buff(length/4) = o
+                call pbwrite(iunit2,buff,length,iret)
+                write(*,*) 'After PBWRITE, iret = ', iret
+                if ( iret .lt. 0 ) stop 'write failed'
+        enddo
+
+C Close files
+        call pbclose(iunit1,iret)
+        write(*,*) 'After PBCLOSE, iret = ', iret
+        if ( iret .ne. 0 ) stop 'close failed'
+
+        call pbclose(iunit2,iret)
+        write(*,*) 'After PBCLOSE, iret = ', iret
+        if ( iret .ne. 0 ) stop 'close failed'
+
+        stop
+
+        end

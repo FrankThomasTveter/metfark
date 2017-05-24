@@ -1,0 +1,10 @@
+#! /bin/csh
+#
+#./fark_url.pl '?modelFile=default.cfg&modelStart=1167458405.00000&modelStop=1167458400.00000&modelTargets=timeModel~time~1167458405.00000~1167458410.00000|lat~latitude~~|lon~longitude~~|&obsFile=default.cfg&obsStart=213273331200.00000&obsStop=213273356400.00000&obsTargets=latitude~15~5002~~-999~999|longitude~16~6002~~-999~999|&matchRules=timeModel~timeObs*1000~~|lat~latitude~~|lon~longitude~~|'
+#
+#./fark_url.pl '?modelFile=default.cfg&modelStart=1454360300&modelStop=1459987300&modelTargets=time~time~1167458400~|lat~latitude~~|lon~longitude~~|&modelDefault=[time~1454360500|lat~60|lon~10|'
+#
+#
+#./fark_url.pl '?urlFile=default.cfg'
+./fark_url.pl '?urlFile=AROME - Oslo'
+#

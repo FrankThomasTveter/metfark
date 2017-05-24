@@ -1,0 +1,9 @@
+Funksjoner for aa
+=================
+
+
+1) hente "forecast_reference_time" (analyse-tid)
+2) hente start/stop prognose-tid
+3) hente synop/radiosonde parametere (trykk/temperatur/fuktighet/nedboer...) 
+   for gitt tid, posisjon og trykkflate/hoeyde?
+

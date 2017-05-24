@@ -1,0 +1,21 @@
+#?
+#exit
+ NCLL V1.0 [0]VFLR
+#
+ VARIABLE FILE (NETCDF) [1]VFLR &
+    simsd00X.nc
+#   AROME_Norway25_00.nc
+#
+ VARIABLES [*]VFLR
+   orography
+   potential_temperature
+#  precipitation_amount_acc
+#
+ PROJECTION FILE (NETCDF) [1]VFLR &
+   simsd00.nc
+#   AROME_Norway25_00.nc
+#   rr24hNOgrd1957on_1957_02_05.nc
+#
+ OUTPUT FILE (NETCDF) [1]VFLR &
+     test.nc
+#

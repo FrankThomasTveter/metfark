@@ -1,0 +1,17 @@
+#
+# Header file dependencies
+#
+PBGroutines.o: PBGroutines.h
+crexrd.o: /usr/include/stdio.h
+extras.o: /usr/include/stdio.h
+fort2c.o: fort2c.h
+gbyte.o: /usr/include/stdio.h /usr/include/limits.h fortint.h
+newpbio.o: bufrgrib.h fort2c.h fortint.h /usr/include/sys/types.h /usr/include/sys/stat.h /usr/include/fcntl.h
+pbsize.o: /usr/include/stdio.h /usr/include/unistd.h bufrgrib.h fortint.h fileRead.h
+readany.o: bufrgrib.h fortint.h fileRead.h
+readbufr.o: bufrgrib.h fortint.h fileRead.h
+readgrib.o: bufrgrib.h fortint.h fileRead.h sizeRoutines.h
+readnext.o: bufrgrib.h fortint.h fileRead.h
+readprod.o: bufrgrib.h fortint.h /usr/include/stdio.h /usr/include/unistd.h /usr/include/string.h /usr/include/memory.h fileRead.h sizeRoutines.h
+recheckLength.o: /usr/include/stdio.h /usr/include/string.h 
+setpar.o: /usr/include/limits.h fortint.h

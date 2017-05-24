@@ -1,0 +1,12 @@
+Package: fark-perl
+Version: 0.13-1
+Architecture: amd64
+Maintainer: root <frank.tveter@met.no>
+Installed-Size: 3499
+Depends: perl (>= 5.18.2-2ubuntu1), perlapi-5.18.2, libc6 (>= 2.14), libgfortran3 (>= 4.6), libnetcdff5
+Section: perl
+Priority: optional
+Homepage: http://search.cpan.org/dist/fark-perl/
+Description: point archive perl library for extracting data from netcdf files.
+ .
+ This description was automagically extracted from the module by dh-make-perl.

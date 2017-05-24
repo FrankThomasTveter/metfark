@@ -1,0 +1,6 @@
+Revision history for Perl extension fark.
+
+0.01  Fri Mar 13 07:46:12 2015
+	- original version; created by h2xs 1.23 with options
+		-Afn fark
+

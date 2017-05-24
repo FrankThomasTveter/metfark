@@ -1,0 +1,14 @@
+Source: fark-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 5.0.0), perl (>= 5.8.8-12ubuntu0.5)
+Maintainer: root <frank.tveter@met.no>
+Standards-Version: 3.7.2
+Homepage: http://search.cpan.org/dist/fark-perl/
+
+Package: fark-perl
+Architecture: any
+Depends: ${perl:Depends}, ${shlibs:Depends}, ${misc:Depends}, 
+Description:  point archive perl library for extracting data from netcdf files.
+ .
+ This description was automagically extracted from the module by dh-make-perl.

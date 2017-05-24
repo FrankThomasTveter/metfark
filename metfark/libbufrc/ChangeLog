@@ -1,0 +1,8 @@
+ChangeLog src/pbio dir
+
+Fri May 13 18:14:39 BST 2011 - mao
++ now the specification for integer mapping between Fortran and C is done by fortint.h in this dir but generated on the fly by the compilation system
++ added pbio-if.h and included pbio-if.h in all the C-source files used by this dir. This file should
+specify all the C-functions implemented in this library
++ got rid of the defines hpR64 and hpiaR64 in source code (pbio.c)
++ got rid of the define INTEGER_8 in source code (gbyte.c)

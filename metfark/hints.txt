@@ -1,0 +1,26 @@
+make;cp */*.mod fark/lib;cd fark;rm *.o;touch Makefile;make;sudo make install; cd ..
+
+ sudo add-apt-repository ppa:heiko-klein/fimex
+ apt-cache search fimex
+
+# sudo apt-get install libfimex-0.61-0
+# sudo apt-get install libfimexf-0.61-0
+
+ sudo apt-get install libfimexf-dev
+ sudo apt-get install libcapture-tiny-perl
+
+sudo apt-get purge apache2
+sudo apt-get autoremove
+sudo apt-get remove apache2*
+dpkg -S `which apache2`
+
+sudo service apache2 stop
+sudo apt-get purge apache2 apache2-utils apache2.2-bin apache2-common
+
+whereis apache2
+sudo rm -Rf /etc/apache2 /usr/lib/apache2 /usr/include/apache2sudo rm -Rf /etc/apache2 /usr/lib/apache2 /usr/include/apache2 /usr/share/apache2 /usr/share/man/man8/apache2*
+
+ sudo apt-get install -y apache2
+ sudo apt-get remove -y --purge  `sudo dpkg --get-selections | grep apache | cut -f 1`
+ whereis apache2
+

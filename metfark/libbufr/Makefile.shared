@@ -1,0 +1,30 @@
+#
+#                                 Makefile for bufrdc
+#
+LIBRARY = ../lib$(LIB)$(R64).so
+#
+include ../config/config.$(ARCH)$(CNAME)$(R64)$(A64)
+#
+include ../options/options_$(ARCH)
+#
+PROFILE=$(SHLIB)
+#
+TARGETS      = all clean
+#
+include sources
+#
+OBJECTS.F    = $(SOURCES.F:.F=.o) 
+OBJECTS.f    = $(SOURCES.f:.f=.o)
+OBJECTS.c    = $(SOURCES.c:.c=.o)
+OBJECTS      = $(OBJECTS.F) $(OBJECTS.f) $(OBJECTS.c)
+#
+#
+.PRECIOUS: $(LIBRARY)
+
+all: $(LIBRARY)
+
+$(LIBRARY): $(OBJECTS) $(EXTRAOBJ)
+	$(LD) $(DYNLINKFLAGS) $? -o $@
+
+clean:
+	\rm -f $(OBJECTS)

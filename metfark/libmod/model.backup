@@ -1,0 +1,4592 @@
+
+module model
+  USE fimex, ONLY : fimexio, set_filetype, axis_geox, axis_geoy, axis_lon, axis_lat, &
+       & axis_time, axis_referenceTime, axis_height, axis_pressure, filetype_rw, &
+       & interpol_bilinear,interpol_nearest_neighbor,interpol_bicubic
+  IMPLICIT NONE
+  !
+  ! Global constants
+  !
+  CHARACTER(LEN=50)               :: blank50 = ''
+  character*1 :: sep = "|"
+  logical                         :: bdeb=.false.
+  !
+  ! MODEL FILE VARIABLE
+  !
+  type :: variable
+     character*80 :: varname
+     ! dimensions
+     integer :: ndim = 0
+     character*80, allocatable :: dimnames(:)
+     character*10, allocatable :: atype10(:)
+  end type variable
+  !
+  ! MODEL FILE STACK
+  !
+  type :: file
+     character*250                   :: fn250 = "" ! file name
+     integer                         :: lenf
+     CHARACTER(LEN=250)              :: con250 = ""
+     CHARACTER(len=10)               :: cfiletype = "netcdf"
+     character*250 :: mod250=""                  ! model id
+     logical :: ltset = .false.                   ! is sort trg available
+     real :: trg                                 ! sorting trg
+     integer :: tsort                            ! total number of sort values 
+     real :: tstart                           ! total number of sort values 
+     real :: tend                             ! total number of sort values 
+     integer :: nsort=0                          ! number of sort values
+     real, allocatable :: sort(:)                ! sort values
+     integer,allocatable :: indsort(:)           ! index of sort values
+     character*250, allocatable :: desc250(:)    ! description of position
+     type(file), pointer :: prev => null()       ! linked list
+     type(file), pointer :: next => null()       ! linked list
+     ! dimensions (names, length)
+     integer :: ndim = 0
+     character*80, allocatable :: dimnames(:)
+     integer, allocatable :: dimsize(:)
+     integer, allocatable :: atype(:)
+     character*10, allocatable :: atype10(:)
+     ! variables
+     integer :: nvar                             ! number of variables
+     type(variable), allocatable :: var(:)       ! variables
+  end type file
+  !
+  type :: filePointer
+     type(file), pointer :: pointer => null()
+  end type filePointer
+  !
+  type :: slice
+     character*80 :: dimname=""
+     integer :: idim
+     integer :: nloc = 0
+     integer :: level = 0
+     integer :: active=0 ! -1:ignoreData  0:notAvailable   1: available
+     type(locPointer), pointer :: loc(:) => null()
+     type(slice), pointer :: parent => null()    ! linked list start
+     type(slice), pointer :: first => null()    ! linked list start
+     type(slice), pointer :: last => null()     ! linked list end
+     type(slice), pointer :: prev => null()   ! linked list
+     type(slice), pointer :: next => null()   ! linked list
+  end type slice
+  !
+  ! Location item
+  !   
+  type :: location
+     character*50 :: locid50
+     real :: lat
+     real :: lon
+     integer :: index
+     integer :: nsliceTarget=0
+     logical, allocatable :: printTarget(:)
+     real, allocatable :: sliceTarget(:)
+     type(location), pointer :: prev => null()   ! linked list
+     type(location), pointer :: next => null()   ! linked list
+  end type location
+  !
+  type :: locPointer
+     type(location), pointer :: pointer => null()
+  end type locPointer
+  !
+  ! colocation
+  !
+  type :: reportItem
+     character*250 :: desc250 ! description
+     real :: value            ! value
+     type(reportItem), pointer :: prev => null()   ! linked list
+     type(reportItem), pointer :: next => null()   ! linked list
+  end type reportItem
+  !
+  ! colocation linked list
+  !
+  type :: report ! fixed: lat, lon, analysis
+     type(reportItem), pointer :: first => null()    ! linked list start
+     type(reportItem), pointer :: last => null()     ! linked list end
+     type(reportItem), pointer :: current => null()  ! current pointer
+     integer :: nreport = 0                          ! number of colocation items
+  end type report
+  !
+  type :: reportPointer
+     type(report), pointer :: pointer => null()
+     character*50 :: locid50                        ! location name
+     type(file), pointer :: file                   ! file name
+  end type reportPointer
+  !
+  !
+  ! SESSION VARIABLES
+  !
+  type :: session
+     integer                         :: sid
+     INTEGER                         :: MODEL_INTERPOL = interpol_bilinear
+     CHARACTER(LEN=250)              :: fn250
+     CHARACTER(LEN=250)              :: con250=""
+     CHARACTER(len=10)               :: cfiletype = "netcdf"
+     character(LEN=80)               :: sort_variable              ! sorting variable
+     !
+     type(file), pointer :: firstFile => null()   ! linked list start
+     type(file), pointer :: lastFile => null()    ! linked list end
+     type(file), pointer :: currentFile => null()
+     type(file), pointer :: nextFile => null()
+     type(filePointer), pointer   :: fileStack(:) => null() ! array of the stack elements
+     real, allocatable            :: fileStackSort(:)
+     integer, allocatable         :: fileStackInd(:)
+     integer :: nFileIndexes = 0              ! total number of files on the stack
+     integer :: nFileSortIndexes = 0          ! number of file indexes on the stack
+     integer :: newnFileSortIndexes = 0                  ! new number of file indexes on the stack
+     integer :: currentFileSortIndex = 0      ! current stack index element
+     integer :: currentFileIndex = 0          ! current stack element
+     logical :: stackReady =.false.        ! are sorted data ready for use?
+     !
+     integer :: tsort = 0              ! total number of "sort values" on the stack
+     integer :: msort                  ! maximum number of "sort variables"
+     !
+     integer :: tgslice = 0
+     integer :: ngslice = 0
+     character*80, allocatable :: gslice80(:)
+     integer, allocatable      :: gindex(:)
+     integer, allocatable      :: gindexi(:)
+     !
+     logical :: ltset = .false.
+     real    :: tstart
+     real    :: tend
+     !
+     type(location), pointer :: firstLoc => null()   ! linked list start
+     type(location), pointer :: lastLoc => null()    ! linked list end
+     integer :: tloc=0                               ! number of items in location-chain
+     !
+     logical :: pready=.false.         ! are reported data ready for use
+     integer :: maxreport = 0           ! maximum number of colocation-items
+     integer :: nreport=0               ! number of pready data locations
+     integer :: creport=0               ! current position in report data
+     type(reportPointer), allocatable :: reportData(:) ! pready data locations
+     !
+     type(locPointer), allocatable :: locData(:) !  data locations
+     type(session), pointer :: prev => null()         ! linked list
+     type(session), pointer :: next => null()         ! linked list
+  end type session
+  !
+  integer :: mid=0 ! session counter
+  type(session), pointer :: firstSession => null()   ! linked list start
+  type(session), pointer :: lastSession => null()    ! linked list end
+  !
+CONTAINS
+  !
+  !###############################################################################
+  ! SESSION ROUTINES
+  !###############################################################################
+  !
+  subroutine model_opensession(sid,crc250,irc)
+    integer :: sid
+    character*250 :: crc250
+    integer :: irc
+    type(session),pointer :: newSession !  new session
+    character*25 :: myname = "model_openSession"
+    if (.not.associated(firstSession)) then
+       allocate(firstSession, lastSession,stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'firstSession/lastSession'.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       firstSession%next => lastSession
+       lastSession%prev => firstSession
+    end if
+    allocate(newSession,stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'new session'.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    mid=mid+1
+    newSession%sid=mid
+    newSession%prev => lastSession%prev
+    newSession%next => lastSession
+    newSession%prev%next => newSession
+    newSession%next%prev => newSession
+    sid = newSession%sid
+    allocate(newSession%firstFile,newSession%lastFile, stat=irc) ! 
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate &
+            & 'newSession%firstFile/newSession%lastFile'.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    newSession%firstFile%next => newSession%lastFile
+    newSession%lastFile%prev => newSession%firstFile
+    newSession%nFileIndexes=0
+    newSession%tsort=0
+    ! mark as prepared
+    newSession%stackReady=.false.
+    return
+  end subroutine model_opensession
+
+  subroutine model_getSession(css,sid,crc250,irc)
+    type(session), pointer :: css !  current session
+    integer :: sid
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_getSession"
+    css => firstSession%next
+    do while ( .not.associated(css,target=lastSession))
+       if (css%sid .eq. sid) then
+          return
+       end if
+       css=>css%next
+    end do
+    nullify(css)
+    irc=342
+    call model_errorappend(crc250,myname)
+    call model_errorappend(crc250,"Invalid session id:")
+    call model_errorappendi(crc250,sid)
+    call model_errorappend(crc250,"\n")
+    return
+  end subroutine model_getSession
+
+  subroutine model_closeSession(sid,crc250,irc)
+    integer :: sid
+    character*250 :: crc250
+    integer :: irc
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_closeSession"
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (associated(css)) then
+       call model_removeSession(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from removeSession.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+  end subroutine model_closeSession
+
+  subroutine model_removeSession(css,crc250,irc)
+    type(session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: cf, cfn
+    integer :: ii
+    character*25 :: myname = "model_removeSession"
+    ! remove reportdata
+    if (allocated(css%reportData)) then
+       do ii=1,size(css%reportData)
+          if (associated(css%reportData(ii)%pointer)) then
+             call model_removeReport(css,css%reportData(ii)%pointer,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from removeReport.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+             nullify(css%reportData(ii)%pointer)
+          end if
+       end do
+       deallocate(css%reportData)
+    end if
+    ! remove location stack
+    if (allocated(css%locData)) then
+       do ii=1,size(css%locData)
+          if (associated(css%locData(ii)%pointer)) then
+             call model_removeLoc(css,css%locData(ii)%pointer,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from removeReport.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+             nullify(css%locData(ii)%pointer)
+          end if
+       end do
+       deallocate(css%locData)
+    end if
+    ! remove global slice arrays
+    if (allocated(css%gslice80)) deallocate(css%gslice80)
+    if (allocated(css%gindex)) deallocate(css%gindex)
+    if (allocated(css%gindexi)) deallocate(css%gindexi)
+    ! remove file-stack
+    if (associated(css%filestack)) then
+       do ii=1,size(css%filestack)
+          if (associated(css%filestack(ii)%pointer)) then
+             nullify(css%filestack(ii)%pointer)
+          end if
+       end do
+       deallocate(css%filestack)
+    end if
+    if (allocated(css%filestacksort)) deallocate(css%filestacksort)
+    if (allocated(css%filestackind)) deallocate(css%filestackind)
+    if (associated(css%firstFile)) then
+       cf => css%firstFile%next
+       do while (.not.associated(cf,target=css%lastFile))
+          cfn => cf%next
+          call model_removeFile(css,cf,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from removeFile.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          cf  => cfn
+       end do
+       deallocate(css%firstFile,css%lastFile)
+    end if
+    ! unlink from session-chain
+    css%prev%next => css%next
+    css%next%prev => css%prev
+    deallocate(css)
+  end subroutine model_removeSession
+  !
+  ! make cache file
+  !
+  subroutine model_makecache(bid,path250,crc250,irc)
+    integer :: bid
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile !  current file
+    type(session), pointer :: css !  current session
+    integer, external :: length,ftunit
+    integer :: lenp,lenf,lenv,lend,unitr,ii,jj
+    character*250 :: buff250, str250
+    character*22 :: myname = "model_makeCache"
+    if(bdeb)write(*,*) myname,' Entering.',irc,bid
+    call model_getSession(css,bid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    call chop0(path250,250)
+    lenp=length(path250,250,20)
+    if(bdeb)write(*,*)myname,' Path.',bid,path250(1:lenp)
+    ! open file
+    unitr=ftunit(irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," no free unit number for:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    lenp=length(path250,250,10)
+    open ( unit=unitr, status="unknown", form="formatted", &
+         &        access="sequential", &
+         &        iostat=irc, file=path250(1:lenp) )
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to open:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! write number of files: css%nFileIndexes
+    if(bdeb)write(*,*) myname,' Stack entries.',css%nFileIndexes,unitr
+    write(unitr,'(I0)',iostat=irc) css%nFileIndexes
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to write to:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! loop over file stack
+    currentFile=>css%firstFile%next
+    do while (.not.associated(currentFile,target=css%lastFile))
+       lenf=length(currentFile%fn250,250,currentFile%lenf)
+       write(unitr,'(L1,5(X,I0),X,A)',iostat=irc) currentFile%ltset,&
+            & currentFile%tsort,&
+            & currentFile%nsort,&
+            & currentFile%ndim,&
+            & currentFile%nvar,&
+            & currentFile%lenf,currentFile%fn250(1:LENF)
+       ! write category summary
+       do ii=1,currentFile%nsort
+          lend=length(currentFile%desc250(ii),250,5)
+          write(unitr,'(2(X,I0),X,A)',iostat=irc) currentFile%sort(ii),currentFile%indsort(ii),&
+               currentFile%desc250(ii)(1:lend)
+       end do
+       do ii=1,currentFile%ndim
+          lend=length(currentFile%dimnames(ii),250,5)
+          write(unitr,'(2(X,I0),2(X,A))',iostat=irc) currentFile%dimsize(ii),&
+               & currentFile%atype(ii),currentFile%atype10(ii),currentFile%dimnames(ii)(1:lend)
+       end do
+       do ii=1,currentFile%nvar
+          !call chop0(currentFile%var(ii)%varname,80)
+          lenv=length(currentFile%var(ii)%varname,80,5)
+          write(unitr,'(I0,X,A)',iostat=irc) currentFile%var(ii)%ndim, currentFile%var(ii)%varname(1:lenv)
+          do jj=1,currentFile%var(ii)%ndim
+             lend=length(currentFile%var(ii)%dimnames(jj),250,5)
+             write(unitr,'(A10,X,A)',iostat=irc) currentFile%var(ii)%atype10(jj),&
+                  currentFile%var(ii)%dimnames(jj)(1:lend)
+          end do
+       end do
+       currentFile=>currentFile%next
+    end do
+    ! close file
+    close(unitr,iostat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to close:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Done.',irc,bid
+  end subroutine model_makecache
+  !
+  ! load cache file
+  !
+  subroutine model_loadcache(bid,path250,crc250,irc)
+    integer :: bid
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: cf, cfn
+    type(file),pointer :: newFile
+    type(session), pointer :: css !  current session
+    integer, external :: length
+    integer :: lenp,ii,jj,kk,opos,pos,unitr
+    character*250 :: buff250
+    character*22 :: myname = "model_loadCache"
+    if(bdeb)write(*,*) myname,' Entering.',irc,bid
+    call model_getSession(css,bid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    call chop0(path250,250)
+    lenp=length(path250,250,20)
+    if(bdeb)write(*,*)myname,' Path.',bid,path250(1:lenp)
+    ! clear existing cache
+    css%stackReady=.false.
+    if (associated(css%firstFile)) then
+       cf => css%firstFile%next
+       do while (.not.associated(cf,target=css%lastFile))
+          cfn => cf%next
+          call model_removeFile(css,cf,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from removeFile.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          cf  => cfn
+       end do
+    end if
+    ! open cache file
+    open ( unit=unitr, status="old", form="formatted", &
+         &        access="sequential", &
+         &        iostat=irc, file=path250(1:lenp) )
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to open:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! write number of files: css%nFileIndexes
+    read(unitr,'(A)',iostat=irc) buff250
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to read:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    read(buff250,*,iostat=irc) css%nFileIndexes
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to interpret:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! loop through cache file
+    do ii=1,css%nFileIndexes
+       allocate(newFile,stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate new File item.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       css%stackReady=.false.
+       newFile%prev => css%lastFile%prev
+       newFile%next => css%lastFile
+       newFile%prev%next => newFile
+       newFile%next%prev => newFile
+       !
+       read(unitr,'(A)',iostat=irc) buff250
+       call chop0(buff250,250)
+       pos=0
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%ltset
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%tsort
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%nsort
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%ndim
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%nvar
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%lenf
+       opos=pos
+       pos=251 ! call findDelimiter(buff250," ",pos)
+       newFile%fn250=buff250(pos+1:pos-1)
+       !
+       allocate(newFile%sort(newFile%nsort),newFile%indsort(newFile%nsort),newFile%desc250(newFile%nsort),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate new Sort item.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       do jj=1,newFile%nsort
+          read(unitr,'(A)',iostat=irc) buff250
+          call chop0(buff250,250)
+          pos=0
+          opos=pos
+          call findDelimiter(buff250," ",pos)
+          read(buff250(opos+1:pos-1),*,iostat=irc)newFile%sort(ii)
+          opos=pos
+          call findDelimiter(buff250," ",pos)
+          read(buff250(opos+1:pos-1),*,iostat=irc)newFile%indsort(ii)
+          opos=pos
+          pos=251 ! call findDelimiter(buff250," ",pos)
+          newFile%desc250(ii)=buff250(opos+1:pos-1)
+       end do
+       allocate(newFile%dimsize(newFile%ndim),newFile%atype(newFile%ndim),newFile%atype10(newFile%ndim),&
+            & newFile%dimnames(newFile%ndim),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate new Sort item.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       do jj=1,newFile%ndim
+          read(unitr,'(A)',iostat=irc) buff250
+          call chop0(buff250,250)
+          pos=0
+          opos=pos
+          call findDelimiter(buff250," ",pos)
+          read(buff250(opos+1:pos-1),*,iostat=irc)newFile%dimsize(jj)
+          opos=pos
+          call findDelimiter(buff250," ",pos)
+          read(buff250(opos+1:pos-1),*,iostat=irc)newFile%atype(jj)
+          opos=pos
+          call findDelimiter(buff250," ",pos)
+          newFile%atype10(jj)=buff250(opos+1:min(opos+10,pos-1))
+          opos=pos
+          pos=251 ! call findDelimiter(buff250," ",pos)
+          newFile%dimnames(jj)=buff250(opos+1:min(opos+80,pos-1))
+       end do
+       allocate(newFile%var(newFile%nvar),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate new Var item.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       do jj=1,newFile%nvar
+          read(unitr,'(A)',iostat=irc) buff250
+          call chop0(buff250,250)
+          pos=0
+          opos=pos
+          call findDelimiter(buff250," ",pos)
+          read(buff250(opos+1:pos-1),*,iostat=irc)newFile%var(jj)%ndim
+          opos=pos
+          newfile%var(jj)%varname=buff250(opos+1:min(opos+80,80))
+          allocate(newFile%var(jj)%dimnames(newFile%var(jj)%ndim),&
+               newFile%var(jj)%atype10(newFile%var(jj)%ndim),stat=irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to allocate new Var dim item.")
+             call model_errorappendi(crc250,jj)
+             call model_errorappendi(crc250,newFile%var(jj)%ndim)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          do kk=1,newFile%var(jj)%ndim
+             read(unitr,'(A)',iostat=irc) buff250
+             call chop0(buff250,250)
+             pos=0
+             opos=pos
+             call findDelimiter(buff250," ",pos)
+             newfile%var(jj)%atype10(kk)=buff250(opos+1:min(opos+10,pos-1))
+             opos=pos
+             newfile%var(jj)%dimnames(kk)=buff250(opos+1:min(opos+80,250))
+          end do
+       end do
+    end do
+    ! close file
+    close(unitr,iostat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," unable to close:"//path250(1:lenp))
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Done.',irc,bid
+  end subroutine model_loadcache
+  !
+  !
+  !###############################################################################
+  !STACK ROUTINES
+  !###############################################################################
+  !
+  ! initialise the stack
+  !
+  subroutine model_stackinit(css,crc250,irc)
+    type(session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_stackinit"
+    ! initialise chain
+    allocate(css%firstFile,css%lastFile, stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'css%firstFile/css%lastFile'.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    css%firstFile%next => css%lastFile
+    css%lastFile%prev => css%firstFile
+    css%nFileIndexes=0
+    css%tsort=0
+    ! mark as prepared
+    css%stackReady=.false.
+  end subroutine model_stackinit
+  !
+  ! clear the MODEL STACK
+  !
+  subroutine model_stackclear(sid,varname,crc250,irc)
+    integer :: sid
+    character*80 :: varname
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile => null()
+    type(file), pointer :: stackNext => null()
+    integer, external :: length
+    integer :: lens
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackclear"
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.associated(css%firstFile)) then
+       call model_stackinit(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from rmItem.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    css%sort_variable=varname
+    call chop0(css%sort_variable,80)
+    lens=length(css%sort_variable,80,10)
+    currentFile => css%firstFile%next
+    do while (.not.associated(currentFile,target=css%lastFile))
+       stackNext => currentFile%next
+       call model_removeFile(css,currentFile,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from rmItem.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       currentFile => stackNext
+    end do
+    css%stackReady=.false.
+    if (css%nFileIndexes .ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," System error:")
+       call model_errorappendi(crc250,css%nFileIndexes)
+       call model_errorappend(crc250,"\n")
+       irc=940
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Done.'
+  end subroutine model_stackclear
+  !
+  ! clear the MODEL STACK
+  !
+  subroutine model_filesetup(sid,path250,type,crc250,irc)
+    integer :: sid
+    character*250 :: path250
+    character*10 :: type
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile => null()
+    type(file), pointer :: stackNext => null()
+    integer, external :: length
+    integer :: lens
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_filesetup"
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    css%cfileType=type
+    call chop0(css%cfiletype,10)
+    lens=length(css%cfiletype,10,10)
+    css%con250=path250
+    call chop0(css%con250,250)
+    if(bdeb)write(*,*)myname,' Done.'
+  end subroutine model_filesetup
+  !
+  ! remove item from model stack
+  !
+  subroutine model_removeFile (css,df, crc250,irc)
+    type(session), pointer :: css !  current session
+    type(file), pointer :: df
+    character*250 :: crc250
+    integer :: irc  ! error return code (0=ok)
+    character*25 :: myname = "model_removeFile"
+    integer :: irc2
+    if (associated(df)) then
+       css%nFileIndexes = css%nFileIndexes - 1
+       css%tsort = css%tsort - df%nsort
+       css%stackReady=.false.
+       df%next%prev => df%prev
+       df%prev%next => df%next
+       nullify(df%prev)
+       nullify(df%next)
+       if (allocated(df%sort)) deallocate(df%sort,stat=irc2)
+       if (allocated(df%indsort)) deallocate(df%indsort,stat=irc2)
+       if (allocated(df%desc250)) deallocate(df%desc250,stat=irc2)
+       deallocate(df)
+    end if
+  end subroutine model_removeFile
+  !
+  ! Add model-file (grib/netcdf) to the MODEL STACK
+  !
+  subroutine model_stackpush(sid,path250,crc250,irc)
+    integer :: sid
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    type(file),pointer :: newFile
+    logical  :: bok =.false.
+    integer :: nlatlon,nheight,nana,ntime,nother
+    character*250 :: buff250
+    INTEGER(KIND=4), ALLOCATABLE, DIMENSION(:) :: start, vsize, atypes
+    character(len=80), allocatable, dimension(:) :: dimnames
+    integer :: nvalues, tsize, ndims
+    real(KIND=8), allocatable :: values(:)
+    integer :: ii,jj,kk,tt
+    TYPE(fimexio),target  :: fio      ! current fimex-object
+    TYPE(fimexio),pointer :: cio      ! current fimex-object
+    CHARACTER(LEN=80)               :: varname
+    integer :: irc2
+    integer, external :: length
+    integer :: lenc,leni,lenv,lens,lenp,lend
+    logical :: bbok
+    integer :: nslice
+    character*80, allocatable :: sdimnames(:)
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackpush"
+    !bdeb=.true.
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    call chop0(path250,250)
+    lenp=length(path250,250,20)
+    if(bdeb)write(*,*)myname,' Entering.',path250(1:lenp)
+    if (.not.associated(css%firstFile)) then
+       call model_stackinit(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from stackinit.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    ! create new stack-item
+    bok=.true.
+    allocate(newFile,stat=irc)
+    if (irc.ne.0) then
+       bok=.false.
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to allocate new stack item.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    cio=>fio
+    ! open file
+    if (bok) then
+       ! set file name...
+       nslice=0
+       allocate(sdimnames(1))
+       newFile%fn250=path250
+       newFile%lenf=lenp
+       newFile%con250=css%con250
+       newFile%cfileType=css%cfiletype
+       ! open file
+       call model_fimexopen(css,cio,newFile,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from openFile.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! get "css%sort_variable" dimension range
+       varname=css%sort_variable(1:80)
+       lenv=length(varname,80,10)
+       if (lenv.eq.0) then ! no sort variable
+          if (bdeb) write(*,*)myname,'Warning: no file-sorting variable defined.'
+          newFile%nsort=1
+          allocate(newFile%sort(newFile%nsort),&
+               & newFile%indsort(newFile%nsort), &
+               & newFile%desc250(newFile%nsort), &
+               & values(newFile%nsort),stat=irc)
+          do jj=1,newFile%nsort
+             newFile%sort(jj)=0.0D0
+             newFile%indsort(jj)=jj
+             newFile%desc250(jj)="undef"
+          end do
+          newFile%ltset=.false. ! no target to print...
+          newFile%tstart=0.0D0
+          newFile%tend=0.0D0
+          newFile%trg=0.0D0
+       else
+          ndims=-1
+          call model_fimexrange(css,cio,varname,ndims,dimnames,start,vsize,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from getRange.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          if(bdeb)write(*,*)myname,'Here again.',ndims
+          ! read "css%sort_variable"
+          tsize=1
+          do ii=1,ndims
+             !lend=length(dimnames(ii),80,10)
+             if(bdeb)write(*,*)myname,'Dim:',ii,start(ii),vsize(ii),dimnames(ii)(1:lend)
+             tsize=tsize*max(1,vsize(ii))
+          end do
+          newFile%nsort=abs(tsize)
+          if (newFile%nsort .lt.1000) then
+             if (allocated(values))deallocate(values)
+             allocate(newFile%sort(newFile%nsort),&
+                  & newFile%indsort(newFile%nsort), &
+                  & newFile%desc250(newFile%nsort), &
+                  & values(newFile%nsort),stat=irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to allocate var:")
+                call model_errorappendi(crc250,abs(newFile%nsort))
+                call model_errorappend(crc250,":")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+             if(bdeb)write(*,*)myname,' Calling getrawvalues.'
+             nvalues=0
+             call model_fimexvalues(css,cio, varname, nvalues,values,blank50,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from getRawValues.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+             do jj=1,newFile%nsort
+                newFile%sort(jj)=values(jj)
+                newFile%indsort(jj)=jj
+                newFile%desc250(jj)=model_getdesc250(jj,ndims,dimnames,start,vsize,nslice,sdimnames,crc250,irc)
+             end do
+             if(bdeb)write(*,*)myname,' Sorting.'
+             newFile%tsort=newFile%nsort
+             call model_heapsort1r(newFile%nsort,newFile%sort,1.0D-5,newFile%tsort,newFile%nsort,newFile%indsort,.false.)
+             if(bdeb)write(*,*)myname,' Sorting done.'
+             newFile%ltset=.true. ! target is available
+             newFile%tstart=newFile%sort(newFile%indsort(1))
+             newFile%tend=newFile%sort(newFile%indsort(newFile%nsort))
+             newFile%trg=newFile%tstart
+             if (allocated(values)) deallocate(values)
+          else
+             irc=453
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Invalid "//trim(varname)//" dimensions.")
+             call model_errorappendi(crc250,newFile%nsort)
+             call model_errorappend(crc250,"\n")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       end if
+       if(bdeb)write(*,*)myname,' Storing dimensions.'
+       ! store dimensions
+       newFile%ndim=cio%dimensions_size()
+       if (allocated(newFile%dimnames)) deallocate(newFile%dimnames,stat=irc2)
+       if (allocated(newFile%dimsize)) deallocate(newFile%dimsize,stat=irc2)
+       if (allocated(newFile%atype)) deallocate(newFile%atype,stat=irc2)
+       if (allocated(newFile%atype10)) deallocate(newFile%atype10,stat=irc2)
+       allocate(newFile%dimnames(newFile%ndim),newFile%dimsize(newFile%ndim), &
+            & newFile%atype(newFile%ndim),newFile%atype10(newFile%ndim),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate newFile%dimname:")
+          call model_errorappendi(crc250,newFile%ndim)
+          call model_errorappend(crc250,":")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       do ii=1,newFile%ndim
+          newFile%dimnames(ii)=cio%file_dimname(ii)
+          newFile%dimsize(ii)=cio%get_dimsize(cio%file_dimname(ii))
+          newFile%atype10(ii)="UNDEF"
+          call chop0(newFile%dimnames(ii),80)
+       end do
+       newFile%nvar=cio%variables_size()
+       if (allocated(newFile%var)) deallocate(newFile%var,stat=irc2)
+       allocate(newFile%var(newFile%nvar),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate newFile%var:")
+          call model_errorappendi(crc250,newFile%nvar)
+          call model_errorappend(crc250,":")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if(bdeb)write(*,*)myname,' More dimensions.',newFile%nvar
+       do ii=1,newFile%nvar
+          if(bdeb)write(*,*)myname,' Looping.',ii
+          newFile%var(ii)%varname=cio%get_varname(ii)
+          newFile%var(ii)%ndim=cio%get_dimensions(cio%get_varname(ii))
+          if(bdeb)write(*,*)myname,' Allocating.',ii,newFile%var(ii)%ndim
+          allocate(newFile%var(ii)%dimnames(newFile%var(ii)%ndim),newFile%var(ii)%atype10(newFile%var(ii)%ndim),stat=irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to allocate newFile%var%dim:")
+             call model_errorappendi(crc250, newFile%var(ii)%ndim)
+             call model_errorappend(crc250,":")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          if (allocated(atypes)) deallocate(atypes,stat=irc2)
+          allocate(atypes(max(1,newFile%var(ii)%ndim)), stat=irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to allocate atypes:")
+             call model_errorappendi(crc250, newFile%var(ii)%ndim)
+             call model_errorappend(crc250,":")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          if(bdeb)write(*,*) myname,'Calling axistypes B.'
+          irc2 = model_fimexaxistypes(cio,cio%get_varname(ii),newFile%var(ii)%ndim,bbok,atypes)
+          if(bdeb)write(*,*)myname,'Here.'
+          do jj=1,newFile%var(ii)%ndim
+             if(bdeb)write(*,*)myname,'There.',jj
+             newFile%var(ii)%dimnames(jj)=cio%get_dimname(jj) 	
+             call chop0(newFile%var(ii)%dimnames(jj),80)
+             tt=0
+             do kk=1,newFile%ndim
+                if (newFile%var(ii)%dimnames(jj).eq.newFile%dimnames(kk)) then
+                   tt=kk
+                end if
+             end do
+             if (irc2.eq.0.and.bbok.and.tt.ne.0) then
+                SELECT CASE (atypes(jj))
+                CASE(axis_geox, axis_lon,axis_geoy, axis_lat)
+                   newFile%atype(tt)=atypes(jj)
+                   newFile%atype10(tt)="GEO"
+                   newFile%var(ii)%atype10(jj)="GEO"
+                CASE (axis_height,axis_pressure)
+                   newFile%atype(tt)=atypes(jj)
+                   newFile%atype10(tt)="HEIGHT"
+                   newFile%var(ii)%atype10(jj)="HEIGHT"
+                CASE(axis_referencetime)
+                   newFile%atype(tt)=atypes(jj)
+                   newFile%atype10(tt)="REFTIME"
+                   newFile%var(ii)%atype10(jj)="REFTIME"
+                CASE(axis_time)
+                   newFile%atype(tt)=atypes(jj)
+                   newFile%atype10(tt)="TIME"
+                   newFile%var(ii)%atype10(jj)="TIME"
+                CASE default
+                   newFile%atype(tt)=atypes(jj)
+                   newFile%atype10(tt)="OTHER"
+                   newFile%var(ii)%atype10(jj)="OTHER"
+                END SELECT
+             else
+                newFile%var(ii)%atype10(jj)="UNDEF"
+             end if
+          end do
+       end do
+       if(bdeb)write(*,*)myname,'Where.'
+       ! close file
+       call model_fimexclose(css,cio, crc250,irc)
+       if (irc.ne.0) then
+          bok=.false.
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from closeFile.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    if (allocated(sdimnames)) deallocate(sdimnames)
+    if(bdeb)write(*,*)myname,'Care.'
+    ! push onto stack
+    if (bok) then
+       css%nFileIndexes=css%nFileIndexes + 1
+       css%tsort=css%tsort + newFile%nsort
+       css%stackReady=.false.
+       newFile%prev => css%lastFile%prev
+       newFile%next => css%lastFile
+       newFile%prev%next => newFile
+       newFile%next%prev => newFile
+    end if
+    if(bdeb)write(*,*)myname,' Done.'
+    !bdeb=.false.
+  end subroutine model_stackpush
+
+  !
+  ! Remove last model-file on the MODEL STACK
+  !
+  subroutine model_stackpop(sid,path250,crc250,irc)
+    integer :: sid
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile => null()
+    type(file), pointer :: prevFile => null()
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackpop"
+    logical :: bdone
+    integer, external :: length
+    integer :: lenp
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.associated(css%firstFile)) then
+       call model_stackinit(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from rmItem.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    call chop0(path250,250)
+    lenp=length(path250,250,10)
+    currentFile => css%lastFile%prev
+    bdone=associated(currentFile,target=css%firstFile)
+    do while (.not. bdone) 
+       prevFile=>currentFile%prev
+       if (currentFile%fn250(1:currentFile%lenf).eq.path250(1:lenp).or.lenp.eq.0) then
+          css%nFileIndexes=css%nFileIndexes - 1
+          css%tsort=css%tsort - currentFile%nsort
+          call model_removeFile(css,currentFile,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from removeFile.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          css%stackReady=.false.
+          bdone=(lenp.eq.0)
+       end if
+       currentFile=>prevFile
+       bdone=(bdone.or.associated(currentFile,target=css%firstFile))
+    end do
+  end subroutine model_stackpop
+
+  !
+  ! Peek at last model-file put onto the MODEL STACK
+  !
+  subroutine model_stackpeeklen(sid,maxrep,crc250,irc)
+    integer :: sid
+    integer :: maxrep
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile => null()
+    integer :: ii,jj
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackpeeklen"
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.associated(css%firstFile)) then
+       call model_stackinit(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from stackinit.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    currentFile => css%lastFile%prev
+    ! report file-name
+    maxrep=1
+    if (.not.associated(currentFile,target=css%firstFile)) then
+       ! file name
+       !maxrep=maxrep+1
+       maxrep=maxrep+1
+       maxrep=maxrep+(1+currentFile%nsort)
+       maxrep=maxrep+currentFile%ndim*3
+       do ii=1,currentFile%nvar
+          maxrep=maxrep+1
+          do jj=1,currentFile%var(ii)%ndim
+             maxrep=maxrep+1
+             maxrep=maxrep+1
+          end do
+       end do
+    end if
+    if(bdeb)write(*,*)myname,' Done.',maxrep
+  end subroutine model_stackpeeklen
+  !
+  subroutine model_stackpeek(sid,maxrep,nrep, rep250, crc250,irc)
+    integer :: sid
+    integer :: maxrep
+    integer :: nrep
+    character*250 :: rep250(maxrep)
+    character*250 :: crc250
+    integer :: irc
+    character*50 :: s1, s2, s3
+    integer, external :: length
+    integer :: len1,len2,len3,lenm,lenv,lena,lenr,lend,lens
+    type(file), pointer :: currentFile => null()
+    integer :: ii,jj
+    character*80 :: varname
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackpeek"
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.associated(css%firstFile)) then
+       call model_stackinit(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from stackinit.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    currentFile => css%lastFile%prev
+    ! report file-name
+    nrep=0
+    if (.not.associated(currentFile,target=css%firstFile)) then
+       ! file name
+       nrep=min(maxrep,nrep+1)               ! file name  +1
+       call chop0(currentFile%fn250,250)
+       lenm=length(currentFile%fn250,250,20)
+       rep250(nrep)="file"//sep//"name"//sep//currentFile%fn250(1:lenm)
+       ! sorting variable is available
+       if (currentFile%ltset) then
+          write(s1,'(F17.5)') currentFile%trg; call chop0(s1,50); len1=length(s1,50,10)
+          call chop0(css%sort_variable,80)
+          lens=length(css%sort_variable,80,10)
+          if (lens.gt.0) then
+             nrep=min(maxrep,nrep+1)             ! target value   +1
+             rep250(nrep)="file"//sep//"sort"//sep//"variable"//sep//css%sort_variable(1:lens)//sep//s1(1:len1)
+             do jj=1,currentFile%nsort
+                s2=currentFile%desc250(jj)(1:50);call chop0(s2,50);len2=length(s2,50,1)
+                write(s3,'(F17.5)') currentFile%sort(jj); call chop0(s3,50); len3=length(s3,50,10)
+                nrep=min(maxrep,nrep+1)          ! sort values      +nsort
+                rep250(nrep)="file"//sep//"variable"//&
+                     & sep//css%sort_variable(1:lens)//sep//s2(1:len2)//sep//s3(1:len3)
+             end do
+             write(s2,'(I12)') currentFile%nsort; call chop0(s2,50);len2=length(s2,50,1)
+             nrep=min(maxrep,nrep+1) ! number of sort values   +1
+             rep250(nrep)="file"//sep//"variable"//&
+                  & sep//css%sort_variable(1:lens)//sep//"cnt"//sep//s2(1:len2)
+
+          end if
+       end if
+       ! dimensions
+       write(s1,'(I12)') currentFile%ndim; call chop0(s1,50); len1=length(s1,50,10)
+       do ii=1,currentFile%ndim
+          write(s2,'(I12)') ii; call chop0(s2,50); len2=length(s2,50,10)
+          call chop0(currentFile%dimnames(ii),80)
+          lend=length(currentFile%dimnames(ii),80,10)
+          nrep=min(maxrep,nrep+1)              ! dimension size  +currentFile%ndim
+          write(rep250(nrep),*) currentFile%dimsize(ii)
+          lenr=length(rep250(nrep),250,10)
+          rep250(nrep)="file"//sep//"dimension"//sep//currentFile%dimnames(ii)(1:lend)//sep//"size"//sep//rep250(nrep)(1:lenr)
+          nrep=min(maxrep,nrep+1)              ! dimension index  +currentFile%ndim
+          rep250(nrep)="file"//sep//"dimension"//sep//currentFile%dimnames(ii)(1:lend)//sep//"index"//sep//s2(1:len2)
+          call chop0(currentFile%atype10(ii),10)
+          lena=length(currentFile%atype10(ii),10,10)
+          nrep=min(maxrep,nrep+1)              ! dimension type  +currentFile%ndim
+          rep250(nrep)="file"//sep//"dimension"//sep//currentFile%dimnames(ii)(1:lend)//&
+               & sep//"type"//sep//currentFile%atype10(ii)(1:lena)
+       end do
+       if(bdeb)write(*,*)myname,' Near.'
+       ! variables (name, dimensions)
+       write(s1,'(I12)') currentFile%nvar; call chop0(s1,50); len1=length(s1,50,10)
+       do ii=1,currentFile%nvar
+          write(s1,'(I12)') ii; call chop0(s1,50);len1=length(s1,50,10)
+          varname=currentFile%var(ii)%varname
+          call chop0(varname,80)
+          lenv=length(varname,80,10)
+          if(bdeb)write(*,*)myname,'VARNAME:',varname(1:lenv),lenv
+          write(s2,'(I12)') currentFile%var(ii)%ndim; call chop0(s2,50);len2=length(s2,50,10)
+          nrep=min(maxrep,nrep+1)                 ! var index  +currentFile%nvar
+          rep250(nrep)="file"//sep//"variable"//sep//varname(1:lenv)//sep//"index"//sep//s1(1:len1)
+          do jj=1,currentFile%var(ii)%ndim
+             write(s2,'(I12)') jj; call chop0(s2,50);len2=length(s2,50,10)
+             s3= currentFile%var(ii)%dimnames(jj)(1:50);call chop0(s3,50);len3=length(s3,50,10)
+             nrep=min(maxrep,nrep+1)              ! dimension index  +currentFile%nvar * currentFile%var(ii)%ndim
+             rep250(nrep)="file"//sep//"variable"//sep//varname(1:lenv)//sep//"dimension"// &
+                  & sep//s3(1:len3)//sep//"index"//sep//s2(1:len2)
+             call chop0(currentFile%var(ii)%atype10(jj),10)
+             lena=length(currentFile%var(ii)%atype10(jj),10,10)
+             nrep=min(maxrep,nrep+1)              ! dimension type   +currentFile%nvar * currentFile%var(ii)%ndim
+             rep250(nrep)="file"//sep//"variable"//sep//varname(1:lenv)//sep//"dimension"// &
+                  & sep//s3(1:len3)//sep//"type"//sep//currentFile%var(ii)%atype10(jj)(1:lena)
+          end do
+       end do
+    end if
+
+    !do ii=1,nrep
+    !   lenr=length(rep250(ii),250,100)
+    !   write(*,*) myname,'REP:',ii,maxrep,rep250(ii)(1:lenr)
+    !end do
+
+    if(bdeb)write(*,*)myname,' Done.',maxrep,nrep
+  end subroutine model_stackpeek
+
+  !
+  !###############################################################################
+  !POS ROUTINES
+  !###############################################################################
+  !
+  ! initialise the MOEL POS
+  !
+  subroutine model_locinit(css,crc250,irc)
+    type(session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_locinit"
+    css%pready=.false. ! we must redo colocation
+    ! initialise chain
+    if (.not.associated(css%firstLoc)) then
+       allocate(css%firstLoc,css%lastLoc, stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'firstLoc/lastLoc'.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       css%firstLoc%next => css%lastLoc
+       css%lastLoc%prev => css%firstLoc
+       css%tloc=0
+    end if
+  end subroutine model_locinit
+  !
+  ! clear the MODEL POS
+  !
+  subroutine model_locclear(sid,nslice,slice,crc250,irc)
+    integer :: sid
+    integer :: nslice
+    character*80 :: slice(nslice)
+    character*250 :: crc250
+    integer :: irc
+    type(location), pointer :: currentLoc => null()
+    type(location), pointer :: locNext => null()
+    character*25 :: myname = "model_locclear"
+    integer :: ii, lens
+    integer, external :: length
+    type(session), pointer :: css !  current session
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    css%pready=.false. ! we must redo colocation
+    call model_locinit(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from locinit.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! delete any existing location-entries
+    currentLoc => css%firstLoc%next
+    do while (.not.associated(currentLoc,target=css%lastLoc))
+       locNext => currentLoc%next
+       call model_removeLoc(css,currentLoc,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from locrmitem.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       currentLoc => locNext
+    end do
+    if (css%tloc .ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," System error:")
+       call model_errorappendi(crc250,css%tloc)
+       call model_errorappend(crc250,"\n")
+       irc=940
+       return
+    end if
+    ! store slice variables/dimensions
+    css%tgslice=0
+    css%ngslice=0
+    if (allocated(css%gslice80)) deallocate(css%gslice80)
+    if (allocated(css%gindex)) deallocate(css%gindex)
+    if (allocated(css%gindexi)) deallocate(css%gindexi)
+    allocate(css%gslice80(nslice),css%gindex(nslice),css%gindexi(nslice),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'gslice'.")
+       call model_errorappendi(crc250,nslice)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    css%tgslice=nslice
+    do ii=1,nslice
+       css%gindexi(ii)=0
+       call chop0(slice(ii),80)
+       lens=length(slice(ii),80,10)
+       if (bdeb) write(*,*)myname,'Slice variable:', ii,slice(ii)(1:lens)
+       if (lens.ne.0) then
+          css%ngslice=min(nslice,css%ngslice+1)
+          css%gslice80(css%ngslice)=slice(ii)
+          css%gindex(css%ngslice)=ii
+          css%gindexi(css%gindex(css%ngslice))=css%ngslice
+       end if
+    end do
+    if(bdeb)write(*,*)myname,' Done.',css%ngslice
+  end subroutine model_locclear
+  !
+  ! remove item from MODEL POS
+  !
+  subroutine model_removeLoc (css,loc, crc250,irc)
+    type(session), pointer :: css !  current session
+    type(location), pointer :: loc
+    character*250 :: crc250
+    integer :: irc  ! error return code (0=ok)
+    character*25 :: myname = "model_removeLoc"
+    if (associated(loc)) then
+       css%tloc = css%tloc - 1
+       loc%next%prev => loc%prev
+       loc%prev%next => loc%next
+       nullify(loc%prev)
+       nullify(loc%next)
+       nullify(loc)
+    end if
+  end subroutine model_removeLoc
+  !
+  ! Add item to MODEL POS
+  !
+  subroutine model_locpush(sid,locid50,lat,lon,nsliceTarget,sliceTarget,crc250,irc)
+    integer :: sid
+    character*50 :: locid50
+    real :: lat
+    real :: lon
+    integer :: nsliceTarget
+    real:: sliceTarget(nsliceTarget)
+    character*250 :: crc250
+    integer :: irc
+    type(location),pointer :: newLocation
+    integer :: nlatlon,nheight,nana,ntime,nother
+    character*250 :: varname
+    character*250 :: buff250
+    real(KIND=8), allocatable :: values(:)
+    integer :: ii,yy,mm,dd,hh,mi
+    real:: sec
+    integer :: lenc
+    integer, external :: length
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_locpush"
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if(bdeb)write(*,*)myname,' data.',nsliceTarget,css%ngslice
+    css%pready=.false. ! we must redo colocation
+    ! check number of slice-variables
+    if(bdeb) write(*,*)myname,'Slices:',nsliceTarget,css%ngslice
+    do ii=1,nsliceTarget
+       if(bdeb)write(*,*) myname,'Slice:',ii,sliceTarget(ii)
+    end do
+    if (nsliceTarget.ne.css%tgslice) then
+       irc=346
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,":Location:")
+       call model_errorappend(crc250,locid50)
+       call model_errorappend(crc250,":Wrong number of slice-variables, expected:")
+       call model_errorappendi(crc250,css%tgslice)
+       call model_errorappend(crc250," got:")
+       call model_errorappendi(crc250,nsliceTarget)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! initialise location stack
+    call model_locinit(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from locinit.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! create new pos-item
+    allocate(newLocation,stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to allocate new location.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    newLocation%nsliceTarget=nsliceTarget
+    allocate(newLocation%sliceTarget(newLocation%nsliceTarget),newLocation%printTarget(newLocation%nsliceTarget),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to allocate newLocation%sliceTarget.")
+       call model_errorappendi(crc250,newLocation%nsliceTarget)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    newLocation%locid50=locid50
+    newLocation%lat=lat
+    newLocation%lon=lon
+    do ii=1,newLocation%nsliceTarget
+       if(bdeb)write(*,*)myname,'Slice target:',ii,sliceTarget(ii)
+       newLocation%sliceTarget(ii)=sliceTarget(ii)
+       newLocation%printTarget(ii)=.false.
+    end do
+    ! push onto stack
+    css%tloc=css%tloc + 1
+    newLocation%prev => css%lastLoc%prev
+    newLocation%next => css%lastLoc
+    newLocation%prev%next => newLocation
+    newLocation%next%prev => newLocation
+    if(bdeb)write(*,*)myname,' Done.'
+    return
+  end subroutine model_locpush
+
+  !
+  ! Get arrays from MODEL POS
+  !
+  subroutine model_locprint(sid,crc250,irc)
+    integer :: sid
+    character*250 :: crc250
+    integer :: irc
+    type(location), pointer :: currentLoc => null()
+    integer, external :: length
+    integer :: lenl,lenn,lenb,leng,ii
+    integer :: cnt=0
+    character*250 :: buff250
+    character*50 :: num50
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_locprint"
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (associated(css%firstLoc).and.css%tloc.gt.0) then
+       currentLoc => css%firstLoc%next
+       do while (.not.associated(currentLoc,target=css%lastLoc))
+          cnt=cnt+1
+          buff250=""
+          lenb=0
+          do ii=1,currentLoc%nsliceTarget
+             write(num50,*)currentLoc%slicetarget(ii)
+             call chop0(num50,50)
+             lenn=length(num50,50,10)
+             leng=length(css%gslice80(ii),80,10)
+             if (css%gindexi(ii).eq.0) then
+                buff250=buff250(1:lenb)//" undef="//num50(1:lenn)
+             else
+                buff250=buff250(1:lenb)//" "//css%gslice80(css%gindexi(ii))(1:leng)//"="//num50(1:lenn)
+             end if
+             call chop0(buff250,250)
+             lenb=length(buff250,250,10)
+          end do
+          lenl=length(currentLoc%locid50,50,10)
+          write(*,'(X,A,A,X,"(",F5.1,",",F5.1,")",X,A)') &
+               & myname, &
+               & currentLoc%locid50(1:lenl), &
+               & currentLoc%lat, &
+               & currentLoc%lon, &
+               & buff250(1:lenb)
+          currentLoc => currentLoc%next
+       end do
+    end if
+    if(bdeb)write(*,*)myname,' Number of locations:',cnt
+    if(bdeb)write(*,*)myname,' Done.'
+  end subroutine model_locprint
+  !
+  ! Get arrays from MODEL POS
+  !
+  subroutine model_locget(css,nloc,locid50,lat,lon,loc,crc250,irc)
+    type(session), pointer :: css !  current session
+    integer :: nloc
+    character*50, allocatable :: locid50(:)
+    real, allocatable :: lat(:)
+    real, allocatable :: lon(:)
+    type(locPointer), allocatable :: loc(:)
+    character*250 :: crc250
+    integer :: irc
+    type(location), pointer :: currentLoc => null()
+    character*25 :: myname = "model_locget"
+    integer :: ii
+    nloc=0
+    if (associated(css%firstLoc).and.css%tloc.gt.0) then
+       nloc=css%tloc
+       if (allocated(locid50)) deallocate(locid50)
+       if (allocated(lat)) deallocate(lat)
+       if (allocated(lon)) deallocate(lon)
+       if (allocated(loc)) deallocate(loc)
+       allocate(locid50(css%tloc),lat(css%tloc),lon(css%tloc),loc(css%tloc),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate locid50,lat,lon.")
+          call model_errorappendi(crc250,css%tloc)
+          call model_errorappend(crc250," , ")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       ii=0
+       currentLoc => css%firstLoc%next
+       do while (.not.associated(currentLoc,target=css%lastLoc))
+          ii=ii+1
+          locid50(ii)=currentLoc%locid50
+          lat(ii)=currentLoc%lat
+          lon(ii)=currentLoc%lon
+          loc(ii)%pointer=>currentLoc
+          loc(ii)%pointer%index=ii
+          currentLoc => currentLoc%next
+       end do
+    end if
+  end subroutine model_locget
+  !
+  !###############################################################################
+  !ROUTINES FOR LOOPING OVER ANALYSIS
+  !###############################################################################
+  ! Forecasts from one analysis is pready at a time... (=the same parameters)
+  ! Used in this way
+  ! 1)  model_stackorder: make index of all analysis in stack
+  ! 2a) model_stackfirst: put pointer to before first analysis
+  ! 3a) model_getnextfile: report to prev analysis and get forecast times
+  ! 2b) model_stacklast: put pointer to after last analysis
+  ! 3b) model_getprevfile: report to next analysis and get forecast times
+  !
+  ! Reset indexes for looping over analysis
+  !
+  subroutine model_stackorder(sid,crc250,irc)
+    integer :: sid
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile => null()
+    integer :: ii
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackorder"
+    !
+    ! make array of files
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    call model_stackarray(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from stackordercss.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    return
+  end subroutine model_stackorder
+
+  subroutine model_stackarray(css,crc250,irc)
+    type(session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(file), pointer :: currentFile => null()
+    integer :: ii
+    character*25 :: myname = "model_stackarray"
+    !
+    ! make array of files
+    if(bdeb)write(*,*)myname,' Entering.'
+    if (associated(css%fileStack)) deallocate(css%fileStack)
+    if (allocated(css%fileStackSort)) deallocate(css%fileStackSort)
+    if (allocated(css%fileStackInd)) deallocate(css%fileStackInd)
+    allocate(css%fileStack(css%nFileIndexes),css%fileStackSort(css%nFileIndexes),&
+         &css%fileStackInd(css%nFileIndexes),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from allocate (")
+       call model_errorappendi(crc250,css%nFileIndexes)
+       call model_errorappend(crc250,")")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Here.'
+    css%msort=0 ! max number of forecasts
+    currentFile => css%firstFile%next
+    ii=0
+    do while (.not.associated(currentFile, target=css%lastFile))
+       css%msort=max(css%msort,currentFile%nsort)
+       ii=ii+1
+       if (ii.le.css%nFileIndexes) then
+          css%fileStack(ii)%pointer => currentFile
+          css%fileStackInd(ii)=ii
+          css%fileStackSort(ii)=css%fileStack(ii)%pointer%trg
+       end if
+       currentFile => currentFile%next
+    end do
+    if(bdeb)write(*,*)myname,' There.'
+    if (ii.ne.css%nFileIndexes) then
+       irc=944
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," System error:")
+       call model_errorappendi(crc250,css%nFileIndexes)
+       call model_errorappend(crc250,"!=")
+       call model_errorappendi(crc250,ii)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! make sorted index (chronologically)
+    css%nFileSortIndexes=css%nFileIndexes
+    css%newnFileSortIndexes=css%nFileIndexes
+    call model_heapsort1r(css%nFileIndexes,css%fileStackSort,1.0D-5,&
+         & css%newnFileSortIndexes,css%nFileSortIndexes,css%fileStackInd,.false.)
+    css%stackReady = .true.
+    ! set time range
+    if(bdeb)write(*,*)myname,' Where.'
+    call model_stacklast(css,crc250,irc)   ! start with latest analysis
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from setLatestAna.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Done.'
+    return
+  end subroutine model_stackarray
+
+  subroutine model_stackfirst(css,crc250,irc)
+    type(session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_stackfirst"
+    if (.not.css%stackReady) then
+       irc=945
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Analysis not initialised.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    css%currentFileSortIndex=0
+    css%currentFileIndex=0
+  end subroutine model_stackfirst
+
+  subroutine model_stacklast(css,crc250,irc)
+    type(session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_stacklast"
+    if (.not.css%stackReady) then
+       irc=946
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Analysis not initialised.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    css%currentFileSortIndex=css%newnFileSortIndexes+1
+    css%currentFileIndex=0
+  end subroutine model_stacklast
+  !
+  ! Prepare to process next analysis
+  !
+  subroutine model_getprevfilelen(sid,ltset,tstart,tend,maxrep,crc250,irc)
+    integer :: sid
+    logical :: ltset
+    real    :: tstart
+    real    :: tend
+    integer :: maxrep        ! max number of reports
+    character*250 :: crc250
+    integer :: irc
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_getprevfilelen"
+    !bdeb=.true.
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.css%stackReady) then
+       if(bdeb)write(*,*)myname,'Calling makeana.'
+       call model_stackarray(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stackarray.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if(bdeb)write(*,*)myname,'Calling setlastana.'
+       call model_stacklast(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stacklast.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    if(bdeb)write(*,*)myname,'There.',css%currentFileIndex,css%nFileIndexes
+    maxrep=1+2+css%msort
+    if(bdeb)write(*,*)myname,' Done.',maxrep
+    !bdeb=.false.
+  end subroutine model_getprevfilelen
+  !
+  subroutine model_getprevfile(sid,ltset,tstart,tend,maxrep,nrep,rep250, crc250,irc)
+    integer :: sid
+    logical :: ltset
+    real    :: tstart
+    real    :: tend
+    integer :: maxrep        ! max number of reports
+    integer :: nrep          ! number of reports
+    character*250 :: rep250(maxrep)  ! model report
+    character*250 :: crc250
+    integer :: irc
+    logical :: ltrg
+    real :: trg
+    integer :: nsort                  ! number of forecasts in analysis (0=no more data)
+    real, allocatable :: sort(:) ! forecast times
+    character*50 :: s1, s2, s3
+    integer :: len1,len2,len3,lenr,lens,jj
+    integer, external :: length
+    type(session), pointer :: css !  current session
+    logical :: bdone
+    character*25 :: myname = "model_getprevfile"
+    !bdeb=.true.
+    if(bdeb)write(*,*)myname,' Entering.',ltset
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.css%stackReady) then
+       call model_stackarray(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stackarray.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       call model_stacklast(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stacklast.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    call model_setSortLimits(css,ltset,tstart,tend)
+    bdone=.false.
+    css%currentFileSortIndex=css%currentFileSortIndex-1                ! count down...
+    if(bdeb)write(*,*)myname,' Current sort index.',css%currentFileSortIndex
+    if (css%currentFileSortIndex.le.0) then
+       nsort=0 ! no more data
+       bdone=.true.
+       if(bdeb)write(*,*)myname,'No more data.'
+    else
+       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
+       css%currentFile => css%fileStack(css%currentFileIndex)%pointer
+    end if
+    SEARCH : do while (.not.bdone)
+       if (css%currentFile%ltset .and. css%ltset) then
+          if ((css%currentFile%tstart.le.css%tend .and.css%currentFile%tstart.ge.css%tstart) .or.  &
+               & (css%currentFile%tend.le.css%tend .and.css%currentFile%tend.ge.css%tstart) .or. &
+               & (css%currentFile%tstart.le.css%tstart .and.css%currentFile%tend.ge.css%tstart) .or. &
+               & (css%currentFile%tstart.le.css%tend .and.css%currentFile%tend.ge.css%tend)) then ! overlap
+             bdone=.true.
+          else ! next
+             if(bdeb)write(*,*)myname,'No time match:',css%currentFileSortIndex, &
+                  & css%currentFile%ltset,css%currentFile%tstart,css%currentFile%tend,&
+                  & css%ltset,css%tstart,css%tend
+
+             css%currentFileSortIndex=css%currentFileSortIndex-1                ! count down...
+             if (css%currentFileSortIndex.le.0) then
+                bdone=.true.
+             else
+                css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
+                css%currentFile => css%fileStack(css%currentFileIndex)%pointer
+             end if
+          end if
+       else ! no search necessary
+          bdone=.true.
+       end if
+    end do SEARCH
+    if (css%currentFileSortIndex.gt.0.and.css%currentFileSortIndex.le.css%newnFileSortIndexes) then
+       if(bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex,nsort
+       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
+       call model_stackinflate(css,ltrg, trg, nsort, sort, crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from inflatefile.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! insert data into report strings (rep250)...
+       ! 
+       if(bdeb)write(*,*)myname," Maxrep:",maxrep,css%currentFileIndex,ltrg
+       nrep=0
+       ! make file name        +1
+       nrep=min(maxrep,nrep+1)
+       rep250(nrep)=css%fileStack(css%currentFileIndex)%pointer%fn250
+       lenr=length(rep250(nrep),250,10)
+       rep250(nrep)="file"//sep//"name"//sep//rep250(nrep)(1:lenr)
+       if (ltrg) then
+          write(s1,'(F17.5)') trg; call chop0(s1,50); len1=length(s1,50,10)
+          call chop0(css%sort_variable,80)
+          lens=length(css%sort_variable,80,10)
+          if (lens.gt.0) then
+             nrep=min(maxrep,nrep+1) ! make target entry        +1
+             rep250(nrep)="file"//sep//"sort"//sep//"variable"//sep//css%sort_variable(1:lens)//sep//s1(1:len1)
+             do jj=1,nsort
+                write(s2,'(I12)') jj; call chop0(s2,50);len2=length(s2,50,1)
+                write(s3,'(F17.5)') sort(jj); call chop0(s3,50); len3=length(s3,50,10)
+                nrep=min(maxrep,nrep+1) ! sort values      +nsort
+                rep250(nrep)="file"//sep//"variable"//&
+                     & sep//css%sort_variable(1:lens)//sep//s2(1:len2)//sep//s3(1:len3)
+             end do
+             write(s2,'(I12)') nsort; call chop0(s2,50);len2=length(s2,50,1)
+             nrep=min(maxrep,nrep+1) ! number of sort values   +1
+             rep250(nrep)="file"//sep//"variable"//&
+                  & sep//css%sort_variable(1:lens)//sep//"cnt"//sep//s2(1:len2)
+             
+          end if
+       end if
+    else
+       if(bdeb)write(*,*)myname,' No more data.',css%currentFileSortIndex,css%newnFileSortIndexes
+    end if
+    if (allocated(sort)) deallocate(sort)
+    if(bdeb)write(*,*)myname,' Done.',nrep
+    !bdeb=.false.
+  end subroutine model_getprevfile
+
+  !
+  ! Prepare to process next analysis
+  !
+  subroutine model_getnextfilelen(sid,ltset,tstart,tend,maxrep,crc250,irc)
+    integer :: sid
+    logical :: ltset
+    real    :: tstart
+    real    :: tend
+    integer :: maxrep        ! max number of reports
+    character*250 :: crc250
+    integer :: irc
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_getnextfilelen"
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+     if (.not.css%stackReady) then
+       call model_stackarray(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stackarray.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       call model_stackfirst(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stacklast.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    maxrep=1+2+css%msort
+  end subroutine model_getnextfilelen
+  !
+  subroutine model_getnextfile(sid,ltset,tstart,tend,maxrep,nrep,rep250, crc250,irc)
+    integer :: sid
+    logical :: ltset
+    real    :: tstart
+    real    :: tend
+    integer :: maxrep        ! max number of reports
+    integer :: nrep          ! number of reports
+    character*250 :: rep250(maxrep)  ! model report
+    character*250 :: crc250
+    integer :: irc
+    logical :: ltrg
+    real :: trg
+    integer :: nsort                  ! number of forecasts in analysis (0=no more data)
+    real, allocatable :: sort(:) ! forecast times
+    character*50 :: s1, s2, s3
+    integer :: len1,len2,len3,lenr,lens,jj
+    integer, external :: length
+    logical :: bdone
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_getnextfile"
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.css%stackReady) then
+       call model_stackarray(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stackarray.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       call model_stackfirst(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stackfirst.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    call model_setSortLimits(css,ltset,tstart,tend)
+    bdone=.false.
+    css%currentFileSortIndex=css%currentFileSortIndex+1                ! count down...
+    if (css%currentFileSortIndex.gt.css%newnFileSortIndexes) then
+       nsort=0 ! no more data
+       bdone=.true.
+    else
+       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
+       css%currentFile => css%fileStack(css%currentFileIndex)%pointer
+    end if
+    SEARCH : do while (.not.bdone)
+       if (css%currentFile%ltset .and. css%ltset) then
+          if ((css%currentFile%tstart.le.css%tend .and.css%currentFile%tstart.ge.css%tstart) .or.  &
+               & (css%currentFile%tend.le.css%tend .and.css%currentFile%tend.ge.css%tstart) .or. &
+               & (css%currentFile%tstart.le.css%tstart .and.css%currentFile%tend.ge.css%tstart) .or. &
+               & (css%currentFile%tstart.le.css%tend .and.css%currentFile%tend.ge.css%tend)) then ! overlap
+             bdone=.true.
+          else ! next
+             css%currentFileSortIndex=css%currentFileSortIndex+1                ! count down...
+             if (css%currentFileSortIndex.gt.css%newnFileSortIndexes) then
+                bdone=.true.
+             else
+                css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
+                css%currentFile => css%fileStack(css%currentFileIndex)%pointer
+             end if
+          end if
+       else ! no search necessary
+          bdone=.true.
+       end if
+    end do SEARCH
+    if (css%currentFileSortIndex.gt.0.and.css%currentFileSortIndex.le.css%newnFileSortIndexes) then
+       if(bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex,nsort
+       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
+       call model_stackinflate(css,ltrg, trg, nsort, sort, crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from inflateAna.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! insert data into report strings (rep250)...
+       !
+       nrep=0
+       ! make file name        +1
+       nrep=min(maxrep,nrep+1)
+       rep250(nrep)=css%fileStack(css%currentFileIndex)%pointer%fn250
+       lenr=length(rep250(nrep),250,10)
+       rep250(nrep)="file"//sep//"name"//sep//rep250(nrep)(1:lenr)
+       if (ltrg) then
+          write(s1,'(F17.5)') trg; call chop0(s1,50); len1=length(s1,50,10)
+          call chop0(css%sort_variable,80)
+          lens=length(css%sort_variable,80,10)
+          if (lens.gt.0) then
+             nrep=min(maxrep,nrep+1) ! make target entry        +1
+             rep250(nrep)="file"//sep//"sort"//sep//"variable"//sep//css%sort_variable(1:lens)//sep//s1(1:len1)
+             do jj=1,nsort
+                write(s2,'(I12)') jj; call chop0(s2,50);len2=length(s2,50,1)
+                write(s3,'(F17.5)') sort(jj); call chop0(s3,50); len3=length(s3,50,10)
+                nrep=min(maxrep,nrep+1) ! sort values      +nsort
+                rep250(nrep)="file"//sep//"variable"//&
+                     & sep//css%sort_variable(1:lens)//sep//s2(1:len2)//sep//s3(1:len3)
+             end do
+             write(s2,'(I12)') nsort; call chop0(s2,50);len2=length(s2,50,1)
+             nrep=min(maxrep,nrep+1) ! number of sort values   +1
+             rep250(nrep)="file"//sep//"variable"//&
+                  & sep//css%sort_variable(1:lens)//sep//"cnt"//sep//s2(1:len2)
+
+          end if
+       end if
+    end if
+    if (allocated(sort)) deallocate(sort)
+  end subroutine model_getnextfile
+
+  !
+  ! private: used by nextfile and prevfile to extract information from analysis
+  !
+  subroutine model_stackinflate(css,ltset, trg, nsort, sort, crc250,irc)
+    type(session), pointer :: css !  current session
+    logical :: ltset
+    real :: trg
+    integer :: nsort                   ! number of forecasts in analysis (0=no more data)
+    real, allocatable :: sort(:)  ! forecast times
+    character*250 :: crc250
+    integer :: irc
+    integer :: isort,ii
+    character*25 :: myname = "model_stackinflate"
+    isort=css%fileStack(css%currentFileIndex)%pointer%nsort
+    if (isort .ne. nsort) then
+       nsort=isort
+       if (allocated(sort)) deallocate(sort)
+       allocate(sort(nsort),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'sort'.")
+          call model_errorappendi(crc250,nsort)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    do ii=1,nsort
+       sort(ii)=css%fileStack(css%currentFileIndex)%pointer%sort(&
+            & css%fileStack(css%currentFileIndex)%pointer%indsort(ii))
+    end do
+    ltset=css%fileStack(css%currentFileIndex)%pointer%ltset
+    trg=css%fileStack(css%currentFileIndex)%pointer%trg
+    return
+  end subroutine model_stackinflate
+
+  !
+  ! private subroutine for setting start/end-search-dates
+  !
+  subroutine model_setSortLimits(css,ltset,tstart,tend)
+    type(session), pointer :: css !  current session
+    logical :: ltset
+    real :: tstart,tend
+    integer :: irc2
+    character*22 :: myname="model_setSortLimits"
+    css%ltset=ltset
+    css%tstart=tstart
+    css%tend=tend
+  end subroutine model_setSortLimits
+  !
+  !###############################################################################
+  !ROUTINES FOR REPORTATING CURRENT ANALYSIS AND OBSERVATIONS
+  !###############################################################################
+  !
+  subroutine model_reportalloc(css,nloc,report,loc,cFilePointer,crc250,irc)
+    type(session), pointer :: css !  current session
+    integer :: nloc
+    type(reportPointer), allocatable :: report(:)
+    type(locPointer), allocatable :: loc(:)
+    type(filePointer) :: cFilePointer
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    integer ii
+    !
+    character*25 :: myname = "model_reportalloc"
+    type(reportItem), pointer :: current, next
+    !
+    ! deallocate the report-stack
+    !
+    css%nreport=nloc
+    if (allocated(report)) then
+       do ii=1,css%nreport
+          ! write(*,*)myname,' Looping.',ii
+          if (associated(report(ii)%pointer)) then
+             current => report(ii)%pointer%first%next
+             do while (.not.associated(current,target=report(ii)%pointer%last))
+                next => current%next
+                deallocate(current)
+                current => next
+             end do
+             deallocate(report(ii)%pointer%first,report(ii)%pointer%last)
+             deallocate(report(ii)%pointer)
+          end if
+       end do
+       deallocate(report)
+    end if
+    !
+    ! allocate new colocation stack
+    !
+    if (bdeb) write(*,*)myname,'Allocating reports: ',css%nreport
+    allocate(report(css%nreport),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'report'.")
+       call model_errorappendi(crc250,css%nreport)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    do ii=1,css%nreport
+       allocate (report(ii)%pointer,stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'pointer'.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       allocate(report(ii)%pointer%first,report(ii)%pointer%last,stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'pointer%first/last'.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if(bdeb)write(*,*)myname,'Initialising REPORT chain:',ii,&
+            & associated(report(ii)%pointer%first),associated(report(ii)%pointer%last)
+       report(ii)%pointer%first%next => report(ii)%pointer%last
+       report(ii)%pointer%last%prev => report(ii)%pointer%first
+       if(bdeb)write(*,*)myname,'Here:',ii,irc
+       ! allocate upper/lower/level indexes
+       report(ii)%locid50=loc(ii)%pointer%locid50
+       if(bdeb)write(*,*)myname,'There:',ii,irc
+       report(ii)%file=>cFilePointer%pointer
+    end do
+    if(bdeb)write(*,*)myname,'Done:',irc
+  end subroutine model_reportalloc
+
+  !
+  ! remove colocation-item
+  !
+  subroutine model_removeReport(css,creport,crc250,irc)
+    type(session), pointer :: css !  current session
+    type(report), pointer :: creport
+    character*250 :: crc250
+    integer :: irc  ! error return code (0=ok)
+    type(reportItem), pointer :: citem,nitem
+    if (associated(creport%first)) then
+       citem=>creport%first%next
+       do while (.not.associated(citem,target=creport%last))
+          nitem=>citem%next;
+          deallocate(citem)
+          citem=>nitem;
+       end do
+       deallocate(creport%first, creport%last)
+    end if
+  end subroutine model_removeReport
+  !
+  ! retrieve next pready obs/model
+  !
+  subroutine model_stackslicecurrentfilelen(sid,maxrep,type20,crc250,irc)
+    integer :: sid
+    integer :: maxrep        ! max number of reports
+    character*20 :: type20  ! type of interpolation
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    character*50, allocatable :: locid50(:)
+    real, allocatable :: lat(:)
+    real, allocatable :: lon(:)
+    integer :: nrloc,ii,lent
+    integer, external :: length
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackslicecurrentfilelen"
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    call chop0(type20,20)
+    lent=length(type20,20,10)
+    if (lent.ne.0) then
+       if (type20(1:lent).eq."bilinear") then
+          css%model_interpol=interpol_bilinear
+       else if (type20(1:lent).eq."bicubic") then
+          css%model_interpol=interpol_bicubic
+       else if (type20(1:lent).eq."nearest_neighbor") then
+          css%model_interpol=interpol_nearest_neighbor
+       else
+          irc=999
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Invalid interpolation method.")
+          call model_errorappend(crc250,type20)
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+       end if
+    end if
+    if (.not.css%pready) then
+       css%maxreport=0
+       call model_locget(css,nrloc,locid50,lat,lon,css%locData,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_locget.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       call model_reportalloc(css,nrloc,css%reportData,css%locData,&
+            & css%fileStack(css%currentFileIndex),crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_reportalloc.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! write(*,*)myname,' Reportating.',nrloc
+       call model_stackslicefile(css,nrloc,locid50,lat,lon,css%locData,&
+            & css%fileStack(css%currentFileIndex),crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from model_stackslicefile.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if(bdeb)write(*,*)myname,' Done.',nrloc
+       css%pready=.true.
+    end if
+    if (allocated(locid50)) deallocate(locid50)
+    if (allocated(lat)) deallocate(lat)
+    if (allocated(lon)) deallocate(lon)
+    maxrep=max(css%maxreport,1)
+  end subroutine model_stackslicecurrentfilelen
+  !
+  ! retrieve next obs/model
+  !
+  subroutine model_stackslicecurrentfile(sid,maxrep,nrep,rep250,bok,crc250,irc)
+    integer :: sid
+    integer :: maxrep        ! max number of reports
+    integer :: nrep          ! number of reports
+    character*250 :: rep250(maxrep)  ! model report
+    logical :: bok           ! was get successful?
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    type(reportItem), pointer :: old ! last reportItem
+    character*250 :: buff250
+    integer :: lenr, lenb, lenc
+    logical :: bdone
+    integer, external :: length
+    type(reportItem), pointer :: current => null()
+    type(session), pointer :: css !  current session
+    character*25 :: myname = "model_stackslicecurrentfile"
+    if(bdeb)write(*,*)myname,' Entering.'
+    call model_getSession(css,sid,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getSession.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    ! check if colocation data is prepared....
+    ! write(*,*)myname,' There.',css%creport,css%nreport
+    ! find next colocation data element...
+    bok=.false.
+    css%creport=css%creport+1
+    bdone=css%creport.gt.css%nreport
+    do while (.not.bdone)
+       ! write(*,*)myname,' Loop.',css%creport,css%nreport
+       if (associated(css%reportData(css%creport)%pointer)) then
+          bdone=.true.
+       else
+          css%creport=css%creport+1
+          bdone=css%creport.gt.css%nreport
+       end if
+    end do
+    ! write(*,*)myname,' Where.',css%creport,css%nreport
+    if (css%creport.le.css%nreport) then
+       bok=.true.
+       nrep=0
+       ! loop over colocation items and make hash-entries...
+       current => css%reportData(css%creport)%pointer%first%next
+       do while (.not.associated(current,target=css%reportData(css%creport)%pointer%last))
+          nrep=min(maxrep,nrep+1)
+          !
+          ! location name
+          !
+          write(buff250,'(I8)') css%creport
+          call chop0(buff250,250)
+          lenb=length(buff250,250,10)
+          call chop0(css%reportData(css%creport)%locid50,50)
+          lenc=length(css%reportData(css%creport)%locid50,50,10)
+          rep250(nrep)=sep//css%reportData(css%creport)%locid50(1:lenc)//sep//buff250(1:lenb) ! location name
+          lenr=1+lenc+1+lenb
+          !
+          ! model name
+          !
+          buff250=css%reportData(css%creport)%file%mod250
+          call chop0(buff250,250)
+          lenb=length(buff250,250,10)
+          if (lenb.gt.0) then
+             rep250(nrep)=rep250(nrep)(1:lenr)//sep//buff250(1:lenb) ! model name
+             lenr=lenr+1+lenb
+          end if
+          !
+          ! description
+          !
+          buff250=current%desc250
+          call chop0(buff250,250)
+          lenb=length(buff250,250,10)
+          if (lenb.gt.0) then
+             rep250(nrep)=rep250(nrep)(1:lenr)//buff250(1:lenb) ! description
+             lenr=lenr+lenb
+          end if
+          !
+          ! value
+          !
+          write(buff250,*) current%value
+          call chop0(buff250,250)
+          lenb=length(buff250,250,10)
+          rep250(nrep)=rep250(nrep)(1:lenr)//sep//buff250(1:lenb) ! value
+          lenr=lenr+1+lenb
+          !
+          ! next item...
+          !
+          bok=.true.
+          current => current%next
+       end do
+       if (nrep.eq.0) then
+          if(bdeb)write(*,*) myname,'No data for location. How strange.'
+       else
+          ! write(*,*) myname,'Number of reports:',nrep,css%reportData(css%creport)%pointer%nreport,css%maxreport,maxrep
+       end if
+    else 
+       bok=.false.
+       nrep=0
+    end if
+    if(bdeb)write(*,*)myname,' Done.',bok
+    return
+  end subroutine model_stackslicecurrentfile
+
+  !
+  ! private: reportates analysis and locations with the two given time-steps... (before and after)
+  !
+  subroutine model_stackslicefile(css,nloc,locid50,loclat,loclon,loc,cFilePointer,crc250,irc)
+    type(session), pointer :: css !  current session
+    integer :: nloc          ! number of locations
+    character*50 :: locid50(nloc)
+    real, allocatable :: loclon(:)     ! longitude (deg)
+    real, allocatable :: loclat(:)     ! latitude (deg)
+    type(locPointer) :: loc(nloc)   !  location pointer
+    type(filePointer) :: cFilePointer ! stack item to process
+    character*250 :: crc250
+    integer :: irc
+    type(slice), pointer :: cSlice
+    integer :: itime
+    !    type(reportPointer), pointer :: XXXXX
+    real, allocatable :: poslat(:)
+    real, allocatable :: poslon(:)
+    integer :: dir, ileft, iright
+    integer,parameter :: goDown = 1
+    integer,parameter :: findNext = 2
+    integer :: ovalues,nvalues, newvalues
+    real :: targetValue                        ! target value
+    real(KIND=8), allocatable :: values(:)
+    integer, allocatable :: indval(:)
+    integer :: iana = -1
+    character*80, allocatable :: varnames(:),in_varnames(:)
+    character*80, allocatable :: gdimnames(:),dimnames(:)
+    integer, allocatable :: gdimsize(:)
+    integer, allocatable :: start(:), vsize(:)
+    integer :: adim, ival, ndims
+    integer, external :: length
+    character*50 :: s1, s2, s3
+    integer :: len1,len2,len3,lenr,lens
+    integer :: nvar, ndim, in_nvar, clevel
+    integer :: lenh,lenv,lenb,leng,lend,npos,ii,jj,kk
+    TYPE(fimexio),TARGET  :: fio      ! current fimex-object
+    TYPE(fimexio),TARGET  :: fin      ! interpolation fimex-object
+    TYPE(fimexio),pointer :: cio      ! current fimex-object to use
+    integer, allocatable :: indvar(:), inddim(:), indvari(:)
+    integer, allocatable :: posind(:), pospos(:), posval(:)
+    type(locPointer), allocatable :: posloc(:)
+    type(reportPointer), pointer :: cReportPointer
+    logical :: bok
+    character*250 :: buff250, desc250
+    CHARACTER(LEN=80)               :: varname, dimname
+    type(slice), target       :: rootSlice
+    integer :: nslice, dimsize
+    character*80, allocatable :: sdimnames(:)
+    character*250, allocatable :: sdesc250(:)
+    character*25 :: myname = "model_stackslicefile"
+    !
+    !
+    ! open stack file
+    !
+    if(bdeb)write(*,*)myname,' Entering.',nloc
+    call model_fimexopen(css,fio,cFilePointer%pointer,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from openFile.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! get list of dimensions in file
+    !
+    if(bdeb)write(*,*)myname,' Here.',nloc
+    call model_fimexgetdimnames(css,fio,ndim,gdimnames,gdimsize,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getVarnames.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! get list of variables in file
+    !
+    if(bdeb)write(*,*)myname,' There.',nloc
+    call model_fimexgetvarnames(css,fio,nvar,varnames,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getVarnames.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! make latlon interpolation slice...
+    !
+    if(bdeb)write(*,*)myname,' Care.',nloc
+    if (nloc.eq.0) then
+       irc=200
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," No valid locations specified.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    call model_fimexlatlon(css,fio,fin,nloc,loclat,loclon,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from model_fimexlatlon.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! retrieve latlon-interpolated variables
+    !
+    call model_fimexgetvarnames(css,fin,in_nvar,in_varnames,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getVarnames.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! make slice -- variable/dimension indexes
+    !
+    if(bdeb)write(*,*)myname,' Share.',nloc
+    if (allocated(indvar)) deallocate(indvar)
+    if (allocated(inddim)) deallocate(inddim)
+    if (allocated(indvari)) deallocate(indvari)
+    allocate(indvar(css%ngslice),inddim(css%ngslice),indvari(nvar),stat=irc)
+    do jj=1,nvar
+       indvari(jj)=0
+    end do
+    do ii=1,css%ngslice
+       indvar(ii)=0
+       inddim(ii)=0
+       call chop0(css%gslice80(ii),80)
+       leng=length(css%gslice80(ii),80,10)
+       if (leng.gt.2) then
+          if (css%gslice80(ii)(1:1).eq."(".and.css%gslice80(ii)(leng:leng).eq.")") then
+             do jj=1,ndim
+                lend=length(gdimnames(jj),80,10)
+                if (css%gslice80(ii)(2:leng-1).eq.gdimnames(jj)(1:lend)) then
+                   inddim(ii)=jj
+                end if
+             end do
+          end if
+       end if
+       if (inddim(ii).eq.0) then
+          do jj=1,nvar
+             lenv=length(varnames(jj),80,10)
+             if (css%gslice80(ii)(1:leng).eq.varnames(jj)(1:lenv)) then
+                indvar(ii)=jj
+                indvari(jj)=ii
+                if(bdeb)write(*,*) myname,'Equal: "'//css%gslice80(ii)(1:leng)//'"  "'//varnames(jj)(1:lenv)//'"',ii,jj
+             end if
+          end do
+       end if
+       if (inddim(ii).eq.0.and.indvar(ii).eq.0) then
+          if(bdeb)write(*,*) myname,'Unrecognised slice ignored:',css%gslice80(ii)(1:leng)
+       end if
+    end do
+    !
+    ! compress global arrays
+    !
+    ii=1
+    do while (ii.le.css%ngslice)
+       if (indvar(ii).eq.0.and.inddim(ii).eq.0) then
+          leng=length(css%gslice80(ii),80,10)
+          if(bdeb)write(*,*)myname,'Unable to interpret slice variable: "'//css%gslice80(ii)(1:leng)//'"'
+          do jj=ii+1,css%ngslice
+             css%gslice80(jj-1)=css%gslice80(jj)
+             css%gindex(jj-1)=css%gindex(jj)
+             css%gindexi(css%gindex(jj-1))=jj-1
+             indvar(jj-1)=indvar(jj)
+             inddim(jj-1)=inddim(jj)
+          end do
+          css%ngslice=css%ngslice-1
+       else
+          ii=ii+1
+       end if
+    end do
+    !
+    ! initiate root-slice
+    !
+    if(bdeb)write(*,*)myname,' Anywhere.',nloc
+    call model_sliceinitiate(css,rootSlice,nloc,loc,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'dimname'.")
+       call model_errorappendi(crc250,ndim)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! make lat/lon/locid50 reports
+    !
+    do jj=1,rootSlice%nloc
+       cReportPointer => css%reportData(rootSlice%loc(jj)%pointer%index)
+       !
+       ! latitude
+       !
+       varname="latitude"
+       call chop0(varname,80)
+       lenv=length(varname,80,10)
+       desc250=sep//"slice"//sep//varname(1:lenv)//sep//"target"
+       call model_reportItem(css,cio,cReportPointer,desc250,rootSlice%loc(jj)%pointer%lat,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from add.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! longitude
+       !
+       varname="longitude"
+       call chop0(varname,80)
+       lenv=length(varname,80,10)
+       desc250=sep//"slice"//sep//varname(1:lenv)//sep//"target"
+       call model_reportItem(css,cio,cReportPointer,desc250,rootSlice%loc(jj)%pointer%lon,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from add.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end do
+    !
+    ! Define the slice-tree and create reports for slice-variables
+    !
+    ovalues=-1
+    if(bdeb)then
+       write(*,*)myname,' Slice variables:',css%ngslice
+       do ii=1,css%ngslice                  ! loop over slice operations
+          leng=length(css%gslice80(ii),80,10)
+          write(*,*)myname,'    Slicing:',ii,(indvar(ii).ne.0),(inddim(ii).ne.0),css%gslice80(ii)(1:leng)
+       end do
+    end if
+    !
+    ! allocate slice-dimname stack
+    !
+    nslice=css%ngslice
+    allocate(sdimnames(max(1,nslice)),stat=irc)
+    allocate(sdesc250(max(1,nslice)),stat=irc)
+    !
+    SLICELOOP: do ii=1,css%ngslice                  ! loop over slice operations
+       sdimnames(ii)=""
+       sdesc250(ii)=""
+       leng=length(css%gslice80(ii),80,10)
+       if(bdeb)write(*,*)myname,'SLICE:',ii,indvar(ii),inddim(ii),css%gslice80(ii)(1:leng)
+       if (indvar(ii).ne.0) then      ! variable slice operations
+          ! load variable
+          varname=varnames(indvar(ii))
+          lenv=length(varname,80,10)
+          if(bdeb)write(*,*)myname,'         Slicing:',indvar(ii),varname(1:lenv),"("//css%gslice80(ii)(1:leng)//")"
+          call model_fimexassignpointer(css,cio,fio,fin,varname,in_nvar,in_varnames,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from assignPointer.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          ndims=-1
+          call model_fimexrange(css,cio,varname,ndims,dimnames,start,vsize,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from getrange.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       else
+          varname="undef"
+          ndims=-1
+       end if
+       ! slice down to current level
+       dir=goDown ! go down / find next
+       cSlice => rootSlice ! current slice
+       do while (associated(cSlice))
+          if(bdeb)write(*,*)myname,'Looping:',dir,ii,cslice%level,css%gslice80(ii)(1:leng)
+          if (dir.eq.goDown) then ! go down
+             if(bdeb)write(*,*)myname,'   Going down.',ii,cslice%level,css%gslice80(ii)(1:leng)
+             if ( cslice%level .eq. ii-1 ) then ! we are at the right parent layer (create child slice)
+                if(bdeb)write(*,*)myname,'      Bottom:',ii,cslice%level,css%gslice80(ii)(1:leng)
+                if (indvar(ii).ne.0) then            ! variable slice operations
+                   desc250=model_pretty(varname,ndims,dimnames,start,vsize)
+                   lend=length(desc250,250,10)
+                   if(bdeb)write(*,*)myname,'Initial variable:',desc250(1:lend),ndims
+                   call model_sliceparents(css,cio,cSlice,varname,ndims,dimnames,start,vsize,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from model_sliceparents.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                   if(bdeb)write(*,*)myname,'There again.'
+                   ! get active dimension name and corresponding ostart and odim
+                   adim=0
+                   nvalues=1
+                   do jj=1,ndims
+                      lend=length(dimnames(jj),80,1)
+                      if (dimnames(jj)(1:lend).ne."x") then ! this is the pre-defined "locations" dimension...
+                         nvalues=nvalues*vsize(jj)
+                         if (vsize(jj).gt.1) then
+                            if (adim.eq.0) then
+                               adim=jj
+                            else
+                               adim=-1
+                            end if
+                         end if
+                      end if
+                   end do
+                   if (adim.gt.0) then
+                      dimname=dimnames(adim)
+                      sdimnames(ii)=dimname
+                      ! read varname data
+                      if(bdeb)write(*,*)myname,'Adim nvalues:',adim,nvalues
+                      if (ovalues.ne.nvalues) then
+                         if (allocated(values)) deallocate(values)
+                         allocate(values(nvalues),stat=irc)
+                         ovalues=nvalues
+                         if (irc.ne.0) then
+                            call model_errorappend(crc250,myname)
+                            call model_errorappend(crc250,"Unable to allocate 'values(")
+                            call model_errorappendi(crc250,nvalues)
+                            call model_errorappend(crc250,")'")
+                            call model_errorappend(crc250,"\n")
+                            return
+                         end if
+                      end if
+                      !
+                      if(bdeb)write(*,*)myname,'Slice indexes.',nvalues
+                      if (allocated(indval)) deallocate(indval)
+                      allocate(indval(nvalues),stat=irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250,"Unable to allocate 'indval'.")
+                         call model_errorappendi(crc250,nvalues)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                      if (allocated(posind)) deallocate(posind)
+                      if (allocated(pospos)) deallocate(pospos)
+                      if (allocated(posval)) deallocate(posval)
+                      if (allocated(posloc)) deallocate(posloc)
+                      allocate(posind(cSlice%nloc*2),pospos(cSlice%nloc*2),posval(cSlice%nloc*2),posloc(cSlice%nloc*2),stat=irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250,"Unable to allocate 'posind'.")
+                         call model_errorappendi(crc250,cSlice%nloc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                      !
+                      ! loop over locations
+                      !
+                      if(bdeb)write(*,*)myname,'Locations nloc:',cSlice%nloc
+                      npos=0 ! number of positions (ileft and iright)
+                      if (cSlice%active.ne.-1) then ! data should be used
+                         do jj=1,cSlice%nloc
+                            cReportPointer => css%reportData(cSlice%loc(jj)%pointer%index)
+                            call model_slicex(css,cio,cSlice%loc(jj)%pointer%index,varname,ndims,dimnames,start,vsize,crc250,irc)
+                            if (irc.ne.0) then
+                               call model_errorappend(crc250,myname)
+                               call model_errorappend(crc250," Error return from model_slicex.")
+                               call model_errorappendi(crc250,irc)
+                               call model_errorappend(crc250,"\n")
+                               return
+                            end if
+                            ! call model_fimexrange(css,cio,varname,ndims,dimnames,start,vsize,crc250,irc)
+                            ! if (irc.ne.0) then
+                            !    call model_errorappend(crc250,myname)
+                            !    call model_errorappend(crc250," Error return from getrange.")
+                            !    call model_errorappendi(crc250,irc)
+                            !    call model_errorappend(crc250,"\n")
+                            !    return
+                            ! end if
+                            desc250=model_pretty(varname,ndims,dimnames,start,vsize)
+                            lend=length(desc250,250,10)
+                            if(bdeb)write(*,*)myname,'Getting raw values:',nvalues,desc250(1:lend)
+                            call model_fimexvalues(css,cio,varname,nvalues,values,blank50,crc250,irc)
+                            if (irc.ne.0) then
+                               call model_errorappend(crc250,myname)
+                               call model_errorappend(crc250," Error return from getRawValues.")
+                               call model_errorappendi(crc250,irc)
+                               call model_errorappend(crc250,"\n")
+                               return
+                            end if
+                            !
+                            ! make child slice indexes
+                            !
+                            if(bdeb)write(*,*)myname,'Sorting.',nvalues
+                            do kk=1,nvalues
+                               indval(kk)=kk
+                            end do
+                            call model_heapsort1r(nvalues,values,1.0D-5,newvalues,nvalues,indval,.false.)
+                            ! loop through relevant locations and make index of new pos values
+                            targetValue=cSlice%loc(jj)%pointer%sliceTarget(css%gindex(ii)) 
+                            ! sort values and find ileft and iright
+                            if(bdeb)write(*,*)myname,'Searching.',jj,' nloc:',cSlice%nloc," val:",targetValue,&
+                                 & " lev:",ii," org:",css%gindex(ii)
+                            call model_heapsearch1r(nvalues,values,1.0D-5,newvalues,indval,targetValue,ileft,iright)
+                            do kk=1,newvalues
+                               if(bdeb)write(*,*) 'Search:',kk,indval(kk),values(indval(kk)), (values(indval(kk)).gt.targetValue)
+                            end do
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            !
+                            ! make reports
+                            !
+                            if (.not.cSlice%loc(jj)%pointer%printTarget(ii)) then
+                               lend=length(dimname,80,10)
+                               write(s1,'(I8)') ii; call chop0(s1,50); len1=length(s1,50,10)
+                               desc250=sep//"slice"//sep//"dimension"//sep//s1(1:len1)//sep//&
+                                    & dimname(1:lend)//sep//"variable"//sep//varname(1:lenv)//sep//"target"
+                               call model_reportItem(css,cio,cReportPointer,desc250,targetValue,crc250,irc)
+                               if (irc.ne.0) then
+                                  call model_errorappend(crc250,myname)
+                                  call model_errorappend(crc250," Error return from add.")
+                                  call model_errorappendi(crc250,irc)
+                                  call model_errorappend(crc250,"\n")
+                                  return
+                               end if
+                               cSlice%loc(jj)%pointer%printTarget(ii)=.true.
+                            end if
+                            if(bdeb)write(*,*)myname,'Search returned:',targetValue,ileft,iright
+                            if (ileft.le.iright) then
+                               if (ileft.gt.0) then
+                                  if(bdeb)write(*,*)myname,'Adding left:',ileft,indval(ileft),newvalues
+                                  npos=npos+1
+                                  posind(npos)=npos
+                                  pospos(npos)=ileft
+                                  posval(npos)=indval(ileft)
+                                  posloc(npos)%pointer => cSlice%loc(jj)%pointer
+                               end if
+                               if (ileft.lt.iright.and.iright.le.newvalues) then
+                                  if(bdeb)write(*,*)myname,'Adding right:',iright,indval(iright),newvalues
+                                  npos=npos+1
+                                  posind(npos)=npos
+                                  pospos(npos)=iright
+                                  posval(npos)=indval(iright)
+                                  posloc(npos)%pointer => cSlice%loc(jj)%pointer
+                               end if
+                            end if
+                         end do
+                      end if
+                      !
+                      ! make child slice objects
+                      !
+                      lend=length(dimname,80,10)
+                      do jj=1,npos
+                         if(bdeb)write(*,*) myname,'Slicing:',posind(jj),pospos(jj),posval(jj)
+                      end do
+                      if(bdeb)write(*,*)myname,'Make slice children.',dimname(1:lend),' lev:',ii,cSlice%level
+                      call model_slicecreate(css,cSlice,npos,posind,pospos,posval,posloc,&
+                           & dimname,start,vsize,ii,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from create.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                      if(bdeb)write(*,*)myname,'Done model_slicecreate.'
+                   else
+                      if(bdeb)write(*,*) myname,'Slice variable:',varname(1:lenv),' does not have 1 active dimension.'
+                      do jj=1,ndims
+                         lend=length(dimnames(jj)(1:lend),80,10)
+                         if(bdeb)write(*,*)myname,'Slice dims:',dimnames(jj)(1:lend),start(jj),vsize(jj)
+                      end do
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Slice variable without 1 active dimension:")
+                      call model_errorappend(crc250,model_pretty(varname,ndims,dimnames,start,vsize))
+                      irc=347
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                else if (inddim(ii).ne.0) then ! dimension slice operation
+                   dimname=gdimnames(inddim(ii))
+                   dimsize=gdimsize(inddim(ii))
+                   sdimnames(ii)=dimname
+                   lend=length(dimname,80,10)
+                   if(bdeb)write(*,*)myname,'         DimSlice:',inddim(ii),dimname(1:lend),css%gslice80(ii)(1:leng)
+                   !
+                   ! make child slice object containing specified dimension value
+                   !
+                   if (allocated(posind)) deallocate(posind)
+                   if (allocated(pospos)) deallocate(pospos)
+                   if (allocated(posval)) deallocate(posval)
+                   if (allocated(posloc)) deallocate(posloc)
+                   allocate(posind(2*cSlice%nloc),pospos(2*cSlice%nloc),posval(2*cSlice%nloc),posloc(2*cSlice%nloc),stat=irc)
+                   npos=0
+                   do jj=1,cSlice%nloc
+                      targetValue=cSlice%loc(jj)%pointer%sliceTarget(css%gindex(ii))
+                      ! sanity check
+                      if (targetValue .gt. dimsize .or.targetvalue.lt.1) then
+                         irc=457
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Invalid dimension target ")
+                         call model_errorappendi(crc250,nint(targetValue))
+                         call model_errorappend(crc250," (max=")
+                         call model_errorappendi(crc250,dimsize)
+                         call model_errorappend(crc250,") for dimension '"//dimname(1:lend)//"'")
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                      npos=npos+1
+                      posind(npos)=npos
+                      pospos(npos)=floor(targetValue)
+                      posval(npos)=floor(targetValue)
+                      posloc(npos)%pointer => loc(jj)%pointer
+                      if (ceiling(targetValue).ne.floor(targetValue)) then
+                         npos=npos+1
+                         posind(npos)=npos
+                         pospos(npos)=ceiling(targetValue)
+                         posval(npos)=ceiling(targetValue)
+                         posloc(npos)%pointer => loc(jj)%pointer
+                      end if
+                      !
+                      ! make report
+                      !
+                      if (.not.cSlice%loc(jj)%pointer%printTarget(ii)) then
+                         write(s1,'(I8)') ii; call chop0(s1,50); len1=length(s1,50,10)
+                         desc250=sep//"slice"//sep//"dimension"//sep//s1(1:len1)//sep//dimname(1:lend)//sep//"target"
+                         call model_reportItem(css,cio,cReportPointer,desc250,targetValue,crc250,irc)
+                         if (irc.ne.0) then
+                            call model_errorappend(crc250,myname)
+                            call model_errorappend(crc250," Error return from add.")
+                            call model_errorappendi(crc250,irc)
+                            call model_errorappend(crc250,"\n")
+                            return
+                         end if
+                         cSlice%loc(jj)%pointer%printTarget(ii)=.true.
+                      end if
+                   end do
+                   !
+                   ! create slice children
+                   !
+                   if(bdeb)write(*,*)myname,'Make slice children.',dimname(1:lend),' lev:',ii,cSlice%level
+                   call model_slicecreate(css,cSlice,npos,posind,pospos,posval,posloc,&
+                        & dimname,start,vsize,ii,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from create.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                   do jj=1,npos
+                   end do
+                else ! create dummy slice (never actually used for reducing dimensions, just for passing on to next slice)
+                end if
+                ! create reports...
+                dir=findNext
+             else if (associated(cSlice%first)) then ! we have child slices
+                if(bdeb)write(*,*)myname,'      Found child.',dir
+                cSlice => cSlice%first%next
+                if (.not.associated(cSlice,target=cSlice%parent%last)) then
+                   ! slice cSlice, using cSlice%dimname = cSlice%idim
+                   if (indvar(ii).ne.0) then      ! variable slice operations
+                      call model_slicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from slice.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                   else if (inddim(ii).ne.0) then ! no variable to slice...
+                   end if
+                end if
+             else  ! dead end
+                if(bdeb)write(*,*)myname,'      Dead end:',dir
+                dir=findNext
+             end if
+          else if (dir.eq. findNext) then ! find next
+             if (associated(cSlice%parent)) then
+                if (associated(cSlice%next,target=cSlice%parent%last)) then
+                   ! un-slice cSlice
+                   if (indvar(ii).ne.0) then      ! variable slice operations
+                      call model_unslicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from slice.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                   else if (inddim(ii).ne.0) then ! no variable to slice...
+                   end if
+                   cSlice=> cSlice%parent
+                else
+                   ! un-slice cSlice
+                   if (indvar(ii).ne.0) then      ! variable slice operations
+                      call model_unslicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from slice.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                   else if (inddim(ii).ne.0) then ! no variable to slice...
+                   end if
+                   cSlice => cSlice%next
+                   dir=goDown
+                   ! slice cSlice
+                   if (indvar(ii).ne.0) then      ! variable slice operations
+                      call model_slicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from slice.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                   else if (inddim(ii).ne.0) then ! no variable to slice...
+                   end if
+                end if
+             else
+                nullify(cSlice) ! no more objects to process
+             end if
+          end if
+       end do
+    end do SLICELOOP
+    !
+    do ii=1,nslice
+       call chop0(sdimnames(ii),80)
+    end do
+    !
+    ! loop over remaining variables, slicing according to the slice-tree (create remaining reports)
+    !
+    if(bdeb)write(*,*)myname,' ZZZZZZZZZZZZZZZ VARLOOP.',nloc
+    call model_sliceprint(css,"   ",rootSlice)
+    VARLOOP: do ii=1,nvar                       ! loop over slice operations
+       ! if (indvari(ii).ne.0) cycle VARLOOP      ! already processed
+       ! load variable
+       varname=varnames(ii)
+       lenv=length(varname,80,10)
+       ! write(*,*)myname,' Processing:',ii,varname(1:lenv)
+       call model_fimexassignpointer(css,cio,fio,fin,varname,in_nvar,in_varnames,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from assignPointer.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       ndims=-1 ! trigger first - and only - call to get_dimensions
+       call model_fimexrange(css,cio,varname,ndims,dimnames,start,vsize,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from getrange.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       desc250=model_pretty(varname,ndims,dimnames,start,vsize)
+       lend=length(desc250,250,10)
+       if(bdeb)write(*,*)myname,'Initial variable:',desc250(1:lend),ndims
+       ! slice down to current level
+       dir=goDown ! go down / find next
+       cSlice => rootSlice ! current slice
+       cSlice%active=1 ! slice available
+       if(bdeb)write(*,*)myname,'ROOT SLICE.',dir
+       do while (associated(cSlice))
+          if (dir.eq.goDown) then ! go down
+             if(bdeb)write(*,*)myname,'Going down.',dir,goDown
+             if (associated(cSlice%first)) then ! we have child slices
+                if(bdeb)write(*,*)myname,'Processing child slices.',dir,goDown
+                cSlice => cSlice%first%next
+                ! slice cSlice, using cSlice%dimname = cSlice%idim
+                call model_slicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from slice.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+             else ! we are at the bottom layer (create report)
+                if(bdeb)write(*,*)myname,'Bottom slice.',dir,goDown
+                call model_fimexrange(css,cio,varname,ndims,dimnames,start,vsize,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from getrange.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+                nvalues=1
+                do jj=1,ndims
+                   lend=length(dimnames(jj),80,1)
+                   if (dimnames(jj)(1:lend).ne."x") then ! this is the pre-defined "locations" dimension...
+                      nvalues=nvalues*vsize(jj)
+                   end if
+                end do
+                if (ovalues.ne.nvalues) then
+                   if (allocated(values)) deallocate(values)
+                   allocate(values(nvalues),stat=irc)
+                   ovalues=nvalues
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250,"Unable to allocate 'values(")
+                      call model_errorappendi(crc250,nvalues)
+                      call model_errorappend(crc250,")'")
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                end if
+                if (cSlice%active.ne.-1) then ! data should be used
+                   do jj=1,cSlice%nloc
+                      cReportPointer => css%reportData(cSlice%loc(jj)%pointer%index)
+                      call model_slicex(css,cio,cSlice%loc(jj)%pointer%index,varname,ndims,dimnames,start,vsize,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from model_slicex.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                      call model_fimexvalues(css,cio,varname,nvalues,values,blank50,crc250,irc)
+                      if (irc.ne.0) then
+                         call model_errorappend(crc250,myname)
+                         call model_errorappend(crc250," Error return from getRawValues.")
+                         call model_errorappendi(crc250,irc)
+                         call model_errorappend(crc250,"\n")
+                         return
+                      end if
+                      if(bdeb)write(*,*)myname,'RAW.',nvalues,varname(1:lenv),cSlice%idim,' nloc:',cSlice%nloc
+                      do ival =1,nvalues
+                         buff250=model_getdesc250(ival,ndims,dimnames,start,vsize,nslice,sdimnames,crc250,irc)
+                         lenb=length(buff250,250,10)
+                         if (lenb.gt.0) then
+                            desc250=sep//"variable"//sep//varname(1:lenv)//sep//buff250(1:lenb)
+                         else
+                            desc250=sep//"variable"//sep//varname(1:lenv)
+                         end if
+                         call chop0(desc250,250)
+                         lend=length(desc250,250,10)
+                         if(bdeb)write(*,*)myname,'loc:',cSlice%loc(jj)%pointer%index,jj,'Description: "'//desc250(1:lend)//'"'
+                         call model_reportItem(css,cio,cReportPointer,desc250,values(ival),crc250,irc)
+                         if (irc.ne.0) then
+                            call model_errorappend(crc250,myname)
+                            call model_errorappend(crc250," Error return from add.")
+                            call model_errorappendi(crc250,irc)
+                            call model_errorappend(crc250,"\n")
+                            return
+                         end if
+                      end do
+                   end do
+                else
+                   lend=length(cSlice%dimname,80,10)
+                   if(bdeb)write(*,*)myname,'Index is out-of-bounds.', cSlice%dimname(1:lend)
+                end if
+                ! make reports
+                dir=findNext
+             end if
+          else if (dir.eq. findNext) then ! find next
+             if(bdeb)write(*,*)myname,'Find next.',dir,findNext
+             if (associated(cSlice%parent)) then
+                if (associated(cSlice%next,target=cSlice%parent%last).or.cSlice%active.eq.0) then
+                   if(bdeb)write(*,*)myname,'Move up.',dir,findNext
+                   ! un-slice cSlice
+                   call model_unslicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from slice.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                   cSlice=> cSlice%parent
+                else
+                   if(bdeb)write(*,*)myname,'Move to next.',dir,findNext
+                   ! un-slice cSlice
+                   call model_unslicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from slice.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                   cSlice => cSlice%next
+                   dir=goDown
+                   ! slice cSlice
+                   call model_slicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from slice.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                end if
+             else
+                if(bdeb)write(*,*)myname,'No more objects.'
+                nullify(cSlice) ! no more objects to
+             end if
+          end if
+       end do
+    end do VARLOOP
+    if (allocated(values)) deallocate(values)
+    if (allocated(indval)) deallocate(indval)
+    if (allocated(indvar)) deallocate(indvar)
+    if (allocated(inddim)) deallocate(inddim)
+    if (allocated(indvari)) deallocate(indvari)
+    if (allocated(posind)) deallocate(posind)
+    if (allocated(pospos)) deallocate(pospos)
+    if (allocated(posval)) deallocate(posval)
+    if (allocated(posloc)) deallocate(posloc)
+    if (allocated(sdimnames)) deallocate(sdimnames)
+    if (allocated(sdesc250)) deallocate(sdesc250)
+    !
+    ! deallocate the slice-tree...
+    !
+    call model_slicedeallocate(css,rootSlice,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'dimname'.")
+       call model_errorappendi(crc250,ndim)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    ! close stack file
+    !
+    call model_fimexclose(css,fio,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from closeFile.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (allocated(poslat)) deallocate(poslat)
+    if (allocated(poslon)) deallocate(poslon)
+    if(bdeb)write(*,*)myname,' Done.'
+    return
+  end subroutine model_stackslicefile
+
+
+  subroutine model_sliceinitiate(css,root,nloc,loc,crc250,irc)
+    type(session), pointer :: css !  current session
+    type(slice) :: root
+    integer :: nloc
+    type(locPointer) :: loc(nloc)
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "fimex_reportForecast"
+    integer :: ii
+    root%level=0
+    root%nloc=nloc
+    if (associated(root%loc)) deallocate(root%loc)
+    allocate(root%loc(root%nloc),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'slice'.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    do ii=1,root%nloc
+       root%loc(ii)%pointer => loc(ii)%pointer
+    end do
+  end subroutine model_sliceinitiate
+
+  recursive subroutine model_sliceprint(css,pre,cSlice)
+    type(session), pointer :: css !  current session
+    character*(*) :: pre
+    type(slice) :: cSlice
+    type(slice), pointer :: xSlice
+    integer, external :: length
+    integer :: lend,ii
+    character*25 :: myname = "model_sliceprint"
+    lend=length(cSlice%dimname,80,10)
+    if (.not.associated(cSlice%parent)) then
+       if(bdeb)write(*,*) pre,'nloc:',(cSlice%loc(ii)%pointer%index,ii=1,cSlice%nloc),'   ******Root'
+    else
+       if(bdeb)write(*,*) pre,'nloc:',(cSlice%loc(ii)%pointer%index,ii=1,cSlice%nloc),&
+            & 'lev:',cSlice%level,' value:',cSlice%idim,cSlice%dimname(1:lend),cslice%parent%level
+    end if
+    if (associated(cSlice%first)) then
+       xSlice => cSlice%first%next
+       do while (.not.associated(xSlice,target=cSlice%last))
+          call model_sliceprint(css,pre//"   ",xSlice)
+          xSlice => xSlice%next
+       end do
+    end if
+  end subroutine model_sliceprint
+
+
+  recursive subroutine model_slicedeallocate(css,root,crc250,irc)
+    type(session), pointer :: css !  current session
+    type(slice) :: root
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_slicedeallocate"
+    type(slice), pointer :: cSlice, ncSlice
+    integer :: ii
+    if (associated(root%loc)) deallocate(root%loc)
+    if (associated(root%first)) then
+       cSlice => root%first%next
+       do while (.not.associated(cSlice,target=root%last))
+          call model_slicedeallocate(css,cSlice,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250,"Unable to deallocate 'slice'.")
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          ncSlice => cSlice%next;
+          cSlice%next%prev => cSlice%prev
+          cSlice%prev%next => cSlice%next
+          nullify(cSlice)
+          cSlice => ncSlice
+       end do
+       nullify(cSlice%first)
+       nullify(cSlice%last)
+    end if
+    nullify(cSlice)
+    return
+  end subroutine model_slicedeallocate
+
+  subroutine model_slicecreate(css,cSlice,npos,posind,pospos,posval,posloc,&
+       & dimname,start,vsize,level,crc250,irc)
+    type(session), pointer :: css !  current session
+    type(slice), pointer :: cSlice ! current slice
+    integer :: npos
+    integer :: posind(npos)
+    integer :: pospos(npos)
+    integer :: posval(npos)
+    type(locPointer) :: posloc(npos)
+    character*80 :: dimname
+    integer, allocatable :: start(:),vsize(:)
+    integer :: level
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_slicecreate"
+    integer :: newcnt, oldind, oldpos, jj,kk
+    logical :: bdump
+    type(slice), pointer :: newChild
+    integer, external :: length
+    integer :: lend
+    if(bdeb)write(*,*)myname,'Entering.',npos
+    !
+    call model_heapsort1i(npos,pospos,newcnt,npos,posind,.false.) ! sort index positions
+    !
+    ! group equal positions into child slice objects
+    !
+    oldind=1
+    oldpos=0
+    if(bdeb)write(*,*)myname,'Looping.',newcnt
+    do kk=1,newcnt+1 ! loop over index positions, group equal indexes
+       bdump=.false.
+       if (.not.bdump) bdump=(kk.gt.newcnt)
+       !if (.not.bdump) write(*,*) myname,'Processing index:',pospos(posind(kk)),oldpos
+       if (.not.bdump) bdump=(pospos(posind(kk)).ne.oldpos)
+       if (bdump) then ! we get here first time, last time and every time pospos has changed
+          if(bdeb)write(*,*) myname,'POS:::',oldpos,kk,posind(min(kk,newcnt))
+          if (oldpos.ne.0.or.kk.gt.newcnt) then
+             lend=length(dimname,80,10)
+             if(bdeb)write(*,*)myname,'>>>>>>>>>>>> creating child lev:',level,&
+                  & ' parent:',cslice%level,' pos:',oldpos,' dim:',dimname(1:lend)
+             ! create child, initiate and attach to chain...
+             allocate(newChild,stat=irc)
+             newChild%level=level
+             newChild%nloc = kk-oldind
+             !if(bdeb)write(*,*)myname,'New child locations:',kk,oldind,newChild%nloc
+             allocate(newChild%loc(newChild%nloc),stat=irc)
+             do jj=1,newChild%nloc
+                newChild%loc(jj)%pointer => posloc(posind(jj-1+oldind))%pointer
+                !if(bdeb)write(*,*)myname,'Loc index:',jj,newChild%loc(jj)%pointer%index
+             end do
+             newChild%dimname=dimname
+             if (oldpos.ne.0) then
+                newChild%idim=posval(posind(oldind))
+             else
+                newChild%idim=-1
+             end if
+             !if(bdeb)write(*,*)myname,'cSlice init lev:', cslice%level
+             if (.not. associated(cSlice%first)) then
+                if (associated(cSlice%last)) then
+                   if(bdeb)write(*,*)myname,'System error: partial first/last link found...'
+                end if
+                allocate(cSlice%first,cSlice%last,stat=irc)
+                cSlice%first%parent=>cSlice
+                cSlice%last%parent=>cSlice
+                cSlice%first%next=>cSlice%last
+                cSlice%last%prev=>cSlice%first
+             end if
+             newChild%prev => cSlice%last%prev
+             newChild%next => cSlice%last
+             newChild%prev%next => newChild
+             newChild%next%prev => newChild
+             newChild%parent => cSlice
+          end if
+          oldind=kk
+          if (newcnt.gt.0) oldpos=pospos(posind(min(newcnt,kk)))
+       end if
+       if(bdeb)write(*,*)myname,'Loop done.'
+    end do
+    if(bdeb)write(*,*)myname,'Done.'
+  end subroutine model_slicecreate
+
+  !
+  ! Make report item
+  !
+  subroutine model_reportItem(css,fio,cReportPointer,desc250,svalue,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)  :: fio      ! current fimex-object
+    type(reportPointer), pointer :: cReportPointer
+    character*250 :: desc250
+    real(KIND=8) :: svalue
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_reportItem"
+    type(reportItem), pointer :: newReport
+    integer :: nrep
+    type(reportItem), pointer ::  current
+    if(bdeb)write(*,*)myname,'Entering.'
+    nrep=0
+    if (associated(cReportPointer%pointer)) then
+       allocate(newReport,stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to allocate newReport.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       call chop0(desc250,250)
+       newReport%desc250=desc250
+       newReport%value=svalue
+       newReport%prev => cReportPointer%pointer%last%prev
+       newReport%next => cReportPointer%pointer%last
+       cReportPointer%pointer%last%prev%next => newReport
+       cReportPointer%pointer%last%prev => newReport
+       cReportPointer%pointer%nreport=cReportPointer%pointer%nreport+1
+       css%maxreport=max(css%maxreport,cReportPointer%pointer%nreport)
+       nullify(newReport)
+       current => cReportPointer%pointer%first%next
+       do while (.not.associated(current,target=cReportPointer%pointer%last))
+          nrep=nrep+1
+          current => current%next
+       end do
+    end if
+    if(bdeb)write(*,*)myname,'Done.',nrep
+  end subroutine model_reportItem
+  !
+  !###############################################################################
+!!!!!!!!!!!!!!!!!!!!!!!!! FIMEX ROUTINES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !###############################################################################
+  !
+  ! open netcdf-file and read inventory
+  !
+  subroutine model_fimexopen(css,fio,fp,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)                   :: fio      ! current fimex-object
+    type(file), pointer   :: fp
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    character*25 :: myname = "model_fimexopen"
+    integer, external :: length
+    integer :: leni,lenc
+    css%fn250=fp%fn250
+    css%con250=fp%con250
+    css%cfiletype=fp%cfiletype
+    ! Open file
+    leni=length(fp%fn250,250,10)
+    lenc=length(fp%con250,250,10)
+    if(bdeb)write(*,*)myname,' Opening:',fp%fn250(1:leni)
+    irc=fio%open(fp%fn250,fp%con250,set_filetype(fp%cfiletype))
+    if (irc .ne. 0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to open file:")
+       call model_errorappend(crc250,fp%fn250)
+       if (lenc.gt.0) then
+          call model_errorappend(crc250," [")
+          call model_errorappend(crc250,fp%con250)
+          call model_errorappend(crc250,"]")		
+       end if
+       call model_errorappend(crc250,"\n")
+       return
+    else
+       if(bdeb)write(*,*)myname,' Ok:',fp%fn250(1:leni),irc
+    end if
+  end subroutine model_fimexopen
+
+  !
+  ! get list of dimensions in file
+  !
+  subroutine model_fimexgetdimnames(css,fio,ndim,dimnames,dimsize,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)                   :: fio      ! current fimex-object
+    integer :: ndim
+    character*80, allocatable :: dimnames(:) ! name of dimension
+    integer, allocatable :: dimsize(:) ! name of dimension
+    character*250 :: crc250  ! error message string
+    integer :: irc
+    integer ii
+    character*25 :: myname = "model_fimexgetdimnames"
+    integer :: lenc
+    ndim = fio%dimensions_size()
+    if (ndim .lt. 0) then
+       irc=1
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Error reading dimensions in file:")
+       call model_errorappend(crc250,css%fn250)
+       if (lenc.gt.0) then
+          call model_errorappend(crc250," [")
+          call model_errorappend(crc250,css%con250)
+          call model_errorappend(crc250,"]")		
+       end if
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (allocated(dimnames)) deallocate(dimnames)
+    if (allocated(dimsize)) deallocate(dimsize)
+    if (ndim.gt.0) then
+       allocate(dimnames(ndim),dimsize(ndim),stat= irc) 
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'dimname'.")
+          call model_errorappendi(crc250,ndim)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    do ii=1,ndim
+       dimnames(ii)=fio%file_dimname(ii)
+       dimsize(ii)=fio%get_dimsize(dimnames(ii))
+       call chop0(dimnames(ii),80)
+    end do
+  end subroutine model_fimexgetdimnames
+
+  !
+  ! get list of variables in file
+  !
+  subroutine model_fimexgetvarnames(css,fio,nvar,varnames,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)                   :: fio      ! current fimex-object
+    integer :: nvar
+    character*80, allocatable :: varnames(:) ! name of variable
+    character*250 :: crc250  ! error message string
+    integer :: irc
+    integer ii
+    character*25 :: myname = "model_fimexgetvarnames"
+    integer :: lenc
+    nvar = fio%variables_size()
+    if (nvar .lt. 0) then
+       irc=1
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Error reading variables in file:")
+       call model_errorappend(crc250,css%fn250)
+       if (lenc.gt.0) then
+          call model_errorappend(crc250," [")
+          call model_errorappend(crc250,css%con250)
+          call model_errorappend(crc250,"]")		
+       end if
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (allocated(varnames)) deallocate(varnames)
+    if (nvar.gt.0) then
+       allocate(varnames(nvar),stat= irc) 
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'varname'.")
+          call model_errorappendi(crc250,nvar)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    do ii=1,nvar
+       varnames(ii)=fio%get_varname(ii)
+       call chop0(varnames(ii),80)
+    end do
+  end subroutine model_fimexgetvarnames
+
+  !
+  ! get number of values for current variable
+  !
+  subroutine model_fimexrange(css,cio,varname,ndims,dimname,start,vsize,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)  :: cio      ! current fimex-object
+    CHARACTER(LEN=80) :: varname
+    integer :: ndims ! dimensions
+    character(LEN=80), allocatable :: dimname(:) ! number of values
+    integer, allocatable :: start(:) ! number of values
+    integer, allocatable :: vsize(:) ! number of values
+    character*250 :: crc250  ! error message string
+    integer :: irc    ! error return code(0=ok)
+    character*25 :: myname = "model_fimexrange"
+    integer :: ii,lenv,lenb
+    character*250 buff250
+    integer, external :: length
+    if(bdeb)write(*,*) myname,' Entering.'
+    if (ndims.eq.-1) then
+       ndims=cio%get_dimensions(varName)
+    end if
+    if (allocated(dimname)) deallocate(dimname)
+    if (allocated(start)) deallocate(start)
+    if (allocated(vsize)) deallocate(vsize)
+    allocate(dimname(ndims),start(ndims),vsize(ndims),stat=irc)
+    do ii=1,ndims
+       dimname(ii)=cio%get_dimname(ii) 	
+       call chop0(dimname(ii),80)
+    end do
+    irc=cio%get_dimension_start_size(start,vsize)
+    lenv=length(varname,80,10)
+    if(bdeb)write(*,*) myname,'DimStaSiz:',varname(1:lenv),ndims,start,vsize
+  end subroutine model_fimexrange
+
+  !
+  ! get times in netcdf-file
+  !
+  subroutine model_fimexvalues(css,cio,varname,nvalues,values, unit50,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio), pointer  :: cio      ! current fimex-object
+    CHARACTER(LEN=80) :: varname
+    integer :: nvalues
+    real(KIND=8), allocatable    ::  values(:)
+    character*50 :: unit50    ! output unit
+    character*250 :: crc250  ! error message string
+    integer :: irc             ! error return code(0=ok)
+    integer, external :: length
+    integer :: leni,lenc,lenv
+    character*25 :: myname = "model_fimexvalues"
+    if(bdeb)write(*,*)myname,'Entering.',nvalues
+    irc=cio%read(varName,values,unit50)
+    lenv=length(varname,80,10)
+    ! write(*,*) myname,' Values:',values,varname(1:lenv)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from read('")
+       call model_errorappend(crc250,varname)
+       call model_errorappend(crc250,"') for file:")
+       call model_errorappend(crc250,css%fn250)
+       lenc=length(css%con250,250,10)
+       if (lenc.gt.0) then
+          call model_errorappend(crc250," [")
+          call model_errorappend(crc250,css%con250)
+          call model_errorappend(crc250,"]")		
+       end if
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    nvalues=size(values)
+    if(bdeb)write(*,*)myname,'Done.',nvalues
+  end subroutine model_fimexvalues
+
+  !
+  ! reduce dimension of current variable
+  !
+  subroutine model_fimexassignpointer(css,cio,fio,fin,varname,in_nvar,in_varnames,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio),pointer  :: cio      ! current fimex-object
+    TYPE(fimexio),target   :: fio      ! current fimex-object
+    TYPE(fimexio),target   :: fin      ! current fimex-object
+    CHARACTER(LEN=80) :: varname
+    integer :: in_nvar
+    character*80, allocatable :: in_varnames(:)
+    character*250 :: crc250  ! error message string
+    integer :: irc        ! error return code(0=ok)
+    integer :: ndims,ii
+    character*25 :: myname = "model_fimexassignpointer"
+    integer,external :: length
+    integer :: lenv,leni
+    lenv=length(varname,80,10)
+    if(bdeb)write(*,*)myname,' Entering:',varname(1:lenv)
+    do ii=1,in_nvar
+       leni=length(in_varnames(ii),80,10)
+       if (in_varnames(ii)(1:leni).eq.varname(1:lenv)) then
+          cio => fin
+          if(bdeb)write(*,*) myname,'Using LATLON interpolation.'
+          return
+       end if
+    end do
+    cio => fio
+    if(bdeb)write(*,*) myname,'Using no interpolation.'
+  end subroutine model_fimexassignpointer
+
+  !
+  ! get description of indexes
+  !
+  character*250 function model_getdesc250(fpos,ndims,dimnames,start,vsize,nslice,sdimnames,crc250,irc)
+    integer :: fpos                   ! current dimension index 
+    integer :: ndims                  ! number of dimensions
+    character(len=80), allocatable :: dimnames(:)
+    INTEGER(KIND=4), ALLOCATABLE :: start(:)
+    INTEGER(KIND=4), ALLOCATABLE :: vsize(:)
+    integer :: nslice
+    character*80, allocatable :: sdimnames(:)
+    character*250 :: crc250  ! error message string
+    integer :: irc        ! error return code(0=ok)
+    integer, external :: length
+    integer :: leni,lenc,lenb,lend,lens
+    integer :: cpos,xsize
+    integer :: ii,jj
+    character*250 :: buff250
+    character*10 :: ccdim10
+    logical :: bok
+    integer, allocatable :: cdim(:)
+    character*25 :: myname = "model_getdesc250"
+    allocate(cdim(max(1,ndims)),stat=irc)
+    cpos= (fpos-1)
+    buff250=""
+    lenb=0
+    if (fpos.ne.-1) then
+       do ii=1,ndims
+          cdim(ii)=1+start(ii)+mod(cpos,max(1,vsize(ii)))
+          cpos=int(cpos/max(1,vsize(ii)))
+       end do
+       ! print slice-dimensions from bottom up
+       do jj=nslice,1,-1
+          lens=length(sdimnames(jj),80,10)
+          do ii=1,ndims
+             lend=length(dimnames(ii),80,10)
+             if (sdimnames(jj)(1:lens).eq.dimnames(ii)(1:lend)) then
+                write(ccdim10,'(I10)')cdim(ii)
+                call chop0(ccdim10,10)
+                lenc=length(ccdim10,10,10)
+                buff250=sep//dimnames(ii)(1:lend)//sep//ccdim10(1:lenc)//buff250(1:lenb)
+                call chop0(buff250,250)
+                lenb=length(buff250,250,max(1,min(250,lenb)))
+                cdim(ii)=-1
+             end if
+          end do
+       end do
+       ! print other dimensions
+       do ii=1,ndims
+          if (cdim(ii).eq.-1) cycle
+          write(ccdim10,'(I10)')cdim(ii)
+          call chop0(ccdim10,10)
+          lenc=length(ccdim10,10,10)
+          lend=length(dimnames(ii),80,10)
+          buff250=sep//dimnames(ii)(1:lend)//sep//ccdim10(1:lenc)//buff250(1:lenb)
+          call chop0(buff250,250)
+          lenb=length(buff250,250,max(1,min(250,lenb)))
+       end do
+    end if
+    !write(*,*)myname,"DESC:",buff250(1:lenb),nslice
+    call chop0(buff250,250)
+    model_getdesc250=buff250
+    if (allocated(cdim)) deallocate(cdim)
+  end function model_getdesc250
+
+  !
+  ! get model values interpolated to lat/lon positions for given time and level
+  !
+  subroutine model_fimexlatlon(css,fio,fin,npos,poslat,poslon,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)  :: fio      ! current fimex-object
+    TYPE(fimexio)  :: fin      ! interpolated fimex-object
+    integer :: npos            ! number of positions
+    real, allocatable :: poslon(:)       ! longitude of positions
+    real, allocatable :: poslat(:)       ! latitude of positions
+    character*250 :: crc250    ! error message string
+    integer :: irc             ! error return code(0=ok)
+    integer :: irc2,ii,ndims
+    integer, external :: length
+    integer :: leni,lenc
+    character*25 :: myname = "model_fimexlatlon"
+    ! write(*,*)myname,'Interpolating:',npos
+    irc = fin%interpolate_lonlat(fio, css%model_interpol, poslon, poslat )
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from interpolate_latlon(")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,") for file:")
+       call model_errorappend(crc250,css%fn250)
+       lenc=length(css%con250,250,10)
+       if (lenc.gt.0) then
+          call model_errorappend(crc250," [")
+          call model_errorappend(crc250,css%con250)
+          call model_errorappend(crc250,"]")		
+       end if
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+  end subroutine model_fimexlatlon
+
+  !
+  ! close netcdf-file and clean up memory
+  !
+  subroutine model_fimexclose(css,fio,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio)  :: fio      ! current fimex-object
+    character*250 :: crc250  ! error message string
+    integer :: irc ! error return code (0=ok)
+    integer, external :: length
+    integer :: leni,lenc
+    character*25 :: myname = "model_fimexclose"
+    irc = fio%close()
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from close for file:")
+       call model_errorappend(crc250,css%fn250)
+       lenc=length(css%con250,250,10)
+       if (lenc.gt.0) then
+          call model_errorappend(crc250," [")
+          call model_errorappend(crc250,css%con250)
+          call model_errorappend(crc250,"]")		
+       end if
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+  end subroutine model_fimexclose
+
+  !
+  ! wrapper for fimex function
+  !
+  integer function model_fimexaxistypes(fio,varname,ndims,bok,atypes)
+    TYPE(fimexio)  :: fio      ! current fimex-object
+    CHARACTER(LEN=80)               :: varname
+    integer :: ndims
+    logical :: bok
+    integer(KIND=4), allocatable :: atypes(:)
+    CHARACTER(LEN=80)               :: dimname
+    !integer, allocatable :: atypes(:)
+    integer ::  irc2,ii
+    character*25 :: myname = "model_fimexaxistypes"
+    character*10 :: type
+    integer :: lenv
+    integer, external :: length
+    if(bdeb)write(*,*)myname,' Entering.',trim(varname)
+    ndims=fio%get_dimensions(varname)
+    if (allocated(atypes)) deallocate(atypes)
+    allocate(atypes(ndims))
+    atypes(:)=-1
+    bok=.true.
+    irc2 = fio%get_axistypes(atypes)
+    if (irc2.ne.0) then
+       ! check if variable has dimension "time", "forecast_reference_time" etc.
+       do ii=1,ndims
+          dimname=fio%get_dimname(ii)
+          if(bdeb)write(*,*)myname,' dimension=',trim(dimname),'(variable=',trim(varname),')'
+          if (trim(dimname).eq."forecast_reference_time") then
+             atypes(ii)=axis_referencetime
+          else if (trim(dimname).eq."time") then
+             atypes(ii)=axis_time
+          else if (trim(dimname).eq."x") then
+             atypes(ii)=axis_geox
+          else if (trim(dimname).eq."y") then
+             atypes(ii)=axis_geoy
+          else if (trim(dimname).eq."lat") then
+             atypes(ii)=axis_lat
+          else if (trim(dimname).eq."lon") then
+             atypes(ii)=axis_lon
+          else
+             bok=.false.
+          end if
+       end do
+    end if
+
+    do ii=1,ndims
+       dimname=fio%get_dimname(ii)
+       type="undef"
+       SELECT CASE (atypes(ii))
+       CASE(axis_geox, axis_lon,axis_geoy, axis_lat)
+          type="GEO"
+       CASE (axis_height,axis_pressure)
+          type="HEIGHT"
+       CASE(axis_referencetime)
+          type="REFTIME"
+       CASE(axis_time)
+          type="TIME"
+       CASE default
+          write(type,'(I10)')atypes(ii)
+          !type="OTHER"
+       END SELECT
+
+       call chop0(varname,80)
+       lenv=length(varname,80,10)
+       ! write(*,*)myname,'VAR:',varname(1:lenv)//"  "//trim(dimname)//"  "//trim(type)
+       ! write(*,*)myname,'REF:',axis_geox, axis_lon,axis_geoy, axis_lat,axis_height,axis_pressure,axis_referencetime,axis_time
+    end do
+    model_fimexaxistypes=0
+    if(bdeb)write(*,*)myname,' Done.'
+  end function model_fimexaxistypes
+
+  !
+  ! returns time as character-string
+  !
+  character*21 function model_gettime(j2000) 
+    implicit none
+    real :: j2000
+    integer :: yy,mm,dd,hh,mi
+    real :: sec
+    character*4 :: csec
+    integer, external :: length
+    integer :: lenp,lenc
+    character*25 :: myname = "model_gettime"
+    call dj2000(j2000,yy,mm,dd,hh,mi,sec)
+    write(csec,'(F4.1)') sec
+    call chop0(csec,4)
+    lenc=length(csec,4,4)
+    if (sec.lt.10.0D0)  csec="0"//csec(1:lenc)
+    write(model_gettime,'(I4.4,"/",I2.2,"/",I2.2," ",I2.2,":",I2.2,":",A4)') yy,mm,dd,hh,mi,csec
+!!!!! write(*,*) myname,j2000,model_gettime
+  end function model_gettime
+
+  real function  model_getj2000(time50,crc250,irc) 
+    implicit none
+    character*50 :: time50
+    character*250 :: crc250
+    integer :: irc
+    real :: j2000
+    integer, external :: length
+    integer :: lenp,lent
+    character*25 :: myname = "model_getj2000"
+    integer :: yy,mm,dd,hh,mi
+    real :: sec
+    ! first try to read as formatted time
+    read(time50,'(I4,X,I2,X,I2,X,I2,X,I2,X,F4.1)',iostat=irc)yy,mm,dd,hh,mi,sec
+    if (irc.eq.0) then
+       call jd2000(j2000,yy,mm,dd,hh,mi,sec)
+    else
+       read(time50,*,iostat=irc)j2000
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to determine time from:")
+          call model_errorappend(crc250,time50)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    model_getj2000=j2000
+    !lent=length(time50,50,10)
+    if(bdeb)write(*,*)myname,' Time:',time50(1:lent)," Found:",j2000
+  end function model_getj2000
+
+  subroutine model_sliceparents(css,cio,cSlice,varname,ndims,dimnames,start,vsize,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio), pointer  :: cio      ! current fimex-object
+    type(slice), pointer :: cSlice
+    character*80 :: varname
+    integer :: ndims
+    character*80, allocatable :: dimnames(:) ! name of dimension
+    integer, allocatable :: start(:) ! number of values
+    integer, allocatable :: vsize(:) ! number of values
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_sliceparents"
+    type(slice), pointer :: current
+    integer, external :: length
+    integer :: ii,jj, lenc,lenv,lenb
+    character*250 buff250
+    integer :: ifound
+    current => cSlice
+    do while (associated(current%parent))
+       ifound=0
+       do jj=1,ndims
+          if (dimnames(jj).eq.current%dimname) ifound=jj
+       end do
+       if (ifound.ne.0) then
+          start(ifound)=current%idim-1
+          vsize(ifound)=1
+          if (current%idim.ge.1) then !
+             current%active=1 ! slice available
+             if(bdeb)write(*,*) myname,'>>> Slicing:',current%dimname(1:lenc),current%idim
+             irc=cio%reduce_dimension(current%dimname, current%idim-1, 1) 
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from reduce_dimension('")
+                call model_errorappend(crc250,current%dimname)
+                call model_errorappend(crc250,") for file:")
+                call model_errorappend(crc250,css%fn250)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+          else
+             current%active=-1 ! slice ignores all data
+          end if
+       else
+          current%active=0 ! slice ignores all data
+       end if
+       current => current%parent
+    end do
+    return
+  end subroutine model_sliceparents
+  !
+  subroutine model_slicex(css,cio,idim,varname,ndims,dimnames,start,vsize,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio), pointer  :: cio      ! current fimex-object
+    integer :: idim
+    character*80 :: varname
+    integer :: ndims
+    character*80, allocatable :: dimnames(:) ! name of dimension
+    integer, allocatable :: start(:) ! number of values
+    integer, allocatable :: vsize(:) ! number of values
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_slicex"
+    integer, external :: length
+    integer :: ii,jj, lenc,lenv,lenb,lend
+    character*250 buff250
+    integer :: ifound
+    ifound=0
+    do jj=1,ndims
+       lend=length(dimnames(jj),80,1)
+       if (dimnames(jj)(1:lend).eq."x") ifound=jj
+    end do
+    if (ifound.ne.0) then
+       start(ifound)=idim-1
+       vsize(ifound)=1
+       if(bdeb)write(*,*) myname,'>>> Slicing:',"x",idim-1
+       irc=cio%reduce_dimension("x",idim-1, 1) 
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from reduce_dimension('x') for file:")
+          call model_errorappend(crc250,css%fn250)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    else
+       if(bdeb)write(*,*) myname,'+++ not slicing:',"x"
+    end if
+    return
+  end subroutine model_slicex
+  !
+  subroutine model_slicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio), pointer  :: cio      ! current fimex-object
+    type(slice), pointer :: cSlice
+    integer :: ndims
+    character*80, allocatable :: dimnames(:) ! name of dimension
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_slicedimension"
+    character(LEN=80), allocatable :: dimname(:) ! number of values
+    integer, allocatable :: start(:) ! number of values
+    integer, allocatable :: vsize(:) ! number of values
+    integer, external :: length
+    integer :: ii,jj, lenc,lenv,lenb
+    character*250 buff250
+    integer :: ifound
+    if (bdeb) write(*,*)myname,'Entering.', associated(cSlice),ndims,size(dimnames)
+    ifound=0
+    do jj=1,ndims
+       if (dimnames(jj).eq.cSlice%dimname) ifound=jj
+    end do
+    if (bdeb) write(*,*)myname,'Getting length.'
+    lenc=length(cSlice%dimname,80,10)
+    if (bdeb) write(*,*)myname,'Dim-index.', ifound,cSlice%dimname(1:lenc)
+    if (ifound.ne.0) then
+       if (cSlice%idim.ge.1) then !
+          cSlice%active=1 ! slice available
+          if(bdeb)write(*,*) myname,'>>> Slicing:',cSlice%dimname(1:lenc),cSlice%idim
+          irc=cio%reduce_dimension(cSlice%dimname, cSlice%idim-1, 1) 
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from reduce_dimension('")
+             call model_errorappend(crc250,cSlice%dimname)
+             call model_errorappend(crc250,") for file:")
+             call model_errorappend(crc250,css%fn250)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       else
+          cSlice%active=-1 ! slice ignores all data
+       end if
+    else
+       cSlice%active=0 ! slice not available
+       if(bdeb)write(*,*) myname,'+++ not slicing:',cSlice%dimname(1:lenc),cSlice%idim
+    end if
+    if (bdeb) write(*,*)myname,'Done.'
+    return
+  end subroutine model_slicedimension
+  !
+  subroutine model_unslicedimension(css,cio,cSlice,ndims,dimnames,crc250,irc)
+    type(session), pointer :: css !  current session
+    TYPE(fimexio), pointer  :: cio      ! current fimex-object
+    type(slice), pointer :: cSlice
+    integer :: ndims
+    character*80, allocatable :: dimnames(:) ! name of dimension
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_unslicedimension"
+    integer :: dimsize,lenc
+    integer, external :: length
+    integer :: jj
+    integer :: ifound
+    ifound=0
+    do jj=1,ndims
+       if (dimnames(jj).eq.cSlice%dimname) ifound=jj
+    end do
+    if (ifound.ne.0) then
+       if(bdeb)write(*,*) myname,'    <<< un-Slicing:',cSlice%dimname(1:lenc),cSlice%idim
+       dimsize=cio%get_dimsize(cSlice%dimname)
+       if (dimsize .gt. 0) then
+          irc=cio%reduce_dimension(cSlice%dimname, 0, dimsize) 
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from reduce_dimension('")
+             call model_errorappend(crc250,cSlice%dimname)
+             call model_errorappend(crc250,") for file:")
+             call model_errorappend(crc250,css%fn250)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       end if
+    end if
+    return
+  end subroutine model_unslicedimension
+  !
+  ! E R R O R    R O U T I N E S
+  !
+  subroutine model_errorappend(crc250,string)
+    implicit none
+    character*250 :: crc250
+    character*(*) :: string
+    character*250 :: buff250
+    integer :: lenc, lenb
+    integer, external :: length
+    call chop0(crc250,250)
+    lenc=length(crc250,250,10)
+    lenb=len(trim(string))
+    buff250=string(1:lenb)
+    if (lenc.eq.0) then
+       crc250=buff250(1:lenb)
+    else
+       crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
+    end if
+  end subroutine model_errorappend
+  subroutine model_errorappendi(crc250,inum)
+    implicit none
+    character*250 :: crc250
+    integer :: inum
+    character*250 :: buff250
+    integer :: lenc, lenb
+    integer, external :: length
+    call chop0(crc250,250)
+    lenc=length(crc250,250,10)
+    write(buff250,'(I12)')inum
+    call chop0(buff250,250)
+    lenb=length(buff250,250,1)
+    if (lenc.eq.0) then
+       crc250=buff250(1:lenb)
+    else
+       crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
+    end if
+  end subroutine model_errorappendi
+  !
+  ! S O R T I N G   R O U T I N E S
+  !
+  subroutine model_heapsearch1r(maxnn,key,eps,nn,ind,tkey,left,right)
+    !
+    implicit none
+    !
+    integer :: maxnn
+    real :: key(maxnn)
+    real :: eps ! tolerance
+    integer :: nn
+    integer :: ind(nn)
+    real :: tkey
+    integer :: left
+    integer :: right
+    !
+    real :: mid
+    integer :: mfl,mcl,kfl,kcl,mch
+    logical bdone
+    !
+    if (nn.eq.0) then
+       left=-1                ! first element regardless of value
+       return
+    end if
+    !
+    left = 1
+    right = nn
+    do
+       mid=float(left+right)/2.0D0
+       mfl=floor(mid)
+       mcl=ceiling(mid)
+       kfl=model_cmpr(tkey,key(ind(mfl)),eps)
+       kcl=model_cmpr(tkey,key(ind(mcl)),eps)
+       !write(*,'(X,A,X,I3,F9.2,5(X,I3),3(X,F9.2),2(X,I5))')'model_heapsearch:',left,mid,right,mfl,mcl,kfl,kcl,&
+       !& tkey,key(ind(mfl)),key(ind(mcl)),ind(mfl),ind(mcl)
+       if (kfl.eq.0) then        ! target is at ceiling => exit
+          left=mfl
+          right=mfl
+          exit
+       else if (kcl.eq.0) then   ! target is at floor => exit
+          left=mcl
+          right=mcl
+          exit
+       else if (kfl.gt.0) then   ! target is lower than floor
+          IF (left.eq.right) then
+             right=mfl-1
+             exit ! out of bounds -> exit
+          else
+             right=mfl
+          end if
+       else if (kcl.lt.0) then   ! target is higher than ceiling
+          if (left.eq.right) then
+             left=mcl+1
+             exit ! out of bounds -> exit
+          else
+             left=mcl
+          end if
+       else                      ! target is between floor and ceiling => exit
+          left=mfl
+          right=mcl
+          exit
+       end if
+    end do
+    IF (left > right) return
+    !find first match...
+    bdone=(left<2)
+    do while (.not.bdone)
+       mch=model_cmpr(tkey, key(ind(left-1)),eps)
+       if (mch == 0) then ! equal or target is below
+          left=left-1
+          bdone=(left<2)
+       else
+          bdone=.true.
+       end if
+    end do
+    !find last match
+    bdone=(right>nn-1)
+    do while (.not.bdone)
+       mch=model_cmpr(tkey, key(ind(right+1)),eps)
+       if (mch == 0) then ! equal or target is above
+          right=right+1
+          bdone=(right>nn-1)
+       else
+          bdone=.true.
+       end if
+    end do
+    !
+  end subroutine model_heapsearch1r
+  !
+  subroutine model_heapsort1r(mm,key1,eps,newnn,nn,ind,uniq)
+    !
+    !! Generate sorted index for key1 
+    !
+    implicit none
+
+    integer :: mm                ! Number of elements
+    real :: key1(mm)             ! key
+    real :: eps                  ! key tolerance (when are they equal)
+    integer :: newnn             ! new number of keys
+    integer :: nn                ! Number of elements
+    integer :: ind(nn)           ! Resulting sorted index
+    logical uniq               ! Ignore duplicate records
+    !
+    integer :: ii,dmp
+
+    if (nn.eq.0) then
+       newnn=0
+       return
+    end if
+    !
+    do ii = nn/2, 1, -1
+       call model_pushdownr(ii, nn, mm,key1,eps,newnn,nn,ind)
+    end do
+    do ii = nn, 2, -1
+       call model_swap(ind(1), ind(ii))
+       call model_pushdownr(1, ii-1, mm,key1,eps,newnn,nn,ind)
+    end do
+    !
+    if (uniq) then
+       dmp=0
+       newnn=1
+       do ii=2,nn
+          if (model_cmpr(key1(ind(ii-1)),key1(ind(ii)),eps) /= 0) then
+             ! Keep ind(ii)
+             newnn = newnn+1
+             ind(newnn) = ind(ii)
+          else
+             dmp=dmp+1
+          end if
+       end do
+       if(bdeb)write(*,*) "MODEL_HEAPSORT dumped elements:",dmp
+    else
+       newnn=nn
+    end if
+    !
+    !
+  end subroutine model_heapsort1r
+  !
+  subroutine model_heapsort1i(mm,key1,newnn,nn,ind,uniq)
+    !
+    !! Generate sorted index for key1 
+    !
+    implicit none
+
+    integer :: mm                ! Number of elements
+    integer :: key1(mm)             ! key
+    integer :: newnn             ! new number of keys
+    integer :: nn                ! Number of elements
+    integer :: ind(nn)           ! Resulting sorted index
+    logical uniq               ! Ignore duplicate records
+    !
+    integer :: ii,dmp
+
+    if (nn.eq.0) then
+       newnn=0
+       return
+    end if
+    !
+    do ii = nn/2, 1, -1
+       call model_pushdowni(ii, nn, mm,key1,newnn,nn,ind)
+    end do
+    do ii = nn, 2, -1
+       call model_swap(ind(1), ind(ii))
+       call model_pushdowni(1, ii-1, mm,key1,newnn,nn,ind)
+    end do
+    !
+    if (uniq) then
+       dmp=0
+       newnn=1
+       do ii=2,nn
+          if (model_cmpi(key1(ind(ii-1)),key1(ind(ii))) /= 0) then
+             ! Keep ind(ii)
+             newnn = newnn+1
+             ind(newnn) = ind(ii)
+          else
+             dmp=dmp+1
+          end if
+       end do
+       if(bdeb)write(*,*) "MODEL_HEAPSORT dumped elements:",dmp
+    else
+       newnn=nn
+    end if
+    !
+    !
+  end subroutine model_heapsort1i
+  !
+  subroutine model_pushdownr(first, last,mm,key1,eps,newnn,nn,ind)
+    !
+    integer :: first
+    integer :: last
+    integer :: mm                ! Number of elements
+    real :: key1(mm)             ! key
+    real :: eps                  ! key tolerance (when are they equal)
+    integer :: newnn             ! new number of keys
+    integer :: nn                ! Number of elements
+    integer :: ind(nn)           ! Resulting sorted index
+    !
+    integer :: r
+    !
+    r = first
+    !
+    MAINLOOP: do while (r <= last/2)
+       if (last == 2*r) then
+          if (model_cmpr(key1(ind(r)),key1(ind( 2*r)),eps) > 0) then
+             call model_swap(ind(r), ind(2*r))
+          end if
+          exit MAINLOOP
+       else
+          if (model_cmpr(key1(ind(r)),key1(ind(2*r)),eps) > 0 .and. &
+               & model_cmpr(key1(ind(2*r)),key1(ind(2*r+1)),eps) <= 0) then
+             call model_swap(ind(r), ind(2*r))
+             r = 2*r
+          else if (model_cmpr(key1(ind(r)),key1(ind(2*r+1)),eps)>0 .and. &
+               & model_cmpr(key1(ind(2*r+1)),key1(ind(2*r)),eps)<0) then
+             call model_swap(ind(r), ind(2*r+1))
+             r = 2*r+1
+          else
+             exit MAINLOOP
+          end if
+       end if
+    end do MAINLOOP
+    !
+  end subroutine model_pushdownr
+  !
+  subroutine model_pushdowni(first, last,mm,key1,newnn,nn,ind)
+    !
+    integer :: first
+    integer :: last
+    integer :: mm                ! Number of elements
+    integer :: key1(mm)          ! key
+    integer :: newnn             ! new number of keys
+    integer :: nn                ! Number of elements
+    integer :: ind(nn)           ! Resulting sorted index
+    !
+    integer :: r
+    !
+    r = first
+    !
+    MAINLOOP: do while (r <= last/2)
+       if (last == 2*r) then
+          if (model_cmpi(key1(ind(r)),key1(ind( 2*r))) > 0) then
+             call model_swap(ind(r), ind(2*r))
+          end if
+          exit MAINLOOP
+       else
+          if (model_cmpi(key1(ind(r)),key1(ind(2*r))) > 0 .and. &
+               & model_cmpi(key1(ind(2*r)),key1(ind(2*r+1))) <= 0) then
+             call model_swap(ind(r), ind(2*r))
+             r = 2*r
+          else if (model_cmpi(key1(ind(r)),key1(ind(2*r+1)))>0 .and. &
+               & model_cmpi(key1(ind(2*r+1)),key1(ind(2*r)))<0) then
+             call model_swap(ind(r), ind(2*r+1))
+             r = 2*r+1
+          else
+             exit MAINLOOP
+          end if
+       end if
+    end do MAINLOOP
+    !
+  end subroutine model_pushdowni
+  !
+  !
+  integer function model_cmpr(a,b,eps)
+    real :: a
+    real :: b
+    real :: eps
+    if (abs(a-b) < eps) then
+       model_cmpr = 0
+    else if (a < b) then
+       model_cmpr = 1
+    else
+       model_cmpr = -1
+    end if
+  end function model_cmpr
+  !
+  integer function model_cmpi(a,b)
+    integer :: a
+    integer :: b
+    if (a == b) then
+       model_cmpi = 0
+    else if (a < b) then
+       model_cmpi = 1
+    else
+       model_cmpi = -1
+    end if
+  end function model_cmpi
+  !
+  !
+  subroutine model_swap(k1, k2)
+    !
+    implicit none
+    !
+    integer :: k1
+    integer :: k2
+    !
+    integer :: tmp
+    !
+    tmp = k1
+    k1 = k2
+    k2 = tmp
+    !
+  end subroutine model_swap
+  !
+  subroutine findDelimiter(var80,del,pos)
+    character*80 :: var80
+    character*1 :: del
+    integer :: pos
+    logical :: bdone
+    pos=min(80,pos+1)
+    bdone=(pos.eq.80)
+    do while (.not.bdone)
+       if (var80(pos:pos).eq.del) then
+          bdone=.true.
+       else
+          pos=min(80,pos+1)
+          bdone=(pos.eq.80)
+       end if
+    end do
+  end subroutine findDelimiter
+
+  character*250 function model_pretty(varname,ndims,dimnames,start,vsize)
+    character*80 :: varname
+    integer :: ndims
+    character*80 :: dimnames(ndims)
+    integer :: start(ndims)
+    integer :: vsize(ndims)
+    integer, external :: length
+    integer :: lenv, lend, lenb, lenx
+    character*250 :: xuff250, yuff250,buff250
+    integer :: ii
+    buff250=""
+    lenb=0
+    do ii=1,ndims
+       lend=length(dimnames(ii),80,10)
+       if(bdeb)write(*,*) "model_pretty  dimnames:",dimnames(ii)(1:lend),start(ii),vsize(ii)
+       if (vsize(ii).gt.1) then
+          write(yuff250,*)vsize(ii);call chop0(yuff250,250);lenx=length(yuff250,250,2)
+          write(xuff250,'(I8,"+",A)')start(ii),yuff250(1:lenx);call chop0(xuff250,250);lenx=length(xuff250,250,2)
+       else
+          write(xuff250,'(I8)')start(ii);call chop0(xuff250,250);lenx=length(xuff250,250,2)
+       end if
+       xuff250=dimnames(ii)(1:lend)//"["//xuff250(1:lenx)//"]";call chop0(xuff250,250);lenx=length(xuff250,250,2)
+       if(bdeb)write(*,*)'Model_Pretty here:',xuff250(1:lenx)
+       if (lenb.eq.0) then
+          buff250=xuff250(1:lenx)
+       else
+          buff250=buff250(1:lenb)//","//xuff250(1:lenx)
+       end if
+       call chop0(buff250,250)
+       lenb=length(buff250,250,10)
+    end do
+    lenb=length(buff250,250,10)
+    if(bdeb)write(*,*)'Model_Pretty there:',buff250(1:lenb)
+    lenv=length(varname,80,10)
+    xuff250=varname(1:lenv)//"("//buff250(1:lenb)//")";
+    call chop0(xuff250,250);
+    model_pretty=xuff250
+  end function model_pretty
+
+end module model

@@ -1,0 +1,14 @@
+# lokal isntallasjon:   
+#    sudo dpkg --install fark-perl_0.06-1_amd64.deb
+
+
+# changing a package :
+# 1) oppdater versjonsnr (lib/fark.pm).
+# 2) oppdatere versjonsnr i debian/changelog
+# 3) debuild -i -us -uc -b (i perlfark, "pakken" legges i parent-directory)
+# 5) sende perl-fark-....changes etc. filer til IT
+# 6) lokal isntallasjon: dpkg --install fark-perl_0.06-1_amd64.deb
+# 7) dpkg --contents fark-perl_0.06-1_amd64.deb
+ 
+ sudo apt-get install libfimexf-0.58.1-0
+ sudo apt-get install libfimexf-dev

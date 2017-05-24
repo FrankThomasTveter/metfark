@@ -1,0 +1,27 @@
+#
+#   Configuration file for linux (32-bit reals).
+#
+AR      = ar
+ARFLAGS = rv
+#
+PROFILE=
+DEBUG = -O2
+USE_NO_POINTERS = -DPOINTER_64
+LARGE_FILE = -Dlinux -DFOPEN64 -D_LARGEFILE64_SOURCE
+#CC_A32 = -m64
+CC_A32 =
+#
+#
+CC      = gcc
+CFLAGS  = $(DEBUG) $(PROFILE) -DREAL_8 -DLITTLE_ENDIAN -DPOINTER_64 -DREAL_BIGGER_THAN_INTEGER $(CC_A32) $(LOCAL_CFLAGS) $(LARGE_FILE) -DTABLE_PATH=\"emos\"
+FASTCFLAGS = $(CFLAGS)
+#
+FC      = gfortran
+FFLAGS = $(DEBUG) $(PROFILE) $(CC_A32) -fdefault-real-8 -fcray-pointer -Dlinux $(USE_NO_POINTERS) -DREAL_8 -DREAL_BIGGER_THAN_INTEGER -Dgfortran -DTABLE_PATH=\"emos\" -DLITTLE_ENDIAN
+VECTFFLAGS = $(FFLAGS)
+#              |
+#              v
+#          32-bit reals
+#
+RANLIB  = /usr/bin/ranlib
+

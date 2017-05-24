@@ -1,0 +1,36 @@
+#
+#   Sources for libemos/pbio for linux
+#
+
+HEADERS      = \
+   bufrgrib.h \
+   fort2c.h
+
+SOURCES.F    = \
+   blokex.F \
+   pbbufr.F \
+   pbcrex.F \
+   pbgrib.F \
+   pbionum.F \
+   emosnum.F \
+   pbpseu.F
+
+SOURCES.f    = 
+
+SOURCES.c    = \
+   PBGroutines.c \
+   extras.c   \
+   fort2c.c   \
+   lwsize.c   \
+   mvchars.c  \
+   pbio.c     \
+   readany.c  \
+   readbufr.c \
+   readcrex.c \
+   readgrib.c \
+   readnext.c \
+   readprod.c \
+   recheckLength.c
+
+FASTSRC.c    = \
+   gbyte_le.c

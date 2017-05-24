@@ -1,0 +1,7 @@
+.SUFFIXES: .o .c .F
+
+.F.o:
+	$(FC) $(FFLAGS) -c $<
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<

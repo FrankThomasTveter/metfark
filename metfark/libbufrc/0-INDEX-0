@@ -1,0 +1,40 @@
+0-INDEX-0	mac	This index file
+Makefile	mac	libemos.a makefile for this directory
+PBGroutines.c	mac	Handle pure binary GRIB files in indexed fashion.
+PBGroutines.h	mac	header for PBGroutines.h.
+README		mac	Description of the files in this directory
+blokex.F	mac	BLOK extraction routines
+bufrgrib.h	mac	Header for PBBUFR/GRIB routines
+config.pbio	mac	Configuration file for make
+crexrd.c	mac	(dead)C routine for reading CREX products
+extras.c	mac	Get environ value; remove blanks from end
+fileRead.h	mqc	Default definitions for fileRead, fileSeek and fileTell
+fort2c.c	mac	FORTRAN to C character conversion
+fort2c.h	mac	FORTRAN to C character conversion header
+fortint.h	mac	Allow for Fortran INTEGERs to be C int/long
+gbyte.c		mac	Machine independent gbyte(s),sbyte(s)
+gbyte_alpha.c	mac	gbyte for ALPHA
+lwsize.c	mac	Returns byte size of next GRIB, BUFR, TIDE, BUDG, DIAG
+make.dep	mac	Make dependencies
+mvchars.c	mac	Fortran callable to move a string to integer array.
+newpbio.c	mac	(dead)PBOPEN/READ/WRITE/SEEK/CLOSE file-handling
+pbio.c          mac	PBOPEN/READ/WRITE/SEEK/CLOSE file-handling routines
+pbio_alpha.c	mac	(dead)(new)pbio for ALPHA
+pbbufr.F	mac	Reads next BUFR product from a file
+pbcrex.F	mac	Reads next CREX product from a file
+pbfp.c		mac	Returns C file pointer for a file opened by PBOPEN
+pbionum.F	mac	Returns PBIO_CYCLE
+pbgrib.F	mac	Reads next GRIB product from a file
+pbpseu.F	mac	Reads next GRIB/BUFR/DIAG/TIDE/BUDG product from a file
+pbsize.c	mac	(dead)Returns size in bytes of following product.
+readany.c       mac     Reads any product (GRIB,BUFR,BUDG,..) from a file
+readbufr.c	mac	Reads next BUFR product from a file
+readcrex.c	mac	Reads next CREX product from a file
+readgrib.c	mac	Reads next GRIB product from a file
+readnext.c	mac	Reads next BUFR/GRIB product from a 'stream'
+readprod.c	mac	Reads next BUFR/GRIB product from a file
+readprod_alpha.c mac	Reads next BUFR/GRIB product from a file (ALPHA)
+recheckLength.c	mac	Calculates the length of GRIB from lengths of sections
+setpar.c	mac	Sets no. of bits per word, largest negative no.
+sizeRoutines.h	mac	Function protypes for size functions (prodsize, etc)
+sources.XXX	mac	Sources for platform XXX.

@@ -1,0 +1,41 @@
+#
+#
+#
+A64 = %plat%
+R64 = %reals%
+ARCH = %arch%
+CNAME = %comp%
+LIB = %depl%
+
+LIBRARY = ../lib$(LIB)$(R64).a
+#
+include ../config/config.$(ARCH)$(CNAME)$(R64)$(A64)
+#
+include ../options/options_$(ARCH)
+#
+TARGETS      = all clean
+#
+include sources.$(ARCH)
+#
+OBJECTS.F    = $(SOURCES.F:.F=.o) 
+OBJECTS.c    = $(SOURCES.c:.c=.o)
+OBJECTS      = $(OBJECTS.F) $(OBJECTS.c)
+FASTOBJ.o    = $(FASTSRC.c:.c=.o)
+FASTOBJ      = $(FASTOBJ.o)
+#
+#
+.PRECIOUS: $(LIBRARY)
+
+all: $(LIBRARY)
+
+$(FASTOBJ.o): $(FASTSRC.c)
+	$(CC) $(FASTCFLAGS) -c $(FASTSRC.c)
+
+$(LIBRARY): $(OBJECTS) $(FASTOBJ)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
+
+include make.dep
+
+clean:
+	\rm -f $(OBJECTS) $(FASTOBJ) *.f
