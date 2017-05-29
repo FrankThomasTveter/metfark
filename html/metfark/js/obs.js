@@ -1,16 +1,22 @@
 obs_file = "default.cfg";
-obs_config = { "default.cfg" : { fileFilterDir : "/opdata/",
-				 fileFilter : "def_.*\.bufr",
-				 tablePath : "/var/tables/",
+obs_config = { "default.cfg" : { fileFilterDir : "/home/www/bufr/",
+				 fileFilter : ".*\.bufr",
+				 tablePath : "/home/www/fark-perl_0.15/bufrtables/",
 				 hits : "?",
-				 bufr : { 99 : { 9 : { seq: [{pos: 1, descr:99999, info: "default info"}],
-						       info : "more default info"
+				 bufr : { 99 : { info : "default", 9 : { seq: [{pos: 1, descr:99999, info: "default info"}],
+									 info : "more default info"
 						     }
 					       }
 					},
-				 filter : { 99 : {9 : "default info"}},
+				 bufrType : "99",
+				 subType : "9",
+				 typeInfo : "default info.",
+				 targets : { "yy" : {pos:"", descr:"", info:"", min:"", max:""}},
+				 indexTarget : "time",
+				 indexExp : "sec1970(yy,mm,dd,hh,mi)",
+				 files : ["file1","file2"],
 				 password: "test"
-			       }
+					   }
 	     };
 obs_configEd = 0;
 
@@ -29,13 +35,22 @@ function obs_setArray(parameter,value) {
     //console.log("File:",file,parameter,obs_config[file]);
     obs_config[file][parameter]=value;
 };
+function obs_setIndexTarget(target,parameter,value) {
+    var file=obs_getConfigFile();
+    obs_config[file]["targets"][target][parameter]=value;
+};
 function obs_show() {
     var file=obs_getConfigFile();
     setValue('obsConfigFile',file);
     setValue('obsFileFilterDir',obs_config[file]["fileFilterDir"]);
     setValue('obsFileFilter',obs_config[file]["fileFilter"]);
     setValue('obsTablePath',obs_config[file]["tablePath"]);
-    obs_setFilterTable(file,obs_config[file]['filter']);
+    setValue('obsBufrType',obs_config[file]["bufrType"]);
+    setValue('obsSubType',obs_config[file]["subType"]);
+    setValue('obsTypeInfo',obs_config[file]["typeInfo"]);
+    obs_setIndexTargetTable(file,obs_config[file]['targets']);
+    setValue('obsIndexTarget',obs_config[file]["indexTarget"]);
+    setValue('obsIndexExp',obs_config[file]["indexExp"]);
     setInnerHTML('obsPatternHits',obs_config[file]["hits"]);
 };
 // observation config methods
@@ -52,14 +67,17 @@ function obs_checkPassword() {
     };
     return true;
 }
-function obs_removeFilter(item,file,bufrType,subType) {
-    //if (! obs_checkPassword()) {return;}
-    //item.parentNode.removeChild(item);
-    delete obs_config[file]["filter"][bufrType][subType];
-    if (obs_isEmpty(obs_config[file]["filter"][bufrType])) {
-	delete obs_config[file]["filter"][bufrType];
-    }
-    obs_setFilterTable(file,obs_config[file]["filter"]);
+function obs_removeTarget(target) {
+    var file=obs_getConfigFile();
+    var item=document.getElementById("newlineObsIndexTarget");
+    item.children[1].children[0].value=target;
+    item.children[2].children[0].value=obs_config[file]["targets"][target]["pos"];
+    item.children[4].children[0].value=obs_config[file]["targets"][target]["descr"];
+    item.children[5].children[0].value=obs_config[file]["targets"][target]["info"];
+    item.children[6].children[0].value=obs_config[file]["targets"][target]["min"];
+    item.children[7].children[0].value=obs_config[file]["targets"][target]["max"];
+    delete obs_config[file]["targets"][target];
+    obs_setIndexTargetTable(file,obs_config[file]["targets"]);
 };
 
 function obs_isEmpty(obj) {
@@ -68,67 +86,73 @@ function obs_isEmpty(obj) {
             return false;
     }
     return true;
-}
-function obs_newFilter(item) {
+};
+function obs_newObsIndexTarget(item) {
     //if (! obs_checkPassword()) {return;}
-    var bufrType=item.parentNode.parentNode.children[1].children[0].value;
-    var subType=item.parentNode.parentNode.children[3].children[0].value;
+    var target=item.parentNode.parentNode.children[1].children[0].value;
+    var pos=item.parentNode.parentNode.children[2].children[0].value;
+    var descr=item.parentNode.parentNode.children[4].children[0].value;
     var info=item.parentNode.parentNode.children[5].children[0].value;
-    if (bufrType !== "" & subType !== "") {
+    var min=item.parentNode.parentNode.children[6].children[0].value;
+    var max=item.parentNode.parentNode.children[7].children[0].value;
+//    console.log("New: trg:",target," pos:",pos," des:",descr," info:",info," min:",min," max:",max);
+    if (target !== "") {
 	var file= obs_getConfigFile();
 	if (obs_config[file] === undefined) {
 	    obs_config[file]={};
 	};
-	if (obs_config[file]["filter"] === undefined) {
-	    obs_config[file]["filter"]={};
+	if (obs_config[file]["targets"] === undefined) {
+	    obs_config[file]["targets"]={};
 	};
-	if (obs_config[file]["filter"][bufrType] === undefined) {
-	    obs_config[file]["filter"][bufrType]={};
+	if (obs_config[file]["targets"][target] === undefined) {
+	    obs_config[file]["targets"][target]={};
 	};
-	obs_config[file]["filter"][bufrType][subType]=info;
-	obs_setFilterTable(file,obs_config[file]["filter"]);
+	obs_config[file]["targets"][target]["pos"]=pos;
+	obs_config[file]["targets"][target]["descr"]=descr;
+	obs_config[file]["targets"][target]["info"]=info;
+	obs_config[file]["targets"][target]["min"]=min;
+	obs_config[file]["targets"][target]["max"]=max;
+	obs_setIndexTargetTable(file,obs_config[file]["targets"]);
 	item.parentNode.parentNode.children[1].children[0].value="";
-	item.parentNode.parentNode.children[3].children[0].value="";
+	item.parentNode.parentNode.children[2].children[0].value="";
+	item.parentNode.parentNode.children[4].children[0].value="";
 	item.parentNode.parentNode.children[5].children[0].value="";
+	item.parentNode.parentNode.children[6].children[0].value="";
+	item.parentNode.parentNode.children[7].children[0].value="";
     } else {
-	alert("Invalid: BufrType ('"+bufrType+"'), SubType ('"+subType+"')");
+	alert("Invalid observation target name: ('"+target+"')");
     }
 };
 function obs_saveConfigFile() {
     var file=obs_getConfigFile();
     var password=document.getElementById("obsConfigFilePsw").value;
-    var obsBufr="";
-    var bufr=obs_config[file]["bufr"];
-    for (var bufrType in bufr) {
-	for (var subType in bufr[bufrType]) {
-	    var info=bufr[bufrType][subType]["info"];
-	    var seq=bufr[bufrType][subType]["seq"];
-	    obsBufr=obsBufr+"|"+bufrType+"/"+subType+"/"+info;
-	    var len=seq.length;
-	    for (var jj=0;jj<len;jj++) {
-		var pos=seq[jj]["pos"];
-		var descr=seq[jj]["descr"];
-		var pinfo=seq[jj]["info"];
-		obsBufr=obsBufr+"/"+pos+"#"+descr+"#"+pinfo;
-	    }
-	}
-    };
-    var obsFilter="";
-    var filter=obs_config[file]["filter"];
-    for (var bufrType in filter) {
-	for (var subType in filter[bufrType]) {
-	    var info=filter[bufrType][subType];
-	    obsFilter=obsFilter + "|" + bufrType + "/" + subType + "/" + info;
-	}
+    var bufrType=obs_config[file]["bufrType"];
+    var subType=obs_config[file]["subType"];
+    var typeInfo=obs_config[file]["typeInfo"];
+    var indexTarget=obs_config[file]["indexTarget"];
+    var indexExp=obs_config[file]["indexExp"];
+    var obsTargets="";
+    var targets=obs_config[file]["targets"];
+    for (var target in targets) {
+	var pos=targets[target]["pos"];
+	var descr=targets[target]["descr"];
+	var info=targets[target]["info"];
+	var min=targets[target]["min"];
+	var max=targets[target]["max"];
+	obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info + "~" + min + "~" + max;
     };
     obs_configEd++;
     documentLog.innerHTML="Sent obs-save request.";
-    $.get("cgi-bin/save.pl",{type:"obs",file:file,password:password,
+    $.get("cgi-bin/fark_save.pl",{type:"obs",file:file,password:password,
 			     filterDir:obs_config[file]["fileFilterDir"],
 			     filter:obs_config[file]["fileFilter"],
 			     table:obs_config[file]["tablePath"],
-			     obsBufr:obsBufr,
-			     obsFilter:obsFilter
+                             bufrType:bufrType,
+                             subType:subType,
+                             typeInfo:typeInfo,
+                             indexTarget:indexTarget,
+                             indexExp:indexExp,
+			     obsTargets:obsTargets
 			    },
 	  function(data, status){if (status == "success") {
 	      var errors=data.getElementsByTagName("error");
@@ -140,75 +164,98 @@ function obs_saveConfigFile() {
 	      documentLog.innerHTML="";}
 				}
 	 );
+    makeUrl("obs",file);
 };
-function obs_setFileFilter(bufrType,subType,info) {
+// make new obs-index entry
+function obs_setIndexTargetTable(file,value) {
     var file=obs_getConfigFile();
-    if (obs_config[file] !== undefined) {
-	obs_config[file]["filter"][bufrType][subType]=info;
-    };
-}
-function obs_getFilterBufrType() {
-    var item=document.getElementById("obsFilterTable");
-    var newline=getChild(item,"newlineFilter");
-    return newline.children[1].children[0].value;
-};
-// make new obs-filter entry
-function obs_setFilterTable(file,value) {
-    var item=document.getElementById('obsFilterTable');
-    var tail=removeTableChildFromTo(item,"labelsFilter","newlineFilter");
-    for (var bufrType in value) {
-	for (var subType in value[bufrType]) {
-	    obs_insertFilterRow(tail,file,bufrType,subType,value[bufrType][subType]);
-	}
+    var bufrType = obs_config[file]["bufrType"];
+    var subType = obs_config[file]["subType"];
+    var item=document.getElementById('obsIndexTargetTable');
+    var tail=removeTableChildFromTo(item,"labelsObsIndexTarget","newlineObsIndexTarget");
+    for (var target in value) {
+	obs_insertIndexTargetRow(tail,target,value[target]["pos"],value[target]["descr"],
+				 value[target]["info"],value[target]["min"],value[target]["max"]);
     }
 }
-function obs_insertFilterRow(item,file,bufrType,subType,info) {
+function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     var row = document.createElement("TR");
     var td,inp;
     // make "-" column
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
-    
     var btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","obs_removeFilter(this.parentNode.parentNode,'"+file+"','"+bufrType+"','"+subType+"')");
+    btn.setAttribute("onclick","obs_removeTarget('"+target+"')");
     btn.setAttribute("style","width:100%");
     var t=document.createTextNode("-");
     btn.appendChild(t);
     td.appendChild(btn);
     row.appendChild(td);
-    // make BufrType column
+    // make NAME column  ***************************
     td=document.createElement("TD");
-    td.innerHTML=bufrType;
+    td.innerHTML=target;
     row.appendChild(td);
-    // make select-BufrType column
+    // make pos column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",pos);
+    inp.setAttribute("style","width:100%");
+    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','pos',this.value);");
+    td.appendChild(inp);
+    row.appendChild(td);
+    // make select-pos column  ***************************
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
     row.appendChild(td);
-    // make SubType column
+    // make descr column  ***************************
     td=document.createElement("TD");
-    td.innerHTML=subType;
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",descr);
+    inp.setAttribute("style","width:100%");
+    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','descr',this.value);");
+    td.appendChild(inp);
     row.appendChild(td);
-    // make select-SubType column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(td);
-    // make info column
+    // make info column  ***************************
     td=document.createElement("TD");
     td.setAttribute("class","fill");
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",info);
     inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","obs_setFileFilter('"+bufrType+"','"+subType+"',this.value)");
+    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','info',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
-    // make add row to table
+    // make minimum column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",min);
+    inp.setAttribute("style","width:100%");
+    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','min',this.value);");
+    td.appendChild(inp);
+    row.appendChild(td);
+    // make maximum column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",max);
+    inp.setAttribute("style","width:100%");
+    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','max',this.value);");
+    td.appendChild(inp);
+    row.appendChild(td);
+    // make add row to table  ***************************
     item.parentNode.insertBefore(row,item);
     return row;
 }
-function obs_updataData() {
+function obs_updateData() {
     documentLog.innerHTML="Sent obs-load request.";
-    $.get("cgi-bin/load.pl",{type:"obs"},function(data, status){
+    $.get("cgi-bin/fark_load.pl",{type:"obs"},function(data, status){
 	dataToArray(data,status,documentLog);
 	obsLoaded=true;
 	//console.log("Updating dropdown for ",target);
@@ -216,25 +263,105 @@ function obs_updataData() {
 	documentLog.innerHTML="";
     });
 };
-function obs_patternFind() {
+function obs_patternFind(target) {
+    var dropdown=target + 'Dropdown';
+    var item=document.getElementById(dropdown);
     var file=obs_getConfigFile();
     var password=document.getElementById("obsConfigFilePsw").value;
     var filterDir = obs_config[file]["fileFilterDir"];
     var filter = obs_config[file]["fileFilter"];
     var table = obs_config[file]["tablePath"];
+    var obsTargets = "";
+    var obsTrg=obs_config[file]["targets"];
+    for (var target in obsTrg) {
+	obsTargets=obsTargets + "|" + target + "~" + 
+	    obsTrg[target]["pos"] + "~" + 
+	    obsTrg[target]["descr"] + "~" + 
+	    obsTrg[target]["info"] + "~" + 
+	    obsTrg[target]["min"] + "~" + 
+	    obsTrg[target]["max"];
+    };
+    var indexTarget = obs_config[file]["indexTarget"];
+    var indexExp = obs_config[file]["indexExp"];
+    var bufrType = obs_config[file]["bufrType"];
+    var subType = obs_config[file]["subType"];
+    var typeInfo=obs_config[file]["typeInfo"];
     documentLog.innerHTML="Sent obs-find request.";
-    $.get("cgi-bin/find.pl",{type:"obs",
-			     file:file,
-			     password:password,
-			     filterDir:obs_config[file]["fileFilterDir"],
-			     filter:obs_config[file]["fileFilter"],
-			     table:obs_config[file]["tablePath"]},
+    $.get("cgi-bin/fark_find.pl",{type:"obs",
+				  file:file,
+				  password:password,
+				  filterDir:obs_config[file]["fileFilterDir"],
+				  filter:obs_config[file]["fileFilter"],
+				  table:obs_config[file]["tablePath"],
+				  obsTargets:obsTargets,
+				  indexTarget:indexTarget,
+				  indexExp:indexExp,
+				  bufrType:bufrType,
+				  subType:subType,
+				  typeInfo:typeInfo},
 	  function(data, status){if (status == "success") {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
 		  alert("Unable to peek at: "+filterDir+" "+filter+" (file:"+file+")\n"+msg);
+	      } else {
+		  dataToArray(data,status,documentLog);
+		  removeChildren(item);
+		  var len=obs_config[file]["files"].length;
+		  for (var ii=0; ii<len;ii++) {
+		      var sfile=obs_config[file]["files"][ii];
+		      addChildButton(item,sfile,"obs_fileFind('"+sfile+"');");
+		  }
+		  obs_show();
+	      };
+	      documentLog.innerHTML="";
+	      document.getElementById(dropdown).classList.toggle("show");
+	  }
+				}
+	 );
+};
+function obs_fileFind(sfile) {
+    var file=obs_getConfigFile();
+    var password=document.getElementById("obsConfigFilePsw").value;
+    var filterDir = obs_config[file]["fileFilterDir"];
+    var filter = obs_config[file]["fileFilter"];
+    var table = obs_config[file]["tablePath"];
+    var obsTargets = "";
+    var obsTrg=obs_config[file]["targets"];
+    for (var target in obsTrg) {
+	obsTargets=obsTargets + "|" + target + "~" + 
+	    obsTrg[target]["pos"] + "~" + 
+	    obsTrg[target]["descr"] + "~" + 
+	    obsTrg[target]["info"] + "~" + 
+	    obsTrg[target]["min"] + "~" + 
+	    obsTrg[target]["max"];
+    };
+    var indexTarget = obs_config[file]["indexTarget"];
+    var indexExp = obs_config[file]["indexExp"];
+    var bufrType = obs_config[file]["bufrType"];
+    var subType = obs_config[file]["subType"];
+    var typeInfo=obs_config[file]["typeInfo"];
+    documentLog.innerHTML="Sent obs-find request.";
+    $.get("cgi-bin/fark_find.pl",{type:"obsfile",
+				  file:file,
+				  target:sfile,
+				  password:password,
+				  filterDir:obs_config[file]["fileFilterDir"],
+				  filter:obs_config[file]["fileFilter"],
+				  table:obs_config[file]["tablePath"],
+				  obsTargets:obsTargets,
+				  indexTarget:indexTarget,
+				  indexExp:indexExp,
+				  bufrType:bufrType,
+				  subType:subType,
+				  typeInfo:typeInfo},
+	  function(data, status){if (status == "success") {
+	      var errors=data.getElementsByTagName("error");
+	      if (errors.length > 0 ) {
+		  console.log("Error:",data);
+		  var msg=(errors[0].getAttribute("message")||"");
+		  alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
 	      } else {
 		  dataToArray(data,status,documentLog);
 		  obs_show();

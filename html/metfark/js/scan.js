@@ -1,7 +1,7 @@
 // data structure
-scan_config = { model : {"model_config1.cfg" : {lastScan:"",lastUsed:""},
-			 "model_config2.cfg": {lastScan:"",lastUsed:""}},
-		obs :  {"obs_config1.cfg": {lastScan:"",lastUsed:""}},
+scan_config = { model : {"model_config1.cfg" : {lastScan:"",lastUsed:"",status:""},
+			 "model_config2.cfg": {lastScan:"",lastUsed:"",status:""}},
+		obs :  {"obs_config1.cfg": {lastScan:"",lastUsed:"",status:""}},
 		password: "test"
 	      };
 scan_configEd=0;
@@ -21,7 +21,7 @@ function scan_checkPassword() {
 function scan_updateData() {
     documentLog.innerHTML="Sent scan-load request.";
     var root="scan.cfg";
-    $.get("cgi-bin/load.pl",{type:"scan",root:root},function(data, status){
+    $.get("cgi-bin/fark_load.pl",{type:"scan",root:root},function(data, status){
 	dataToArray(data,status,documentLog);
 	scan_setTable();
     });
@@ -42,10 +42,11 @@ function scan_newModelConfigFile(item) {
     }
 };
 function scan_scanNow(target,type,file) {
-    var root="scan.cfg";
+    var root="";
+    if (target === "") {root="scan.cfg";};
     if (file !== "") {
 	documentLog.innerHTML="Sent scan-now request ("+file+").";
-	$.get("cgi-bin/scan.pl",{root:root,type:type,file:file},
+	$.get("cgi-bin/fark_scan.pl",{root:root,type:type,file:file},
 	      function(data, status){
 		  if (status == "success") {
 		      var errors=data.getElementsByTagName("error");
@@ -54,8 +55,12 @@ function scan_scanNow(target,type,file) {
 			  var msg=(errors[0].getAttribute("message")||"");
 			  alert("Unable to scan, "+type+" config file: "+file+"\n"+msg);
 		      };
-		      dataToArray(data,status,documentLog);
-		      scan_setTable();
+		      if (target === "") {
+			  dataToArray(data,status,documentLog);
+			  scan_setTable();
+		      } else {
+			  target.children[3].innerHTML="manual";
+		      }
 		      documentLog.innerHTML="";}
 	      }
 	 );
@@ -84,17 +89,17 @@ function scan_saveConfig(target) {
     scan_setTable();
     var len=scan_config["model"];
     for (var model in scan_config["model"]) {
-	modelFiles=modelFiles + "|" + model + "/" + 
-	    scan_config["model"][model]["lastScan"] + "/";
+	modelFiles=modelFiles + "|" + model + "~" + 
+	    scan_config["model"][model]["lastScan"] + "~";
 	    scan_config["model"][model]["lastUsed"];
     };
     for (var obs in scan_config["obs"]) {
-	obsFiles=obsFiles + "|" + obs + "/" + 
-	    scan_config["obs"][obs]["lastScan"] + "/";
+	obsFiles=obsFiles + "|" + obs + "~" + 
+	    scan_config["obs"][obs]["lastScan"] + "~";
 	    scan_config["obs"][obs]["lastUsed"];
     }
     documentLog.innerHTML="Sent obs-save request.";
-    $.get("cgi-bin/save.pl",{type:"scan",root:root,password:password,modelFiles:modelFiles,obsFiles:obsFiles},
+    $.get("cgi-bin/fark_save.pl",{type:"scan",root:root,password:password,modelFiles:modelFiles,obsFiles:obsFiles},
 	  function(data, status){
 	      if (status == "success") {
 		  var errors=data.getElementsByTagName("error");
@@ -106,8 +111,16 @@ function scan_saveConfig(target) {
 		  documentLog.innerHTML="";}
 	  }
 	 );
+    makeUrl("scan",root);
 };
 function scan_removeFile(item,type,file) {
+    if (type == "model") {
+	var item=document.getElementById("newlineScanModel");
+	item.children[1].children[0].value=file;
+    } else if (type =="obs") {
+	var item=document.getElementById("newlineScanObs");
+	item.children[1].children[0].value=file;
+    };
     //if (! checkScanPassword()) {return;}
     //item.parentNode.removeChild(item);
     delete scan_config[type][file];
@@ -119,15 +132,15 @@ function scan_setTable() {
     var item=document.getElementById('scanTable');
     var tail=removeTableChildFromTo(item,"labelsScanModel","newlineScanModel");
     for (var model in scan_config["model"]) {
-	scan_insertRow(tail,"model",model,scan_config["model"][model]["lastScan"],scan_config["model"][model]["lastUsed"]);
+	scan_insertRow(tail,"model",model,scan_config["model"][model]["lastScan"],scan_config["model"][model]["lastUsed"],scan_config["model"][model]["status"]);
     }
     var tail=removeTableChildFromTo(item,"labelsScanObs","newlineScanObs");
     for (var obs in scan_config["obs"]) {
-	scan_insertRow(tail,"obs",obs,scan_config["obs"][obs]["lastScan"],scan_config["obs"][obs]["lastUsed"]);
+	scan_insertRow(tail,"obs",obs,scan_config["obs"][obs]["lastScan"],scan_config["obs"][obs]["lastUsed"],scan_config["obs"][obs]["status"]);
     }
 };
 // create scan table row
-function scan_insertRow(item,type,file,lastScan,lastUsed) {
+function scan_insertRow(item,type,file,lastScan,lastUsed,status) {
     var row = document.createElement("TR");
     var td;
     // make "-" column
@@ -150,6 +163,9 @@ function scan_insertRow(item,type,file,lastScan,lastUsed) {
     row.appendChild(td);
     // make LAST SCAN column
     td=document.createElement("TD");
+    if (status !== "") {
+	td.setAttribute("style","color:blue");
+    }
     td.innerHTML=lastScan;
     row.appendChild(td);
     // make LAST USED column
@@ -160,7 +176,7 @@ function scan_insertRow(item,type,file,lastScan,lastUsed) {
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
     btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","scan_scanNow(this.parentNode.parentNode,'"+type+"','"+file+"')");
+    btn.setAttribute("onclick","scan_scanNow('','"+type+"','"+file+"')");
     btn.setAttribute("style","width:100%");
     var t=document.createTextNode("Scan now");
     btn.appendChild(t);
