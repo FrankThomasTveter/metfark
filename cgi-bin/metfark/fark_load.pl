@@ -13,13 +13,14 @@ use Data::Dumper;
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $user=$ENV{USERNAME} // "www";
 $user="www";
-my $modelDir="/home/".$user."/pub/model/";check_path($modelDir);
-my $obsDir="/home/".$user."/pub/obs/";check_path($obsDir);
-my $scanDir="/home/".$user."/pub/scan/";check_path($scanDir);
-my $colocDir="/home/".$user."/pub/coloc/";check_path($colocDir);
-my $useModelDir="/home/".$user."/pub/use/model/";check_path($useModelDir);
-my $useObsDir="/home/".$user."/pub/use/obs/";check_path($useObsDir);
-my $lockDir="/home/".$user."/pub/lock"; check_path($lockDir);
+my $pub="/metfark/pub";
+my $modelDir="$pub/model/";check_path($modelDir);
+my $obsDir="$pub/obs/";check_path($obsDir);
+my $scanDir="$pub/scan/";check_path($scanDir);
+my $colocDir="$pub/coloc/";check_path($colocDir);
+my $useModelDir="$pub/use/model/";check_path($useModelDir);
+my $useObsDir="$pub/use/obs/";check_path($useObsDir);
+my $lockDir="$pub/lock"; check_path($lockDir);
 #
 #
 my $ref=CGI->new();

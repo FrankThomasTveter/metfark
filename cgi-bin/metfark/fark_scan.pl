@@ -19,18 +19,19 @@ use File::Copy;
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $user=$ENV{USERNAME} // "www";
-my $modelDir="/home/".$user."/pub/model/";check_path($modelDir);
-my $modelOldDir="/home/".$user."/pub/old/model/"; check_path($modelOldDir);
-my $modelCacheDir="/home/".$user."/pub/cache/model/"; check_path($modelCacheDir);
-my $modelRegDir="/home/".$user."/pub/reg/model/"; check_path($modelRegDir);
-my $obsDir="/home/".$user."/pub/obs/";check_path($obsDir);
-my $obsOldDir="/home/".$user."/pub/old/obs/"; check_path($obsOldDir);
-my $obsCacheDir="/home/".$user."/pub/cache/obs/"; check_path($obsCacheDir);
-my $obsRegDir="/home/".$user."/pub/reg/obs/"; check_path($obsRegDir);
-my $scanDir="/home/".$user."/pub/scan/";check_path($scanDir);
-my $useModelDir="/home/".$user."/pub/use/model/";check_path($useModelDir);
-my $useObsDir="/home/".$user."/pub/use/obs/";check_path($useObsDir);
-my $lockDir="/home/".$user."/pub/lock/"; check_path($lockDir);
+my $pub="/metfark/pub";
+my $modelDir="$pub/model/";check_path($modelDir);
+my $modelOldDir="$pub/old/model/"; check_path($modelOldDir);
+my $modelCacheDir="$pub/cache/model/"; check_path($modelCacheDir);
+my $modelRegDir="$pub/reg/model/"; check_path($modelRegDir);
+my $obsDir="$pub/obs/";check_path($obsDir);
+my $obsOldDir="$pub/old/obs/"; check_path($obsOldDir);
+my $obsCacheDir="$pub/cache/obs/"; check_path($obsCacheDir);
+my $obsRegDir="$pub/reg/obs/"; check_path($obsRegDir);
+my $scanDir="$pub/scan/";check_path($scanDir);
+my $useModelDir="$pub/use/model/";check_path($useModelDir);
+my $useObsDir="$pub/use/obs/";check_path($useObsDir);
+my $lockDir="$pub/lock/"; check_path($lockDir);
 #
 #
 my $myname = basename($0);

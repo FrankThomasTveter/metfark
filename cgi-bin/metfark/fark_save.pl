@@ -12,14 +12,15 @@ use File::Path qw( make_path );
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $user=$ENV{USERNAME} // "www";
-my $modelDir="/home/".$user."/pub/model/"; check_path($modelDir);
-my $obsDir="/home/".$user."/pub/obs/"; check_path($obsDir);
-my $scanDir="/home/".$user."/pub/scan/"; check_path($scanDir);
-my $colocDir="/home/".$user."/pub/coloc/"; check_path($colocDir);
-my $modelCacheDir="/home/".$user."/pub/cache/model/"; check_path($modelCacheDir);
-my $modelRegDir="/home/".$user."/pub/reg/model/"; check_path($modelRegDir);
-my $obsCacheDir="/home/".$user."/pub/cache/obs/"; check_path($obsCacheDir);
-my $obsRegDir="/home/".$user."/pub/reg/obs/"; check_path($obsRegDir);
+my $pub="/metfark/pub";
+my $modelDir="$pub/model/"; check_path($modelDir);
+my $obsDir="$pub/obs/"; check_path($obsDir);
+my $scanDir="$pub/scan/"; check_path($scanDir);
+my $colocDir="$pub/coloc/"; check_path($colocDir);
+my $modelCacheDir="$pub/cache/model/"; check_path($modelCacheDir);
+my $modelRegDir="$pub/reg/model/"; check_path($modelRegDir);
+my $obsCacheDir="$pub/cache/obs/"; check_path($obsCacheDir);
+my $obsRegDir="$pub/reg/obs/"; check_path($obsRegDir);
 #
 my $ref=CGI->new();
 #

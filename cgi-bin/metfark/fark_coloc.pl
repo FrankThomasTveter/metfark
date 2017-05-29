@@ -20,14 +20,15 @@ use Capture::Tiny 'capture';
 #
 my $user=$ENV{USERNAME} // "www";
 my $ref=CGI->new();
-$ref->{"modelDir"} =  "/home/".$user."/pub/model/";check_path($ref->{"modelDir"});
-$ref->{"modelCache"}   = "/home/".$user."/pub/cache/model";check_path($ref->{"modelCache"});
-$ref->{"obsDir"}   = "/home/".$user."/pub/obs/";check_path($ref->{"obsDir"});
-$ref->{"obsCache"}   = "/home/".$user."/pub/cache/obs";check_path($ref->{"obsCache"});
-$ref->{"scanDir"}  = "/home/".$user."/pub/scan/";check_path($ref->{"scanDir"});
-$ref->{"colocDir"}   = "/home/".$user."/pub/coloc/";check_path($ref->{"colocDir"});
-$ref->{"useModelDir"}   = "/home/".$user."/pub/use/model/";check_path($ref->{"useModelDir"});
-$ref->{"useObsDir"}   = "/home/".$user."/pub/use/obs/";check_path($ref->{"useObsDir"});
+my $pub="/metfark/pub";
+$ref->{"modelDir"} =  "$pub/model/";check_path($ref->{"modelDir"});
+$ref->{"modelCache"}   = "$pub/cache/model";check_path($ref->{"modelCache"});
+$ref->{"obsDir"}   = "$pub/obs/";check_path($ref->{"obsDir"});
+$ref->{"obsCache"}   = "$pub/cache/obs";check_path($ref->{"obsCache"});
+$ref->{"scanDir"}  = "$pub/scan/";check_path($ref->{"scanDir"});
+$ref->{"colocDir"}   = "$pub/coloc/";check_path($ref->{"colocDir"});
+$ref->{"useModelDir"}   = "$pub/use/model/";check_path($ref->{"useModelDir"});
+$ref->{"useObsDir"}   = "$pub/use/obs/";check_path($ref->{"useObsDir"});
 #
 my $param=$ref->{param};
 #

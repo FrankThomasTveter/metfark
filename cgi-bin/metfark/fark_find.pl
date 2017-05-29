@@ -16,8 +16,9 @@ use File::Find;
 use Capture::Tiny 'capture';
 #
 my $user=$ENV{USERNAME} // "www";
-my $modelDir="/home/".$user."/pub/model/";
-my $obsDir="/home/".$user."/pub/obs/";
+my $pub="/metfark/pub";
+my $modelDir="$pub/model/";
+my $obsDir="$pub/obs/";
 #
 my $ref=CGI->new();
 

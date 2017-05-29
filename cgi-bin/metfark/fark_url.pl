@@ -19,12 +19,13 @@ use Capture::Tiny 'capture';
 #
 my $user=$ENV{USERNAME} // "www";
 my $ref=CGI->new();
-$ref->{"modelDir"} =  "/home/".$user."/pub/model/";
-$ref->{"modelCache"}   = "/home/".$user."/pub/cache/model";
-$ref->{"obsDir"}   = "/home/".$user."/pub/obs/";
-$ref->{"obsCache"}   = "/home/".$user."/pub/cache/obs";
-$ref->{"scanDir"}  = "/home/".$user."/pub/scan/";
-$ref->{"urlDir"}   = "/home/".$user."/pub/url/";
+my $pub="/metfark/pub";
+$ref->{"modelDir"} =  "$pub/model/";
+$ref->{"modelCache"}   = "$pub/cache/model";
+$ref->{"obsDir"}   = "$pub/obs/";
+$ref->{"obsCache"}   = "$pub/cache/obs";
+$ref->{"scanDir"}  = "$pub/scan/";
+$ref->{"urlDir"}   = "$pub/url/";
 #
 my $param=$ref->{param};
 #
