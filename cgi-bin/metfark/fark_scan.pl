@@ -162,8 +162,8 @@ sub scanModel {
 	    my $parser = XML::LibXML->new();
 	    my $modeldoc = $parser->parse_file($xmlfile);
 	    if ( my ($modelnode)=$modeldoc->findnodes("model/model_config")) {
-		my $filterDir=$modelnode->getAttribute("fileFilterDir");
-		my $filter=$modelnode->getAttribute("fileFilter");
+		my $filterDir=$modelnode->getAttribute("filterDir");
+		my $filterFile=$modelnode->getAttribute("filterFile");
 		my $index=$modelnode->getAttribute("index");
 		# get list of processed files
 		eval {
@@ -173,7 +173,7 @@ sub scanModel {
 			if (-e $cachefile) {
 			    $fark->loadModelCache($cachefile);
 			};
-			$fark->updateModelRegister($registerfile,$filterDir,$filter);
+			$fark->updateModelRegister($registerfile,$filterDir,$filterFile);
 			chmod 0666, $registerfile;
 			$fark->makeModelCache($cachefile);
 			chmod 0666, $cachefile;
@@ -257,8 +257,8 @@ sub scanObs {
 	    my $parser = XML::LibXML->new();
 	    my $obsdoc = $parser->parse_file($xmlfile);
 	    if ( my ($node)=$obsdoc->findnodes("obs/obs_config")) {
-		my $filterDir=$node->getAttribute("fileFilterDir");
-		my $filter=$node->getAttribute("fileFilter");
+		my $filterDir=$node->getAttribute("filterDir");
+		my $filterFile=$node->getAttribute("filterFile");
 		my $tablepath=$node->getAttribute("tablePath");
 		my $indexTarget=$node->getAttribute("indexTarget");
 		my $indexExp=$node->getAttribute("indexExp");
@@ -284,7 +284,7 @@ sub scanObs {
 			if (-e $cachefile) {
 			    $fark->loadObservationCache($cachefile);
 			};
-			$fark->updateObservationRegister($registerfile,$filterDir,$filter);
+			$fark->updateObservationRegister($registerfile,$filterDir,$filterFile);
 			chmod 0666, $registerfile;
 			$fark->makeObservationCache($cachefile);
 			chmod 0666, $cachefile;

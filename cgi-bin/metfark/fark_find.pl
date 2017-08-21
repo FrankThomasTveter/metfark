@@ -8,17 +8,23 @@ use strict;
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
-use File::Basename;
 use Data::Dumper;
+use Cwd; use Cwd 'abs_path';
 use File::Find;
 #dont know if you need this: sudo apt-get install libpath-tiny-perl
 #but you need this: sudo apt-get install libcapture-tiny-perl
 use Capture::Tiny 'capture';
+# must end with slash...
+my %dirs = ( "data" => {"/lustre/storeA/users/"     => "ro",
+		      "/lustre/storeA/project/"   => "ro",
+		      "/elysium/data/"            => "rw" }, 
+	     "obs" => {"/elysium/metfark/obs/"      => "rw" },
+	     "model" => {"/elysium/metfark/mod/"      => "rw" },
+	     "coloc" => {"/elysium/metfark/coloc/"  => "rw" },
+	     "plot" => {"/elysium/metfark/plot/"    => "rw" },
+	     "auto" => {"/elysium/metfark/auto/"    => "rw" }
+    );
 #
-my $user=$ENV{USERNAME} // "www";
-my $pub="/metfark/pub";
-my $modelDir="$pub/model/";
-my $obsDir="$pub/obs/";
 #
 my $ref=CGI->new();
 
@@ -27,23 +33,32 @@ print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $param= $ref->{param};
 if (! defined $param->{type}) {&term("Undefined type.".Dumper($param))};
 if ($param->{type}->[0] eq "model") {
-    &findModel($param,$modelDir);
+    &findModel($param,"model");
 } elsif ($param->{type}->[0] eq "modelfile") {
-    &findModelFile($param,$modelDir);
+    &findModelFile($param,"model");
 } elsif ($param->{type}->[0] eq "obs") {
-    &findObs($param,$obsDir);
+    &findObs($param,"obs");
 } elsif ($param->{type}->[0] eq "obsfile") {
-    &findObsFile($param,$obsDir);
+    &findObsFile($param,"obs");
 }
 
 sub findModel {
     my $param =shift;
-    my $dir =shift;
-    my $base=basename($param->{file}[0]);
-    my $file = $dir . $base;
+    my $cls=shift;
+    my $ifile=$param->{file}[0];
+    my $idir = (keys (%{$dirs{$cls}}))[0];
+    my( $adir, $afile ) = splitArg($ifile);
+    my $xdir = $idir;
+    my $prefix = substr $adir,0,1;
+    if ($prefix eq "\/") {
+	$xdir = $adir; # absolute path
+    } else {
+	$xdir = $xdir . $adir; # relative path
+    };
+    my $file = $xdir.$afile;
     my $password=($param->{password}[0] // "");
     my $filterDir = ($param->{filterDir}->[0]||"/tmp");
-    my $filter = ($param->{filter}->[0] // "");
+    my $filterFile = ($param->{filterFile}->[0] // "");
     my $index = ($param->{index}->[0] // "");
     # read config file into memory
     my $parser = XML::LibXML->new();
@@ -70,18 +85,22 @@ sub findModel {
     };
     my @files=();
     find({wanted => sub {
-	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
+	if (-f $File::Find::name && $File::Find::name =~ m/$filterFile/) {
 	    push(@files, $File::Find::name);
 	}
 	  }}, $filterDir);
     if (@files) {
 	$node->setAttribute("password",        $password);
-	$node->setAttribute("file",            $base);
-	$node->setAttribute("fileFilterDir",   $filterDir);
-	$node->setAttribute("fileFilter",      $filter);
-	$node->setAttribute("fileFilter",      $filter);
-	$node->setAttribute("index",            $index);
+	$node->setAttribute("file",            $ifile);
+	$node->setAttribute("filterDir",       $filterDir);
+	$node->setAttribute("filterFile",      $filterFile);
+	$node->setAttribute("index",           $index);
 	$node->setAttribute("hits",            scalar @files);
+	my ($sdir,$root,$loc) = check_dir($xdir,$cls);
+	$node->setAttribute("class",     $cls);
+	$node->setAttribute("root",      $root);
+	$node->setAttribute("location",  $loc);
+	$node->setAttribute("status",    $sdir);
 	foreach my $sfile (@files) {
 	    my $parent = XML::LibXML::Element->new( 'stack' );
 	    $parent->setAttribute("name",$sfile);
@@ -106,9 +125,18 @@ sub findModel {
 
 sub findModelFile {
     my $param =shift;
-    my $dir =shift;
-    my $base=basename($param->{file}[0]);
-    my $file = $dir . $base;
+    my $cls=shift;
+    my $ifile=$param->{file}[0];
+    my $idir = (keys (%{$dirs{$cls}}))[0];
+    my( $adir, $afile ) = splitArg($ifile);
+    my $xdir = $idir;
+    my $prefix = substr $adir,0,1;
+    if ($prefix eq "\/") {
+	$xdir = $adir; # absolute path
+    } else {
+	$xdir = $xdir . $adir; # relative path
+    };
+    my $file = $xdir.$afile;
     my $password=($param->{password}[0] // "");
     my $sfile = $param->{target}[0] // "";
     my $passok=1;
@@ -136,6 +164,11 @@ sub findModelFile {
 	$node->removeChild($oldNode);
     };
     if ($sfile) {
+	my ($sdir,$root,$loc) = check_dir($xdir,$cls);
+	$node->setAttribute("class",     $cls);
+	$node->setAttribute("root",      $root);
+	$node->setAttribute("location",  $loc);
+	$node->setAttribute("status",    $sdir);
 	my $log="";
 	eval {
 	    $log=capture {
@@ -191,12 +224,21 @@ sub findModelFile {
 
 sub findObs {
     my $param =shift;
-    my $dir =shift;
-    my $base=basename($param->{file}[0]);
-    my $file = $dir . $base;
+    my $cls=shift;
+    my $ifile=$param->{file}[0];
+    my $idir = (keys (%{$dirs{$cls}}))[0];
+    my( $adir, $afile ) = splitArg($ifile);
+    my $xdir = $idir;
+    my $prefix = substr $adir,0,1;
+    if ($prefix eq "\/") {
+	$xdir = $adir; # absolute path
+    } else {
+	$xdir = $xdir . $adir; # relative path
+    };
+    my $file = $xdir.$afile;
     my $password=($param->{password}[0] // "");
     my $filterDir = ($param->{filterDir}->[0]||"/tmp");
-    my $filter = ($param->{filter}->[0] // ".*");
+    my $filterFile = ($param->{filterFile}->[0] // ".*");
     my $bufrType=($param->{bufrType}[0] // "");
     my $subType=($param->{subType}[0] // "");
     my $typeInfo=($param->{typeInfo}[0] // "");
@@ -228,15 +270,15 @@ sub findObs {
     };
     my @files=();
     find({wanted => sub {
-	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
+	if (-f $File::Find::name && $File::Find::name =~ m/$filterFile/) {
 	    push(@files, $File::Find::name);
 	}
 	  }}, $filterDir);
     if (@files) {
 	$node->setAttribute("password",        $password);
-	$node->setAttribute("file",            $base);
-	$node->setAttribute("fileFilterDir",   $filterDir);
-	$node->setAttribute("fileFilter",      $filter);
+	$node->setAttribute("file",            $ifile);
+	$node->setAttribute("filterDir",       $filterDir);
+	$node->setAttribute("filterFile",      $filterFile);
 	$node->setAttribute("tablePath",       $table);
 	$node->setAttribute("bufrType",        $bufrType);
 	$node->setAttribute("subType",         $subType);
@@ -244,6 +286,11 @@ sub findObs {
 	$node->setAttribute("indexTarget",      $indexTarget);
 	$node->setAttribute("indexExp",         $indexExp);
 	$node->setAttribute("hits",            scalar @files);
+	my ($sdir,$root,$loc) = check_dir($xdir,$cls);
+	$node->setAttribute("class",     $cls);
+	$node->setAttribute("root",      $root);
+	$node->setAttribute("location",  $loc);
+	$node->setAttribute("status",    $sdir);
 	foreach my $sfile (@files) {
 	    my $parent = XML::LibXML::Element->new( 'stack' );
 	    $parent->setAttribute("name",$sfile);
@@ -268,9 +315,18 @@ sub findObs {
 
 sub findObsFile {
     my $param =shift;
-    my $dir =shift;
-    my $base=basename($param->{file}[0]);
-    my $file = $dir . $base;
+    my $cls=shift;
+    my $ifile=$param->{file}[0];
+    my $idir = (keys (%{$dirs{$cls}}))[0];
+    my( $adir, $afile ) = splitArg($ifile);
+    my $xdir = $idir;
+    my $prefix = substr $adir,0,1;
+    if ($prefix eq "\/") {
+	$xdir = $adir; # absolute path
+    } else {
+	$xdir = $xdir . $adir; # relative path
+    };
+    my $file = $xdir.$afile;
     my $password=($param->{password}[0] // "");
     my $sfile=$param->{target}[0] // "";
     my $obsTargets = ($param->{obsTargets}->[0] // "");
@@ -307,6 +363,11 @@ sub findObsFile {
 	$node->removeChild($oldNode);
     };
     if ($sfile) {
+	my ($sdir,$root,$loc) = check_dir($xdir,$cls);
+	$node->setAttribute("class",     $cls);
+	$node->setAttribute("root",      $root);
+	$node->setAttribute("location",  $loc);
+	$node->setAttribute("status",    $sdir);
 	my $log="";
 	eval {
 	    $log=capture {
@@ -438,4 +499,36 @@ sub tostring (&) {
   open local *STDOUT, '>', \$s;
   shift->();
   $s
+}
+
+sub check_dir {
+    my $idir = shift;
+    my $cls = shift;
+    if (-d $idir) {
+	my $adir = abs_path( $idir );
+	return getPrivileges( $adir, $cls );
+    } else {
+	return ("missing","",$idir); # missing directory
+    }
+}
+
+sub getPrivileges {
+    my $dir = shift;
+    my $cls = shift;
+    foreach my $k (keys %{$dirs{$cls}}) {
+	my $kk = substr($k,0,-1); # remove last "/" from "%dirs" directory name
+	#print "Checking $dir~$kk\n";
+	if ( $dir =~ /$kk\/?(.*)/) {
+	    return ($dirs{$cls}{$k},$k,$1);
+	}
+    }
+    return ("denied","",$dir);
+}
+sub splitArg {
+    my $arg = shift;
+    if ($arg =~ /^(.*\/)([^\/]*)$/) {
+	return ($1,$2)
+    } else {
+	return ("",$arg)
+    }
 }
