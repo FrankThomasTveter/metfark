@@ -78,7 +78,7 @@ LIBS = ../libgenc/libgenc.a
 # BINOP = -L/home/franktt/bufr/src/libbufr -L/home/franktt/bufr/src/libgenc -lbufr -lfmgenc -lgfortran -L/usr/lib -lfimex
 # BINOP = -L/home/franktt/bufr/src/libbufr -L/home/franktt/bufr/src/libgenc -lbufr -lfmgenc -lgfortran -L/usr/lib -lfimex
 #
- OPTIONS = -g -fdefault-real-8 -fPIC -fmax-errors=10 -fbounds-check -fcheck=all
+ OPTIONS =  -g -fdefault-real-8 -fPIC -fmax-errors=10 -fbounds-check -fcheck=all -DJBPW_64 
 # BINOP = -L/usr/lib/ -lfimexf -lfimex -Wl,-rpath,/usr/lib/
  BINOP = -L/vol/fou/emep/People/heikok/fimexTrunk/lib/ -lfimexf -lfimex -Wl,-rpath,/vol/fou/emep/People/heikok/fimexTrunk/lib/
  ORDER = observations.F90

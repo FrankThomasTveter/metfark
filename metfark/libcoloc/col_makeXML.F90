@@ -1,19 +1,48 @@
-subroutine col_makeXML(cid,mid,bid,crc250, irc)
+subroutine col_makeXML(sid,mid,bid,crc250, irc)
   use colocation
+  use model
+  use observations
   implicit none
-  integer :: cid ! colocation session id
+  integer :: sid ! colocation session id
   integer :: mid ! model session id
   integer :: bid ! observation session id
   character*250 :: crc250
   integer :: irc
   character*25 :: myname = "col_makeXML"
+  type(col_session), pointer :: css !  current session
+  type(mod_session), pointer :: mss !  current session
+  type(obs_session), pointer :: oss !  current session
+  call colocation_getSession(css,sid,crc250,irc)
+  if (irc.ne.0) then
+     call colocation_errorappend(crc250,myname)
+     call colocation_errorappend(crc250," Error return from col_getSession.")
+     call colocation_errorappendi(crc250,irc)
+     call colocation_errorappend(crc250,"\n")
+     return
+  end if
+  call model_getSession(mss,mid,crc250,irc)
+  if (irc.ne.0) then
+     call colocation_errorappend(crc250,myname)
+     call colocation_errorappend(crc250," Error return from mod_getSession.")
+     call colocation_errorappendi(crc250,irc)
+     call colocation_errorappend(crc250,"\n")
+     return
+  end if
+  call observation_getSession(oss,bid,crc250,irc)
+  if (irc.ne.0) then
+     call colocation_errorappend(crc250,myname)
+     call colocation_errorappend(crc250," Error return from obs_getSession.")
+     call colocation_errorappendi(crc250,irc)
+     call colocation_errorappend(crc250,"\n")
+     return
+  end if
   !
   write(*,'(A)') "Content-type: text/plain;"
   write(*,*)
   write(*,'(A)') "<?xml version='1.0' encoding='utf-8'?>";
   write(*,'(A)') "<url>"
   !
-  call  colocation_makeXML(cid,mid,bid,crc250, irc)
+  call  colocation_makeXML(css,mss,oss,crc250, irc)
   if (irc.ne.0) then
      call printError(crc250)
   end if

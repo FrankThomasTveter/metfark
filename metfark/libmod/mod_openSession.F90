@@ -5,8 +5,9 @@ subroutine mod_opensession(sid, crc250, irc)
   character*250 :: crc250
   integer :: irc
   character*25 :: myname = "determinefileorder"
+  type(mod_session), pointer :: css !  current session
   !write(*,*) myname,'Entering.',irc
-  call model_opensession(sid,crc250,irc)
+  call model_opensession(sid,css,crc250,irc)
   if (irc.ne.0) then
      call model_errorappend(crc250,"|")
      call model_errorappend(crc250,myname)

@@ -169,7 +169,8 @@ O_FILES  = fark.o
 H_FILES  = ppport.h
 MAN1PODS = 
 MAN3PODS = lib/fark.pm \
-	lib/farkdata.pm
+	lib/farkdata.pm \
+	lib/farkdir.pm
 
 # Where is the Config information that we are using/depend on
 CONFIGDEP = $(PERL_ARCHLIBDEP)$(DFSEP)Config.pm $(PERL_INCDEP)$(DFSEP)config.h
@@ -192,17 +193,16 @@ PERL_ARCHIVEDEP    =
 PERL_ARCHIVE_AFTER = 
 
 
-TO_INST_PM = 2015.06.17_fark.pl \
-	fark.pl \
+TO_INST_PM = fark.pl \
 	fark2.pl \
 	farkobs.pl \
 	lib/colocation.mod \
 	lib/fark.pm \
 	lib/farkdata.pm \
+	lib/farkdir.pm \
 	lib/libbufr.a \
 	lib/libbufrc.a \
 	lib/libcoloc.a \
-	lib/libfparse.a \
 	lib/libgenc.a \
 	lib/libmodel.a \
 	lib/libobs.a \
@@ -214,9 +214,7 @@ TO_INST_PM = 2015.06.17_fark.pl \
 	lib/xmlparse.mod \
 	t.pl
 
-PM_TO_BLIB = 2015.06.17_fark.pl \
-	$(INST_LIB)/2015.06.17_fark.pl \
-	fark.pl \
+PM_TO_BLIB = fark.pl \
 	$(INST_LIB)/fark.pl \
 	fark2.pl \
 	$(INST_LIB)/fark2.pl \
@@ -228,14 +226,14 @@ PM_TO_BLIB = 2015.06.17_fark.pl \
 	blib/lib/fark.pm \
 	lib/farkdata.pm \
 	blib/lib/farkdata.pm \
+	lib/farkdir.pm \
+	blib/lib/farkdir.pm \
 	lib/libbufr.a \
 	blib/lib/libbufr.a \
 	lib/libbufrc.a \
 	blib/lib/libbufrc.a \
 	lib/libcoloc.a \
 	blib/lib/libcoloc.a \
-	lib/libfparse.a \
-	blib/lib/libfparse.a \
 	lib/libgenc.a \
 	blib/lib/libgenc.a \
 	lib/libmodel.a \
@@ -355,8 +353,8 @@ MPOLLUTE =
 # fark might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
-EXTRALIBS = -L/home/franktt/github.com/fark/fark/fark/lib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
-LDLOADLIBS = -L/home/franktt/github.com/fark/fark/fark/lib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+EXTRALIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+LDLOADLIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
 BSLOADLIBS = 
 
 
@@ -571,10 +569,12 @@ POD2MAN = $(POD2MAN_EXE)
 
 manifypods : pure_all  \
 	lib/fark.pm \
-	lib/farkdata.pm
+	lib/farkdata.pm \
+	lib/farkdir.pm
 	$(NOECHO) $(POD2MAN) --section=$(MAN3EXT) --perm_rw=$(PERM_RW) -u \
 	  lib/fark.pm $(INST_MAN3DIR)/fark.$(MAN3EXT) \
-	  lib/farkdata.pm $(INST_MAN3DIR)/farkdata.$(MAN3EXT) 
+	  lib/farkdata.pm $(INST_MAN3DIR)/farkdata.$(MAN3EXT) \
+	  lib/farkdir.pm $(INST_MAN3DIR)/farkdir.$(MAN3EXT) 
 
 
 
@@ -632,8 +632,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(OBJECT) $(FIRST_MAKEFILE) \
-	  $(MAKEFILE_OLD) 
+	  $(OBJECT) $(MAKEFILE_OLD) \
+	  $(FIRST_MAKEFILE) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 
@@ -1076,17 +1076,16 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  2015.06.17_fark.pl $(INST_LIB)/2015.06.17_fark.pl \
 	  fark.pl $(INST_LIB)/fark.pl \
 	  fark2.pl $(INST_LIB)/fark2.pl \
 	  farkobs.pl $(INST_LIB)/farkobs.pl \
 	  lib/colocation.mod blib/lib/colocation.mod \
 	  lib/fark.pm blib/lib/fark.pm \
 	  lib/farkdata.pm blib/lib/farkdata.pm \
+	  lib/farkdir.pm blib/lib/farkdir.pm \
 	  lib/libbufr.a blib/lib/libbufr.a \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
 	  lib/libcoloc.a blib/lib/libcoloc.a \
-	  lib/libfparse.a blib/lib/libfparse.a \
 	  lib/libgenc.a blib/lib/libgenc.a \
 	  lib/libmodel.a blib/lib/libmodel.a \
 	  lib/libobs.a blib/lib/libobs.a \

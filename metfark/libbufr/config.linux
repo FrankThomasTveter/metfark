@@ -17,7 +17,8 @@ CFLAGS  = $(DEBUG) $(PROFILE) -DREAL_8 -DLITTLE_ENDIAN -DPOINTER_64 -DREAL_BIGGE
 FASTCFLAGS = $(CFLAGS)
 #
 FC      = gfortran
-FFLAGS = $(DEBUG) $(PROFILE) $(CC_A32) -fdefault-real-8 -fcray-pointer -Dlinux $(USE_NO_POINTERS) -DREAL_8 -DREAL_BIGGER_THAN_INTEGER -Dgfortran -DTABLE_PATH=\"/usr/share/metno-bufrtables/\" -DLITTLE_ENDIAN -fPIC
+FFLAGS = $(DEBUG) $(PROFILE) $(CC_A32) -fdefault-real-8 -fcray-pointer -Dlinux $(USE_NO_POINTERS) -DREAL_8 -DREAL_BIGGER_THAN_INTEGER -Dgfortran -DTABLE_PATH=\"/usr/share/metno-bufrtables/\" -DLITTLE_ENDIAN -fPIC -DJBPW_64
+
 VECTFFLAGS = $(FFLAGS)
 #              |
 #              v

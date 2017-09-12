@@ -8,7 +8,7 @@
 ###ONLY =  
 
 # A list of files to be compiled in given order
-ORDER = libxml libparse libobs libmod libcoloc
+ORDER = libxml libparse libobs libmod libcoloc libplot
 #
 # A list of the files or directories that should not be 'made'
  STATIC = ice bufrtables fark CVS doc scr ice jnk hints.txt build

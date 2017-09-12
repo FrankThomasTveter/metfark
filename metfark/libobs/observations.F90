@@ -16,7 +16,7 @@ module observations
   ! bufrdc PARAMETERS
   integer,parameter :: JSUP   =       9
   integer,parameter :: JSEC0  =       3
-  integer,parameter :: JSEC1  =      40
+  integer,parameter :: JSEC1  =      80
   integer,parameter :: JSEC2  =    4096
   integer,parameter :: JSEC3  =       4
   integer,parameter :: JSEC4  =       2
@@ -155,7 +155,7 @@ module observations
   ! SESSION VARIABLES
   !
   type :: obs_session
-     integer                         :: bid
+     integer                         :: sid
      CHARACTER(LEN=250)              :: fn250
      CHARACTER(LEN=250)              :: tablepath=""
      !
@@ -193,22 +193,23 @@ module observations
      !
      type(obs_target), pointer        :: firsttarget => null()   ! linked list start
      type(obs_target), pointer        :: lasttarget => null()    ! linked list end
+     type(obs_target), pointer        :: ctarget => null()    ! linked list end
      integer :: ntarget=0                  ! number of targets
      integer :: ntrg=0                     ! number of targets including index_target
      integer :: category                   ! filter category/bufrType
      integer :: subCategory                ! filter subcategory/subType
      !
-     character*80, allocatable       :: trg80(:)       ! target name
-     integer, allocatable            :: trg_lent(:)       ! target name
-     integer, allocatable            :: trg_seq(:)              ! position/sequence number
-     integer, allocatable            :: trg_descr(:)            ! descriptor
-     logical, allocatable            :: trg_lval(:,:)           ! above/below/between limits?
+     character*80, allocatable       :: trg80(:)        ! target name
+     integer, allocatable            :: trg_lent(:)     ! target name
+     integer, allocatable            :: trg_seq(:)      ! position/sequence number
+     integer, allocatable            :: trg_descr(:)    ! descriptor
+     logical, allocatable            :: trg_lval(:,:)   ! above/below/between limits?
      real, allocatable               :: trg_minval(:)
      real, allocatable               :: trg_maxval(:)
      integer, allocatable            :: trg_ook(:)
      integer, allocatable            :: trg_orm(:)
-     CHARACTER (LEN=80), allocatable :: trg_var(:)   ! target variable names
-     REAL(rn),           allocatable :: trg_val(:)   ! target variable values
+     CHARACTER (LEN=80), allocatable :: trg_var(:)      ! target variable names
+     REAL(rn),           allocatable :: trg_val(:)      ! target variable values
      logical                         :: trg_set=.false. ! is target list set?
      !
      ! report label flags
@@ -265,11 +266,11 @@ CONTAINS
   ! SESSION ROUTINES
   !###############################################################################
   !
-  subroutine observation_opensession(bid,crc250,irc)
-    integer :: bid
+  subroutine observation_opensession(sid,css,crc250,irc)
+    integer :: sid
     character*250 :: crc250
     integer :: irc
-    type(obs_session),pointer :: newSession !  new session
+    type(obs_session),pointer :: css !  new session
     character*22 :: myname = "observation_opensession"
     !write(*,*)myname,'Entering.'
     if (.not.associated(firstSession)) then
@@ -284,7 +285,8 @@ CONTAINS
        lastSession%prev => firstSession
        !
     end if
-    allocate(newSession,stat=irc)
+    nullify(css)
+    allocate(css,stat=irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250,"Unable to allocate 'new session'.")
@@ -292,36 +294,36 @@ CONTAINS
        return
     end if
     maxid=maxid+1
-    newSession%bid=maxid
-    newSession%prev => lastSession%prev
-    newSession%next => lastSession
-    newSession%prev%next => newSession
-    newSession%next%prev => newSession
-    bid = newSession%bid
+    css%sid=maxid
+    css%prev => lastSession%prev
+    css%next => lastSession
+    css%prev%next => css
+    css%next%prev => css
+    sid = css%sid
     ! stack
-    allocate(newSession%firstFile,newSession%lastFile, stat=irc) ! 
+    allocate(css%firstFile,css%lastFile, stat=irc) ! 
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250,"Unable to allocate &
-            & 'newSession%firstFile/newSession%lastFile'.")
+            & 'css%firstFile/css%lastFile'.")
        call observation_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstFile%next => newSession%lastFile
-    newSession%lastFile%prev => newSession%firstFile
+    css%firstFile%next => css%lastFile
+    css%lastFile%prev => css%firstFile
     ! reports
-    allocate(newSession%firstReport,newSession%lastReport,stat=irc)
+    allocate(css%firstReport,css%lastReport,stat=irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250,"Unable to allocate first/lastReport.")
        call observation_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstReport%next => newSession%lastReport
-    newSession%lastReport%prev => newSession%firstReport
-    newSession%nsubset = 0
+    css%firstReport%next => css%lastReport
+    css%lastReport%prev => css%firstReport
+    css%nsubset = 0
     ! targets
-    call observation_targetinit(newSession,crc250,irc)
+    call observation_targetinit(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250,"Error return from observation_targetInit.")
@@ -334,17 +336,17 @@ CONTAINS
     return
   end subroutine observation_opensession
 
-  subroutine observation_getSession(css,bid,crc250,irc)
+  subroutine observation_getSession(css,sid,crc250,irc)
     type(obs_session), pointer :: css !  current session
-    integer :: bid
+    integer :: sid
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "observation_getSession"
-    if(bdeb)write(*,*)myname,' Entering.',irc,bid
+    if(bdeb)write(*,*)myname,' Entering.',irc,sid
     css => firstSession%next
     do while ( .not.associated(css,target=lastSession))
-       if (css%bid .eq. bid) then
-          if(bdeb)write(*,*)myname,' Done.',irc,bid
+       if (css%sid .eq. sid) then
+          if(bdeb)write(*,*)myname,' Done.',irc,sid
           return
        end if
        css=>css%next
@@ -353,28 +355,19 @@ CONTAINS
     irc=342
     call observation_errorappend(crc250,myname)
     call observation_errorappend(crc250,"Invalid session id:")
-    call observation_errorappendi(crc250,bid)
+    call observation_errorappendi(crc250,sid)
     call observation_errorappend(crc250,"\n")
-    if(bdeb)write(*,*)myname,'Error.',irc,bid
+    if(bdeb)write(*,*)myname,'Error.',irc,sid
     return
   end subroutine observation_getSession
 
-  subroutine observation_closeSession(bid,crc250,irc)
-    integer :: bid
+  subroutine observation_closeSession(css,crc250,irc)
     character*250 :: crc250
     integer :: irc
     type(obs_session), pointer :: css !  current session
     integer :: ii
     character*22 :: myname = "observation_closeSession"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        ! remove reportdata
        call observation_clearReports(css,crc250,irc)
@@ -439,31 +432,22 @@ CONTAINS
   !
   ! make cache file
   !
-  subroutine observation_makeCache(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine observation_makeCache(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile !  current file
     type(obs_mainCategory), pointer :: currentCat !  current file
     type(obs_subCategory), pointer :: currentSub !  current file
-    type(obs_session), pointer :: css !  current session
     integer, external :: length,ftunit
     integer :: lenp,unitr
     character*250 :: buff250, str250
     character*22 :: myname = "observation_makeCache"
-    if(bdeb)write(*,*) myname,' Entering.',irc,bid
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
+    if(bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Path.',bid,path250(1:lenp)
+    if(bdeb)write(*,*)myname,' Path.',path250(1:lenp)
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -524,36 +508,27 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc,bid
+    if(bdeb)write(*,*)myname,' Done.',irc
   end subroutine observation_makeCache
   !
   ! load cache file
   !
-  subroutine observation_loadCache(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine observation_loadCache(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(obs_file),pointer :: newFile
     type(obs_mainCategory), pointer :: newCat !  current file
     type(obs_subCategory), pointer :: newSub !  current file
-    type(obs_session), pointer :: css !  current session
     integer, external :: length
     integer :: lenp,lenf,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
     character*22 :: myname = "observation_loadCache"
-    if(bdeb)write(*,*) myname,' Entering.',irc,bid
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
+    if(bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Path.',bid,path250(1:lenp)
+    if(bdeb)write(*,*)myname,' Path.',path250(1:lenp)
     ! clear existing cache
     css%stackReady=.false.
     call observation_removeFiles(css,crc250,irc)
@@ -714,7 +689,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc,bid
+    if(bdeb)write(*,*)myname,' Done.',irc
   end subroutine observation_loadCache
   !
   !###############################################################################
@@ -723,23 +698,14 @@ CONTAINS
   !
   ! clear the BUFR STACK
   !
-  subroutine observation_stackclear(bid,crc250,irc)
-    integer :: bid
+  subroutine observation_stackclear(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
     integer, external :: length
     integer :: lens
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_stackclear"
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     ! mark as prepared
     css%stackReady=.false.
     !
@@ -763,37 +729,50 @@ CONTAINS
     if(bdeb)write(*,*)myname,' Done.'
   end subroutine observation_stackclear
   !
+  ! get the bufr table path
+  !
+  subroutine observation_getTablePath(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    path250=css%tablepath
+    return
+  end subroutine observation_getTablePath
+  !
   ! set the bufr table path
   !
-  subroutine observation_setTablePath(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine observation_setTablePath(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
-    integer :: lens
-    type(obs_session), pointer :: css !  current session
+    integer :: lenb
+    character*250 :: buff250
     character*22 :: myname = "observation_setTablePath"
-    if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
+    if(bdeb)write(*,*)myname,' Entering.'//path250
+    buff250=path250
+    call chop0(buff250,250)
+    lenb=length(buff250,250,10)
+    if (lenb.gt.0.and.lenb.lt.250) then
+       if (buff250(lenb:lenb).ne."/") then
+          buff250=buff250(1:lenb)//"/"
+          call chop0(buff250,250)
+          lenb=length(buff250,250,10)
+       end if
     end if
-    css%tablepath=path250
+    css%tablepath=buff250
     call chop0(css%tablepath,250)
-    if(bdeb)write(*,*)myname,' Done.'
+    if(bdeb)write(*,*)myname,' Done. "'//buff250(1:lenb)//'"'
   end subroutine observation_setTablePath
   !
   ! set table c file name
   !
-  subroutine observation_setTableC(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine observation_setTableC(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
@@ -801,7 +780,6 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_setTableC"
     ctableInit=.false.
     c250=path250
@@ -811,8 +789,8 @@ CONTAINS
   !
   !
   !
-  subroutine observation_setBufrType(bid,category,subCategory,crc250,irc)
-    integer :: bid
+  subroutine observation_setBufrType(css,category,subCategory,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     integer :: category
     integer :: subCategory
     character*250 :: crc250
@@ -821,17 +799,8 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_setBufrType"
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     css%category=category
     css%subCategory=subCategory
     if(bdeb)write(*,*)myname,' Done.'
@@ -867,8 +836,8 @@ CONTAINS
   !
   ! Add bufr-file to the BUFR STACK
   !
-  subroutine observation_stackpush(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine observation_stackpush(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
@@ -883,20 +852,11 @@ CONTAINS
     integer, external :: length
     integer :: lenc,leni,lenv,lens,lenp,lend
     logical :: bbok
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_stackpush"
-    if(bdeb)write(*,*) myname,' Entering.',irc,bid
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
+    if(bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Starting.',bid,path250(1:lenp)
+    if(bdeb)write(*,*)myname,' Starting.',path250(1:lenp)
     ! create new stack-item
     bok=.true.
     allocate(newFile,stat=irc)
@@ -909,7 +869,7 @@ CONTAINS
     end if
     newFile%firstCategory%next => newFile%lastCategory
     newFile%lastCategory%prev => newFile%firstCategory
-    if(bdeb)write(*,*)myname,'Care.',bid
+    if(bdeb)write(*,*)myname,'Care.'
     ! push onto stack
     if (bok) then
        css%nFileIndexes=css%nFileIndexes + 1
@@ -920,7 +880,7 @@ CONTAINS
        newFile%next%prev => newFile
        css%currentFile=>newFile
     end if
-    if(bdeb)write(*,*)myname,'Dare.',bid
+    if(bdeb)write(*,*)myname,'Dare.'
     ! open file
     if (bok) then
        ! set file name...
@@ -928,10 +888,11 @@ CONTAINS
        call chop0(newFile%fn250,250)
        newFile%lenf=length(newFile%fn250,250,20)
        newFile%tablepath=css%tablepath
+       if (bdeb) call observation_printStack(css,crc250,irc)
        ! open file
-       if(bdeb)write(*,*)myname,'Flare.',bid,bok
+       if(bdeb)write(*,*)myname,'Flare.',bok
        call observation_scanFile(css,newFile,bok,crc250,irc)
-       if(bdeb)write(*,*)myname,'Share.',bid,bok
+       if(bdeb)write(*,*)myname,'Share.',bok
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from observation_scanFileSortIndexes.")
@@ -942,7 +903,7 @@ CONTAINS
     end if
     ! if (.not.bok) then
     !    if (associated(newFile)) then
-    !       call observation_stackpop(bid,path250,crc250,irc)
+    !       call observation_stackpop(css,path250,crc250,irc)
     !       if (irc.ne.0) then
     !          call observation_errorappend(crc250,myname)
     !          call observation_errorappend(crc250," Error return from observation_stackpop.")
@@ -952,33 +913,25 @@ CONTAINS
     !       end if
     !    end if
     ! end if
-    if(bdeb)write(*,*)myname,' Done.',irc,bid
+    if (bdeb) call observation_printStack(css,crc250,irc)
+    if(bdeb)write(*,*)myname,' Done.',irc
   end subroutine observation_stackpush
 
   !
   ! Remove last bufr-file on the BUFR STACK
   !
-  subroutine observation_stackpop(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine observation_stackpop(css,path250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     type(obs_file), pointer :: prevFile => null()
-    type(obs_session), pointer :: css !  current session
     integer :: irc2
     character*22 :: myname = "observation_stackpop"
     logical :: bdone
     integer, external :: length
     integer :: lenp
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     call chop0(path250,250)
     lenp=length(path250,250,10)
     currentFile => css%lastFile%prev
@@ -1004,23 +957,14 @@ CONTAINS
   !
   ! Peek at last bufr-file put onto the BUFR STACK
   !
-  subroutine observation_stackpeeklen(bid,maxrep,crc250,irc)
-    integer :: bid
+  subroutine observation_stackpeeklen(css,maxrep,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     integer :: maxrep
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     integer :: ii,jj
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_stackpeeklen"
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     maxrep=1
     currentFile => css%lastFile%prev
     ! report file-name
@@ -1037,8 +981,8 @@ CONTAINS
     !if(bdeb)write(*,*)myname,' Done.',associated(css%lastFile%prev,target=css%firstFile)
   end subroutine observation_stackpeeklen
   !
-  subroutine observation_stackpeek(bid,maxrep,nrep,rep250,crc250,irc)
-    integer :: bid
+  subroutine observation_stackpeek(css,maxrep,nrep,rep250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     integer :: maxrep
     integer :: nrep
     character*250 :: rep250(maxrep)
@@ -1050,17 +994,8 @@ CONTAINS
     type(obs_file), pointer :: currentFile => null()
     integer :: ii,jj
     character*80 :: varname
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_stackpeek"
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     currentFile => css%lastFile%prev
     ! report file-name
     nrep=0
@@ -1227,23 +1162,14 @@ CONTAINS
   !
   ! clear the target stack
   !
-  subroutine observation_clearTargetStack(sid,crc250,irc)
-    integer :: sid
+  subroutine observation_clearTargetStack(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "observation_clearTargetStack"
     integer :: ii, lens
     integer, external :: length
-    type(obs_session), pointer :: css !  current session
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     css%reportsReady=.false. ! old reports are discarded...
     ! delete any existing Target-entries
     call observation_removeTarget(css,crc250,irc)
@@ -1266,15 +1192,15 @@ CONTAINS
   !
   ! add item to target list
   !
-  subroutine observation_pushtarget(sid,trg,pos,descr,info,&
+  subroutine observation_pushtarget(css,trg,pos,descr,info,&
        & min,max,crc250,irc)
-    integer :: sid
+    type(obs_session), pointer :: css !  current session
     character(len=*) :: trg      ! target name
-    character(len=*) :: pos      ! target name
-    character(len=*) :: descr      ! target name
-    character(len=*) :: info      ! target name
-    character(len=*) :: min      ! target name
-    character(len=*) :: max      ! target name
+    character(len=*) :: pos      ! target position
+    character(len=*) :: descr    ! target description
+    character(len=*) :: info     ! target info
+    character(len=*) :: min      ! target min value
+    character(len=*) :: max      ! target max value
     character*250 :: crc250
     integer :: irc
     type(obs_target),pointer :: newTarget
@@ -1282,14 +1208,21 @@ CONTAINS
     real:: sec
     integer :: lenc,lenp,lend,lens,lene
     integer, external :: length
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_pushTarget"
-    if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
+    if(bdeb)write(*,*)myname,' Entering "'//trg(1:len(trg))//'" "'//pos(1:len(pos))//'"'
+    if (len(trg).eq.0) then
+       irc=983
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250," Invalid target name:")
+       call observation_errorappend(crc250,trg(1:len(trg))//" "//pos(1:len(pos)))
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    if (len(pos).eq.0) then
+       irc=984
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Invalid target position:")
+       call observation_errorappend(crc250,trg(1:len(trg))//" "//pos(1:len(pos)))
        call observation_errorappend(crc250,"\n")
        return
     end if
@@ -1319,6 +1252,42 @@ CONTAINS
     return
   end subroutine observation_pushTarget
   !
+  ! loop over target entries
+  !
+  logical function observation_looptarget(css,trg80,pos250,descr80,&
+       & info250,min80,max80,irc)
+    implicit none
+    type(obs_session), pointer :: css !  current session
+    character*80  :: trg80      ! target name
+    character*250 :: pos250    ! position/sequence number
+    character*80  :: descr80    ! descriptor
+    character*250 :: info250   ! information
+    character*80  :: min80      ! min value
+    character*80  :: max80      ! max value
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="looptarget"
+    observation_looptarget=.false. ! only true if all is ok...
+    if (.not.associated(css%ctarget)) then
+       css%ctarget =>  css%firstTarget%next 
+    else
+       css%ctarget =>  css%ctarget%next
+    end if
+    if (associated(css%ctarget,css%lastTarget)) then
+       nullify(css%ctarget)
+       observation_looptarget=.false.
+    else
+       trg80=css%ctarget%trg80
+       pos250=css%ctarget%pos250
+       descr80=css%ctarget%descr80
+       info250=css%ctarget%info250
+       min80=css%ctarget%min80
+       max80=css%ctarget%max80
+       observation_looptarget=.true.
+    end if
+    return
+  end function observation_looptarget
+  !
   ! get number of targets
   !
   integer function observation_targetCount(css,crc250,irc)
@@ -1339,6 +1308,47 @@ CONTAINS
     character*22 :: myname = "observation_hasExpression "
     observation_hasExpression=css%ind_set
   end function observation_hasExpression
+  !
+  ! print stack
+  !
+  subroutine observation_printStack(css,crc250,irc) 
+    type(obs_session), pointer :: css   ! session structure
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "observation_printStack "
+    type(obs_target), pointer :: currenttarget => null()
+    integer :: lent,lenp,lend,lens,lene,ii
+    integer, external :: length
+    ii=0
+    if ( .not. css%trg_set ) then
+       if (css%ind_set) then
+          css%ntrg=css%ntarget+1
+       else
+          css%ntrg=css%ntarget
+       end if
+       if(bdeb)write(*,*)myname,' here.',css%ntrg
+       currenttarget => css%firsttarget%next
+       do while (.not.associated(currenttarget,target=css%lasttarget))
+          ii=ii+1
+          call chop0(currenttarget%trg80,80)
+          call chop0(currenttarget%pos250,250)
+          call chop0(currenttarget%descr80,80)
+          call chop0(currenttarget%info250,250)
+          call chop0(currenttarget%min80,80)
+          call chop0(currenttarget%max80,80)
+          lent=length(currenttarget%trg80,80,10)
+          lenp=length(currenttarget%pos250,250,10)
+          lend=length(currenttarget%descr80,80,10)
+          lens=length(currenttarget%min80,80,10)
+          lene=length(currenttarget%max80,80,10)
+          write(*,*) myname,' Stack:',ii,' file="'//currenttarget%pos250//'" target="'//currenttarget%trg80(1:lent)//'"'
+          currenttarget => currenttarget%next
+       end do
+    end if
+    write(*,*) myname,' Stack entries:',ii
+    return
+  end subroutine observation_printStack
+
   !
   ! make target list from target chain
   !
@@ -1396,6 +1406,16 @@ CONTAINS
           lene=length(currenttarget%max80,80,10)
           css%trg80(ii)=currenttarget%trg80(1:lent)
           css%trg_lent(ii)=lent
+          if (lenp.eq.0) then
+             irc=999
+             write(*,*) myname,' Processing sequence "'//currenttarget%pos250//'"',lenp,associated(currenttarget)
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," Undefined sequence found, no:")
+             call observation_errorappendi(crc250,ii)
+             call observation_errorappend(crc250,"\n")
+             return
+          end if
+
           read(currenttarget%pos250(1:lenp),*,iostat=irc) css%trg_seq(ii)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
@@ -1563,25 +1583,16 @@ CONTAINS
   !
   ! Reset indexes for looping over analysis
   !
-  subroutine observation_sortFiles(bid,crc250,irc)
-    integer :: bid
+  subroutine observation_sortFiles(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     integer :: ii
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_sortFiles"
     !
     ! make array of files
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from observation_getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     call observation_sortStack(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -1628,7 +1639,7 @@ CONTAINS
        end if
        css%stackReady = .true.
     end if
-    call observation_setIndexLimits_(css,ind_lim,ind_start,ind_stop)
+    call observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
     !if(bdeb)
     ! write(*,*)myname,'There.',css%currentFileSortIndex,css%newnFileSortIndexes
     isubset=1
@@ -1704,7 +1715,7 @@ CONTAINS
        end if
        css%stackReady = .true.
     end if
-    call observation_setIndexLimits_(css,ind_lim,ind_start,ind_stop)
+    call observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
     isubset=1
     nsubset=0
     bdone=.false.
@@ -1746,8 +1757,19 @@ CONTAINS
   !
   ! set the observation time span
   !
-  subroutine observation_setIndex(bid,trg80,exp250,crc250,irc)
-    integer :: bid
+  subroutine observation_getIndex(css,trg80,exp250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*80 :: trg80
+    character*250 :: exp250
+    character*250 :: crc250
+    integer :: irc
+    trg80=css%ind_trg80
+    exp250=css%ind_exp250
+    return
+  end subroutine observation_getIndex
+  !
+  subroutine observation_setIndex(css,trg80,exp250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*80 :: trg80
     character*250 :: exp250
     character*250 :: crc250
@@ -1756,17 +1778,8 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lene,lent
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_setIndex"
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     css%ind_trg80=trg80
     css%ind_exp250=exp250
     call chop0(css%ind_trg80,80)
@@ -1781,8 +1794,19 @@ CONTAINS
   !
   ! set the observation time span
   !
-  subroutine observation_setIndexLimits(bid,s25,e25,crc250,irc)
-    integer :: bid
+  subroutine observation_getIndexLimits(css,s25,e25,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*25 :: s25,e25
+    character*250 :: crc250
+    integer :: irc
+    integer :: irc2
+    write(s25,*,iostat=irc2) css%ind_start
+    write(e25,*,iostat=irc2) css%ind_stop
+    return
+  end subroutine observation_getIndexLimits
+  !
+  subroutine observation_setIndexLimits(css,s25,e25,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*25 :: s25,e25
     character*250 :: crc250
     integer :: irc
@@ -1791,17 +1815,8 @@ CONTAINS
     integer :: lens, lene
     integer, external :: length
     integer :: irc2
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_setIndexLimits"
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     call chop0(s25,25)
     lens=length(s25,25,10)
     call chop0(e25,25)
@@ -1834,8 +1849,8 @@ CONTAINS
   !
   ! ignore labels
   !
-  subroutine observation_ignorelabel(bid,lab250,crc250,irc)
-    integer :: bid
+  subroutine observation_ignorelabel(css,lab250,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: lab250
     character*250 :: crc250
     integer :: irc
@@ -1843,17 +1858,8 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lenl
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_ignoreLabel"
     if(bdeb)write(*,*)myname,' Entering.'
-    call observation_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from getSession.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
     call chop0(lab250,250)
     lenl=length(lab250,250,10)
     if (lenl.eq.0) then
@@ -1883,18 +1889,30 @@ CONTAINS
   !
   ! set index limits directly
   !
-  subroutine observation_setIndexLimits_(css,ind_lim,ind_start,ind_stop)
+  subroutine observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
     type(obs_session), pointer :: css !  current session
     logical :: ind_lim
     real :: ind_start,ind_stop
     integer :: irc2
-    character*22 :: myname="model_setIndexLimits"
+    character*22 :: myname="model_setIndexLimitsRaw"
     css%ind_lim(1)=ind_lim
     css%ind_lim(2)=ind_lim
     css%ind_lim(3)=ind_lim
     css%ind_start=ind_start
     css%ind_stop=ind_stop
-  end subroutine observation_setIndexLimits_
+  end subroutine observation_setIndexLimitsRaw
+  !
+  subroutine observation_getIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
+    type(obs_session), pointer :: css !  current session
+    logical :: ind_lim
+    real :: ind_start,ind_stop
+    integer :: irc2
+    character*22 :: myname="model_getIndexLimitsRaw"
+    ind_lim=css%ind_lim(3)
+    ind_start=css%ind_start
+    ind_stop=css%ind_stop
+    return
+  end subroutine observation_getIndexLimitsRaw
   !
   ! private subroutine for sorting the stack
   !
@@ -2874,8 +2892,8 @@ CONTAINS
           end if
        end if
        sec=0.0D0
-       if(bdeb)write(*,'(X,A,A,A,5(A,I0))') myname,"File:",&
-            & css%currentFile%fn250(1:css%currentFile%lenf),":",&
+       if(bdeb)write(*,'(X,A,A,A,5(A,I0))') myname," File '",&
+            & css%currentFile%fn250(1:css%currentFile%lenf),"'",&
             & yy,"/",mm,"/",dd," ",hh,":",mi
        call jd2000(j2000,yy,mm,dd,hh,mi,sec)
        !read file and get start/end indexs...
@@ -3022,6 +3040,8 @@ CONTAINS
        KBUFL=KBUFL/NBYTPW+1
        !
        css%currentfile%mok(1)=css%currentfile%mok(1)+1
+       if(bdeb)WRITE(*,*)myname,'Calling BUS0123...',kbufl,nbytpw,jbufl,jbpw
+
        CALL BUS0123( KBUFL,KBUFF,KSUP,KSEC0,&
             & KSEC1,KSEC2,KSEC3,irc)
        !*KSUP*    -  ARRAY CONTAINING SUPLEMENTARY INFORMATION
@@ -3051,7 +3071,7 @@ CONTAINS
        nsubset=KSEC3(3)
        KEL=KVALS/nsubset
        IF(KEL.GT.KELEM) KEL=KELEM
-       !WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
+       if(bdeb)WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
        !
        CALL BUFREX(KBUFL,KBUFF,KSUP,KSEC0 ,&
             & KSEC1,KSEC2 ,KSEC3 ,&
@@ -4189,44 +4209,39 @@ CONTAINS
     integer :: ii
     type(obs_target), pointer :: currenttarget => null()
     if(bdeb)write(*,*)myname,' Entering.',bdeb
-     if (css%ntarget == 0) then
-       if(bdeb)write(*,*)myname,' Done,  nothing to do.'
+    if(bdeb)write(*,*)myname,' Make trg list.'
+    call observation_makeTargetList(css,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from maketargetlist.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
        return
-    else
-       if(bdeb)write(*,*)myname,' Make trg list.'
-       call observation_makeTargetList(css,crc250,irc)
-       if(bdeb)write(*,*)myname,' Done making target list.',irc,css%ntarget,css%ntrg
+    end if
+    if(bdeb)write(*,*)myname,' Done making target list.',irc,css%ntarget,css%ntrg
+    do ii=1,css%ntarget
+       css%trg_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
+    end do
+    if(bdeb)write(*,*)myname,' Assigning index.',css%ind_set
+    if (css%ind_set) then
+       ii=css%ntrg
+       css%trg_var(ii)=css%ind_trg80(1:css%ind_lent)
+    end if
+    if(bdeb)write(*,*)myname,' Parsing.',css%ind_set
+    if (css%ind_set) then
+       call parse_open(css%ind_pss,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from maketargetlist.")
+          call observation_errorappend(crc250,"Error return from 'parse_open'.")
+          return
+       end if
+       call parse_parsef(css%ind_pss,css%ind_exp250(1:css%ind_lene),css%trg_var,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parsef.")
           call observation_errorappendi(crc250,irc)
           call observation_errorappend(crc250,"\n")
           return
-       end if
-       do ii=1,css%ntarget
-          css%trg_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
-       end do
-       if(bdeb)write(*,*)myname,' Assigning index.',css%ind_set
-       if (css%ind_set) then
-          ii=css%ntrg
-          css%trg_var(ii)=css%ind_trg80(1:css%ind_lent)
-       end if
-       if(bdeb)write(*,*)myname,' Parsing.',css%ind_set
-       if (css%ind_set) then
-          call parse_open(css%ind_pss,crc250,irc)
-          if (irc.ne.0) then
-             call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from 'parse_open'.")
-             return
-          end if
-          call parse_parsef(css%ind_pss,css%ind_exp250(1:css%ind_lene),css%trg_var,crc250,irc)
-          if (irc.ne.0) then
-             call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250," Error return from parsef.")
-             call observation_errorappendi(crc250,irc)
-             call observation_errorappend(crc250,"\n")
-             return
-          end if
        end if
     end if
     if(bdeb)write(*,*)myname,' Done.'

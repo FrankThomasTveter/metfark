@@ -40,14 +40,14 @@ module model
   !
   type :: mod_expression
      integer :: nTrgExp = 0
-     logical, pointer :: vset(:)       ! is value set?
-     character*80, pointer  :: n80(:)
+     logical, pointer :: vset(:)                         ! is value set?
+     character*80, pointer  :: n80(:)                    ! name
      integer, pointer  :: lenn(:)
-     character*250, pointer  :: e250(:)
+     character*250, pointer  :: e250(:)                  ! expression
      integer, pointer :: lene(:)
-     character*80, pointer  :: l80(:)
-     character*80, pointer  :: u80(:)
-     type(parse_pointer), pointer  :: psp(:) => null()
+     character*80, pointer  :: l80(:)                    ! lower limit
+     character*80, pointer  :: u80(:)                    ! upper limit
+     type(parse_pointer), pointer  :: psp(:) => null()   ! parse-pointer
      real, pointer  :: val(:)
      type(mod_expression), pointer :: prev => null()   ! linked list
      type(mod_expression), pointer :: next => null()   ! linked list
@@ -243,6 +243,7 @@ module model
      ! targets
      type(mod_target), pointer :: firstTrg => null()   ! linked list start
      type(mod_target), pointer :: lastTrg => null()    ! linked list end
+     type(mod_target), pointer :: cTrg => null()       ! current target
      integer :: ntarget=0                               ! number of items in target-chain
      character*80, pointer :: trg80(:) => null()   ! list of target names
      integer, pointer :: trg_lent(:) => null()       ! list of target name length
@@ -269,7 +270,7 @@ module model
      ! expression rules
      type(mod_expression), pointer :: firstExp => null()   ! linked list start
      type(mod_expression), pointer :: lastExp => null()    ! linked list end
-     type(mod_expression), pointer :: currentExp => null()  ! current expression
+     type(mod_expression), pointer :: currentExp => null() ! current expression
      integer :: nexp=0                               ! number of items in expression-chain
      !
      type(mod_session), pointer :: prev => null()         ! linked list
@@ -286,11 +287,11 @@ CONTAINS
   ! SESSION ROUTINES
   !###############################################################################
   !
-  subroutine model_opensession(sid,crc250,irc)
+  subroutine model_opensession(sid,css,crc250,irc)
     integer :: sid
+    type(mod_session),pointer :: css  !  new session
     character*250 :: crc250
     integer :: irc
-    type(mod_session),pointer :: newSession  !  new session
     character*25 :: myname = "model_openSession"
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
@@ -303,7 +304,8 @@ CONTAINS
        firstSession%next => lastSession
        lastSession%prev => firstSession
     end if
-    allocate(newSession,stat=irc)
+    nullify(css)
+    allocate(css,stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate 'new session'.")
@@ -311,74 +313,74 @@ CONTAINS
        return
     end if
     maxid=maxid+1
-    newSession%sid=maxid
-    newSession%prev => lastSession%prev
-    newSession%next => lastSession
-    newSession%prev%next => newSession
-    newSession%next%prev => newSession
-    sid = newSession%sid
-    newSession%nFileIndexes=0
-    newSession%tsort=0
+    css%sid=maxid
+    css%prev => lastSession%prev
+    css%next => lastSession
+    css%prev%next => css
+    css%next%prev => css
+    sid = css%sid
+    css%nFileIndexes=0
+    css%tsort=0
     !
-    allocate(newSession%firstFile,newSession%lastFile, stat=irc) ! 
+    allocate(css%firstFile,css%lastFile, stat=irc) ! 
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate &
-            & 'newSession%firstFile/newSession%lastFile'.")
+            & 'css%firstFile/css%lastFile'.")
        call model_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstFile%next => newSession%lastFile
-    newSession%lastFile%prev => newSession%firstFile
+    css%firstFile%next => css%lastFile
+    css%lastFile%prev => css%firstFile
     !
-    allocate(newSession%firstLoc,newSession%lastLoc, stat=irc) ! 
+    allocate(css%firstLoc,css%lastLoc, stat=irc) ! 
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate &
-            & 'newSession%firstLoc/newSession%lastLoc'.")
+            & 'css%firstLoc/css%lastLoc'.")
        call model_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstLoc%next => newSession%lastLoc
-    newSession%lastLoc%prev => newSession%firstLoc
-    newSession%locReady=.false.
+    css%firstLoc%next => css%lastLoc
+    css%lastLoc%prev => css%firstLoc
+    css%locReady=.false.
     !
-    allocate(newSession%firstTrg,newSession%lastTrg, stat=irc) ! 
+    allocate(css%firstTrg,css%lastTrg, stat=irc) ! 
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate &
-            & 'newSession%firstTrg/newSession%lastTrg'.")
+            & 'css%firstTrg/css%lastTrg'.")
        call model_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstTrg%next => newSession%lastTrg
-    newSession%lastTrg%prev => newSession%firstTrg
+    css%firstTrg%next => css%lastTrg
+    css%lastTrg%prev => css%firstTrg
     !
-    allocate(newSession%firstDef,newSession%lastDef, stat=irc) ! 
+    allocate(css%firstDef,css%lastDef, stat=irc) ! 
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate &
-            & 'newSession%firstDef/newSession%lastDef'.")
+            & 'css%firstDef/css%lastDef'.")
        call model_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstDef%next => newSession%lastDef
-    newSession%lastDef%prev => newSession%firstDef
+    css%firstDef%next => css%lastDef
+    css%lastDef%prev => css%firstDef
     !
-    allocate(newSession%firstExp,newSession%lastExp, stat=irc) ! 
+    allocate(css%firstExp,css%lastExp, stat=irc) ! 
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate &
-            & 'newSession%firstExp/newSession%lastExp'.")
+            & 'css%firstExp/css%lastExp'.")
        call model_errorappend(crc250,"\n")
        return
     end if
-    newSession%firstExp%next => newSession%lastExp
-    newSession%lastExp%prev => newSession%firstExp
-    newSession%nexp=0
+    css%firstExp%next => css%lastExp
+    css%lastExp%prev => css%firstExp
+    css%nexp=0
 
     ! mark as prepared
-    newSession%stackReady=.false.
+    css%stackReady=.false.
     return
   end subroutine model_opensession
 
@@ -404,21 +406,12 @@ CONTAINS
     return
   end subroutine model_getSession
 
-  subroutine model_closeSession(sid,crc250,irc)
-    integer :: sid
+  subroutine model_closeSession(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_closeSession"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        call model_removeSession(css,crc250,irc)
        if (irc.ne.0) then
@@ -587,28 +580,19 @@ CONTAINS
   !
   ! make cache file
   !
-  subroutine model_makecache(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine model_makecache(css,path250,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: currentFile !  current file
-    type(mod_session), pointer :: css !  current session
     integer, external :: length,ftunit
     integer :: lenp,lenf,lenv,lend,unitr,ii,jj
     character*22 :: myname = "model_makeCache"
-    if(bdeb)write(*,*) myname,' Entering.',irc,bid
-    call model_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
+    if(bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Path.',bid,path250(1:lenp)
+    if(bdeb)write(*,*)myname,' Path.',path250(1:lenp)
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -682,35 +666,26 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc,bid
+    if(bdeb)write(*,*)myname,' Done.',irc
   end subroutine model_makecache
   !
   ! load cache file
   !
-  subroutine model_loadcache(bid,path250,crc250,irc)
-    integer :: bid
+  subroutine model_loadcache(css,path250,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: cfile, cfilen
     type(mod_file),pointer :: newFile
-    type(mod_session), pointer :: css !  current session
     integer, external :: length
     integer :: lenp,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
     character*22 :: myname = "model_loadCache"
-    if(bdeb)write(*,*) myname,' Entering.',irc,bid
-    call model_getSession(css,bid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
+    if(bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Path.',bid,path250(1:lenp)
+    if(bdeb)write(*,*)myname,' Path.',path250(1:lenp)
     ! clear existing cache
     css%stackReady=.false.
     if (associated(css%firstFile)) then
@@ -908,7 +883,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc,bid
+    if(bdeb)write(*,*)myname,' Done.',irc
   end subroutine model_loadcache
   !
   !
@@ -941,8 +916,8 @@ CONTAINS
   !
   ! clear the MODEL STACK
   !
-  subroutine model_clearfilestack(sid,var80,crc250,irc)
-    integer :: sid
+  subroutine model_clearfilestack(css,var80,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*80 :: var80
     character*250 :: crc250
     integer :: irc
@@ -950,17 +925,8 @@ CONTAINS
     type(mod_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_clearfilestack"
     if(bdeb)write(*,*)myname,' Entering.'
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -1047,8 +1013,8 @@ CONTAINS
   !
   ! Add model-file (grib/netcdf) to the MODEL STACK
   !
-  subroutine model_pushFile(sid,path250,crc250,irc)
-    integer :: sid
+  subroutine model_pushFile(css,path250,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
@@ -1065,17 +1031,8 @@ CONTAINS
     logical :: bbok
     integer :: nslice
     character*80, allocatable :: sdim80(:)
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_pushFile"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     call chop0(path250,250)
     lenp=length(path250,250,20)
     if(bdeb)write(*,*)myname,' File.',path250(1:lenp)
@@ -1173,26 +1130,17 @@ CONTAINS
   !
   ! Remove last model-file on the MODEL STACK
   !
-  subroutine model_popfile(sid,path250,crc250,irc)
-    integer :: sid
+  subroutine model_popfile(css,path250,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: currentFile => null()
     type(mod_file), pointer :: prevFile => null()
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_popfile"
     logical :: bdone
     integer, external :: length
     integer :: lenp
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -1231,23 +1179,14 @@ CONTAINS
   !
   ! Peek at last model-file put onto the MODEL STACK
   !
-  subroutine model_peeklen(sid,maxrep,crc250,irc)
-    integer :: sid
+  subroutine model_peeklen(css,maxrep,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     integer :: maxrep
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: currentFile => null()
     integer :: ii,jj
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_peeklen"
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -1275,8 +1214,8 @@ CONTAINS
     if(bdeb)write(*,*)myname,' Done.',maxrep
   end subroutine model_peeklen
   !
-  subroutine model_peek(sid,maxrep,nrep, rep250, crc250,irc)
-    integer :: sid
+  subroutine model_peek(css,maxrep,nrep, rep250, crc250,irc)
+    type(mod_session), pointer :: css !  current session
     integer :: maxrep
     integer :: nrep
     character*250 :: rep250(maxrep)
@@ -1288,17 +1227,8 @@ CONTAINS
     type(mod_file), pointer :: currentFile => null()
     integer :: ii,jj
     character*80 :: var80
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_peek"
     if(bdeb)write(*,*)myname,' Entering.'
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -1743,25 +1673,16 @@ CONTAINS
   !
   ! Reset indexes for looping over analysis
   !
-  subroutine model_orderstack(sid,crc250,irc)
-    integer :: sid
+  subroutine model_orderstack(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: currentFile => null()
     integer :: ii
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_orderstack"
     !
     ! make array of files
     if(bdeb)write(*,*)myname,' Entering.'
-    call model_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     call model_stackarray(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -1875,6 +1796,7 @@ CONTAINS
   end subroutine model_stacklast
   !
   subroutine model_getprevfile(css,ind_lim,ind_start,ind_stop,bok,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     logical :: ind_lim
     real    :: ind_start
     real    :: ind_stop
@@ -1888,7 +1810,6 @@ CONTAINS
     character*50 :: s1, s2, s3
     integer :: len1,len2,len3,lenr,lens,jj
     integer, external :: length
-    type(mod_session), pointer :: css !  current session
     logical :: bdone
     character*25 :: myname = "model_getprevfile"
     if(bdeb)write(*,*)myname,' Entering.',ind_lim
@@ -1966,6 +1887,7 @@ CONTAINS
   end subroutine model_getprevfile
   !
   subroutine model_getnextfile(css,ind_lim,ind_start,ind_stop,bok,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     logical :: ind_lim
     real    :: ind_start
     real    :: ind_stop
@@ -1980,7 +1902,6 @@ CONTAINS
     integer :: len1,len2,len3,lenr,lens,jj
     integer, external :: length
     logical :: bdone
-    type(mod_session), pointer :: css !  current session
     character*25 :: myname = "model_getnextfile"
     if(bdeb)write(*,*)myname,'Entering.'
     if (.not.css%stackReady) then
@@ -2778,6 +2699,13 @@ CONTAINS
     character*25 :: myname = "model_openFile"
     INTEGER :: CHUNKSIZEHINT
     chunksizehint= 1024*1024*1024
+    if (NEWFILE%LENF.eq.0) then
+       irc=999
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Attempt to open empty file.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     ret = NF__OPEN(newFile%fn250(1:NEWFILE%LENF),nf_nowrite,&
          & chunksizehint,newFile%ncid)
     if (ret .ne. NF_NOERR) then
@@ -3443,12 +3371,12 @@ CONTAINS
   ! slice current file
   !
   subroutine model_slicecurrentfile(css,bok,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     logical :: bok           ! was get successful?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     character*25 :: myname = "model_slicecurrentfile"
     logical :: bdone
-    type(mod_session), pointer :: css !  current session
     if(bdeb)write(*,*)myname,' Entering.',associated(css%currentFile)
     bok=.false.
     if (.not.associated(css%currentFile)) return
@@ -5023,23 +4951,14 @@ CONTAINS
   !
   ! set model sorting index variable
   !
-  subroutine model_setIndex(mid,varname,crc250,irc)
-    integer :: mid
+  subroutine model_setIndex(css,varname,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character(len=*) :: varname
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "model_setIndex"
-    type(mod_session), pointer :: css !  current session
     integer,external :: length
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     css%ind_var80=varname
     call chop0(css%ind_var80,80)
     css%ind_lenv=length(css%ind_var80,80,10)
@@ -5047,10 +4966,23 @@ CONTAINS
     return
   end subroutine model_setindex
   !
+  subroutine model_getIndex(css,var80,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    character*80 :: var80
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_setIndex"
+    integer,external :: length
+    if(bdeb)write(*,*)myname,'Entering.',irc
+    var80=css%ind_var80
+    if(bdeb)write(*,*)myname,'Done.',irc
+    return
+  end subroutine model_setindex
+  !
   ! set the sort variable limits
   !
-  subroutine model_setIndexLimits(mid, smin, smax, crc250,irc)
-    integer :: mid
+  subroutine model_setIndexLimits(css, smin, smax, crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character(LEN=*) :: smin
     character(LEN=*) :: smax
     character*250 :: crc250
@@ -5059,16 +4991,7 @@ CONTAINS
     integer :: lens, lene
     integer, external :: length
     integer :: irc2
-    type(mod_session), pointer :: css !  current session
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     css%ind_lim=.true.
     read(smin,*,iostat=irc2)css%ind_start
     if (irc2.ne.0) then
@@ -5097,22 +5020,13 @@ CONTAINS
   !
   ! clear the target stack
   !
-  subroutine model_cleartarget(mid,crc250,irc)
-    integer :: mid
+  subroutine model_cleartargetStack(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_target), pointer :: currentTarget => null() !  current session
     type(mod_target), pointer :: nextTarget => null() !  current session
-    character*25 :: myname = "model_cleartarget"
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
+    character*25 :: myname = "model_cleartargetstack"
     currentTarget => css%firstTrg%next
     do while (.not.associated(currentTarget,target=css%lastTrg))
        nextTarget => currentTarget%next
@@ -5124,29 +5038,20 @@ CONTAINS
     end do
     css%trg_set=.false.
     return
-  end subroutine model_cleartarget
+  end subroutine model_cleartargetstack
   !
   ! push target to the stack
   !
-  subroutine model_pushtarget(mid,n80,v80,l80,u80,crc250,irc)
-    integer :: mid
+  subroutine model_pushtarget(css,n80,v80,l80,u80,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*80 :: n80        ! target name
     character*80 :: v80        ! variable
     character*80 :: l80        ! lower value
     character*80 :: u80        ! upper value
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_target), pointer :: newTarget !  the new target
     character*25 :: myname = "model_pushtarget"
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (.not.associated(css%firstTrg)) then
        allocate(css%firstTrg,css%lastTrg, stat=irc)
        if (irc.ne.0) then
@@ -5179,6 +5084,35 @@ CONTAINS
     css%trg_set=.false.
     return
   end subroutine model_pushtarget
+  !
+  logical function model_loopTarget(css,n80,v80,l80,u80,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*80  :: n80       ! target name
+    character*80  :: v80       ! variable
+    character*80  :: l80      ! min value
+    character*80  :: u80      ! max value
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="pushset"
+    model_looptarget=.false. ! only true if all is ok...
+    if (.not.associated(css%ctrg)) then
+       css%ctrg =>  css%firstObstrg%next 
+    else
+       css%ctrg =>  css%ctrg%next
+    end if
+    if (associated(css%ctrg,css%lastObstrg)) then
+       nullify(css%ctrg)
+       model_loopTarget=.false.
+    else
+       n80=css%ctrg%n80
+       v80=css%ctrg%v80
+       l80=css%ctrg%l80
+       u80=css%ctrg%u80
+       model_looptarget=.true.
+    end if
+    return
+  end function model_loopTarget
   !
   ! get number of targets
   !
@@ -5219,22 +5153,13 @@ CONTAINS
   !
   ! clear the default stack
   !
-  subroutine model_cleardefault(mid,crc250,irc)
-    integer :: mid
+  subroutine model_cleardefault(css,crc250,irc) 
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_default), pointer :: currentDefault !  the current default target
     type(mod_default), pointer :: nextDef !  the next default target
     character*25 :: myname = "model_cleardefault"
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     currentDefault => css%firstDef%next
     do while (.not.associated(currentDefault,target=css%lastDef))
        nextDef => currentDefault%next
@@ -5476,25 +5401,16 @@ CONTAINS
   !
   ! add default element
   !
-  subroutine model_addDefault(mid,n80,v80,crc250,irc)
-    integer :: mid
+  subroutine model_addDefault(css,n80,v80,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*80 :: n80 ! target name
     character*80 :: v80 ! target value
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     integer :: ii, irc2, lenv, lenn
     integer, external :: length
     character*25 :: myname = "model_addDefault"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     call model_makeTargetList(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -5553,22 +5469,13 @@ CONTAINS
   !
   ! push default values to the stack
   !
-  subroutine model_pushDefault(mid,crc250,irc)
-    integer :: mid
+  subroutine model_pushDefault(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_default), pointer :: newDefault
     character*25 :: myname = "model_pushDefault"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (.not.associated(css%firstDef)) then
        allocate(css%firstDef,css%lastDef, stat=irc)
        if (irc.ne.0) then
@@ -5596,23 +5503,14 @@ CONTAINS
   !
   ! clear the expression stack
   !
-  subroutine model_clearexpression(mid,crc250,irc)
-    integer :: mid
+  subroutine model_clearexpressionstack(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_expression), pointer :: currentExpression => null() !  current session
     type(mod_expression), pointer :: nextExpression => null() !  current session
-    character*25 :: myname = "model_clearexpression"
+    character*25 :: myname = "model_clearexpressionstack"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     currentExpression => css%firstExp%next
     do while (.not.associated(currentExpression,target=css%lastExp))
        nextExpression => currentExpression%next
@@ -5624,33 +5522,24 @@ CONTAINS
     end do
     if(bdeb)write(*,*)myname,'Done.',irc
     return
-  end subroutine model_clearexpression
+  end subroutine model_clearexpressionstack
   !
   ! add expression to current
   !
-  subroutine model_addexpression(mid,n80,e250,l80,u80,crc250,irc)
-    integer :: mid
+  subroutine model_addexpression(css,n80,e250,l80,u80,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*80 :: n80
     character*250 :: e250
     character*80 :: l80
     character*80 :: u80
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_target), pointer :: currentTarget
     type(mod_expression), pointer :: exp
     integer :: ii, irc2, lenv, lenn
     integer, external :: length
     character*25 :: myname = "model_addExpression"
     if(bdeb)write(*,*)myname,'Entering.',irc
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     call model_makeTargetList(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -5729,22 +5618,13 @@ CONTAINS
   !
   ! push current expression to the stack
   !
-  subroutine model_pushExpression(mid,crc250,irc)
-    integer :: mid
+  subroutine model_pushExpression(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_expression), pointer :: newExpression
     character*25 :: myname = "model_pushExpression"
     if(bdeb)write(*,*) myname,'Entering.'
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (associated(css%currentExp)) then
        newExpression => css%currentExp
        css%nexp=css%nexp+1
@@ -5760,23 +5640,14 @@ CONTAINS
   !
   ! retrieve target variable list
   !
-  subroutine model_getvariables(mid,nvar,var80,crc250,irc)
-    integer :: mid
+  subroutine model_getvariables(css,nvar,var80,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     integer :: nvar
     character*80, allocatable :: var80(:)
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_target), pointer :: currentTarget
     character*25 :: myname = "model_getVariables"
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (allocated(var80)) deallocate(var80)
     allocate(var80(css%ntarget),stat=irc)
     if (irc.ne.0) then
@@ -5797,25 +5668,16 @@ CONTAINS
   !
   ! retrieve next default values
   !
-  subroutine model_getdefault(mid,nvar,var,crc250,irc)
-    integer :: mid
+  subroutine model_getdefault(css,nvar,var,crc250,irc)
+    type(mod_session), pointer :: css !  current session
     integer :: nvar
     real, allocatable :: var(:)
     character*250 :: crc250
     integer :: irc
-    type(mod_session), pointer :: css !  current session
     type(mod_target), pointer :: currentTarget
     character*25 :: myname = "model_getdefault"
     integer :: ii
     integer, external :: length
-    call model_getSession(css,mid,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getSession.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     if (nvar.ne.css%ntarget.and.allocated(var)) deallocate(var)
     if (.not.allocated(var)) then
        allocate(var(css%ntarget),stat=irc)

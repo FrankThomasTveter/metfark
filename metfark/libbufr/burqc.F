@@ -195,12 +195,14 @@ C
       CALL BUNPCK(NBPW,KBUFF,IDWINC,IWRD,IBTP,6,KERR)
       IF(KERR.GT.0) RETURN
       IF(IDWINC.GT.JBPW) THEN
+            write(*,*) 'BURQC:',idwinc,jbpw
             KERR=15
             WRITE(KNTN,*)  'BURQC :'
             CALL BUERR(KERR)
             RETURN
       END IF
       IF(IWRD.GT.KBUFL) THEN
+            write(*,*) 'BURQC:',iwrd,kbufl
             KERR=26
             WRITE(KNTN,*)  'BURQC :'
             CALL BUERR(KERR)

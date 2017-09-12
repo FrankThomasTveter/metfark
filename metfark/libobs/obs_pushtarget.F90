@@ -13,7 +13,16 @@ subroutine obs_pushtarget(sid,trg,pos,descr,info,&
   integer :: irc
   character*25 :: myname = "pushtarget"
   !write(*,*) myname, 'Entering.',irc,sid
-  call observation_pushtarget(sid,trg,pos,descr,info,&
+  type(obs_session), pointer :: css !  current session
+  call observation_getSession(css,sid,crc250,irc)
+  if (irc.ne.0) then
+     call observation_errorappend(crc250,myname)
+     call observation_errorappend(crc250," Error return from getSession.")
+     call observation_errorappendi(crc250,irc)
+     call observation_errorappend(crc250,"\n")
+     return
+  end if
+  call observation_pushtarget(css,trg,pos,descr,info,&
        & min,max,crc250,irc)
   if (irc.ne.0) then
      call observation_errorappend(crc250,"|")

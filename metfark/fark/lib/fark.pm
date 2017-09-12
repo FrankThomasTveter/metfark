@@ -94,6 +94,12 @@ sub open {
     } else {
 	die "Unable to create class $class\n";
     }
+    if (my ($pid,$ret,$msg) = xs_openPlotSession()){
+	if ($ret != 0) {die $msg;}
+	$self->{PID}=$pid;
+    } else {
+	die "Unable to create class $class\n";
+    }
     $self->{ObsFileStack}=();
     bless $self => $class;
     return $self;
@@ -121,40 +127,15 @@ sub close {
     if (my ($ret,$msg) = xs_closeColocSession($self->{CID})){
 	if ($ret != 0) {die $msg;}
     }
+    if (my ($ret,$msg) = xs_closePlotSession($self->{PID})){
+	if ($ret != 0) {die $msg;}
+    }
 }
 
 ################################# MODEL ################################
 =head1 MODEL FUNCTIONS 
 
 =cut
-
-=head2 modelFileSetup
-
-modelFileSetup - defines the fimex file setup for the model files.
-
-Arguments:
-
-=over 4
-
-=item (string) path to fimex-configuration-file.
-
-=item (string) fimex-type of file (i.e. "netcdf" or "grib")
-
-=back
-
-=head4 EXAMPLE
-
-$fark->modelFileSetup("fimex.cfg","netcdf");
-
-=cut
-
-
-sub modelFileSetup {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_modelFileSetup($self->{MID},@args);
-    if ($ret != 0) {die $msg;}
-    return;
-}
 
 =head2 clearModelFileStack
 
@@ -424,6 +405,32 @@ sub loadModelCache {
     }
 }
 
+=head2 setModelCache
+
+setModelCache - sets name of cache file.
+
+Arguments:
+
+=over 4
+
+=item (string) path to model cache file (optional in repeated calls).
+
+=back
+
+=head4 EXAMPLE
+
+$fark->setModelCache($modfile);
+
+=cut
+
+sub setModelCache { 
+    my $self = shift; 
+    my $modfile = shift; 
+    if (my ($ret,$msg) = xs_setModelCache($self->{CID},$modfile)){
+	if ($ret != 0) {die $msg;}
+    }
+}
+
 
 =head2 setModelIndex
 
@@ -618,6 +625,7 @@ $fark->setObservationTablePath("/usr/share/metno-bufrtables/");
 
 sub setObservationTablePath {
     my ($self,$path)=@_;
+    if ($path =~ m/.+[^\/]$/) {$path=$path . "/";};
     $ENV{"BUFR_TABLES"}=$path;
     my ($ret,$msg) = xs_setObsTablePath($self->{OID},$path);
     if ($ret != 0) {die $msg;}
@@ -879,6 +887,32 @@ sub loadObservationCache {
     }
 }
 
+=head2 setObservationCache
+
+setObservationCache - sets name of cache file.
+
+Arguments:
+
+=over 4
+
+=item (string) path to obs cache file (optional in repeated calls).
+
+=back
+
+=head4 EXAMPLE
+
+$fark->setObservationCache($obsfile);
+
+=cut
+
+sub setObservationCache { 
+    my $self = shift; 
+    my $obsfile = shift;
+    if (my ($ret,$msg) = xs_setObsCache($self->{CID},$obsfile)){
+	if ($ret != 0) {die $msg;}
+    }
+}
+
 =head2 setObservationType
 
 setObservationType - sets the type of BUFR files that should be processed
@@ -988,43 +1022,6 @@ sub pushObservationTarget {
     return;
 }
 
-
-=head2 setObservationIndexTarget
-
-setObservationIndexTarget - set an observation target for use during file scanning
-
-Arguments:
-
-=over 4
-
-=item (string) target name
-
-=item (string) position
-
-=item (string) descriptor
-
-=item (string) info
-
-=item (string) min
-
-=item (string) max
-
-=back
-
-=head4 EXAMPLE
-
-$fark->setObservationIndexTarget("yy","10","4001","YEAR","","")
-=cut
-
-sub setObservationIndexTarget {
-    my ($self,@args)=@_;
-    my ($ret,$msg,$nrep,@reps) = xs_setObsIndexTarget($self->{OID},@args);
-    if ($ret != 0) {die $msg;}
-    return;
-}
-
-
-
 =head2 setObservationIndex
 
 setObservationIndex - set the observation index (used for sorting the stack).
@@ -1052,14 +1049,45 @@ sub setObservationIndex {
 }
 
 
+################################# COLOCATE ##########################
 
 
-################################# COLOCATE AND PRINT XML ##########################
+=head2 clearColocationStack
+
+clearColocationStack - clear the colocation memory.
+
+=head4 EXAMPLE
+
+ $fark->clearColocationStack();
+
+=cut
+
+sub clearColocationStack {
+    my ($self,@args)=@_;
+    my ($ret,$msg) = xs_clearColocStack($self->{CID},@args);
+    if ($ret != 0) {die $msg;}
+}
 
 
-=head2 addExpression
+=head2 clearMatchRuleStack
 
-addExpression - add a match rule to the stack
+clearMatchRuleStack - clear match-rule expressions.
+
+=head4 EXAMPLE
+
+ $fark->clearMatchRuleStack();
+
+=cut
+
+sub clearMatchRuleStack {
+    my ($self,@args)=@_;
+    my ($ret,$msg) = xs_clearMatchRuleStack($self->{MID},@args);
+    if ($ret != 0) {die $msg;}
+}
+
+=head2 addMatchRule
+
+addMatchRule - add a match-rule to the stack
 
 Arguments:
 
@@ -1077,15 +1105,43 @@ Arguments:
 
 =head4 EXAMPLE
 
- $fark->addExpression("latitude_model","180.0*latitude_obs/3.14",0,90.0);
+ $fark->addMatchRule("latitude_model","180.0*latitude_obs/3.14",0,90.0);
 
 =cut
 
-sub addExpression {
+sub addMatchRule {
     my ($self,@args)=@_;
-    my ($ret,$msg) = xs_addExpression($self->{MID},@args);
+    my ($ret,$msg) = xs_addMatchRule($self->{MID},@args);
     if ($ret != 0) {die $msg;}
 }
+
+
+=head2 setColocFilter
+
+setColocFilter - add a colocation filter.
+
+Arguments:
+
+=over 4
+
+=item (string) colocation filter.
+
+=back
+
+=head4 EXAMPLE
+
+ $fark->setColocFilter("member(obs_id,1047,1049)");
+
+=cut
+
+sub setColocFilter {
+    my ($self,@args)=@_;
+    my ($ret,$msg) = xs_setColocFilter($self->{MID},@args);
+    if ($ret != 0) {die $msg;}
+}
+
+
+
 
 =head2 colocXML
 
@@ -1101,6 +1157,192 @@ sub colocXML {
     my ($self,@args)=@_;
     my ($ret,$msg) = xs_colocXML($self->{CID},$self->{MID},$self->{OID},@args);
     return ($ret,$msg);
+}
+
+################################# PLOT  ##########################
+
+=head1 PLOT FUNCTIONS
+
+=cut
+
+
+
+=head2 setPlotType
+
+setPlotType - defines the type of output files.
+
+Arguments:
+
+=over 4
+
+=item (string) name of the type, e.g. "rms+stdv", "scatter", "skill", "text"
+
+=back
+
+=head4 EXAMPLE
+
+$fark->setPlotType("rms+stdv");
+
+=cut
+
+
+sub setPlotType {
+    my ($self,$type)=@_;
+    my ($ret,$msg) = xs_setPlotType($self->{PID},$type);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+
+=head2 clearPlotSetStack
+
+clearPlotSetStack - clears the datasets in the plot set stack.
+
+=head4 EXAMPLE
+
+$fark->clearPlotSetStack();
+
+=cut
+
+
+sub clearPlotSetStack {
+    my ($self,@args)=@_;
+    # list obs types that should be used...
+    #print "clearPlotSetStack: $self->{PID}, @args\n";
+    my ($ret,$msg) = xs_clearPlotSetStack($self->{PID},@args);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+=head2 pushPlotSet
+
+pushPlotSet - adds a data set to the plot set stack.
+
+Arguments:xs
+
+=over 4
+
+=item (string) plot session id
+
+=item (string) colocation session id
+
+=item (string) model session id
+
+=item (string) observation session id
+
+=item (string) name of set
+
+=item (string) x-variable expression
+
+=item (string) y-variable expression
+
+=item (string) legend
+
+=back
+
+=head4 EXAMPLE
+
+   $fark->pushPlotSet("1","time","temperature_2m","Arome (T2M)");
+
+=cut
+
+sub pushPlotSet {
+    my ($self,$name,$x,$y,$legend)=@_;
+    my ($ret,$msg) = xs_pushPlotSet($self->{PID},$self->{CID},$self->{MID},
+				   $self->{OID},$name,$x,$y,$legend);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+=head2 clearPlotAttributeStack
+
+clearPlotAttributeStack - clears the plot attribute stack.
+
+=head4 EXAMPLE
+
+$fark->clearPlotAttributeStack;
+
+=cut
+
+
+sub clearPlotAttributeStack {
+    my ($self,@args)=@_;
+    # list obs types that should be used...
+    #print "clearPlotSet: $self->{PID}, @args\n";
+    my ($ret,$msg) = xs_clearPlotAttributeStack($self->{PID},@args);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+=head2 pushPlotAttribute
+
+pushPlotAttribute - adds an attribute.
+
+Arguments:xs
+
+=over 4
+
+=item (string) name of attribute
+
+=item (string) attribute value.
+
+=back
+
+=head4 EXAMPLE
+
+   $fark->pushPlotAttribute("title","Temperature - Tryvann");
+
+=cut
+
+sub pushPlotAttribute {
+    my ($self,$name,$value)=@_;
+    my ($ret,$msg) = xs_pushPlotAttribute($self->{PID},$name,$value);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+=head2 makePlotTable
+
+makePlotTable - make table file, return name of plot graphics file...
+
+=head4 EXAMPLE
+
+my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern);
+
+=cut
+
+sub makePlotTable {
+    my ($self,@args)=@_;
+    my ($ret,$msg,$tablefile,$plotfile) = 
+	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},@args);
+    if ($ret != 0) {die $msg;}
+    return ($tablefile,$plotfile);
+}
+
+=head2 makePlotGraphics
+
+makePlotGraphics - generate plot graphics.
+
+Arguments:
+
+=over 4
+
+=item (string) name of table input file.
+
+=item (string) name of graphics output plot file.
+
+=back
+
+=head4 EXAMPLE
+
+my $file = $fark->makePlotGraphics($tablefile,$plotfile);
+
+=cut
+
+sub makePlotGraphics {
+    my ($self,$tablefile,$plotfile)=@_;
+    my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$plotfile);
+    if ($ret != 0) {die $msg;}
+    return;
 }
 
 ################################# GENERAL ##########################
@@ -1195,10 +1437,6 @@ __END__
 
 =head1 INSTALLATION
 
-# make sure fimex is installed:
- sudo apt-get install libfimexf-0.58.1-0
- sudo apt-get install libfimexf-dev
-
 # fark-perl installation:   
  sudo dpkg --install /vol/fou/atmos2/franktt/fark/fark-perl_0.13-1_amd64.deb
 
@@ -1219,7 +1457,6 @@ Frank Thomas Tveter, E<lt>f.t.tveter@met.noE<gt>
 
 =head1 SEE ALSO
 
- FIMEX 
  NETCDF
  BUFR
  ncdump -h

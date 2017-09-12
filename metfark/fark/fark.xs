@@ -207,7 +207,58 @@ xs_closeColocSession(int cid);
       free(crc250);
 
 #
-#  "xs_makeModelCache" writes the model cache to a file.
+#  "openPlotSession" creates a new session
+#   Return array:
+#      (integer) new session id
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+#
+
+void xs_openPlotSession();
+    INIT: 
+      int  pid;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char),251);
+      strcpy(crc250,"");
+      plo_opensession_(&pid,crc250,&irc,250);
+      if (irc == 0) {
+         strcpy(crc250,"No error detected.");
+      }
+      EXTEND(SP, 3);
+      PUSHs(sv_2mortal(newSViv(pid)));
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "closePlotSession" closes a session
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+#
+
+void
+xs_closePlotSession(int pid);
+    INIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 251);
+      plo_closesession_(&pid,crc250, &irc, 250);
+      if (irc == 0) {
+         strcpy(crc250,"No error detected.");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "makeModelCache" writes the model cache to a file.
 #      (string) path to cache file.
 #   Return array:
 #      (integer) error return code (0=ok).
@@ -236,7 +287,7 @@ xs_makeModelCache(int sid, char *path);
       free(crc250);
 
 #
-#  "xs_makeObsCache" writes the observation cache to a file.
+#  "makeObsCache" writes the observation cache to a file.
 #      (string) path to cache file.
 #   Return array:
 #      (integer) error return code (0=ok).
@@ -265,7 +316,7 @@ xs_makeObsCache(int sid, char *path);
       free(crc250);
 
 #
-#  "xs_loadModelCache" loads the model cache from a file.
+#  "loadModelCache" loads the model cache from a file.
 #      (string) path to cache file.
 #   Return array:
 #      (integer) error return code (0=ok).
@@ -294,7 +345,36 @@ xs_loadModelCache(int sid, char *path);
       free(crc250);
 
 #
-#  "xs_loadObsCache" loads the observation cache from a file.
+#  "setModelCache" sets the model cache from a file.
+#      (string) path to cache file.
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+
+void
+xs_setModelCache(int cid, char *path);
+    PREINIT:
+      int  irc;
+      char *path250;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      path250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(path250,path);
+      col_setmodcache_(&cid, path250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(path250);
+      free(crc250);
+
+#
+#  "loadObsCache" loads the observation cache from a file.
 #      (string) path to cache file.
 #   Return array:
 #      (integer) error return code (0=ok).
@@ -322,7 +402,34 @@ xs_loadObsCache(int sid, char *path);
       free(path250);
       free(crc250);
 
+#
+#  "setObsCache" sets the observation cache from a file.
+#      (string) path to cache file.
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
 
+void
+xs_setObsCache(int cid, char *path);
+    PREINIT:
+      int  irc;
+      char *path250;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      path250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(path250,path);
+      col_setobscache_(&cid, path250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(path250);
+      free(crc250);
 
 
 ################################# MODEL ################################
@@ -707,8 +814,33 @@ xs_pushModelDefault(int mid);
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
 
+
 #
-#  "addExpression"  sets the match rules connecting model and observation targets
+#  "clearMatchTuleStack" clear the match rule stack
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_clearMatchRuleStack(int mid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      mod_clearexpressionstack_(&mid,crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+#
+#  "addMatchRule"  sets the match rules connecting model and observation targets
 #      (string) modelTargetName
 #      (string) obsTarget expression
 #      (string) min
@@ -718,7 +850,7 @@ xs_pushModelDefault(int mid);
 #      (string)  error return message
 
 void
-xs_addExpression(int mid, char *modName, char *obsExpr, char *vmin, char *vmax);
+xs_addMatchRule(int mid, char *modName, char *obsExpr, char *vmin, char *vmax);
     PREINIT:
       int  irc;
       char *crc250;
@@ -1014,7 +1146,7 @@ xs_clearObsTargetStack(int sid);
 #      (string)  error return message
 
 void
-xs_pushObsTarget(int cid, char *target, char *pos, char *descr, char *info, char *vmin, char *vmax);
+xs_pushObsTarget(int sid, char *target, char *pos, char *descr, char *info, char *vmin, char *vmax);
     PREINIT:
       int  irc;
       char *crc250;
@@ -1022,7 +1154,7 @@ xs_pushObsTarget(int cid, char *target, char *pos, char *descr, char *info, char
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      obs_pushtarget_(&cid,target,pos,descr,info,vmin,vmax,crc250,&irc,strlen(target),strlen(pos),strlen(descr),strlen(info),strlen(vmin),strlen(vmax),250);
+      obs_pushtarget_(&sid,target,pos,descr,info,vmin,vmax,crc250,&irc,strlen(target),strlen(pos),strlen(descr),strlen(info),strlen(vmin),strlen(vmax),250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -1040,7 +1172,7 @@ xs_pushObsTarget(int cid, char *target, char *pos, char *descr, char *info, char
 #      (string)  error return message
 
 void
-xs_setObsIndex(int cid, char *target, char *expr);
+xs_setObsIndex(int sid, char *target, char *expr);
     PREINIT:
       int  irc;
       char *crc250;
@@ -1054,7 +1186,7 @@ xs_setObsIndex(int cid, char *target, char *expr);
       strcpy(crc250,"");
       strcpy(t80,target);
       strcpy(e250,expr);
-      obs_setindex_(&cid, t80, e250,crc250, &irc, 80,250,250);
+      obs_setindex_(&sid, t80, e250,crc250, &irc, 80,250,250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -1075,7 +1207,7 @@ xs_setObsIndex(int cid, char *target, char *expr);
 #      (string)  error return message
 
 void
-xs_setObsBufrType(int cid, int bufrType, int subType);
+xs_setObsBufrType(int sid, int bufrType, int subType);
     PREINIT:
       int  irc;
       char *crc250;
@@ -1083,7 +1215,7 @@ xs_setObsBufrType(int cid, int bufrType, int subType);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      obs_setbufrtype_(&cid, &bufrType, &subType, crc250, &irc, 250);
+      obs_setbufrtype_(&sid, &bufrType, &subType, crc250, &irc, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -1094,7 +1226,29 @@ xs_setObsBufrType(int cid, int bufrType, int subType);
 
 
 #
-#  "xs_colocXML" gets the next observation array
+#  "clearColocStack" clears the colocation stack.
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+#
+
+void
+xs_clearColocStack(int cid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+        irc=0;
+        crc250 = calloc(sizeof(char), 250);
+        strcpy(crc250,"");
+        col_makexml_(&cid,crc250,&irc,250);
+        EXTEND(SP, 2);
+        PUSHs(sv_2mortal(newSViv(irc)));
+        PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+        free(crc250);
+
+#
+#  "colocXML" gets the next observation array
 #   Return array:
 #      (integer) error return code (0=ok).
 #      (string)  error return message
@@ -1116,7 +1270,7 @@ xs_colocXML(int cid, int mid, int bid);
         free(crc250);
 
 #
-#  "xs_expression" evaluates expression
+#  "expression" evaluates expression
 #      (string) expression.
 #   Return array:
 #      (string)  result
@@ -1147,3 +1301,292 @@ xs_expression(char *exp);
       free(exp250);
       free(crc250);
 
+
+#
+#  "setColocFilter" defines filter
+#      (string) filter.
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setColocFilter(char *filter);
+    PREINIT:
+      char *filter250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      filter250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(filter250,filter);
+      col_setFilter_(filter250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 3);
+      PUSHs(sv_2mortal(newSVpv(filter250,strlen(filter250))));
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(filter250);
+      free(crc250);
+
+
+#
+#  "colocXML" gets the next observation array
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+#
+
+void
+xs_colocXML(int cid, int mid, int bid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+        irc=0;
+        crc250 = calloc(sizeof(char), 250);
+        strcpy(crc250,"");
+        col_makexml_(&cid,&mid,&bid,crc250,&irc,250);
+        EXTEND(SP, 2);
+        PUSHs(sv_2mortal(newSViv(irc)));
+        PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+        free(crc250);
+
+#
+#  "makePlotTable" defines graphics output file path
+#      (string) table file pattern.
+#      (string) graphics file pattern.
+#   Return array:
+#      (string)  name of table file
+#      (string)  name of graphics file
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph);
+    PREINIT:
+      char *table250;
+      char *graph250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      table250 = calloc(sizeof(char), 250);
+      graph250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(table250,table);
+      strcpy(graph250,graph);
+      plo_makeTable_(&pid, &cid, &mid, &oid, table250, graph250, crc250, &irc, 250, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 4);
+      PUSHs(sv_2mortal(newSVpv(table250,strlen(table250))));
+      PUSHs(sv_2mortal(newSVpv(graph250,strlen(graph250))));
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(table250);
+      free(graph250);
+      free(crc250);
+
+#
+#  "makePlotGraphics" make graphics file
+#      (string) table file pattern.
+#      (string) graphics file pattern.
+#   Return array:
+#      (string)  name of table file
+#      (string)  name of graphics file
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_makePlotGraphics(int pid, char *table, char *graph);
+    PREINIT:
+      char *table250;
+      char *graph250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      table250 = calloc(sizeof(char), 250);
+      graph250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(table250,table);
+      strcpy(graph250,graph);
+      plo_makeGraphics_($pid, table250, graph250, crc250, &irc, 250, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(table250);
+      free(graph250);
+      free(crc250);
+
+#
+#  "setPlotType" defines graphics output file type ("rms+stdv", "scatter" etc.)
+#      (string) type.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setPlotType(int pid, char *type);
+    PREINIT:
+      char *type250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      type250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(type250,type);
+      plo_settype_(&pid, type250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(type250);
+      free(crc250);
+
+#
+#  "clearPlotAttributeStack" clear attribute stack.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_clearPlotAttributeStack(int pid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      plo_clearattrstack_(&pid, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "pushPlotAttribute" defines graphics output file path
+#      (string) name.
+#      (string) value.
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_pushPlotAttribute(int pid, char *name, char *value);
+    PREINIT:
+      char *name250;
+      char *value250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      name250 = calloc(sizeof(char), 250);
+      value250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(name250,name);
+      strcpy(value250,value);
+      plo_pushattr_(&pid, name250, value250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(name250);
+      free(value250);
+      free(crc250);
+
+#
+#  "clearPlotSetStack" clear set stack.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_clearPlotSetStack(int pid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      plo_clearsetstack_(&pid, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "pushPlotSet" push plot set to the stack
+#      (int)  plot session id
+#      (int)  coloc session id
+#      (int)  model session id
+#      (int)  obs session id
+#      (string)  name
+#      (string)  x
+#      (string)  y
+#      (string)  legend
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_pushPlotSet(int pid, int cid, int mid, int oid, char *name, char *x, char *y, char *legend);
+    PREINIT:
+      char *name250;
+      char *x250;
+      char *y250;
+      char *legend250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      name250 = calloc(sizeof(char), 250);
+      x250 = calloc(sizeof(char), 250);
+      y250 = calloc(sizeof(char), 250);
+      legend250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(name250,name);
+      strcpy(x250,x);
+      strcpy(y250,y);
+      strcpy(legend250,legend);
+      plo_pushset_(&pid, &cid, &mid, &oid, name250, x250, y250, legend250, crc250, &irc, 250, 250, 250, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(name250);
+      free(x250);
+      free(y250);
+      free(legend250);
+      free(crc250);

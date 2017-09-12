@@ -16,6 +16,7 @@ lib/model.mod
 lib/observations.mod
 lib/coloc.mod
 lib/farkdata.pm
+lib/farkdir.pm
 lib/fark.pm
 lib/read_xml_primitives.mod
 lib/xmlparse.mod

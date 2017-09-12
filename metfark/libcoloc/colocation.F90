@@ -9,6 +9,9 @@ module colocation
   !
   type :: col_session
      integer                         :: sid
+     character*250 :: obs250=""
+     character*250 :: mod250=""
+     character*250 :: filter250=""
      type(col_session), pointer :: prev => null()         ! linked list
      type(col_session), pointer :: next => null()         ! linked list
   end type col_session
@@ -23,11 +26,11 @@ CONTAINS
   ! SESSION ROUTINES
   !###############################################################################
   !
-  subroutine colocation_opensession(sid,crc250,irc)
+  subroutine colocation_opensession(sid,css,crc250,irc)
     integer :: sid
+    type(col_session),pointer :: css  !  new session
     character*250 :: crc250
     integer :: irc
-    type(col_session),pointer :: newSession  !  new session
     character*25 :: myname = "colocation_openSession"
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
@@ -40,7 +43,8 @@ CONTAINS
        firstSession%next => lastSession
        lastSession%prev => firstSession
     end if
-    allocate(newSession,stat=irc)
+    nullify(css)
+    allocate(css,stat=irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
        call colocation_errorappend(crc250,"Unable to allocate 'new session'.")
@@ -48,12 +52,12 @@ CONTAINS
        return
     end if
     maxid=maxid+1
-    newSession%sid=maxid
-    newSession%prev => lastSession%prev
-    newSession%next => lastSession
-    newSession%prev%next => newSession
-    newSession%next%prev => newSession
-    sid = newSession%sid
+    css%sid=maxid
+    css%prev => lastSession%prev
+    css%next => lastSession
+    css%prev%next => css
+    css%next%prev => css
+    sid = css%sid
     return
   end subroutine colocation_opensession
 
@@ -79,21 +83,12 @@ CONTAINS
     return
   end subroutine colocation_getSession
 
-  subroutine colocation_closeSession(sid,crc250,irc)
-    integer :: sid
+  subroutine colocation_closeSession(css,crc250,irc)
+    type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(col_session), pointer :: css !  current session
     character*25 :: myname = "colocation_closeSession"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
-    call colocation_getSession(css,sid,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," Error return from getSession.")
-       call colocation_errorappendi(crc250,irc)
-       call colocation_errorappend(crc250,"\n")
-       return
-    end if
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        call colocation_removeSession(css,crc250,irc)
        if (irc.ne.0) then
@@ -123,6 +118,72 @@ CONTAINS
     css%next%prev => css%prev
     deallocate(css)
   end subroutine colocation_removeSession
+  !
+  subroutine colocation_setobscache(css,path250,crc250,irc)
+    implicit none
+    type(col_session), pointer :: css !  current session
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="expression"
+    INTEGER                         :: nvar = 0
+    !
+    if(col_bdeb)write(*,*)myname,'Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       css%obs250=path250
+    end if
+    !
+  end subroutine colocation_setobscache
+  !
+  subroutine colocation_setmodcache(css,path250,crc250,irc)
+    implicit none
+    type(col_session), pointer :: css !  current session
+    character*250 :: path250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="expression"
+    INTEGER                         :: nvar = 0
+    !
+    if(col_bdeb)write(*,*)myname,'Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       css%mod250=path250
+    end if
+    !
+  end subroutine colocation_setmodcache
+  !
+  subroutine colocation_setfilter(css,filter250,crc250,irc)
+    implicit none
+    type(col_session), pointer :: css !  current session
+    character*250 :: filter250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="setfilter"
+    INTEGER                         :: nvar = 0
+    !
+    if(col_bdeb)write(*,*)myname,'Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       css%filter250=filter250
+    end if
+    if(col_bdeb)write(*,*)myname,'Exiting.',irc
+    !
+  end subroutine colocation_setfilter
+  !
+  subroutine colocation_getfilter(css,filter250,crc250,irc)
+    implicit none
+    type(col_session), pointer :: css !  current session
+    character*250 :: filter250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="getfilter"
+    INTEGER                         :: nvar = 0
+    !
+    if(col_bdeb)write(*,*)myname,'Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       filter250=css%filter250
+    end if
+    if(col_bdeb)write(*,*)myname,'Exiting.',irc
+    !
+  end subroutine colocation_getfilter
   !
   subroutine colocation_expression(exp250,crc250,irc)
     use parse
@@ -517,14 +578,14 @@ CONTAINS
     end do
   end subroutine findDelimiter
 
-  subroutine colocation_makeXML(cid,mid,bid,crc250, irc)
+  subroutine colocation_makeXML(css,mss,oss,crc250, irc)
     use model
     use observations
     use parse
     implicit none
-    integer :: cid ! colocation session id
-    integer :: mid ! model session id
-    integer :: bid ! observation session id
+    type(col_session), pointer :: css !  current session
+    type(mod_session), pointer :: mss !  current session
+    type(obs_session), pointer :: oss !  current session
     character*250 :: crc250
     integer :: irc
     integer, external :: length
@@ -532,9 +593,6 @@ CONTAINS
     character*25 :: myname = "colocation_makeXML"
     integer :: tmod,emod,dmod,tobs,ii,jj,ind_ii,nfunc
     logical :: bobsexp
-    type(mod_session), pointer :: mss !  current session
-    type(obs_session), pointer :: oss !  current session
-    type(col_session), pointer :: css !  current session
     type(parse_session), pointer :: pse
     type(parse_pointer), pointer :: pss(:) ! parse sessions
     integer :: locid,locstart
@@ -547,22 +605,6 @@ CONTAINS
     !
     irc=0
     bok=.true.
-    ! get session objects
-    call model_getSession(mss,mid,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_getSession")
-       return
-    end if
-    call observation_getSession(oss,bid,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"observation_getSession")
-       return
-    end if
-    call colocation_getSession(css,cid,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"colocation_getSession")
-       return
-    end if
     ! check what we should colocated
     tmod=model_targetCount(mss,crc250,irc)
     if (irc.ne.0) then

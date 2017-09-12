@@ -1,15 +1,24 @@
-subroutine obs_pushfile(sid, path, crc250, irc)
+subroutine obs_pushfile(sid, path250, crc250, irc)
   use observations
   implicit none
   integer :: sid             ! session id
-  character*250 :: path
+  character*250 :: path250
   character*250 :: crc250
   integer :: irc
   character*250 :: buff250
   integer :: lenc
   character*25 :: myname = "obs_pushFile"
-  !write(*,*) myname,'Entering.',irc,sid,path
-  call observation_stackpush(sid,path,crc250,irc)
+  type(obs_session), pointer :: css !  current session
+  !write(*,*) myname,'Entering.',irc,sid,path250
+  call observation_getSession(css,sid,crc250,irc)
+  if (irc.ne.0) then
+     call observation_errorappend(crc250,myname)
+     call observation_errorappend(crc250," Error return from getSession.")
+     call observation_errorappendi(crc250,irc)
+     call observation_errorappend(crc250,"\n")
+     return
+  end if
+  call observation_stackpush(css,path250,crc250,irc)
   if (irc.ne.0) then
      !write(*,*) 'pushFile Error.'
      call observation_errorappend(crc250,"|")
