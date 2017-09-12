@@ -27,7 +27,8 @@ module model
   ! default values for the targets
   !
   type :: mod_default
-     integer :: nTrgDef
+     integer :: nTrgDef = 0
+     integer :: cii = 0
      logical, pointer :: vset(:)       ! is value set?
      character*80, pointer :: v80(:)   ! value
      integer, pointer :: vlen(:)       ! value length
@@ -40,6 +41,7 @@ module model
   !
   type :: mod_expression
      integer :: nTrgExp = 0
+     integer :: cii = 0
      logical, pointer :: vset(:)                         ! is value set?
      character*80, pointer  :: n80(:)                    ! name
      integer, pointer  :: lenn(:)
@@ -244,33 +246,34 @@ module model
      type(mod_target), pointer :: firstTrg => null()   ! linked list start
      type(mod_target), pointer :: lastTrg => null()    ! linked list end
      type(mod_target), pointer :: cTrg => null()       ! current target
-     integer :: ntarget=0                               ! number of items in target-chain
-     character*80, pointer :: trg80(:) => null()   ! list of target names
-     integer, pointer :: trg_lent(:) => null()       ! list of target name length
-     character*80, pointer :: trg_v80(:) => null()   ! list of variable names
-     character*80, pointer :: trg_l80(:) => null()   ! list of lower limits
-     character*80, pointer :: trg_u80(:) => null()   ! list of upper limits
-     real, pointer :: trg_minval(:) => null()   ! list of lower limits
-     real, pointer :: trg_maxval(:) => null()   ! list of upper limits
-     logical, pointer :: trg_minset(:) => null()   ! list of lower limits
-     logical, pointer :: trg_maxset(:) => null()   ! list of upper limits
-     real, pointer :: trg_val(:) => null()   ! list of values
+     integer :: ntarget=0                              ! number of items in target-chain
+     character*80, pointer :: trg80(:) => null()       ! list of target names
+     integer, pointer :: trg_lent(:) => null()         ! list of target name length
+     character*80, pointer :: trg_v80(:) => null()     ! list of variable names
+     character*80, pointer :: trg_l80(:) => null()     ! list of lower limits
+     character*80, pointer :: trg_u80(:) => null()     ! list of upper limits
+     real, pointer :: trg_minval(:) => null()          ! list of lower values
+     real, pointer :: trg_maxval(:) => null()          ! list of upper values
+     logical, pointer :: trg_minset(:) => null()       ! list of lower set
+     logical, pointer :: trg_maxset(:) => null()       ! list of upper set
+     real, pointer :: trg_val(:) => null()             ! list of values
      integer, pointer            :: trg_ook(:) => null()
      integer, pointer            :: trg_orm(:) => null()
-     logical :: trg_set=.false. ! is target list set?
+     logical :: trg_set=.false.                        ! is target list set?
      integer :: ctarget = 0 ! targets
      !
      ! default
      type(mod_default), pointer :: firstDef => null()   ! linked list start
      type(mod_default), pointer :: lastDef => null()    ! linked list end
-     type(mod_default), pointer :: currentDef => null()  ! current default
-     integer :: cdef = 0 ! items added so far
-     integer :: ndef=0                               ! number of items in target-chain
+     type(mod_default), pointer :: currentDef => null() ! current default input variable
+     type(mod_default), pointer :: cDef => null()       ! current default loop variable
+     integer :: ndef=0                                  ! number of items in target-chain
      !
      ! expression rules
      type(mod_expression), pointer :: firstExp => null()   ! linked list start
      type(mod_expression), pointer :: lastExp => null()    ! linked list end
-     type(mod_expression), pointer :: currentExp => null() ! current expression
+     type(mod_expression), pointer :: currentExp => null() ! current expression input
+     type(mod_expression), pointer :: cExp => null()       ! current expression loop
      integer :: nexp=0                               ! number of items in expression-chain
      !
      type(mod_session), pointer :: prev => null()         ! linked list
@@ -4977,7 +4980,7 @@ CONTAINS
     var80=css%ind_var80
     if(bdeb)write(*,*)myname,'Done.',irc
     return
-  end subroutine model_setindex
+  end subroutine model_getIndex
   !
   ! set the sort variable limits
   !
@@ -5097,11 +5100,11 @@ CONTAINS
     character*22 :: myname ="pushset"
     model_looptarget=.false. ! only true if all is ok...
     if (.not.associated(css%ctrg)) then
-       css%ctrg =>  css%firstObstrg%next 
+       css%ctrg =>  css%firstTrg%next 
     else
        css%ctrg =>  css%ctrg%next
     end if
-    if (associated(css%ctrg,css%lastObstrg)) then
+    if (associated(css%ctrg,css%lastTrg)) then
        nullify(css%ctrg)
        model_loopTarget=.false.
     else
@@ -5501,6 +5504,56 @@ CONTAINS
     return
   end subroutine model_pushDefault
   !
+  logical function model_loopDefault(css,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*80  :: n80       ! target name
+    character*80  :: v80       ! variable
+    character*80  :: l80      ! min value
+    character*80  :: u80      ! max value
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="pushset"
+    model_loopdefault=.false. ! only true if all is ok...
+    if (.not.associated(css%ctrg)) then
+       css%cdef =>  css%firstDef%next 
+    else
+       css%cdef =>  css%cdef%next
+    end if
+    if (associated(css%cdef,css%lastDef)) then
+       nullify(css%cdef)
+       model_loopDefault=.false.
+    else
+       model_loopdefault=.true.
+    end if
+    return
+  end function model_loopDefault
+  !
+  logical function model_loopDefaultItem(css,n80,v80,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*80  :: n80       ! target name
+    character*80  :: v80       ! variable
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="loopdefitem"
+    model_loopdefaultitem=.false. ! only true if all is ok...
+    if (css%cdef%cii.eq.0) then
+       css%cdef%cii = 1
+    else
+       css%cdef%cii = css%cdef%cii + 1
+    end if
+    if (css%cdef%cii.gt.css%cdef%ntrgDef) then
+       css%cdef%cii = 0
+       model_loopDefaultitem=.false.
+    else
+       n80=css%trg80(css%cdef%cii)
+       v80=css%cdef%v80(css%cdef%cii)
+       model_loopdefaultitem=.true.
+    end if
+    return
+  end function model_loopDefaultItem
+  !
   ! clear the expression stack
   !
   subroutine model_clearexpressionstack(css,crc250,irc)
@@ -5615,6 +5668,35 @@ CONTAINS
     if(bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine model_addexpression
+  !
+  logical function model_loopExpression(css,n80,e250,l80,u80,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*80 :: n80
+    character*250 :: e250
+    character*80 :: l80
+    character*80 :: u80
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="loopexpression"
+    model_loopexpression=.false. ! only true if all is ok...
+    if (css%cexp%cii.eq.0) then
+       css%cexp%cii = 1
+    else
+       css%cexp%cii = css%cexp%cii + 1
+    end if
+    if (css%cexp%cii.gt.css%cexp%ntrgExp) then
+       css%cexp%cii = 0
+       model_loopexpression=.false.
+    else
+       n80=css%cexp%n80(css%cexp%cii)
+       e250=css%cexp%e250(css%cexp%cii)
+       l80=css%cexp%l80(css%cexp%cii)
+       u80=css%cexp%u80(css%cexp%cii)
+       model_loopexpression=.true.
+    end if
+    return
+  end function model_loopExpression
   !
   ! push current expression to the stack
   !

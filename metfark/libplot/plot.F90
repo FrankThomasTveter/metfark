@@ -36,9 +36,24 @@ module plot
      type(plot_modtrg), pointer :: next => null()   ! linked list
   end type plot_modtrg
   !
+  ! default values for the model targets
+  !
+  type :: plot_default
+     integer :: nTrg
+     integer :: cii = 0
+     logical, pointer :: vset(:)       ! is value set?
+     character*80, pointer :: v80(:)   ! value
+     integer, pointer :: vlen(:)       ! value length
+     real, pointer :: val(:)   ! value
+     type(plot_default), pointer :: prev => null()   ! linked list
+     type(plot_default), pointer :: next => null()   ! linked list
+  end type plot_default
+  !
   type :: plot_match
-     character*80 :: trg80      ! model target name
-     character*250 :: obs250    ! observation target expression
+     character*80 :: n80 ! name
+     character*250 :: e250 ! obs expression
+     character*80 :: l80 ! lower limit
+     character*80 :: u80 ! upper limit
      type(plot_match), pointer :: prev => null()   ! linked list
      type(plot_match), pointer :: next => null()   ! linked list
   end type plot_match
@@ -61,16 +76,28 @@ module plot
      character*250 :: obs250 ! observation cache file
      character*250 :: mod250 ! model cache file
      character*80                    :: ind_mod80=""            ! model index variable
+     ! obs data
      type(plot_obstrg), pointer :: firstObstrg => null()        ! linked list
      type(plot_obstrg), pointer :: lastObstrg => null()         ! linked list
+     ! mod data
      type(plot_modtrg), pointer :: firstModtrg => null()        ! linked list
      type(plot_modtrg), pointer :: lastModtrg => null()         ! linked list
-     type(plot_match), pointer :: firstMatch => null()          ! linked list
-     type(plot_match), pointer :: lastMatch => null()           ! linked list
      type(plot_obstrg), pointer :: cObstrg => null()            ! linked list
      type(plot_modtrg), pointer :: cModtrg => null()            ! linked list
-     type(plot_match), pointer :: cMatch => null()              ! linked list
      ! colocation data
+     type(plot_default), pointer :: firstDef => null()          ! linked list start
+     type(plot_default), pointer :: lastDef => null()           ! linked list end
+     type(plot_default), pointer :: cDef => null()              ! current default
+     integer :: ndef = 0                                        ! number of defaults
+     type(plot_match), pointer :: firstMatch => null()          ! linked list
+     type(plot_match), pointer :: lastMatch => null()           ! linked list
+     type(plot_match), pointer :: cMatch => null()              ! linked list
+     ! target lists
+     integer :: nTrgMod=0
+     character*80, pointer :: trgMod80(:) => null()       ! list of target names
+     integer, pointer :: trgModLent(:) => null()         ! list of target name length
+     logical :: trgModSet=.false. ! is target list set?
+     ! linked list
      type(plot_set), pointer :: prev => null()         ! linked list
      type(plot_set), pointer :: next => null()         ! linked list
   end type plot_set
@@ -371,8 +398,6 @@ CONTAINS
     return
   end subroutine plot_deallocateSet
   !
-  !
-  !
   subroutine plot_pushset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
     use model
     use observations
@@ -492,6 +517,31 @@ CONTAINS
     return
   end subroutine plot_clearmatchstack
   !
+  ! clear the default stack
+  !
+  subroutine plot_cleardefaultStack(set,crc250,irc) 
+    type(plot_set), pointer :: set !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(plot_default), pointer :: cDef !  the current default target
+    type(plot_default), pointer :: nDef !  the next default target
+    character*25 :: myname = "plot_cleardefault"
+    cDef => set%firstDef%next
+    do while (.not.associated(cDef,target=set%lastDef))
+       nDef => cDef%next
+       cDef%prev%next =>  cDef%next
+       cDef%next%prev =>  cDef%prev
+       if (associated(cDef%vset)) deallocate(cDef%vset)
+       if (associated(cDef%v80)) deallocate(cDef%v80)
+       if (associated(cDef%vlen)) deallocate(cDef%vlen)
+       if (associated(cDef%val)) deallocate(cDef%val)
+       deallocate(cDef,stat=irc)
+       cDef => nDef
+    end do
+    set%ndef=0
+    return
+  end subroutine plot_cleardefaultStack
+  !
   subroutine plot_unlinkObstrg(trg)
     implicit none
     type(plot_obstrg), pointer :: trg !  current target
@@ -515,6 +565,14 @@ CONTAINS
     trg%next%prev => trg%prev
     return
   end subroutine plot_unlinkMatch
+  !
+  subroutine plot_unlinkDefault(def)
+    implicit none
+    type(plot_default), pointer :: def !  current target
+    def%prev%next => def%next
+    def%next%prev => def%prev
+    return
+  end subroutine plot_unlinkDefault
   !
   subroutine plot_pushobstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
     implicit none
@@ -548,13 +606,11 @@ CONTAINS
     return
   end subroutine plot_pushobstrg
   !
-  subroutine plot_pushmodtrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
+  subroutine plot_pushmodtrg(set,trg80,var80,min80,max80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80 :: trg80      ! target name
-    character*250 :: pos250    ! position/sequence number
-    character*80 :: descr80    ! descriptor
-    character*250 :: info250   ! information
+    character*80 :: var80    ! descriptor
     character*80 :: min80      ! min value
     character*80 :: max80      ! max value
     character*250 :: crc250
@@ -567,9 +623,7 @@ CONTAINS
        call plot_errorappend(crc250,"Unable to allocate 'modtrg'.")
     end if
     trg%trg80=trg80
-    trg%pos250=pos250
-    trg%descr80=descr80
-    trg%info250=info250
+    trg%var80=var80
     trg%min80=min80
     trg%max80=max80
     trg%next => set%lastModtrg
@@ -580,15 +634,13 @@ CONTAINS
     return
   end subroutine plot_pushmodtrg
   !
-  subroutine plot_pushmatch(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
+  subroutine plot_pushmatch(set,n80,e250,l80,u80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
-    character*80 :: trg80      ! target name
-    character*250 :: pos250    ! position/sequence number
-    character*80 :: descr80    ! descriptor
-    character*250 :: info250   ! information
-    character*80 :: min80      ! min value
-    character*80 :: max80      ! max value
+    character*80 :: n80      ! target name
+    character*250 :: e250    ! position/sequence number
+    character*80 :: l80      ! lower
+    character*80 :: u80      ! upper
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "pushmatch"
@@ -598,12 +650,10 @@ CONTAINS
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Unable to allocate 'match'.")
     end if
-    trg%trg80=trg80
-    trg%pos250=pos250
-    trg%descr80=descr80
-    trg%info250=info250
-    trg%min80=min80
-    trg%max80=max80
+    trg%n80=n80
+    trg%e250=e250
+    trg%l80=l80
+    trg%u80=u80
     trg%next => set%lastMatch
     trg%prev => set%lastMatch%prev
     trg%prev%next => trg
@@ -611,6 +661,148 @@ CONTAINS
     nullify(trg)
     return
   end subroutine plot_pushmatch
+  !
+  ! add default element
+  !
+  subroutine plot_addDefault(set,n80,v80,crc250,irc)
+    type(plot_set), pointer :: set !  current session
+    character*80 :: n80 ! target name
+    character*80 :: v80 ! target value
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii, irc2, lenv, lenn
+    integer, external :: length
+    character*25 :: myname = "plot_addDefault"
+    if(plot_bdeb)write(*,*)myname,'Entering.',irc
+    call plot_makeTargetList(set,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from getSession.")
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
+       return
+    end if
+    if(plot_bdeb)write(*,*)myname,'Here.',associated(set%cDef)
+    if (.not.associated(set%cDef)) then
+       allocate(set%cDef, stat=irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Unable to allocate 'firstItm/lastItm'.")
+          call plot_errorappend(crc250,"\n")
+          return
+       end if
+       set%cDef%nTrg=set%nTrgMod
+       allocate(set%cDef%vset(set%cDef%nTrg), set%cDef%v80(set%cDef%nTrg), &
+            & set%cDef%vlen(set%cDef%nTrg),  set%cDef%val(set%cDef%nTrg), stat=irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Unable to allocate 'session: current Default'.")
+          call plot_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    call chop0(n80,80)
+    lenn=length(n80,80,10)
+    if(plot_bdeb)write(*,*)myname,'Looking for target:',n80(1:lenn)
+    ii=1
+    SEEK:do while (ii.le.set%nTrgMod)
+       if (set%trgMod80(ii)(1:set%trgModLent(ii)).eq.n80(1:lenn)) exit SEEK
+       ii=ii+1
+    end do SEEK
+    if (ii.le.set%nTrgMod) then
+       set%cDef%vset(ii)=.true.
+       call chop0(v80,80)
+       lenv=length(v80,80,10)
+       set%cDef%v80(ii)=v80 ! value
+       set%cDef%vlen(ii)=lenv
+       read(v80(1:lenv),*,iostat=irc2) set%cDef%val(ii)
+    else
+       irc=220
+       ! write(*,*)myname,'Targets:',set%nTrgMod,set%ntarget
+       ! do ii=1,set%nTrgMod
+       !    write(*,*)myname,'Target:',ii,set%trgMod80(ii)(1:set%trgModLent(ii))
+       ! end do
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Target not found:"//n80(1:lenn))
+       return
+    end if
+    if(plot_bdeb)write(*,*)myname,'Done.',irc
+    return
+  end subroutine plot_addDefault
+  !
+  subroutine plot_maketargetlist(set,crc250,irc)
+    type(plot_set), pointer :: set !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "plot_maketargetlist"
+    type(plot_modtrg), pointer :: cTrg
+    integer ii,lens,irc2
+    integer, external :: length
+    if(plot_bdeb)write(*,*)myname,'Entering.',irc
+    set%nTrgMod=0
+    cTrg => set%firstModTrg%next
+    do while (.not.associated(cTrg,target=set%lastModTrg))
+       set%nTrgMod=set%nTrgMod+1
+       cTrg => cTrg%next
+    end do
+    if(associated(set%trgMod80)) deallocate(set%trgMod80)
+    if(associated(set%trgModLent)) deallocate(set%trgModLent)
+    if (set%nTrgMod.ne.0) then
+       allocate(set%trgMod80(set%nTrgMod), set%trgModLent(set%nTrgMod), stat=irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Unable to allocate 'session:trg...'.")
+          call plot_errorappend(crc250,"\n")
+          return
+       end if
+       ii=0
+       cTrg => set%firstModTrg%next
+       do while (.not.associated(cTrg,target=set%lastModTrg))
+          ii=min(set%nTrgMod,ii+1)
+          set%trgMod80(ii)=cTrg%trg80
+          call chop0(set%trgMod80(ii),80)
+          set%trgmodlent(ii)=length(set%trgMod80(ii),80,10)
+          cTrg => cTrg%next
+       end do
+    end if
+    set%trgModSet=.true.
+    if(plot_bdeb)write(*,*)myname,'Done.',irc
+    return
+  end subroutine plot_maketargetlist
+  !
+  ! push default values to the stack
+  !
+  subroutine plot_pushDefault(set,crc250,irc)
+    type(plot_set), pointer :: set !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(plot_default), pointer :: newDefault
+    character*25 :: myname = "plot_pushDefault"
+    if(plot_bdeb)write(*,*)myname,'Entering.',irc
+    if (.not.associated(set%firstDef)) then
+       allocate(set%firstDef,set%lastDef, stat=irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Unable to allocate 'firstDef/lastDef'.")
+          call plot_errorappend(crc250,"\n")
+          return
+       end if
+       set%firstDef%next => set%lastDef
+       set%lastDef%prev => set%firstDef
+       set%ndef=0
+    end if
+    if (associated(set%cDef)) then
+       newDefault => set%cDef
+       set%ndef=set%ndef+1
+       newDefault%prev => set%lastDef%prev
+       newDefault%next => set%lastDef
+       newDefault%prev%next => newDefault
+       newDefault%next%prev => newDefault
+       nullify(set%cDef)
+    end if
+    if(plot_bdeb)write(*,*)myname,'Done.',irc
+    return
+  end subroutine plot_pushDefault
   !
   logical function plot_popobstrg(set,trg80,pos250,descr80,info250,min80,max80,irc)
     implicit none
@@ -642,13 +834,11 @@ CONTAINS
     return
   end function plot_popobstrg
   !
-  logical function plot_popmodtrg(set,trg80,pos250,descr80,info250,min80,max80,irc)
+  logical function plot_popmodtrg(set,trg80,var80,min80,max80,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
-    character*250 :: pos250    ! position/sequence number
-    character*80  :: descr80    ! descriptor
-    character*250 :: info250   ! information
+    character*80  :: var80    ! descriptor
     character*80  :: min80      ! min value
     character*80  :: max80      ! max value
     character*250 :: crc250
@@ -660,9 +850,7 @@ CONTAINS
     if (.not.associated(trg,set%firstModtrg)) then
        ntrg=>trg%next
        trg80=trg%trg80
-       pos250=trg%pos250
-       descr80=trg%descr80
-       info250=trg%info250
+       var80=trg%var80
        min80=trg%min80
        max80=trg%max80
        call plot_unlinkModtrg(trg)
@@ -672,15 +860,13 @@ CONTAINS
     return
   end function plot_popmodtrg
   !
-  logical function plot_popmatch(set,trg80,pos250,descr80,info250,min80,max80,irc)
+  logical function plot_popmatch(set,n80,e250,l80,u80,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
-    character*80  :: trg80      ! target name
-    character*250 :: pos250    ! position/sequence number
-    character*80  :: descr80    ! descriptor
-    character*250 :: info250   ! information
-    character*80  :: min80      ! min value
-    character*80  :: max80      ! max value
+    character*80  :: n80      ! target name
+    character*250 :: e250    ! observation expression
+    character*80  :: l80      ! lower
+    character*80  :: u80      ! upper
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="pushset"
@@ -689,13 +875,11 @@ CONTAINS
     trg => set%lastMatch%prev
     if (.not.associated(trg,set%firstMatch)) then
        ntrg=>trg%next
-       trg80=trg%trg80
-       pos250=trg%pos250
-       descr80=trg%descr80
-       info250=trg%info250
-       min80=trg%min80
-       max80=trg%max80
-       call plot_unlinkMatch(trg)
+       n80=trg%n80
+       e250=trg%e250
+       l80=trg%l80
+       u80=trg%u80
+      call plot_unlinkMatch(trg)
        trg=>ntrg
        plot_popmatch=.true.
     end if
@@ -735,13 +919,11 @@ CONTAINS
     return
   end function plot_loopobstrg
   !
-  logical function plot_loopmodtrg(set,trg80,pos250,descr80,info250,min80,max80,irc)
+  logical function plot_loopmodtrg(set,trg80,var80,min80,max80,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
-    character*250 :: pos250    ! position/sequence number
-    character*80  :: descr80    ! descriptor
-    character*250 :: info250   ! information
+    character*80  :: var80    ! descriptor
     character*80  :: min80      ! min value
     character*80  :: max80      ! max value
     character*250 :: crc250
@@ -758,9 +940,7 @@ CONTAINS
        plot_loopmodtrg=.false.
     else
        trg80=set%cmodtrg%trg80
-       pos250=set%cmodtrg%pos250
-       descr80=set%cmodtrg%descr80
-       info250=set%cmodtrg%info250
+       var80=set%cmodtrg%var80
        min80=set%cmodtrg%min80
        max80=set%cmodtrg%max80
        plot_loopmodtrg=.true.
@@ -768,15 +948,64 @@ CONTAINS
     return
   end function plot_loopmodtrg
   !
-  logical function plot_loopmatch(set,trg80,pos250,descr80,info250,min80,max80,irc)
+  logical function plot_loopDefault(set,irc)
+    implicit none
+    type(plot_set), pointer :: set !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="pushset"
+    plot_loopdefault=.false. ! only true if all is ok...
+    if (.not.associated(set%cDef)) then
+       set%cDef =>  set%firstDef%next 
+    else
+       set%cDef =>  set%cDef%next
+    end if
+    if (associated(set%cDef,set%lastDef)) then
+       nullify(set%cDef)
+       plot_loopdefault=.false.
+    else
+       plot_loopdefault=.true.
+       set%cDef%cii=0
+    end if
+    return
+  end function plot_loopdefault
+  !
+  logical function plot_loopDefaultItem(set,trg80,var80,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
-    character*250 :: pos250    ! position/sequence number
-    character*80  :: descr80    ! descriptor
-    character*250 :: info250   ! information
-    character*80  :: min80      ! min value
-    character*80  :: max80      ! max value
+    character*80  :: var80      ! variable
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="loopdefitem"
+    plot_loopdefaultitem=.false. ! only true if all is ok...
+    if (.not.associated(set%cdef)) then
+       plot_loopdefaultitem=.false.
+    else
+       if (set%cdef%cii .eq. 0) then
+          set%cdef%cii=1
+       else
+          set%cdef%cii = set%cdef%cii +1
+       end if
+       if (set%cdef%cii .gt. set%cdef%nTrg) then
+          set%cdef%cii=0
+          plot_loopdefaultitem=.false.
+       else
+          trg80=set%trgMod80(set%cdef%cii)
+          var80=set%cdef%v80(set%cdef%cii)
+          plot_loopdefaultitem=.true.
+       end if
+    end if
+    return
+  end function plot_loopDefaultItem
+  !
+  logical function plot_loopmatch(set,n80,e250,l80,u80,irc)
+    implicit none
+    type(plot_set), pointer :: set !  current session
+    character*80  :: n80      ! target name
+    character*250 :: e250   ! information
+    character*80  :: l80      ! min value
+    character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="pushset"
@@ -790,12 +1019,10 @@ CONTAINS
        nullify(set%cmatch)
        plot_loopmatch=.false.
     else
-       trg80=set%cmatch%trg80
-       pos250=set%cmatch%pos250
-       descr80=set%cmatch%descr80
-       info250=set%cmatch%info250
-       min80=set%cmatch%min80
-       max80=set%cmatch%max80
+       n80=set%cmatch%n80
+       e250=set%cmatch%e250
+       l80=set%cmatch%l80
+       u80=set%cmatch%u80
        plot_loopmatch=.true.
     end if
     return
@@ -838,7 +1065,7 @@ CONTAINS
     call observation_getBufrType(oss,set%category,set%subCategory,crc250,irc)
     call observation_getIndex(oss,set%ind_obs80,set%ind_exp250,crc250,irc)
     call observation_getIndexLimitsRaw(oss,set%ind,set%ind_start,set%ind_stop)
-    call observation_getBatchFile(oss,b250)
+    ! cache file is stored in colocation-module
     call plot_clearObstrgStack(set,crc250,irc)
     do while (observation_loopTarget(oss,trg80,pos250,descr80,info250,min80,max80,irc))
        call plot_pushobstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
@@ -861,6 +1088,7 @@ CONTAINS
     call observation_setBufrType(oss,set%category,set%subCategory,crc250,irc)
     call observation_setIndex(oss,set%ind_obs80,set%ind_exp250,crc250,irc)
     call observation_setIndexLimitsRaw(oss,set%ind,set%ind_start,set%ind_stop)
+    call observation_loadCache(oss,set%obs250,crc250,irc) ! stored in colocation module
     call observation_clearTargetStack(oss,crc250,irc)
     do while (plot_loopObstrg(set,trg80,pos250,descr80,info250,min80,max80,irc))
        call observation_pushtarget(oss,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
@@ -876,14 +1104,28 @@ CONTAINS
     implicit none
     type(plot_set), pointer :: set
     type(mod_session), pointer :: mss
+    character*250 :: crc250
+    integer :: irc
     character*80  :: n80       ! target name
     character*80  :: v80       ! variable
+    character*250 :: e250      ! expression
     character*80  :: l80      ! min value
     character*80  :: u80      ! max value
     call model_getIndex(mss,set%ind_mod80,crc250,irc)
     call plot_clearModTrgStack(set,crc250,irc)
-    do while (model_loopTarget(mss,n80,v80,l80,u80,irc))
+    do while (model_loopTarget(mss,n80,v80,l80,u80,crc250,irc))
        call plot_pushModtrg(set,n80,v80,l80,u80,crc250,irc)
+    end do
+    call plot_clearDefaultStack(set,crc250,irc)
+    do while (model_loopDefault(mss,crc250,irc))
+       do while (model_loopDefaultItem(mss,n80,v80,crc250,irc))
+          call plot_addDefault(set,n80,v80,crc250,irc)
+       end do
+       call plot_pushDefault(set,crc250,irc)
+    end do
+    call plot_clearMatchStack(set,crc250,irc)
+    do while (model_loopExpression(mss,n80,e250,l80,u80,crc250,irc))
+       call plot_pushMatch(set,n80,e250,l80,u80,crc250,irc)
     end do
     return
   end subroutine plot_modImport
@@ -893,11 +1135,31 @@ CONTAINS
     implicit none
     type(plot_set), pointer :: set
     type(mod_session), pointer :: mss
+    character*250 :: crc250
+    integer :: irc
+    character*80 :: n80,v80,l80,u80
+    character*250 :: e250
     call model_setIndex(mss,set%ind_mod80,crc250,irc)
+    call model_loadCache(mss,set%mod250,crc250,irc) ! stored in colocation module
+    !
     call model_clearTargetStack(mss,crc250,irc)
     do while (plot_loopModTrg(set,n80,v80,l80,u80,irc))
        call model_pushTarget(mss,n80,v80,l80,u80,crc250,irc)
     end do
+    !
+    call model_clearDefaultStack(mss,crc250,irc)
+    do while (plot_loopDefault(set,irc))
+       do while (plot_loopDefaultItem(set,n80,v80,irc))
+          call model_addDefault(mss,n80,v80,crc250,irc)
+       end do
+       call model_pushDefault(mss,crc250,irc)
+    end do
+    !
+    call model_clearExpressionStack(mss,crc250,irc)
+    do while (plot_loopMatch(set,n80,e250,l80,u80,irc))
+       call model_addExpression(mss,n80,e250,l80,u80,crc250,irc)
+    end do
+    !
     return
   end subroutine plot_modExport
   !
@@ -919,14 +1181,12 @@ CONTAINS
   subroutine plot_colExport(set,css) ! set colocation data
     use colocation
     use model
-    use observation
+    use observations
     implicit none
     type(plot_set), pointer :: set
     type(col_session), pointer :: css
     character*250 :: crc250
     integer :: irc
-    call model_loadcache(css,set%mod250,crc250,irc)
-    call observation_loadcache(css,set%obs250,crc250,irc)
     return
   end subroutine plot_colExport
   !
@@ -1482,7 +1742,7 @@ CONTAINS
           !      &  mss%currentExp%ntrgexp,  mss%currentExp%e250(ii)(1:mss%currentExp%lene(ii))
           ! 
           ! do jj=1,size(oss%trg80)
-          !    write(*,*) myname,'var:',jj,oss%ntrg,oss%ntarget,oss%trg80(jj)(1:oss%trg_lent(jj))
+          !    write(*,*) myname,'var:',jj,oss%ntrg,oss%ntarget,oss%trg80(jj)(1:oss%trgmodlent(jj))
           ! end do
           call plot_errorappend(crc250,"parse_parsef_loop")
           return
