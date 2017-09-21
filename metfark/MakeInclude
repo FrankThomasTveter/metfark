@@ -2,9 +2,11 @@
 # user set variables:
 # STATIC = list of files/directories which should NOT be 'made'
 #
-STATIC += $(shell rm -f *~; echo Make* *.*)
+STATIC += $(shell rm -f *~;)
 TARGETS = all
-LS_ALLX    := $(shell echo *)
+LS_ALLX    := $(shell ./MakeDirList.pl)
+
+
 LS_LIBSX   := $(shell echo lib*)
 LS_PERLX   := $(shell ./MakePerlList.pl)
 
@@ -81,7 +83,7 @@ FORCE:
 
 debug :
 	@echo " static:" $(STATIC)
-	@echo " ls all:" $(LS_ALL)
+	@echo " ls allx:" $(LS_ALLX)
 	@echo " ls lib:" $(LS_LIBS)
 	@echo " ls order:" $(LS_ORDER)
 	@echo " ls compile:" $(LS_COMPILE)

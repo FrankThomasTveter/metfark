@@ -480,7 +480,7 @@ sub getBranch_ {
 			    $found=1; # do not include this sub-branch later
 			}
 		    } else {
-			print "getBranch >>>>> Missing $value among ".keys %$svalue ."\n";
+			print "getBranch >>>>> Missing $value among ".keys(%$href) ."\n";
 		    }
 		} else {
 		    if($bdeb){print "getBranch >>>>> Value is not a HASH: $svalue\n";}
@@ -716,7 +716,7 @@ sub getValues_ {
 		    if ($value eq "") { # found empty target: store all values
 			my %hash_copy=%$href;
 			delete($href->{$key});			
-			if ($bdeb) {print "   Missing value: '$key' " . scalar keys ($href) . "\n";}
+			if ($bdeb) {print "   Missing value: '$key' " . scalar keys (%$href) . "\n";}
 			my ($h,@locres)=getValues_($svalue,$href);
 			if (keys(%$h)) {
 			    $href=\%hash_copy; # incomplete branch

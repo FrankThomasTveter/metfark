@@ -71,7 +71,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2017-09-05" "perl v5.22.1" "User Contributed Perl Documentation"
+.TH fark 3pm "2017-09-21" "perl v5.22.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -118,23 +118,6 @@ close \- closes a fark session.
 \&\f(CW$fark\fR\->\fIclose()\fR;
 .SH "MODEL FUNCTIONS"
 .IX Header "MODEL FUNCTIONS"
-.SS "modelFileSetup"
-.IX Subsection "modelFileSetup"
-modelFileSetup \- defines the fimex file setup for the model files.
-.PP
-Arguments:
-.IP "(string) path to fimex-configuration-file." 4
-.IX Item "(string) path to fimex-configuration-file."
-.PD 0
-.ie n .IP "(string) fimex-type of file (i.e. ""netcdf"" or ""grib"")" 4
-.el .IP "(string) fimex-type of file (i.e. ``netcdf'' or ``grib'')" 4
-.IX Item "(string) fimex-type of file (i.e. netcdf or grib)"
-.PD
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-\&\f(CW$fark\fR\->modelFileSetup(\*(L"fimex.cfg\*(R",\*(L"netcdf\*(R");
 .SS "clearModelFileStack"
 .IX Subsection "clearModelFileStack"
 clearModelFileStack \- clears the model file stack and sets the sorting variable (optional).
@@ -231,6 +214,18 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->loadModelCache($modfile);
+.SS "setModelCache"
+.IX Subsection "setModelCache"
+setModelCache \- sets name of cache file.
+.PP
+Arguments:
+.IP "(string) path to model cache file (optional in repeated calls)." 4
+.IX Item "(string) path to model cache file (optional in repeated calls)."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->setModelCache($modfile);
 .SS "setModelIndex"
 .IX Subsection "setModelIndex"
 setModelIndex \- sets a target for the model parameters
@@ -429,6 +424,18 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->loadObservationCache($obsfile);
+.SS "setObservationCache"
+.IX Subsection "setObservationCache"
+setObservationCache \- sets name of cache file.
+.PP
+Arguments:
+.IP "(string) path to obs cache file (optional in repeated calls)." 4
+.IX Item "(string) path to obs cache file (optional in repeated calls)."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->setObservationCache($obsfile);
 .SS "setObservationType"
 .IX Subsection "setObservationType"
 setObservationType \- sets the type of \s-1BUFR\s0 files that should be processed
@@ -496,30 +503,6 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->pushObservationTarget(\*(L"yy\*(R",\*(L"10\*(R",\*(L"4001\*(R",\*(L"year\*(R","\*(L",\*(R"");
-.SS "setObservationIndexTarget"
-.IX Subsection "setObservationIndexTarget"
-setObservationIndexTarget \- set an observation target for use during file scanning
-.PP
-Arguments:
-.IP "(string) target name" 4
-.IX Item "(string) target name"
-.PD 0
-.IP "(string) position" 4
-.IX Item "(string) position"
-.IP "(string) descriptor" 4
-.IX Item "(string) descriptor"
-.IP "(string) info" 4
-.IX Item "(string) info"
-.IP "(string) min" 4
-.IX Item "(string) min"
-.IP "(string) max" 4
-.IX Item "(string) max"
-.PD
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-\&\f(CW$fark\fR\->setObservationIndexTarget(\*(L"yy\*(R",\*(L"10\*(R",\*(L"4001\*(R",\*(L"\s-1YEAR\*(R","\*(L",\*(R""\s0)
 .SS "setObservationIndex"
 .IX Subsection "setObservationIndex"
 setObservationIndex \- set the observation index (used for sorting the stack).
@@ -536,32 +519,64 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->setObservationIndex(\*(L"time\*(R",\*(L"dtg(yy,mm,dd,hh,mi)\*(R");
+.SS "clearMatchRuleStack"
+.IX Subsection "clearMatchRuleStack"
+clearMatchRuleStack \- clear match-rule expressions.
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\& $fark\->clearMatchRuleStack();
+.Ve
+.SS "addMatchRule"
+.IX Subsection "addMatchRule"
+addMatchRule \- add a match-rule to the stack
+.PP
+Arguments:
+.IP "(string) model targetName" 4
+.IX Item "(string) model targetName"
+.PD 0
+.IP "(string) obs expression" 4
+.IX Item "(string) obs expression"
+.IP "(string) min" 4
+.IX Item "(string) min"
+.IP "(string) max" 4
+.IX Item "(string) max"
+.PD
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\& $fark\->addMatchRule("latitude_model","180.0*latitude_obs/3.14",0,90.0);
+.Ve
+.SS "setColocFilter"
+.IX Subsection "setColocFilter"
+setColocFilter \- add a colocation filter.
+.PP
+Arguments:
+.IP "(string) colocation filter." 4
+.IX Item "(string) colocation filter."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\& $fark\->setColocFilter("member(obs_id,1047,1049)");
+.Ve
+.SS "colocXML"
+.IX Subsection "colocXML"
+colocXML \- slice model and observation files, dumping resulting \s-1XML\s0 to standard out...
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\& $fark\->colocXML();
+.Ve
 .SH "PLOT FUNCTIONS"
 .IX Header "PLOT FUNCTIONS"
-.SS "setPlotTable"
-.IX Subsection "setPlotTable"
-setPlotTablePath \- defines the path for the data output files.
-.PP
-Arguments:
-.IP "(string) path to the table directory." 4
-.IX Item "(string) path to the table directory."
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-\&\f(CW$fark\fR\->setPlotTable(\*(L"/disk1/fark/tables/YYMMDDHH.table\*(R");
-.SS "setPlotGraphics"
-.IX Subsection "setPlotGraphics"
-setPlotGraphics \- defines the path for the graphics output files.
-.PP
-Arguments:
-.IP "(string) path to the graphics directory." 4
-.IX Item "(string) path to the graphics directory."
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-\&\f(CW$fark\fR\->setPlotGraphics(\*(L"/disk1/fark/graphics/YYMMDDHH.graphics\*(R");
 .SS "setPlotType"
 .IX Subsection "setPlotType"
 setPlotType \- defines the type of output files.
@@ -575,9 +590,57 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->setPlotType(\*(L"rms+stdv\*(R");
+.SS "setPlotTableFile"
+.IX Subsection "setPlotTableFile"
+setPlotTableFile \- sets the tableFile.
+.PP
+Arguments:
+.IP "(string) name of table file." 4
+.IX Item "(string) name of table file."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->setPlotTableFile(\*(L"rms+stdv\*(R");
+.SS "getPlotTableFile"
+.IX Subsection "getPlotTableFile"
+getPlotTableFile \- gets the tableFile.
+.PP
+Arguments:
+.IP "(string) name of table file." 4
+.IX Item "(string) name of table file."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->getPlotTableFile(\*(L"rms+stdv\*(R");
+.SS "setPlotGraphicsFile"
+.IX Subsection "setPlotGraphicsFile"
+setPlotGraphicsFile \- sets the graphicsFile.
+.PP
+Arguments:
+.IP "(string) name of graphics file." 4
+.IX Item "(string) name of graphics file."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->setPlotGraphicsFile(\*(L"rms+stdv\*(R");
+.SS "getPlotGraphicsFile"
+.IX Subsection "getPlotGraphicsFile"
+getPlotGraphicsFile \- gets the graphicsFile.
+.PP
+Arguments:
+.IP "(string) name of graphics file." 4
+.IX Item "(string) name of graphics file."
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->getPlotGraphicsFile(\*(L"rms+stdv\*(R");
 .SS "clearPlotSetStack"
 .IX Subsection "clearPlotSetStack"
-clearPlotFileStack \- clears the datasets in the plot set stack.
+clearPlotSetStack \- clears the datasets in the plot set stack.
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
@@ -588,11 +651,17 @@ clearPlotFileStack \- clears the datasets in the plot set stack.
 pushPlotSet \- adds a data set to the plot set stack.
 .PP
 Arguments:xs
+.IP "(string) plot session id" 4
+.IX Item "(string) plot session id"
+.PD 0
+.IP "(string) colocation session id" 4
+.IX Item "(string) colocation session id"
+.IP "(string) model session id" 4
+.IX Item "(string) model session id"
+.IP "(string) observation session id" 4
+.IX Item "(string) observation session id"
 .IP "(string) name of set" 4
 .IX Item "(string) name of set"
-.PD 0
-.IP "(string) colocation file name" 4
-.IX Item "(string) colocation file name"
 .IP "(string) x\-variable expression" 4
 .IX Item "(string) x-variable expression"
 .IP "(string) y\-variable expression" 4
@@ -607,14 +676,14 @@ Arguments:xs
 .Vb 1
 \&   $fark\->pushPlotSet("1","time","temperature_2m","Arome (T2M)");
 .Ve
-.SS "clearPlotAttributes"
-.IX Subsection "clearPlotAttributes"
-clearPlotAttributes \- clears the plot attribute stack.
+.SS "clearPlotAttributeStack"
+.IX Subsection "clearPlotAttributeStack"
+clearPlotAttributeStack \- clears the plot attribute stack.
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-\&\f(CW$fark\fR\->clearPlotAttributes;
+\&\f(CW$fark\fR\->clearPlotAttributeStack;
 .SS "pushPlotAttribute"
 .IX Subsection "pushPlotAttribute"
 pushPlotAttribute \- adds an attribute.
@@ -640,7 +709,7 @@ makePlotTable \- make table file, return name of plot graphics file...
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-my ($tablefile,$plotfile) = \f(CW$fark\fR\->\fImakePlotTable()\fR;
+my ($tablefile,$plotfile) = \f(CW$fark\fR\->makePlotTable($tablepattern,$plotpattern);
 .SS "makePlotGraphics"
 .IX Subsection "makePlotGraphics"
 makePlotGraphics \- generate plot graphics.
@@ -656,39 +725,7 @@ Arguments:
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-my \f(CW$file\fR = \f(CW$fark\fR\->makePlotGraphics($tablefile,$plotfile);
-.SS "addExpression"
-.IX Subsection "addExpression"
-addExpression \- add a match-rule to the stack
-.PP
-Arguments:
-.IP "(string) model targetName" 4
-.IX Item "(string) model targetName"
-.PD 0
-.IP "(string) obs expression" 4
-.IX Item "(string) obs expression"
-.IP "(string) min" 4
-.IX Item "(string) min"
-.IP "(string) max" 4
-.IX Item "(string) max"
-.PD
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-.Vb 1
-\& $fark\->addExpression("latitude_model","180.0*latitude_obs/3.14",0,90.0);
-.Ve
-.SS "colocXML"
-.IX Subsection "colocXML"
-colocXML \- slice model and observation files, dumping resulting \s-1XML\s0 to standard out...
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-.Vb 1
-\& $fark\->colocXML();
-.Ve
+my \f(CW$file\fR = \f(CW$fark\fR\->makePlotGraphics($tablefile,$graphicfile);
 .SS "expression"
 .IX Subsection "expression"
 expression \- evaluate expression
@@ -699,10 +736,6 @@ expression \- evaluate expression
 my \f(CW$result\fR = fark\->expression('1+2');
 .SH "INSTALLATION"
 .IX Header "INSTALLATION"
-# make sure fimex is installed:
- sudo apt-get install libfimexf\-0.58.1\-0
- sudo apt-get install libfimexf-dev
-.PP
 # fark-perl installation:   
  sudo dpkg \-\-install /vol/fou/atmos2/franktt/fark/fark\-perl_0.13\-1_amd64.deb
 .PP
@@ -721,8 +754,7 @@ my \f(CW$result\fR = fark\->expression('1+2');
 Frank Thomas Tveter, <f.t.tveter@met.no>
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
-.Vb 5
-\& FIMEX 
+.Vb 4
 \& NETCDF
 \& BUFR
 \& ncdump \-h

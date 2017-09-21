@@ -25,6 +25,7 @@ use Pod::Usage qw(pod2usage);
 use File::Path qw( make_path );
 use Cwd 'abs_path';
 use Capture::Tiny 'capture';
+use File::Touch;
 
 require Exporter;
 
@@ -88,7 +89,7 @@ sub makeRoot {
     }
 }
 
-sub getDir {
+sub getRootDir {
     my $cls = shift;
     my @dirs=keys %{$farkdirs{$cls}};
     if (@dirs) {
@@ -134,8 +135,10 @@ sub splitDir {
 	my $prefix = substr $pdir,0,1;
 	if ($prefix eq "\/") {
 	    $tdir = $pdir; # absolute path
-	} else {
+	} elsif (defined $ddir) {
 	    $tdir = $ddir . $pdir; # relative path
+	} else {
+	    $tdir = $pdir; # relative path
 	};
     }
     #
@@ -196,6 +199,13 @@ sub makePath{
     }else {
 	return(0);
     }
+}
+
+sub touchFile {
+    my $path=shift;
+    my ($dir,$name)=splitName($path);
+    if (! -d $dir) { makePath($dir);}
+    return touch($path);
 }
 
 #

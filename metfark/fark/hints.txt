@@ -1,3 +1,6 @@
+debuild -i -us -uc -b
+
+
  sudo locale-gen en_US en_US.UTF-8 nb_NO nb_NO.UTF-8
  sudo dpkg-reconfigure locales
 

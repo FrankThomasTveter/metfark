@@ -1,39 +1,59 @@
 plot_file = "default.cfg";
-plot_config = { "default.cfg" : { dataset : { def : {line: "solid",
-						     coloc:"coloc", 
-						     x:"x",
-						     y:"y",
-						     legend:"legend"}},
+plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
+						   coloc:"coloc", 
+						   x:"x",
+						   y:"y",
+						   legend:"legend"}},
 				  attributes : { def: "default"},
-                                  output : "default.ps",
-				  cat : "rms",
+				  table : "table.ps",
+				  graphics : "default.ps",
+				  cat : "Text",
 				  password: "test"
 				}
 	      };
-plot_cats = { "rms" : {title : "default",xlabel: "default X"},
-	      "stdv" : {title : "default",ylabel: "default Y"}
-	    }; 
-
-plot_lines = { "0" : "default" };
+plot_cats = { "Text": {"attributes":{"Text" : {xlabel:"X", ylabel:"Y"}}, 
+		       "lines": {1:"solid"}}
+	    };
 
 plot_configEd = 0;
 
 function plot_allocate(file) {
-    if (plot_config[file] === undefined) {
+    if (plot_config[plot_file] === undefined) {
+	console.log("Corrupt plot_file:",plot_file);
+    } else if (plot_config[file] === undefined) {
 	plot_config[file]=clone(plot_config[plot_file]);
-	console.log("cloned:",file,plot_file,plot_config[file]);
+	console.log("cloned:",plot_file," -> ",file);
+	plot_file=file;
     }
 }
 function plot_setConfigFile(file) {
     setValue('plotConfigFile',file);
     setValue('plotConfigFileSave',file);
     if (file != "") {
+	console.log("Setting plot config file:",file);
 	plot_allocate(file);
-	plot_file=file;
+	plot_show();
     };
 }
 function plot_getConfigFile() {
     return plot_file;
+};
+function plot_getColocConfigFile() {
+    var item=document.getElementById("newlinePlotDataset");
+    var file = item.children[4].children[0].value;
+    return file;
+};
+function plot_getModelConfigFile() {
+    var file=plot_getColocConfigFile();
+    if (coloc_config[file] !== undefined) {
+	return coloc_config[file]["modelConfigFile"]["file"];
+    }
+};
+function plot_getObsConfigFile() {
+    var file=plot_getColocConfigFile();
+    if (coloc_config[file] !== undefined) {
+	return coloc_config[file]["obsConfigFile"]["file"];
+    }
 };
 function plot_setArray(parameter,value) {
     var file=plot_getConfigFile();
@@ -47,13 +67,13 @@ function plot_setCat(value) {
     // sync file and cat attributes
     for (var attr in plot_config[file]["attributes"]) {
 	if (plot_cats[value]===undefined || 
-	    plot_cats[value][attr] === undefined) {
+	    plot_cats[value]["attributes"][attr] === undefined) {
 	    delete plot_config[file]["attributes"][attr];
 	};
     }
-    for (var attr in plot_cats[value]) {
+    for (var attr in plot_cats[value]["attributes"]) {
 	if (plot_config[file]["attributes"][attr] === undefined) {
-	    plot_config[file]["attributes"][attr]=plot_cats[value][attr];
+	    plot_config[file]["attributes"][attr]=plot_cats[value]["attributes"][attr];
 	};
     }
 };
@@ -75,8 +95,9 @@ function plot_show() {
 	setValue('plotConfigFile',file);
 	setValue('plotConfigFileSave',file);
 	setValue('plotCat',plot_config[file]["cat"]);
-	setValue('plotOutput',plot_config[file]["output"]);
-	plot_setDatasetTable(file,plot_config[file]['dataset']);
+	setValue('plotTable',plot_config[file]["table"]);
+	setValue('plotGraphics',plot_config[file]["graphics"]);
+	plot_setDatasetTable(file);
 	plot_setAttributesTable(file,plot_config[file]['attributes']);
     };
 };
@@ -98,13 +119,14 @@ function plot_removeData(set) {
     var file=plot_getConfigFile();
     var item=document.getElementById("newlinePlotDataset");
     item.children[1].children[0].value=set;
-    item.children[3].children[0].value=plot_lines[set];
+    var type=plot_cats[plot_config[file]["cat"]]["lines"][set]//"";
+    item.children[3].children[0].value=type;
     item.children[4].children[0].value=plot_config[file]["dataset"][set]["coloc"];
     item.children[6].children[0].value=plot_config[file]["dataset"][set]["x"];
     item.children[8].children[0].value=plot_config[file]["dataset"][set]["y"];
     item.children[10].children[0].value=plot_config[file]["dataset"][set]["legend"];
     delete plot_config[file]["dataset"][set];
-    plot_setDatasetTable(file,plot_config[file]["dataset"]);
+    plot_setDatasetTable(file);
 };
 
 function plot_isEmpty(obj) {
@@ -138,7 +160,7 @@ function plot_newPlotDataset(item) {
 	    item.parentNode.parentNode.children[8].children[0].value="";
 	    item.parentNode.parentNode.children[10].children[0].value="";
 	};
-	plot_setDatasetTable(file,plot_config[file]["dataset"]);
+	plot_setDatasetTable(file);
     } else {
 	alert("Invalid line set/coloc: ('"+set+"'/'"+coloc+"')");
     }
@@ -146,7 +168,8 @@ function plot_newPlotDataset(item) {
 function plot_saveConfigFile() {
     var file=plot_getConfigFile();
     var password=document.getElementById("plotConfigFilePsw").value;
-    var output=plot_config[file]["output"];
+    var table=plot_config[file]["table"];
+    var graphics=plot_config[file]["graphics"];
     var cat=plot_config[file]["cat"];
     var plotSets="";
     var sets=plot_config[file]["dataset"];
@@ -169,11 +192,11 @@ function plot_saveConfigFile() {
 	    plotAttrs=plotAttrs + "|" + attr + "~" + value;
 	}
     };
-    console.log("Saving: "+file+" "+cat+" "+plotSets+" "+plotAttrs, plot_config[file]);
+    console.log("Saving: "+file+" "+cat+" "+table+" "+graphics+" "+plotSets+" "+plotAttrs, plot_config[file]);
     plot_configEd++;
     documentLog.innerHTML="Sent plot-save request.";
-    $.get("cgi-bin/fark_save.pl",{type:"plot",file:file,password:password,cat:cat,
-				  output:output,sets:plotSets,attributes:plotAttrs
+    $.get("cgi-bin/fark_save.pl",{type:"plot",file:file,password:password,cat:cat,table:table,
+				  graphics:graphics,sets:plotSets,attributes:plotAttrs
 				 },
 	  function(data, status){if (status == "success") {
 	      var errors=data.getElementsByTagName("error");
@@ -188,16 +211,19 @@ function plot_saveConfigFile() {
     makeUrl("plot",file);
 };
 // make new plot-index entry
-function plot_setDatasetTable(file,sets) {
-    var file=plot_getConfigFile();
+function plot_setDatasetTable(file) {
+    var sets=plot_config[file]["dataset"];
     var item=document.getElementById('plotDatasetTable');
     var tail=removeTableChildFromTo(item,"labelsPlotDataset","newlinePlotDataset");
     for (var set in sets) {
-	plot_insertDatasetRow(tail,set,sets[set]["coloc"],sets[set]["x"],
+	var cat =plot_config[file]["cat"];
+	var type=plot_cats[cat]["lines"][set]//"";
+	console.log("Looking for:",file,cat,set,type);
+	plot_insertDatasetRow(tail,set,type,sets[set]["coloc"],sets[set]["x"],
 				 sets[set]["y"],sets[set]["legend"]);
     }
 }
-function plot_insertDatasetRow(item,set,coloc,x,y,legend) {
+function plot_insertDatasetRow(item,set,type,coloc,x,y,legend) {
     var row = document.createElement("TR");
     var td,inp;
     // make "-" column
@@ -220,7 +246,7 @@ function plot_insertDatasetRow(item,set,coloc,x,y,legend) {
     row.appendChild(td);
     // make line column  ***************************
     td=document.createElement("TD");
-    td.innerHTML=plot_lines[set];
+    td.innerHTML=type;
     row.appendChild(td);
     // make coloc column  ***************************
     td=document.createElement("TD");
@@ -289,13 +315,20 @@ function plot_insertAttributeRow(item,attr,value) {
     item.parentNode.insertBefore(row,item.nextSibling);
     return row;
 }
-function plot_updateData(arg = "") {
-    var args=getArgs(arg);
+function plot_loadColoc(file) {
+    if (file != "") {
+	var mfile=coloc_getModelConfigFile(file);
+	if (coloc_modelIsNotLoaded(mfile)) {coloc_updateModelData(mfile);}
+	var ofile=coloc_getObsConfigFile(file);
+	if (coloc_obsIsNotLoaded(ofile)) {coloc_updateObsData(ofile);}
+    };
+};
+function plot_updateData() {
+    var args=getArgs(plot_getConfigFile());
     documentLog.innerHTML="Sent plot-load request.";
     var types=[];
     types[0]="plot";
     types[1]="cat";
-    types[2]="line";
     $.get("cgi-bin/fark_load.pl",{type:types,arg:args},
 	  function(data, status){
 	      dataToArray(data,status,documentLog);
@@ -335,7 +368,7 @@ function plot_rmfile(path) {
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
-		  alert("Unable to rmdir: "+path+"\n"+msg);
+		  alert("Unable to rmfile: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
 				}

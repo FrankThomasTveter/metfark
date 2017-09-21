@@ -35,6 +35,8 @@ use Pod::Usage qw(pod2usage);
 use File::Find;
 use File::Basename;
 
+use farkdir;
+
 require Exporter;
 
 our @ISA = qw(Exporter);
@@ -76,25 +78,25 @@ my $fark = fark->open();
 sub open { 
     my $class = shift; 
     my $self={}; 
-    if (my ($mid,$ret,$msg) = xs_openModelSession()){
+    if (my ($ret,$msg,$mid) = xs_openModelSession()){
     	if ($ret != 0) {die $msg;}
     	$self->{MID}=$mid;
     } else {
     	die "Unable to create class $class\n";
     }
-    if (my ($bid,$ret,$msg) = xs_openObsSession()){
+    if (my ($ret,$msg,$bid) = xs_openObsSession()){
 	if ($ret != 0) {die $msg;}
 	$self->{OID}=$bid;
     } else {
 	die "Unable to create class $class\n";
     }
-    if (my ($cid,$ret,$msg) = xs_openColocSession()){
+    if (my ($ret,$msg,$cid) = xs_openColocSession()){
 	if ($ret != 0) {die $msg;}
 	$self->{CID}=$cid;
     } else {
 	die "Unable to create class $class\n";
     }
-    if (my ($pid,$ret,$msg) = xs_openPlotSession()){
+    if (my ($ret,$msg,$pid) = xs_openPlotSession()){
 	if ($ret != 0) {die $msg;}
 	$self->{PID}=$pid;
     } else {
@@ -214,8 +216,8 @@ my $peekdata = $fark->peekModelFile();
 =cut
 
 sub peekModelFile {
-    my ($self,@args)=@_;
-    if (my ($ret,$msg,$nrep,@reps) = xs_peekModelFile($self->{MID},@args)){
+    my ($self)=@_;
+    if (my ($ret,$msg,$nrep,@reps) = xs_peekModelFile($self->{MID})){
 	if ($ret != 0) {die $msg;}
 	my $hash=getHash($nrep,0,@reps);
 	bless $hash => "farkdata";
@@ -451,8 +453,8 @@ Arguments:
 =cut
 
 sub setModelIndex {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_setModelIndex($self->{MID},@args);
+    my ($self,$var)=@_;
+    my ($ret,$msg) = xs_setModelIndex($self->{MID},$var);
     if ($ret != 0) {die $msg;}
 }
 
@@ -477,8 +479,8 @@ Arguments:
 =cut
 
 sub setModelIndexLimits {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_setModelIndexLimits($self->{MID},@args);
+    my ($self,$min,$max)=@_;
+    my ($ret,$msg) = xs_setModelIndexLimits($self->{MID},$min,$max);
     if ($ret != 0) {die $msg;}
 }
 
@@ -494,8 +496,8 @@ $fark->clearModelTargetStack();
 =cut
 
 sub clearModelTargetStack {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_clearModelTargetStack($self->{OID},@args);
+    my ($self)=@_;
+    my ($ret,$msg) = xs_clearModelTargetStack($self->{OID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -525,8 +527,8 @@ $fark->pushModelTarget("modeltime","time","","");
 =cut
 
 sub pushModelTarget {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_pushModelTarget($self->{OID},@args);
+    my ($self,$nam,$var,$min,$max)=@_;
+    my ($ret,$msg) = xs_pushModelTarget($self->{OID},$nam,$var,$min,$max);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -543,8 +545,8 @@ $fark->clearModelDefaultStack();
 =cut
 
 sub clearModelDefaultStack {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_clearModelDefaultStack($self->{OID},@args);
+    my ($self)=@_;
+    my ($ret,$msg) = xs_clearModelDefaultStack($self->{OID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -570,8 +572,8 @@ $fark->addModelDefault("modeltime","12220.0");
 =cut
 
 sub addModelDefault {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_addModelDefault($self->{OID},@args);
+    my ($self,$nam,$val)=@_;
+    my ($ret,$msg) = xs_addModelDefault($self->{OID},$nam,$val);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -588,8 +590,8 @@ $fark->pushModelDefault();
 =cut
 
 sub pushModelDefault {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_pushModelDefault($self->{OID},@args);
+    my ($self)=@_;
+    my ($ret,$msg) = xs_pushModelDefault($self->{OID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -644,10 +646,10 @@ $fark->clearObservationFileStack();
 
 
 sub clearObservationFileStack {
-    my ($self,@args)=@_;
+    my ($self)=@_;
     # list obs types that should be used...
-    #print "clearObsFile: $self->{OID}, @args\n";
-    my ($ret,$msg) = xs_clearObsFileStack($self->{OID},@args);
+    #print "clearObsFile: $self->{OID}\n";
+    my ($ret,$msg) = xs_clearObsFileStack($self->{OID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -698,8 +700,8 @@ my $peekdata = $fark->peekObservationFile();
 =cut
 
 sub peekObservationFile {
-    my ($self,@args)=@_;
-    if (my ($ret,$msg,$nrep,@reps) = xs_peekObsFile($self->{OID},@args)){
+    my ($self)=@_;
+    if (my ($ret,$msg,$nrep,@reps) = xs_peekObsFile($self->{OID})){
 	if ($ret != 0) {die $msg;}
 	my $hash=getHash($nrep,0,@reps);
 	bless $hash => "farkdata";
@@ -934,8 +936,8 @@ Arguments:
 =cut
 
 sub setObservationType {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_setObsBufrType($self->{OID},@args);
+    my ($self,$bufrtype,$subtype)=@_;
+    my ($ret,$msg) = xs_setObsBufrType($self->{OID},$bufrtype,$subtype);
     if ($ret != 0) {die $msg;}
 }
 
@@ -963,9 +965,9 @@ $fark->setObservationIndexLimits();
 =cut
 
 sub setObservationIndexLimits {
-    my ($self,@args)=@_;
-    #print "fark.pm Calling xs_setObsIndexLimits with @args\n";
-    my ($ret,$msg) = xs_setObsIndexLimits($self->{OID},@args);
+    my ($self,$start,$end)=@_;
+    #print "fark.pm Calling xs_setObsIndexLimits with $start $end\n";
+    my ($ret,$msg) = xs_setObsIndexLimits($self->{OID},$start,$end);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -981,8 +983,8 @@ $fark->clearObservationTargetStack();
 =cut
 
 sub clearObservationTargetStack {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_clearObsTargetStack($self->{OID},@args);
+    my ($self)=@_;
+    my ($ret,$msg) = xs_clearObsTargetStack($self->{OID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1016,8 +1018,8 @@ $fark->pushObservationTarget("yy","10","4001","year","","");
 =cut
 
 sub pushObservationTarget {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_pushObsTarget($self->{OID},@args);
+    my ($self,$name,$pos,$descr,$info,$min,$max)=@_;
+    my ($ret,$msg) = xs_pushObsTarget($self->{OID},$name,$pos,$descr,$info,$min,$max);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1042,8 +1044,8 @@ $fark->setObservationIndex("time","dtg(yy,mm,dd,hh,mi)");
 =cut
 
 sub setObservationIndex {
-    my ($self,@args)=@_;
-    my ($ret,$msg,$nrep,@reps) = xs_setObsIndex($self->{OID},@args);
+    my ($self,$name,$expr)=@_;
+    my ($ret,$msg,$nrep,@reps) = xs_setObsIndex($self->{OID},$name,$expr);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1051,22 +1053,6 @@ sub setObservationIndex {
 
 ################################# COLOCATE ##########################
 
-
-=head2 clearColocationStack
-
-clearColocationStack - clear the colocation memory.
-
-=head4 EXAMPLE
-
- $fark->clearColocationStack();
-
-=cut
-
-sub clearColocationStack {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_clearColocStack($self->{CID},@args);
-    if ($ret != 0) {die $msg;}
-}
 
 
 =head2 clearMatchRuleStack
@@ -1080,8 +1066,8 @@ clearMatchRuleStack - clear match-rule expressions.
 =cut
 
 sub clearMatchRuleStack {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_clearMatchRuleStack($self->{MID},@args);
+    my ($self)=@_;
+    my ($ret,$msg) = xs_clearMatchRuleStack($self->{MID});
     if ($ret != 0) {die $msg;}
 }
 
@@ -1110,8 +1096,8 @@ Arguments:
 =cut
 
 sub addMatchRule {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_addMatchRule($self->{MID},@args);
+    my ($self,$mod,$exp,$min,$max)=@_;
+    my ($ret,$msg) = xs_addMatchRule($self->{MID},$mod,$exp,$min,$max);
     if ($ret != 0) {die $msg;}
 }
 
@@ -1135,8 +1121,8 @@ Arguments:
 =cut
 
 sub setColocFilter {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_setColocFilter($self->{MID},@args);
+    my ($self,$filter)=@_;
+    my ($ret,$msg) = xs_setColocFilter($self->{MID},$filter);
     if ($ret != 0) {die $msg;}
 }
 
@@ -1154,8 +1140,8 @@ colocXML - slice model and observation files, dumping resulting XML to standard 
 =cut
 
 sub colocXML {
-    my ($self,@args)=@_;
-    my ($ret,$msg) = xs_colocXML($self->{CID},$self->{MID},$self->{OID},@args);
+    my ($self)=@_;
+    my ($ret,$msg) = xs_colocXML($self->{CID},$self->{MID},$self->{OID});
     return ($ret,$msg);
 }
 
@@ -1194,6 +1180,120 @@ sub setPlotType {
 }
 
 
+=head2 setPlotTableFile
+
+setPlotTableFile - sets the tableFile.
+
+Arguments:
+
+=over 4
+
+=item (string) name of table file.
+
+=back
+
+=head4 EXAMPLE
+
+$fark->setPlotTableFile("rms+stdv");
+
+=cut
+
+
+sub setPlotTableFile {
+    my ($self,$tableFile)=@_;
+    my ($ret,$msg) = xs_setPlotTableFile($self->{PID},$tableFile);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+sub setPlotType {
+    my ($self,$type)=@_;
+    my ($ret,$msg) = xs_setPlotType($self->{PID},$type);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+
+=head2 getPlotTableFile
+
+getPlotTableFile - gets the tableFile.
+
+Arguments:
+
+=over 4
+
+=item (string) name of table file.
+
+=back
+
+=head4 EXAMPLE
+
+$fark->getPlotTableFile("rms+stdv");
+
+=cut
+
+
+sub getPlotTableFile {
+    my ($self,$tableFile)=@_;
+    my ($ret,$msg,$fn) = xs_getPlotTableFile($self->{PID},$tableFile);
+    if ($ret != 0) {die $msg;}
+    return $fn;
+}
+
+
+=head2 setPlotGraphicsFile
+
+setPlotGraphicsFile - sets the graphicsFile.
+
+Arguments:
+
+=over 4
+
+=item (string) name of graphics file.
+
+=back
+
+=head4 EXAMPLE
+
+$fark->setPlotGraphicsFile("rms+stdv");
+
+=cut
+
+
+sub setPlotGraphicsFile {
+    my ($self,$graphicsFile)=@_;
+    my ($ret,$msg) = xs_setPlotGraphicsFile($self->{PID},$graphicsFile);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+
+=head2 getPlotGraphicsFile
+
+getPlotGraphicsFile - gets the graphicsFile.
+
+Arguments:
+
+=over 4
+
+=item (string) name of graphics file.
+
+=back
+
+=head4 EXAMPLE
+
+$fark->getPlotGraphicsFile("rms+stdv");
+
+=cut
+
+
+sub getPlotGraphicsFile {
+    my ($self,$graphicsFile)=@_;
+    my ($ret,$msg,$fn) = xs_getPlotGraphicsFile($self->{PID},$graphicsFile);
+    if ($ret != 0) {die $msg;}
+    return $fn;
+}
+
+
 =head2 clearPlotSetStack
 
 clearPlotSetStack - clears the datasets in the plot set stack.
@@ -1206,10 +1306,10 @@ $fark->clearPlotSetStack();
 
 
 sub clearPlotSetStack {
-    my ($self,@args)=@_;
+    my ($self)=@_;
     # list obs types that should be used...
-    #print "clearPlotSetStack: $self->{PID}, @args\n";
-    my ($ret,$msg) = xs_clearPlotSetStack($self->{PID},@args);
+    #print "clearPlotSetStack: $self->{PID}\n";
+    my ($ret,$msg) = xs_clearPlotSetStack($self->{PID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1266,10 +1366,10 @@ $fark->clearPlotAttributeStack;
 
 
 sub clearPlotAttributeStack {
-    my ($self,@args)=@_;
+    my ($self)=@_;
     # list obs types that should be used...
-    #print "clearPlotSet: $self->{PID}, @args\n";
-    my ($ret,$msg) = xs_clearPlotAttributeStack($self->{PID},@args);
+    #print "clearPlotSet: $self->{PID}\n";
+    my ($ret,$msg) = xs_clearPlotAttributeStack($self->{PID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1311,11 +1411,36 @@ my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern);
 =cut
 
 sub makePlotTable {
-    my ($self,@args)=@_;
-    my ($ret,$msg,$tablefile,$plotfile) = 
-	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},@args);
+    my ($self,$tfile,$gfile)=@_;
+    my $ret;
+    my $msg;
+    my $dir;
+    my $name;
+    # set file names
+    ($ret,$msg)= xs_setTableFile($self->{PID},$tfile);
     if ($ret != 0) {die $msg;}
-    return ($tablefile,$plotfile);
+    ($ret,$msg)= xs_setGraphicsFile($self->{PID},$gfile);
+    if ($ret != 0) {die $msg;}
+    # replace wildcards in file names
+    ($ret,$msg)= xs_strepPlotFiles($self->{PID});
+    if ($ret != 0) {die $msg;}
+    # retrieve file names
+    ($ret,$msg,$tfile)= xs_getTableFile($self->{PID});
+    if ($ret != 0) {die $msg;}
+    ($ret,$msg,$gfile)= xs_getGraphicsFile($self->{PID});
+    if ($ret != 0) {die $msg;}
+    #
+    # make sure output file directories exist...
+    ($dir,$name)=farkdir::splitName($tfile);
+    farkdir::makePath($dir);
+    ($dir,$name)=farkdir::splitName($gfile);
+    farkdir::makePath($dir);
+    # make the output...
+    ($ret,$msg,my $tablefile,my $graphicfile) = 
+	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},
+			 $tfile,$gfile);
+    if ($ret != 0) {die $msg;}
+    return ($tablefile,$graphicfile);
 }
 
 =head2 makePlotGraphics
@@ -1334,13 +1459,13 @@ Arguments:
 
 =head4 EXAMPLE
 
-my $file = $fark->makePlotGraphics($tablefile,$plotfile);
+my $file = $fark->makePlotGraphics($tablefile,$graphicfile);
 
 =cut
 
 sub makePlotGraphics {
-    my ($self,$tablefile,$plotfile)=@_;
-    my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$plotfile);
+    my ($self,$tablefile,$graphicfile)=@_;
+    my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$graphicfile);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1423,7 +1548,7 @@ sub expression {
     if ($exp) {
 	my $ret;
 	my $msg;
-	if (($res,$ret,$msg) = xs_expression($exp)){
+	if (($ret,$msg,$res) = xs_expression($exp)){
 	    if ($ret != 0) {die $msg;}
 	} else {
 	    die "Unable to evaluate expression $exp\n";

@@ -69,7 +69,7 @@
 #
 # INCL = ../../include/
 # /opt/netcdf-fortran-4.2/include
- INCL = ./  /opt/netcdf-fortran-4.2/include/
+ INCL = ./
 #
 # Compilation flags 
 #	(Put the compilation flags here (-g is recommented))

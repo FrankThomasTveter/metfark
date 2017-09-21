@@ -132,6 +132,22 @@ module observations
      type(obs_target), pointer :: next => null()   ! linked list
   end type obs_target
   !
+  ! Location item
+  !   
+  type :: obs_location
+     integer :: locid
+     integer :: iloc
+     integer :: ntrg ! number of targets
+     real, allocatable :: trg_val(:) ! target value
+     integer :: search = 0     ! is grid search successful, 0=ok?
+     logical :: bok = .true.
+     type(obs_location), pointer :: prev => null()   ! linked list
+     type(obs_location), pointer :: next => null()   ! linked list
+  end type obs_location
+  !
+  type :: obs_locPointer
+     type(obs_location), pointer :: ptr => null()
+  end type obs_locPointer
   !
   ! report
   !
@@ -212,6 +228,14 @@ module observations
      REAL(rn),           allocatable :: trg_val(:)      ! target variable values
      logical                         :: trg_set=.false. ! is target list set?
      !
+     ! locations
+     type(obs_location), pointer :: firstLoc => null()   ! linked list start
+     type(obs_location), pointer :: lastLoc => null()    ! linked list end
+     integer :: nloc=0                                   ! number of items in location-chain
+     integer :: locoffset = 0                            ! offset between locid and position in locdata
+     type(obs_locPointer), allocatable :: locData(:)     !  data locations
+     logical :: locReady = .false.
+     !
      ! report label flags
      !
      logical :: ignmis=.false.
@@ -230,6 +254,8 @@ module observations
      type(obs_report), pointer :: nextReport => null()  ! current pointer
      integer :: nsubset=0               ! number of reports
      logical :: reportsReady=.false.    ! are reported data ready for use
+     !
+     logical :: pxml =.false.
      !
      type(obs_session), pointer :: prev => null()         ! linked list
      type(obs_session), pointer :: next => null()         ! linked list
@@ -343,6 +369,14 @@ CONTAINS
     integer :: irc
     character*22 :: myname = "observation_getSession"
     if(bdeb)write(*,*)myname,' Entering.',irc,sid
+    if (.not.associated(firstSession)) then
+       irc=911
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"No session is opened!")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
     css => firstSession%next
     do while ( .not.associated(css,target=lastSession))
        if (css%sid .eq. sid) then
@@ -470,7 +504,7 @@ CONTAINS
     end if
     ! write number of files: css%nFileIndexes
     if(bdeb)write(*,*) myname,' Files:',css%nFileIndexes
-    write(unitr,'(I0)',iostat=irc) css%nFileIndexes
+    if (css%pxml)write(unitr,'(I0)',iostat=irc) css%nFileIndexes
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," unable to write to:"//path250(1:lenp))
@@ -481,7 +515,8 @@ CONTAINS
     ! loop over file stack
     currentFile=>css%firstFile%next
     do while (.not.associated(currentFile,target=css%lastFile))
-          write(unitr,'(L1,2(X,F27.10),4(X,I0),X,A)',iostat=irc) currentFile%ind_lim,&
+          write(unitr,'(L1,2(X,F27.10),4(X,I0),X,A)',iostat=irc) &
+               & currentFile%ind_lim,&
                & currentFile%ind_start,currentFile%ind_stop,&
                & currentFile%nmessage,currentFile%ncat,currentFile%nsub,&
                & currentFile%lenf,currentFile%fn250(1:currentFile%lenf)
@@ -805,6 +840,24 @@ CONTAINS
     css%subCategory=subCategory
     if(bdeb)write(*,*)myname,' Done.'
   end subroutine observation_setBufrType
+  !
+  !
+  subroutine observation_getBufrType(css,category,subCategory,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    integer :: category
+    integer :: subCategory
+    character*250 :: crc250
+    integer :: irc
+    type(obs_file), pointer :: currentFile => null()
+    type(obs_file), pointer :: stackNext => null()
+    integer, external :: length
+    integer :: lens
+    character*22 :: myname = "observation_getBufrType"
+    if(bdeb)write(*,*)myname,' Entering.'
+    category=css%category
+    subCategory=css%subCategory
+    if(bdeb)write(*,*)myname,' Done.'
+  end subroutine observation_getBufrType
   !
   ! remove item from bufr stack
   !
@@ -1255,7 +1308,7 @@ CONTAINS
   ! loop over target entries
   !
   logical function observation_looptarget(css,trg80,pos250,descr80,&
-       & info250,min80,max80,irc)
+       & info250,min80,max80,crc250,irc)
     implicit none
     type(obs_session), pointer :: css !  current session
     character*80  :: trg80      ! target name
@@ -1299,15 +1352,68 @@ CONTAINS
     return
   end function observation_targetCount
   !
-  ! check if session has index expression defined
-  !
-  logical function observation_hasExpression(css,crc250,irc)
+  integer function observation_trgCount(css,crc250,irc)
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_hasExpression "
-    observation_hasExpression=css%ind_set
-  end function observation_hasExpression
+    character*22 :: myname = "observation_trgCount "
+    observation_trgCount=css%ntrg
+    return
+  end function observation_trgCount
+  !
+  ! get number of locations
+  !
+  integer function observation_locationCount(css,crc250,irc)
+    type(obs_session), pointer :: css   ! session structure
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "observation_locationCount "
+    observation_locationCount=css%nloc
+    return
+  end function observation_locationCount
+  !
+  ! make target list
+  !
+  subroutine observation_getTrg80(css,var80,offset,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*80, allocatable :: var80(:)
+    integer :: offset
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "observation_maketargetlist"
+    integer ii
+    do ii=1,css%ntrg
+       var80(ii+offset)=css%trg80(ii)
+    end do
+    return
+  end subroutine observation_getTrg80
+  !
+  ! get output values
+  !
+  subroutine observation_getVal(css,iloc,val,offset,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    integer :: iloc
+    real, allocatable :: val(:)
+    integer :: offset
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "observation_maketargetlist"
+    integer ii
+    do ii=1,css%ntrg
+       val(ii+offset)=css%locdata(iloc)%ptr%trg_val(ii)
+    end do
+    return
+  end subroutine observation_getVal
+  !
+  ! check if session has index expression defined
+  !
+  logical function observation_hasValidIndex(css,crc250,irc)
+    type(obs_session), pointer :: css   ! session structure
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "observation_hasValidIndex "
+    observation_hasValidIndex=css%ind_set
+  end function observation_hasValidIndex
   !
   ! print stack
   !
@@ -1894,7 +2000,7 @@ CONTAINS
     logical :: ind_lim
     real :: ind_start,ind_stop
     integer :: irc2
-    character*22 :: myname="model_setIndexLimitsRaw"
+    character*22 :: myname="observation_setIndexLimitsRaw"
     css%ind_lim(1)=ind_lim
     css%ind_lim(2)=ind_lim
     css%ind_lim(3)=ind_lim
@@ -1907,7 +2013,7 @@ CONTAINS
     logical :: ind_lim
     real :: ind_start,ind_stop
     integer :: irc2
-    character*22 :: myname="model_getIndexLimitsRaw"
+    character*22 :: myname="observation_getIndexLimitsRaw"
     ind_lim=css%ind_lim(3)
     ind_start=css%ind_start
     ind_stop=css%ind_stop
@@ -2001,6 +2107,199 @@ CONTAINS
     css%currentFileIndex=0
     if(bdeb)write(*,*)myname,' Done.'
   end subroutine observation_stacklast
+  !
+  !###############################################################################
+  ! LOCATION ROUTINES
+  !###############################################################################
+  ! initialise the MODEL location
+  !
+  subroutine observation_locinit(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "observation_locinit"
+    ! initialise chain
+    if (.not.associated(css%firstLoc)) then
+       allocate(css%firstLoc,css%lastLoc, stat=irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250,"Unable to allocate 'firstLoc/lastLoc'.")
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       css%firstLoc%next => css%lastLoc
+       css%lastLoc%prev => css%firstLoc
+       css%nloc=0
+       css%locReady=.false.
+    end if
+  end subroutine observation_locinit
+  ! clear the location stack
+  !
+  subroutine observation_locclear(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(obs_location), pointer :: currentLoc => null()
+    type(obs_location), pointer :: locNext => null()
+    character*25 :: myname = "observation_locclear"
+    integer :: ii, lens
+    integer, external :: length
+    if(bdeb)write(*,*)myname,' Entering.'
+    call observation_locinit(css,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from locinit.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    ! delete any existing location-entries
+    currentLoc => css%firstLoc%next
+    do while (.not.associated(currentLoc,target=css%lastLoc))
+       locNext => currentLoc%next
+       call observation_deleteLoc(css,currentLoc,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from locrmitem.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       currentLoc => locNext
+    end do
+    if (css%nloc .ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," System error:")
+       call observation_errorappendi(crc250,css%nloc)
+       call observation_errorappend(crc250,"\n")
+       irc=940
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Done.'
+  end subroutine observation_locclear
+  !
+  ! delete loc
+  !
+  subroutine observation_deleteLoc (css,loc, crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    type(obs_location), pointer :: loc
+    character*250 :: crc250
+    integer :: irc  ! error return code (0=ok)
+    character*25 :: myname = "observation_deleteLoc"
+    if (associated(loc)) then
+       css%nloc = css%nloc - 1
+       loc%next%prev => loc%prev
+       loc%prev%next => loc%next
+       if (allocated(loc%trg_val)) deallocate(loc%trg_val)
+       deallocate(loc)
+    end if
+    return
+  end subroutine observation_deleteLoc
+  !
+  ! Add a "location", specified by target variables...
+  !
+  subroutine observation_locpushTarget(css,locid,bok,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    integer :: locid
+    logical :: bok
+    character*250 :: crc250
+    integer :: irc
+    type(obs_location),pointer :: newLocation
+    character*80 :: var80
+    real(KIND=8), allocatable :: values(:)
+    integer :: ii,yy,mm,dd,hh,mi
+    real:: sec
+    integer :: lenc
+    integer, external :: length
+    character*25 :: myname = "observation_locpushTarget"
+    if(bdeb)write(*,*)myname,' Entering.'
+    ! initialise location stack
+    if (css%nloc.eq.0) then
+       css%locoffset=locid-1
+    end if
+    !
+    call observation_locinit(css,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from locinit.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    ! create new location-item
+    allocate(newLocation,stat=irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Unable to allocate new location.")
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    newLocation%ntrg=css%ntrg
+    allocate(newLocation%trg_val(newLocation%ntrg),stat=irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Unable to allocate newLocation%var.")
+       call observation_errorappendi(crc250,newLocation%ntrg)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    newLocation%locid=locid
+    do ii=1,newLocation%ntrg
+       newLocation%trg_val(ii)=css%trg_val(ii)
+    end do
+    newLocation%bok=bok
+    ! push onto stack
+    css%nloc=css%nloc + 1
+    newLocation%prev => css%lastLoc%prev
+    newLocation%next => css%lastLoc
+    newLocation%prev%next => newLocation
+    newLocation%next%prev => newLocation
+    css%locReady=.false.
+    if (css%nloc+css%locoffset .ne. locid) then
+       irc=346
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Non-sequential locid:")
+       call observation_errorappendi(crc250,locid)
+       call observation_errorappend(crc250,"<>")
+       call observation_errorappendi(crc250,css%nloc+css%locoffset)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    if(bdeb)write(*,*)myname,' Done.'
+    return
+  end subroutine observation_locpushTarget
+  !
+  subroutine observation_makeLocList(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(obs_location), pointer :: currentLoc => null()
+    character*25 :: myname = "observation_makeLocList"
+    integer :: ii
+    if (associated(css%firstLoc).and..not.css%locready.and.css%nloc.gt.0) then
+       if (allocated(css%locdata)) deallocate(css%locdata)
+       allocate(css%locdata(css%nloc),stat=irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Unable to allocate locid,lat,lon.")
+          call observation_errorappendi(crc250,css%nloc)
+          call observation_errorappend(crc250," , ")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       ii=0
+       currentLoc => css%firstLoc%next
+       do while (.not.associated(currentLoc,target=css%lastLoc))
+          ii=ii+1
+          css%locdata(ii)%ptr=>currentLoc
+          css%locdata(ii)%ptr%iloc=ii
+          currentLoc => currentLoc%next
+       end do
+       css%locReady=.true.
+    end if
+    return
+  end subroutine observation_makeLocList
   !
   !###############################################################################
   ! ROUTINES FOR REPORTING OBSERVATIONS TO USER
@@ -4328,10 +4627,12 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "observation_fileStartXml"
-    if (associated(css%currentFile)) then
-       write(*,'(2X,A)')"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
-    else
-       write(*,'(2X,A)')"<observationFile>"
+    if (css%pxml) then
+       if (associated(css%currentFile)) then
+          write(*,'(2X,A)')"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
+       else
+          write(*,'(2X,A)')"<observationFile>"
+       end if
     end if
     return
   end subroutine observation_filestartxml
@@ -4341,16 +4642,18 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "observation_fileStartXml"
-    write(*,'(3X,A)')"<observations>"
+    if (css%pxml) then
+       write(*,'(3X,A)')"<observations>"
+    end if
     return
   end subroutine observation_obsstartxml
   !
-  subroutine observation_writexml(css,locid,crc250,irc)
+  subroutine observation_writeoutput(css,locid,crc250,irc)
     type(obs_session), pointer :: css !  current session
     integer :: locid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_writeXml"
+    character*25 :: myname = "observation_writeoutput"
     character*250 :: buff250
     character*50 :: s1, s2, s3, s4
     integer :: ii,jj
@@ -4373,7 +4676,9 @@ CONTAINS
        write(s1,'(I0)') locid
        call chop0(s1,50)
        len1=length(s1,50,10)
-       write(*,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
+       if (css%pxml) then
+          write(*,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
+       end if
        !
        ! add target values
        !
@@ -4407,7 +4712,7 @@ CONTAINS
              len4=0
           end if
           write(buff250,'(A)')"<target "//s1(1:len1)//s2(1:len2)//s3(1:len3)//s4(1:len4)//"/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
        end do
        !
        ! write BUFR sequence
@@ -4416,27 +4721,27 @@ CONTAINS
           !
           ! section 0
           write(buff250,'(A,I0,A)')"<sec0 pos='1' info='Length of section 0 (bytes)' val='",ksec0(1),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec0 pos='2' info='Total length of Bufr message (bytes)' val='",ksec0(2),"'/>";
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec0 pos='3' info='Bufr Edition number' val='",ksec0(3),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           !
           ! section 1
           write(buff250,'(A,I0,A)')"<sec1 pos='1' info='Length of section 1 (bytes)' val='",ksec1(1),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='2' info='Bufr Edition number' val='",ksec1(2),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           if(ksec1(2).ge.3) then
              write(buff250,'(A,I0,A)')"<sec1 pos='16' info='Originating sub-centre' val='",ksec1(16),"'/>"
-             call wo(4,buff250)
+             call wo(css,4,buff250)
           end if
           write(buff250,'(A,I0,A)')"<sec1 pos='3' info='Originating centre' val='",ksec1(3),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='4' info='Update sequence number' val='",ksec1(4),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='5' info='Flag (presence of section 2)' val='",ksec1(5),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
        end if
        call observation_getType(ksec1(6),ksec1(7),s1,s2,crc250,irc) 
        call chop0(s1,50); len1=length(s1,50,10)
@@ -4447,38 +4752,38 @@ CONTAINS
        else
           write(buff250,'(A,I0,A)')"<sec1 pos='6' info='Bufr message type' val='",ksec1(6),"' type='"//s1(1:len1)//"'/>"
        end if
-       call wo(4,buff250)
+       call wo(css,4,buff250)
        if (len2.eq.0) then
           write(buff250,'(A,I0,A)')"<sec1 pos='7' info='Bufr message subtype' val='",ksec1(7),"'/>"
        else
           write(buff250,'(A,I0,A)')"<sec1 pos='7' info='Bufr message subtype' val='",ksec1(7),"' type='"//s2(1:len2)//"'/>"
        end if
-       call wo(4,buff250)
+       call wo(css,4,buff250)
        if (bdeb) then
           write(buff250,'(A,I0,A)')"<sec1 pos='8' info='Version number of local table' val='",ksec1(8),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='9' info='Year' val='",ksec1(9),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='10' info='Month' val='",ksec1(10),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='11' info='Day' val='",ksec1(11),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='12' info='Hour' val='",ksec1(12),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='13' info='Minute' val='",ksec1(13),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='15' info='Version number of Master table' val='",ksec1(15),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='14' info='Bufr Master table' val='",ksec1(14),"'/>"
-          call wo(4,buff250)
+          call wo(css,4,buff250)
           !
           ! section 2
           IF(KSUP(2).LE.1) THEN
              write(buff250,'(A)')"<sec2 info='RDB key not defined in section 2'/>"
-             call wo(4,buff250)
+             call wo(css,4,buff250)
           else
              write(buff250,'(A,I0,A)')"<sec3 pos='1' info='Length of section 2' val='",key(1),"'/>"
-             call wo(4,buff250)
+             call wo(css,4,buff250)
              IKTYPE=0
              IF(KEY(2).EQ.2) IKTYPE=2
              IF(KEY(2).EQ.3) IKTYPE=2
@@ -4497,69 +4802,69 @@ CONTAINS
                    write(s3,*) rlat2; call chop0(s3,50); len3=length(s3,50,10)
                    write(s4,*) rlon2; call chop0(s4,50); len4=length(s4,50,10)
                    write(buff250,'(A,I0,A)')"<sec2 pos='2' info='RDB data type' val='",key(2),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='3' info=''RDB data subtype' val='",key(3),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='4' info='Year' val='",key(4),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='5' info='Month' val='",key(5),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='6' info='Day' val='",key(6),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='7' info='Hour' val='",key(7),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='8' info='Minute' val='",key(8),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='9' info='Second' val='",key(9),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='10' info='Longitude 1' val='"//s2(1:len2)//"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='11' info='Latitude  1' val='"//S1(1:len1)//"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='12' info='Longitude 2' val='"//S4(1:len4)//"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='13' info='Latitude  2' val='"//S3(1:len3)//"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='14' info='Number of observations' val='",key(14),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='15' info='Identifier' val='",key(15),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='25' info='Total Bufr message length' val='",key(25),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='26' info='Day    (RDB insertion' val='",key(26),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='27' info='Hour   (RDB insertion' val='",key(27),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='28' info='Minute( (RDB insertion' val='",key(28),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='29' info='Second (RDB insertion' val='",key(29),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='30' info='Day    (MDB arrival' val='",key(30),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='31' info='Hour   (MDB arrival' val='",key(31),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='32' info='Minute (MDB arrival' val='",key(32),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='33' info='Second (MDB arrival' val='",key(33),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='34' info='Correction number' val='",key(34),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='35' info='Part of message' val='",key(35),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='37' info='Correction number' val='",key(37),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='38' info='Part of message' val='",key(38),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='40' info='Correction number' val='",key(40),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='41' info='Part of message' val='",key(41),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='43' info='Correction number' val='",key(43),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='44' info='Part of message' val='",key(44),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='46' info='Quality control % conf' val='",key(46),"'/>"
-                   call wo(4,buff250)
+                   call wo(css,4,buff250)
                 ELSE
                    RLAT1=(KEY(11)-9000000)/100000.
                    RLON1=(KEY(10)-18000000)/100000.
@@ -4572,63 +4877,63 @@ CONTAINS
                       CIDENT(IDD:IDD)=CHAR(KEY(ID))
                    end do
                    write(buff250,'(A,I0,A)')"<sec2 pos='2' info='RDB data type' val='", KEY(2),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='3' info='RDB data subtype' val='", KEY(3),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='4' info='Year' val='", KEY(4),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='5' info='Month' val='", KEY(5),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='6' info='Day' val='", KEY(6),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='7' info='Hour' val='", KEY(7),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='8' info='Minute' val='", KEY(8),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='9' info='Second' val='", KEY(9),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A)')"<sec2 pos='11' info='Latitude  1'"//s1(1:len1)//"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A)')"<sec2 pos='10' info='Longitude 1'"//s2(1:len2)//"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 info='Identifier' val='", CIDENT,"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='25' info='Total Bufr message length' val='", KEY(25),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='26' info='Day    (RDB insertion' val='", KEY(26),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='27' info='Hour   (RDB insertion' val='", KEY(27),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='28' info='Minute (RDB insertion' val='", KEY(28),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='29' info='Second (RDB insertion' val='", KEY(29),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='30' info='Day    (MDB arrival' val='", KEY(30),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='31' info='Hour   (MDB arrival' val='", KEY(31),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='32' info='Minute (MDB arrival' val='", KEY(32),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='33' info='Second (MDB arrival' val='", KEY(33),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='34' info='Correction number' val='", KEY(34),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='35' info='Part of message' val='", KEY(35),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='37' info='Correction number' val='", KEY(37),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='38' info='Part of message' val='", KEY(38),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='40' info='Correction number' val='", KEY(40),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='41' info='Part of message' val='", KEY(41),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='43' info='Correction number' val='", KEY(43),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='44' info='Part of message' val='", KEY(44),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='46' info='Quality control % conf'", KEY(46),"'/>"
-                   call wo(4,buff250);
+                   call wo(css,4,buff250);
                 END IF
              end if
           end if
@@ -4636,30 +4941,30 @@ CONTAINS
           ! section 3
           !
           write(buff250,'(A,I0,A)')"<sec3 pos='1' info='Length of section 3 (bytes)'", ksec3(1),"'/>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
           write(buff250,'(A,I0,A)')"<sec3 pos='2' info='Reserved'", ksec3(2),"'/>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
           write(buff250,'(A,I0,A)')"<sec3 pos='3' info='Number of data subsets'", ksec3(3),"'/>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
           write(buff250,'(A,I0,A)')"<sec3 pos='4' info='Flag (data type/data compression)'", ksec3(4),"'/>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
        end if
        !write(*,*)myname,'Report D:',KTDLEN
        if (bdeb) then
           write(buff250,'(A,I0,A)')"<sec3 type='unexpanded' count='",KTDLEN,"'>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
           DO II=1,KTDLEN
              write(buff250,'(A,I0,A,I0,A)')"<unexpanded pos='",ii,"' descr='",KTDLST(II),"'/>"
-             call wo(4,buff250);
+             call wo(css,4,buff250);
           end do
           write(buff250,'(A)')"</sec3>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
        end if
        !write(*,*)myname,'Report D:',KTDEXL
        !
        if (.not.css%ignuni.or..not.css%ignden.or..not.css%ignval) then
           write(buff250,'(A,I0,A)')"<sec3 type='expanded' count='",KTDEXL,"'>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
           cnt=0
           EXPANDED: DO II=1,KTDEXL
              IPOS=II+(isubset-1)*KEL
@@ -4709,7 +5014,7 @@ CONTAINS
                          lenb=length(buff250,250,20)
                       end if
                       buff250=buff250(1:lenb)//"/>"
-                      call wo(5,buff250);
+                      call wo(css,5,buff250);
                       cnt=cnt+1
                       !if (cnt.gt.5000) exit EXPANDED
                    end if
@@ -4717,14 +5022,17 @@ CONTAINS
              end if
           end do EXPANDED
           write(buff250,'(A)')"</sec3>"
-          call wo(4,buff250);
+          call wo(css,4,buff250);
        end if
-       write(*,'(3X,A)')"</obs>"
+       if (css%pxml) then
+          write(*,'(3X,A)')"</obs>"
+       end if
     end if
     return
-  end subroutine observation_writexml
+  end subroutine observation_writeoutput
 
-  subroutine wo(ind,buff250)
+  subroutine wo(css,ind,buff250)
+    type(obs_session), pointer :: css !  current session
     integer :: ind
     character*250 :: buff250
     integer :: lenb
@@ -4732,7 +5040,9 @@ CONTAINS
     character*20 :: blank20="                    "
     call chop0(buff250,250)
     lenb=length(buff250,250,10)
-    write(*,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
+    if (css%pxml) then
+       write(*,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
+    end if
     return
   end subroutine wo
   !
@@ -4741,7 +5051,9 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "observation_fileStartXml"
-    write(*,'(3X,A)')"</observations>"
+    if (css%pxml) then
+       write(*,'(3X,A)')"</observations>"
+    end if
     return
   end subroutine observation_obsstopxml
   !
@@ -4756,70 +5068,85 @@ CONTAINS
     integer, external :: length
     character*50 :: s1,s2,s3,s4
     ! write summary
-    if (associated(css%currentFile)) then
-       write(*,'(3X,A)')"<summary>"
-       if (css%currentFile%mok(1).eq.css%currentFile%mok(5)) then
-          write(*,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),"' accepted='",css%currentFile%mok(5),"'/>"
-       else
-          write(*,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),"' accepted='",css%currentFile%mok(5),"'>"
-          if (css%currentFile%mrm(2).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%mrm(2),&
-               & "' reason='unable to decode header.'/>"
-          if (css%currentFile%mrm(3).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%mrm(3),&
-               & "' reason='unable to decode body.'/>"
-          if (css%currentFile%mrm(4).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%mrm(4),&
-               & "' reason='unable to decode description.'/>"
-          if (css%currentFile%mrm(5).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%mrm(5),&
-               & "' reason='Other BUFR/sub-type.'/>"
-          write(*,'(4X,A)')"</messages>"
-       end if
-       if (css%currentFile%ook(1).eq.css%currentFile%ook(5)) then
-          write(*,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),"' accepted='",css%currentFile%ook(5),"'/>"
-       else
-          write(*,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),"' accepted='",css%currentFile%ook(5),"'>"
-          if (css%currentFile%orm(2).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(2),&
-               & "' reason='evaluation failed.'/>"
-          if (css%currentFile%orm(3).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(3),&
-               & "' reason='outside index limits.'/>"
-          if (css%currentFile%orm(4).ne.0) then
-             write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(4),"' reason='outside target limits.'>"
-             do ii=1,css%ntrg
-                if (css%trg_orm(ii).ne.0) then
-                   s1=css%trg80(ii)(1:50) ; call chop0(s1,50); len1=length(s1,50,10)   ! element identification
-                   IF (len1.ne.0) then
-                      s1=" name='"//s1(1:len1)//"'"
-                      len1=len1+8
-                   end if
-                   if (css%trg_lval(1,ii)) then
-                      call observation_wash(css%trg_minval(ii),s3,len3)
-                      if (len3.ne.0) then
-                         s3=" min='"//s3(1:len3)//"'"
-                         len3=len3+7
-                      end if
-                   else
-                      len3=0
-                   end if
-                   if (css%trg_lval(2,ii)) then
-                      call observation_wash(css%trg_maxval(ii),s4,len4)
-                      if (len4.ne.0) then
-                         s4=" max='"//s4(1:len4)//"'"
-                         len4=len4+7
-                      end if
-                   else
-                      len4=0
-                   end if
-                   write(*,'(6X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
-                        & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
-                end if
-             end do
-             write(*,'(5X,A)')"</check>"
+    if (css%pxml) then
+       if (associated(css%currentFile)) then
+          write(*,'(3X,A)')"<summary>"
+          if (css%currentFile%mok(1).eq.css%currentFile%mok(5)) then
+             write(*,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
+                  & "' accepted='",css%currentFile%mok(5),"'/>"
+          else
+             write(*,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
+                  & "' accepted='",css%currentFile%mok(5),"'>"
+             if (css%currentFile%mrm(2).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%mrm(2),&
+                  & "' reason='unable to decode header.'/>"
+             if (css%currentFile%mrm(3).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%mrm(3),&
+                  & "' reason='unable to decode body.'/>"
+             if (css%currentFile%mrm(4).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%mrm(4),&
+                  & "' reason='unable to decode description.'/>"
+             if (css%currentFile%mrm(5).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%mrm(5),&
+                  & "' reason='Other BUFR/sub-type.'/>"
+             write(*,'(4X,A)')"</messages>"
           end if
-          if (css%currentFile%orm(5).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(5),&
-               & "' reason='No model data available.'/>"
-          write(*,'(4X,A)')"</sub>"
+          if (css%currentFile%ook(1).eq.css%currentFile%ook(5)) then
+             write(*,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
+                  & "' accepted='",css%currentFile%ook(5),"'/>"
+          else
+             write(*,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
+                  & "' accepted='",css%currentFile%ook(5),"'>"
+             if (css%currentFile%orm(2).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%orm(2),&
+                  & "' reason='evaluation failed.'/>"
+             if (css%currentFile%orm(3).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%orm(3),&
+                  & "' reason='outside index limits.'/>"
+             if (css%currentFile%orm(4).ne.0) then
+                write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(4),&
+                     & "' reason='outside target limits.'>"
+                do ii=1,css%ntrg
+                   if (css%trg_orm(ii).ne.0) then
+                      s1=css%trg80(ii)(1:50) ; call chop0(s1,50); &
+                           & len1=length(s1,50,10)   ! element identification
+                      IF (len1.ne.0) then
+                         s1=" name='"//s1(1:len1)//"'"
+                         len1=len1+8
+                      end if
+                      if (css%trg_lval(1,ii)) then
+                         call observation_wash(css%trg_minval(ii),s3,len3)
+                         if (len3.ne.0) then
+                            s3=" min='"//s3(1:len3)//"'"
+                            len3=len3+7
+                         end if
+                      else
+                         len3=0
+                      end if
+                      if (css%trg_lval(2,ii)) then
+                         call observation_wash(css%trg_maxval(ii),s4,len4)
+                         if (len4.ne.0) then
+                            s4=" max='"//s4(1:len4)//"'"
+                            len4=len4+7
+                         end if
+                      else
+                         len4=0
+                      end if
+                      write(*,'(6X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
+                           & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
+                   end if
+                end do
+                write(*,'(5X,A)')"</check>"
+             end if
+             if (css%currentFile%orm(5).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%orm(5),&
+                  & "' reason='No model data available.'/>"
+             write(*,'(4X,A)')"</sub>"
+          end if
+          write(*,'(3X,A)')"</summary>"
        end if
-       write(*,'(3X,A)')"</summary>"
+       write(*,'(2X,A)')" </observationFile>"
     end if
-    write(*,'(2X,A)')" </observationFile>"
     return
   end subroutine observation_filestopxml
   !

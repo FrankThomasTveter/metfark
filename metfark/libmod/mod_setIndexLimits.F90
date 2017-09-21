@@ -8,7 +8,7 @@ subroutine mod_setIndexlimits(sid, smin, smax, crc250, irc)
   integer :: irc
   character*25 :: myname = "mod_setindexlimits"
   type(mod_session), pointer :: css !  current session
-  if(bdeb)write(*,*) myname, 'Entering.',irc,sid
+  if(model_bdeb)write(*,*) myname, 'Entering.',irc,sid
   call model_getSession(css,sid,crc250,irc)
   if (irc.ne.0) then
      call model_errorappend(crc250,myname)
@@ -25,6 +25,6 @@ subroutine mod_setIndexlimits(sid, smin, smax, crc250, irc)
      call model_errorappendi(crc250,irc)
      return
   end if
-  if(bdeb)write(*,*) myname,' Done.'
+  if(model_bdeb)write(*,*) myname,' Done.'
   return
 end subroutine mod_setIndexlimits

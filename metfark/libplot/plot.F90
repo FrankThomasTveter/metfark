@@ -3,7 +3,7 @@ module plot
   !
   ! Global constants
   !
-  logical     :: plot_bdeb=.false.
+  logical     :: plot_bdeb=.true.
   !
   ! SESSION VARIABLES
   !
@@ -60,6 +60,7 @@ module plot
   !
   type :: plot_set
      character*250 :: name250=""
+     integer :: id=0
      character*250 :: x250=""
      character*250 :: y250=""
      character*250 :: leg250=""
@@ -92,6 +93,7 @@ module plot
      type(plot_match), pointer :: firstMatch => null()          ! linked list
      type(plot_match), pointer :: lastMatch => null()           ! linked list
      type(plot_match), pointer :: cMatch => null()              ! linked list
+     character*250 :: filter250=""
      ! target lists
      integer :: nTrgMod=0
      character*80, pointer :: trgMod80(:) => null()       ! list of target names
@@ -105,10 +107,32 @@ module plot
   type :: plot_session
      integer :: sid=0            ! session id
      character*250 :: type250="" ! type
+     !
+     ! output
+     character*250 :: tab250=""  ! table file name
+     integer :: lent             ! length of tab250
+     integer :: tunit = 0        ! table file unit
+     character*250 :: gra250=""  ! graphics file name
+     integer :: leng             ! length of gra250
+     integer :: gunit = 0        ! graphics file unit
+     logical :: pxml=.false.     ! print xml to stdout?
+     !
+     ! time information
+     !  VALUES(1):	The year
+     !  VALUES(2):	The month
+     !	VALUES(3):	The day of the month
+     !	VALUES(4):	Time difference with UTC in minutes
+     !	VALUES(5):	The hour of the day
+     !	VALUES(6):	The minutes of the hour
+     !	VALUES(7):	The seconds of the minute
+     !	VALUES(8):	The milliseconds of the second
+     integer :: values(8)
+     !
      type(plot_attribute), pointer :: firstAttribute => null()         ! linked list
      type(plot_attribute), pointer :: lastAttribute => null()         ! linked list
      type(plot_set), pointer :: firstSet => null()         ! linked list
-     type(plot_set), pointer :: lastSet => null()         ! linked list
+     type(plot_set), pointer :: lastSet => null()          ! linked list
+     type(plot_set), pointer :: currentSet => null()       ! linked list
      type(plot_session), pointer :: prev => null()         ! linked list
      type(plot_session), pointer :: next => null()         ! linked list
   end type plot_session
@@ -123,11 +147,11 @@ CONTAINS
   ! SESSION ROUTINES
   !###############################################################################
   !
-  subroutine plot_opensession(sid,css,crc250,irc)
+  subroutine plot_opensession(sid,pss,crc250,irc)
     integer :: sid
     character*250 :: crc250
     integer :: irc
-    type(plot_session),pointer :: css  !  new session
+    type(plot_session),pointer :: pss  !  new session
     character*25 :: myname = "plot_openSession"
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
@@ -140,8 +164,8 @@ CONTAINS
        firstSession%next => lastSession
        lastSession%prev => firstSession
     end if
-    nullify(css)
-    allocate(css,stat=irc)
+    nullify(pss)
+    allocate(pss,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Unable to allocate 'new session'.")
@@ -149,64 +173,75 @@ CONTAINS
        return
     end if
     maxid=maxid+1
-    css%sid=maxid
-    css%prev => lastSession%prev
-    css%next => lastSession
-    css%prev%next => css
-    css%next%prev => css
-    allocate(css%firstAttribute,css%lastAttribute,stat=irc)
+    pss%sid=maxid
+    pss%prev => lastSession%prev
+    pss%next => lastSession
+    pss%prev%next => pss
+    pss%next%prev => pss
+    allocate(pss%firstAttribute,pss%lastAttribute,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Unable to allocate 'attribute chain'.")
        call plot_errorappend(crc250,"\n")
        return
     end if
-    css%firstAttribute%next => css%lastAttribute
-    css%lastAttribute%prev => css%firstAttribute
-    allocate(css%firstSet,css%lastSet,stat=irc)
+    pss%firstAttribute%next => pss%lastAttribute
+    pss%lastAttribute%prev => pss%firstAttribute
+    allocate(pss%firstSet,pss%lastSet,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Unable to allocate 'attribute chain'.")
        call plot_errorappend(crc250,"\n")
        return
     end if
-    css%firstSet%next => css%lastSet
-    css%lastSet%prev => css%firstSet
-    sid = css%sid
+    pss%firstSet%next => pss%lastSet
+    pss%lastSet%prev => pss%firstSet
+    sid = pss%sid
     return
   end subroutine plot_opensession
 
-  subroutine plot_getSession(css,sid,crc250,irc)
-    type(plot_session), pointer :: css !  current session
+  subroutine plot_getSession(pss,sid,crc250,irc)
+    type(plot_session), pointer :: pss !  current session
     integer :: sid
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "plot_getSession"
-    css => firstSession%next
-    do while ( .not.associated(css,target=lastSession))
-       if (css%sid .eq. sid) then
+    if (plot_bdeb) write(*,*)myname,'Entering with sid.',sid,irc
+    if (.not.associated(firstSession)) then
+       irc=911
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"No session is opened!")
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
+       return
+    end if
+    pss => firstSession%next
+    do while ( .not.associated(pss,target=lastSession))
+       if (pss%sid .eq. sid) then
+          if (plot_bdeb) write(*,*)myname,'Exiting with sid:',sid,irc
           return
        end if
-       css=>css%next
+       pss=>pss%next
     end do
-    nullify(css)
+    nullify(pss)
     irc=342
     call plot_errorappend(crc250,myname)
     call plot_errorappend(crc250,"Invalid session id:")
     call plot_errorappendi(crc250,sid)
     call plot_errorappend(crc250,"\n")
+    if (plot_bdeb) write(*,*)myname,'Exiting.',irc
     return
   end subroutine plot_getSession
 
-  subroutine plot_closeSession(css,crc250,irc)
+  subroutine plot_closeSession(pss,crc250,irc)
     implicit none
-    type(plot_session), pointer :: css !  current session
+    type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "plot_closeSession"
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
-    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
-       call plot_removeSession(css,crc250,irc)
+    if (associated(pss)  .and. .not.associated(pss,target=lastSession)) then
+       call plot_removeSession(pss,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
           call plot_errorappend(crc250," Error return from removeSession.")
@@ -225,14 +260,14 @@ CONTAINS
     return
   end subroutine plot_closeSession
 
-  subroutine plot_removeSession(css,crc250,irc)
-    type(plot_session), pointer :: css !  current session
+  subroutine plot_removeSession(pss,crc250,irc)
+    type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "plot_removeSession"
-    css%prev%next => css%next
-    css%next%prev => css%prev
-    call plot_clearAttrStack(css,crc250,irc)
+    pss%prev%next => pss%next
+    pss%next%prev => pss%prev
+    call plot_clearAttrStack(pss,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from clearAttrStack.")
@@ -240,9 +275,9 @@ CONTAINS
        call plot_errorappend(crc250,"\n")
        return
     end if
-    !call plot_clearSetStack(css)
-    deallocate(css%firstAttribute,css%lastAttribute,css%firstSet,css%lastSet)
-    deallocate(css)
+    !call plot_clearSetStack(pss)
+    deallocate(pss%firstAttribute,pss%lastAttribute,pss%firstSet,pss%lastSet)
+    deallocate(pss)
   end subroutine plot_removeSession
   !
   !###############################################################################
@@ -250,27 +285,27 @@ CONTAINS
   !###############################################################################
   !
   ! set the observation graphivcs type ("rms+stdv", "scatter" etc).
-  subroutine plot_settype(css,type250,crc250,irc)
+  subroutine plot_settype(pss,type250,crc250,irc)
     implicit none
-    type(plot_session), pointer :: css !  current session
+    type(plot_session), pointer :: pss !  current session
     character*250 :: type250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "settype"
-    css%type250=type250
+    pss%type250=type250
     return
   end subroutine plot_settype
   !
-  subroutine plot_clearattrstack(css,crc250,irc)
+  subroutine plot_clearattrstack(pss,crc250,irc)
     implicit none
-    type(plot_session), pointer :: css !  current session
+    type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
     integer :: irc2
     character*22 :: myname = "clearattrstack"
     type(plot_attribute), pointer :: cat,nat !  current attribute
-    cat => css%firstAttribute%next
-    do while (.not.associated(cat,target=css%lastAttribute))
+    cat => pss%firstAttribute%next
+    do while (.not.associated(cat,target=pss%lastAttribute))
        nat => cat%next
        call plot_unlinkAttribute(cat)
        call plot_deallocateAttribute(cat)
@@ -295,9 +330,9 @@ CONTAINS
     return
   end subroutine plot_deallocateAttribute
   !
-  subroutine plot_pushattr(css,nam250,val250,crc250,irc)
+  subroutine plot_pushattr(pss,nam250,val250,crc250,irc)
     implicit none
-    type(plot_session), pointer :: css !  current session
+    type(plot_session), pointer :: pss !  current session
     character*250 :: nam250
     character*250 :: val250
     character*250 :: crc250
@@ -311,8 +346,8 @@ CONTAINS
     end if
     cat%name250=nam250
     cat%value250=val250
-    cat%next => css%lastAttribute
-    cat%prev => css%lastAttribute%prev
+    cat%next => pss%lastAttribute
+    cat%prev => pss%lastAttribute%prev
     cat%prev%next => cat
     cat%next%prev => cat
     nullify(cat)
@@ -320,18 +355,244 @@ CONTAINS
   end subroutine plot_pushattr
   !
   !###############################################################################
+  ! OUTPUT FILE ROUTINE
+  !###############################################################################
+  !
+  subroutine plot_setTablefile(pss,tab250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: tab250 ! name of table file
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    pss%tab250=tab250
+    CALL CHOP0(pss%tab250,250)
+    PSS%LENT=LENGTH(pss%tab250,250,10)
+    return
+  end subroutine plot_setTablefile
+  !
+  subroutine plot_getTablefile(pss,tab250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: tab250 ! name of table file
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    tab250=pss%tab250
+    return
+  end subroutine plot_getTablefile
+  !
+  subroutine plot_openTablefile(pss,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: ftunit
+    character*22 :: myname = "openTablefile"
+    pss%tunit=ftunit(irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from FTUNIT.")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    open(unit=pss%tunit,file=pss%tab250(1:pss%lent), &
+         & access="append",form="formatted",status="unknown",iostat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to open table file '"//pss%tab250(1:pss%lent)//"'")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    return
+  end subroutine plot_openTablefile
+  !
+  subroutine plot_closeTablefile(pss,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: ftunit
+    character*22 :: myname = "closeTablefile"
+    close(unit=pss%tunit,iostat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to close table file '"//pss%tab250(1:pss%lent)//"'")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    return
+  end subroutine plot_closeTablefile
+  !
+  subroutine plot_setGraphicsfile(pss,gra250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: gra250 ! name of graphics file
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    pss%gra250=gra250
+    CALL CHOP0(pss%gra250,250)
+    PSS%LENG=LENGTH(pss%gra250,250,10)
+    return
+  end subroutine plot_setGraphicsfile
+  !
+  subroutine plot_getGraphicsfile(pss,gra250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: gra250 ! name of graphics file
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    gra250=pss%gra250
+    return
+  end subroutine plot_getGraphicsfile
+  !
+  subroutine plot_openGraphicsfile(pss,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: ftunit
+    character*22 :: myname = "openGraphicsfile"
+    pss%gunit=ftunit(irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from FTUNIT.")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    open(unit=pss%gunit,file=pss%gra250(1:pss%leng),&
+         & access="sequential",form="formatted",status="unknown",iostat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to open graphics file '"//pss%gra250(1:pss%leng)//"'")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    return
+  end subroutine plot_openGraphicsfile
+  !
+  subroutine plot_closeGraphicsfile(pss,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: ftunit
+    character*22 :: myname = "closeGraphicsfile"
+    close(unit=pss%gunit,iostat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to close graphics file '"//pss%gra250(1:pss%leng)//"'")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    return
+  end subroutine plot_closeGraphicsfile
+  !
+  subroutine plot_setTime(pss,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "clearsetstack"
+    call date_and_time(VALUES=pss%values)
+    return
+  end subroutine plot_setTime
+  !
+  subroutine plot_strepfiles(pss,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "strepfiles"
+    integer,parameter  :: nn = 6
+    character*100 :: src100(nn) = (/'YY','MM','DD','HH','MI','SS'/)
+    character*100 :: rep100(nn)
+    logical :: lrep(nn)
+    if (pss%values(1).eq.0) then
+       call plot_settime(pss,crc250,irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Error return from 'settime'.")
+          call plot_errorappendi(crc250,irc)
+          return
+       end if
+    end if
+    !  values(1):	the year
+    !  values(2):	the month
+    !	values(3):	the day of the month
+    !	values(4):	time difference with utc in minutes
+    !	values(5):	the hour of the day
+    !	values(6):	the minutes of the hour
+    !	values(7):	the seconds of the minute
+    !	values(8):	the milliseconds of the second
+    write(rep100(1),'(i4.4)')pss%values(1)
+    write(rep100(2),'(i2.2)')pss%values(2)
+    write(rep100(3),'(i2.2)')pss%values(3)
+    write(rep100(4),'(i2.2)')pss%values(5)
+    write(rep100(5),'(i2.2)')pss%values(6)
+    write(rep100(6),'(i2.2)')pss%values(7)
+    if (pss%lent.ne.0)call plot_strep(pss%tab250,nn,src100,rep100,lrep,irc)
+    if (pss%leng.ne.0)call plot_strep(pss%gra250,nn,src100,rep100,lrep,irc)
+    return
+  end subroutine plot_strepfiles
+  !
+  subroutine plot_setFiles(pss,tab250,gra250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: tab250
+    character*250 :: gra250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "strepfiles"
+    integer,parameter  :: nn = 6
+    call plot_setTablefile(pss,tab250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'setTableFile'.")
+       return
+    end if
+    call plot_setGraphicsfile(pss,gra250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'setGraphicsFile'.")
+       return
+    end if
+    call plot_strepfiles(pss,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'strepFiles'.")
+       return
+    end if
+    call plot_getTablefile(pss,tab250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'setTableFile'.")
+       return
+    end if
+    call plot_getGraphicsfile(pss,gra250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'setGraphicsFile'.")
+       return
+    end if
+    return
+  end subroutine plot_setFiles
+  !
+  !###############################################################################
   ! SET ROUTINES
   !###############################################################################
   !
-  subroutine plot_clearsetstack(css,crc250,irc)
+  subroutine plot_clearsetstack(pss,crc250,irc)
     implicit none
-    type(plot_session), pointer :: css !  current session
+    type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "clearsetstack"
     type(plot_set), pointer :: cset,nset !  current set
-    cset => css%firstSet%next
-    do while (.not.associated(cset,target=css%lastSet))
+    cset => pss%firstSet%next
+    do while (.not.associated(cset,target=pss%lastSet))
        nset => cset%next
        call plot_unlinkSet(cset)
        call plot_deallocateSet(cset)
@@ -375,6 +636,13 @@ CONTAINS
     end if
     set%firstModtrg%next => set%lastModtrg
     set%lastModtrg%prev => set%firstModtrg
+    allocate(set%firstDef,set%lastDef,stat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to allocate 'set-def'.")
+    end if
+    set%firstDef%next => set%lastDef
+    set%lastDef%prev => set%firstDef
     allocate(set%firstMatch,set%lastMatch,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -407,27 +675,67 @@ CONTAINS
     type(col_session), pointer ::  css !  current session
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
-    character*250 :: nam250,x250,y250,leg250
+    character*250 :: nam250
+    character*250 x250,y250,leg250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="pushset"
     type(plot_set), pointer :: set !  current set
+    if(plot_bdeb) write(*,*)myname,'Entering.',irc
     call plot_allocateSet(set,crc250,irc)
     set%name250=nam250
     set%x250=x250
     set%y250=y250
     set%leg250=leg250
-    call plot_obsImport(set,oss) ! get obs data
+    if(plot_bdeb) write(*,*)myname,'Importing obs.',irc
+    call plot_obsImport(set,oss) ! get obs data 
+    if(plot_bdeb) write(*,*)myname,'Importing model.',irc
     call plot_modImport(set,mss) ! get model data
+    if(plot_bdeb) write(*,*)myname,'Importing colocation.',irc
     call plot_colImport(set,css) ! get colocation data
     set%next => pss%lastSet
     set%prev => pss%lastSet%prev
     set%prev%next => set
     set%next%prev => set
     nullify(set)
+    if(plot_bdeb) write(*,*)myname,'Exiting.',irc
     return
   end subroutine plot_pushset
   !
+  ! loop over sets from top and delete them
+  logical function plot_pullset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+    use model
+    use observations
+    use colocation
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    type(col_session), pointer ::  css !  current session
+    type(mod_session), pointer ::  mss !  current session
+    type(obs_session), pointer ::  oss !  current session
+    character*250 :: nam250
+    character*250 :: x250,y250,leg250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="pullset"
+    type(plot_set), pointer :: set !  current set
+    plot_pullset=.false. ! only true if all is ok...
+    set => pss%firstSet%next
+    if (.not.associated(set,pss%lastSet)) then
+       nam250=set%name250
+       x250=set%x250
+       y250=set%y250
+       leg250=set%leg250
+       call plot_obsExport(set,oss) ! set obs data
+       call plot_modExport(set,mss) ! set model data
+       call plot_colExport(set,css) ! set colocation data
+       call plot_unlinkSet(set)       
+       call plot_deallocateSet(set)
+       plot_pullset=.true.
+    end if
+    return
+  end function plot_pullset
+  !
+  ! loop over sets from bottom and delete them
   logical function plot_popset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
     use model
     use observations
@@ -437,26 +745,65 @@ CONTAINS
     type(col_session), pointer ::  css !  current session
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
-    character*250 :: nam250,x250,y250,leg250
+    character*250 :: nam250
+    character*250 :: x250,y250,leg250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="popset"
     type(plot_set), pointer :: set !  current set
-    plot_popset=.false. ! only true if all is ok...
+    plot_popset=.false. ! only true if all is ok and irc==0
     set => pss%lastSet%prev
     if (.not.associated(set,pss%firstSet)) then
        nam250=set%name250
-       x250=set%y250
-       y250=set%x250
+       x250=set%x250
+       y250=set%y250
        leg250=set%leg250
        call plot_obsExport(set,oss) ! set obs data
        call plot_modExport(set,mss) ! set model data
        call plot_colExport(set,css) ! set colocation data
-       nullify(set)
+       call plot_unlinkSet(set)       
+       call plot_deallocateSet(set)
        plot_popset=.true.
     end if
     return
   end function plot_popset
+  !
+  ! loop over sets from the top without deleting them...
+  logical function plot_loopSet(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+    use model
+    use observations
+    use colocation
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    type(col_session), pointer ::  css !  current session
+    type(mod_session), pointer ::  mss !  current session
+    type(obs_session), pointer ::  oss !  current session
+    character*250 :: nam250
+    character*250 :: x250,y250,leg250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="loopSet"
+    plot_loopset=.false. ! only true if all is ok...
+    if (.not.associated(pss%currentSet)) then
+       pss%currentSet =>  pss%firstSet%next 
+    else
+       pss%currentSet =>  pss%currentSet%next
+    end if
+    if (associated(pss%currentSet,pss%lastSet)) then
+       nullify(pss%currentSet)
+       plot_loopset=.false.
+    else
+       nam250=pss%currentSet%name250
+       x250=pss%currentSet%x250
+       y250=pss%currentSet%y250
+       leg250=pss%currentSet%leg250
+       call plot_obsExport(pss%currentSet,oss) ! set obs data
+       call plot_modExport(pss%currentSet,mss) ! set model data
+       call plot_colExport(pss%currentSet,css) ! set colocation data
+       plot_loopset=.true.
+    end if
+    return
+  end function plot_loopSet
   !
   !###############################################################################
   ! SUB DATA ROUTINES (OBS-, MODEL-, MATCH-TARGET)
@@ -526,6 +873,8 @@ CONTAINS
     type(plot_default), pointer :: cDef !  the current default target
     type(plot_default), pointer :: nDef !  the next default target
     character*25 :: myname = "plot_cleardefault"
+    if (plot_bdeb) write(*,*)myname,'Entering.',irc
+    if (plot_bdeb) write(*,*)myname,'Association.',associated(set), associated(set%firstDef)
     cDef => set%firstDef%next
     do while (.not.associated(cDef,target=set%lastDef))
        nDef => cDef%next
@@ -539,6 +888,7 @@ CONTAINS
        cDef => nDef
     end do
     set%ndef=0
+    if (plot_bdeb) write(*,*)myname,'Exiting.',irc
     return
   end subroutine plot_cleardefaultStack
   !
@@ -804,7 +1154,7 @@ CONTAINS
     return
   end subroutine plot_pushDefault
   !
-  logical function plot_popobstrg(set,trg80,pos250,descr80,info250,min80,max80,irc)
+  logical function plot_popobstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
@@ -815,7 +1165,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="popobstrg"
     type(plot_obstrg), pointer :: trg,ntrg !  current trg
     plot_popobstrg=.false. ! only true if all is ok...
     trg => set%lastObstrg%prev
@@ -834,7 +1184,7 @@ CONTAINS
     return
   end function plot_popobstrg
   !
-  logical function plot_popmodtrg(set,trg80,var80,min80,max80,irc)
+  logical function plot_popmodtrg(set,trg80,var80,min80,max80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
@@ -843,7 +1193,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="popmodtrg"
     type(plot_modtrg), pointer :: trg,ntrg !  current trg
     plot_popmodtrg=.false. ! only true if all is ok...
     trg => set%lastModtrg%prev
@@ -860,7 +1210,7 @@ CONTAINS
     return
   end function plot_popmodtrg
   !
-  logical function plot_popmatch(set,n80,e250,l80,u80,irc)
+  logical function plot_popmatch(set,n80,e250,l80,u80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: n80      ! target name
@@ -869,7 +1219,7 @@ CONTAINS
     character*80  :: u80      ! upper
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="popmatch"
     type(plot_match), pointer :: trg,ntrg !  current trg
     plot_popmatch=.false. ! only true if all is ok...
     trg => set%lastMatch%prev
@@ -886,7 +1236,7 @@ CONTAINS
     return
   end function plot_popmatch
   !
-  logical function plot_loopobstrg(set,trg80,pos250,descr80,info250,min80,max80,irc)
+  logical function plot_loopobstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
@@ -897,7 +1247,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="loopobstrg"
     plot_loopobstrg=.false. ! only true if all is ok...
     if (.not.associated(set%cobstrg)) then
        set%cobstrg =>  set%firstObstrg%next 
@@ -919,7 +1269,7 @@ CONTAINS
     return
   end function plot_loopobstrg
   !
-  logical function plot_loopmodtrg(set,trg80,var80,min80,max80,irc)
+  logical function plot_loopmodtrg(set,trg80,var80,min80,max80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
@@ -928,7 +1278,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="loopmodtrg"
     plot_loopmodtrg=.false. ! only true if all is ok...
     if (.not.associated(set%cmodtrg)) then
        set%cmodtrg =>  set%firstModtrg%next 
@@ -948,12 +1298,12 @@ CONTAINS
     return
   end function plot_loopmodtrg
   !
-  logical function plot_loopDefault(set,irc)
+  logical function plot_loopDefault(set,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="loopdefault"
     plot_loopdefault=.false. ! only true if all is ok...
     if (.not.associated(set%cDef)) then
        set%cDef =>  set%firstDef%next 
@@ -970,7 +1320,7 @@ CONTAINS
     return
   end function plot_loopdefault
   !
-  logical function plot_loopDefaultItem(set,trg80,var80,irc)
+  logical function plot_loopDefaultItem(set,trg80,var80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: trg80      ! target name
@@ -999,7 +1349,7 @@ CONTAINS
     return
   end function plot_loopDefaultItem
   !
-  logical function plot_loopmatch(set,n80,e250,l80,u80,irc)
+  logical function plot_loopmatch(set,n80,e250,l80,u80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*80  :: n80      ! target name
@@ -1008,7 +1358,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname ="loopmatch"
     plot_loopmatch=.false. ! only true if all is ok...
     if (.not.associated(set%cmatch)) then
        set%cmatch =>  set%firstMatch%next 
@@ -1067,7 +1417,7 @@ CONTAINS
     call observation_getIndexLimitsRaw(oss,set%ind,set%ind_start,set%ind_stop)
     ! cache file is stored in colocation-module
     call plot_clearObstrgStack(set,crc250,irc)
-    do while (observation_loopTarget(oss,trg80,pos250,descr80,info250,min80,max80,irc))
+    do while (observation_loopTarget(oss,trg80,pos250,descr80,info250,min80,max80,crc250,irc))
        call plot_pushobstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
     end do
     return
@@ -1090,12 +1440,12 @@ CONTAINS
     call observation_setIndexLimitsRaw(oss,set%ind,set%ind_start,set%ind_stop)
     call observation_loadCache(oss,set%obs250,crc250,irc) ! stored in colocation module
     call observation_clearTargetStack(oss,crc250,irc)
-    do while (plot_loopObstrg(set,trg80,pos250,descr80,info250,min80,max80,irc))
+    do while (plot_loopObstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc))
        call observation_pushtarget(oss,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
     end do
     call observation_makeTargetList(oss,crc250,irc) ! make target list from target chain
     cnt = observation_targetCount(oss,crc250,irc)
-    bex= observation_hasExpression(oss,crc250,irc)
+    bex= observation_hasValidIndex(oss,crc250,irc)
     return
   end subroutine plot_obsExport
   !
@@ -1108,25 +1458,17 @@ CONTAINS
     integer :: irc
     character*80  :: n80       ! target name
     character*80  :: v80       ! variable
-    character*250 :: e250      ! expression
     character*80  :: l80      ! min value
     character*80  :: u80      ! max value
+    character*22 :: myname ="modImport"
+    if (plot_bdeb) write(*,*)myname,'Entering.',irc
     call model_getIndex(mss,set%ind_mod80,crc250,irc)
+    if (plot_bdeb) write(*,*)myname,'Get target stack.',irc
     call plot_clearModTrgStack(set,crc250,irc)
     do while (model_loopTarget(mss,n80,v80,l80,u80,crc250,irc))
        call plot_pushModtrg(set,n80,v80,l80,u80,crc250,irc)
     end do
-    call plot_clearDefaultStack(set,crc250,irc)
-    do while (model_loopDefault(mss,crc250,irc))
-       do while (model_loopDefaultItem(mss,n80,v80,crc250,irc))
-          call plot_addDefault(set,n80,v80,crc250,irc)
-       end do
-       call plot_pushDefault(set,crc250,irc)
-    end do
-    call plot_clearMatchStack(set,crc250,irc)
-    do while (model_loopExpression(mss,n80,e250,l80,u80,crc250,irc))
-       call plot_pushMatch(set,n80,e250,l80,u80,crc250,irc)
-    end do
+    if (plot_bdeb) write(*,*)myname,'Done.',irc
     return
   end subroutine plot_modImport
   !
@@ -1138,26 +1480,13 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*80 :: n80,v80,l80,u80
-    character*250 :: e250
+    character*22 :: myname ="modExport"
     call model_setIndex(mss,set%ind_mod80,crc250,irc)
     call model_loadCache(mss,set%mod250,crc250,irc) ! stored in colocation module
     !
     call model_clearTargetStack(mss,crc250,irc)
-    do while (plot_loopModTrg(set,n80,v80,l80,u80,irc))
+    do while (plot_loopModTrg(set,n80,v80,l80,u80,crc250,irc))
        call model_pushTarget(mss,n80,v80,l80,u80,crc250,irc)
-    end do
-    !
-    call model_clearDefaultStack(mss,crc250,irc)
-    do while (plot_loopDefault(set,irc))
-       do while (plot_loopDefaultItem(set,n80,v80,irc))
-          call model_addDefault(mss,n80,v80,crc250,irc)
-       end do
-       call model_pushDefault(mss,crc250,irc)
-    end do
-    !
-    call model_clearExpressionStack(mss,crc250,irc)
-    do while (plot_loopMatch(set,n80,e250,l80,u80,irc))
-       call model_addExpression(mss,n80,e250,l80,u80,crc250,irc)
     end do
     !
     return
@@ -1171,10 +1500,27 @@ CONTAINS
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
-    call colocation_getmodcache(css,path250,crc250,irc)
-    set%mod250=path250
-    call colocation_getobscache(css,path250,crc250,irc)
-    set%obs250=path250
+    character*80 :: n80,v80,l80,u80
+    character*250 :: e250
+    character*22 :: myname ="colImport"
+    call colocation_getfilter(css,set%filter250,crc250,irc)
+    call colocation_getmodcache(css,set%mod250,crc250,irc)
+    call colocation_getobscache(css,set%obs250,crc250,irc)
+    if (plot_bdeb) write(*,*)myname,'Get default stack.',irc
+    call plot_clearDefaultStack(set,crc250,irc)
+    do while (colocation_loopDefault(css,crc250,irc))
+       do while (colocation_loopDefaultItem(css,n80,v80,crc250,irc))
+          call plot_addDefault(set,n80,v80,crc250,irc)
+       end do
+       call plot_pushDefault(set,crc250,irc)
+    end do
+    if (plot_bdeb) write(*,*)myname,'Get match stack.',irc
+    call plot_clearMatchStack(set,crc250,irc)
+    if (plot_bdeb) write(*,*)myname,'Starting match loop.',irc
+    do while (colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc))
+       if (plot_bdeb) write(*,*)myname,'Inside loop.',irc
+       call plot_pushMatch(set,n80,e250,l80,u80,crc250,irc)
+    end do
     return
   end subroutine plot_colImport
   !
@@ -1187,6 +1533,24 @@ CONTAINS
     type(col_session), pointer :: css
     character*250 :: crc250
     integer :: irc
+    character*80 :: n80,v80,l80,u80
+    character*250 :: e250
+    character*22 :: myname ="colExport"
+    call colocation_setfilter(css,set%filter250,crc250,irc)
+    !
+    call colocation_clearDefaultStack(css,crc250,irc)
+    do while (plot_loopDefault(set,crc250,irc))
+       do while (plot_loopDefaultItem(set,n80,v80,crc250,irc))
+          call colocation_addDefault(css,n80,v80,crc250,irc)
+       end do
+       call colocation_pushDefault(css,crc250,irc)
+    end do
+    !
+    call colocation_clearMatchStack(css,crc250,irc)
+    do while (plot_loopMatch(set,n80,e250,l80,u80,crc250,irc))
+       call colocation_addMatch(css,n80,e250,l80,u80,crc250,irc)
+    end do
+    !
     return
   end subroutine plot_colExport
   !
@@ -1197,6 +1561,115 @@ CONTAINS
   !
   !
   subroutine plot_maketable(pss,css,mss,oss,tab250,gra250,crc250,irc)
+    use model
+    use observations
+    use colocation
+    use parse
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    type(col_session), pointer ::  css !  current session
+    type(mod_session), pointer ::  mss !  current session
+    type(obs_session), pointer ::  oss !  current session
+    integer :: cid,mid,oid
+    character*250 :: tab250,gra250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="maketable"
+    type(parse_session), pointer :: psx,psy
+    integer :: nvar
+    character*250 :: leg250,x250,y250,nam250
+    character*80, allocatable :: var80(:)
+    real, allocatable :: val(:)
+    integer :: mloc,mtrg,oloc,otrg
+    integer :: lenc,lene,lenn,lenl
+    integer, external :: length
+    real :: valx, valy
+    integer :: tmod,emod,dmod,tobs,ii,jj,ind_ii,nfunc
+    logical :: bobsind
+    type(parse_session), pointer :: pse
+    type(parse_pointer), pointer :: ppt(:) ! parse sessions
+    integer :: locid,locstart
+    !
+    real :: mod_start = 0.0D0
+    real :: mod_stop = 0.0D0
+    real :: obs_start = 0.0D0
+    real :: obs_stop = 0.0D0
+    logical :: mod_lim,obs_lim,bok,first,lok
+    !
+    ! set files and replace any wildcards: "YY MM DD HH MI SS"
+    call plot_setFiles(pss,tab250,gra250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'setFiles'.")
+       return
+    end if
+    call plot_openTablefile(pss,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'openTableFile'.")
+       return
+    end if
+    call plot_exportOutputSettings(pss,css,mss,oss,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'exportOutputSettings'.")
+       return
+    end if
+    !
+    ! loop over set and write attributes and legend as comments
+    !
+    write(pss%tunit,'("#")')
+    write(pss%tunit,'("# Legend table")')
+    do while (plot_loopset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc))
+       call chop0(nam250,250)
+       lenn=length(nam250,250,1)
+       call chop0(leg250,250)
+       lenl=length(leg250,250,1)
+       write(pss%tunit,'("#",X,A,X,A)')nam250(1:lenn),leg250(1:lenl)
+    end do
+    !
+    write(pss%tunit,'("#")')
+    write(pss%tunit,'("# Data table")')
+    do while (plot_loopset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc))
+       ! make output data for this set
+       irc=0
+       call colocation_makeOutput(css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Error return from 'makeOutput'.")
+          return
+       end if
+    end do
+    ! end set loop
+    call plot_closeTablefile(pss,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from 'closeTableFile'.")
+       return
+    end if
+    !
+    return
+  end subroutine plot_maketable
+
+  !
+  subroutine plot_makegraphics(pss,tab250,gra250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: tab250,gra250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="makegraphics"
+    !
+    irc=999
+    call plot_errorappend(crc250,myname)
+    call plot_errorappend(crc250," Not implemented.")
+    call plot_errorappendi(crc250,irc)
+    call plot_errorappend(crc250,"\n")
+    !
+    return
+  end subroutine plot_makegraphics
+  !
+  subroutine plot_exportOutputSettings(pss,css,mss,oss,crc250,irc)
     use model
     use observations
     use colocation
@@ -1211,32 +1684,13 @@ CONTAINS
     integer :: irc
     character*22 :: myname ="maketable"
     !
-    irc=999
-    call plot_errorappend(crc250,myname)
-    call plot_errorappend(crc250," Not implemented.")
-    call plot_errorappendi(crc250,irc)
-    call plot_errorappend(crc250,"\n")
-    !
+    mss%pxml=pss%pxml
+    oss%pxml=pss%pxml
+    css%pxml=pss%pxml
+    css%tunit=pss%tunit
     return
-  end subroutine plot_maketable
+  end subroutine plot_exportOutputSettings
 
-  !
-  subroutine plot_makegraphics(css,tab250,gra250,crc250,irc)
-    implicit none
-    type(plot_session), pointer :: css !  current session
-    character*250 :: tab250,gra250
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname ="makegraphics"
-    !
-    irc=999
-    call plot_errorappend(crc250,myname)
-    call plot_errorappend(crc250," Not implemented.")
-    call plot_errorappendi(crc250,irc)
-    call plot_errorappend(crc250,"\n")
-    !
-    return
-  end subroutine plot_makegraphics
   !
   !
   !###############################################################################
@@ -1603,482 +2057,54 @@ CONTAINS
     end do
   end subroutine findDelimiter
   !
-  subroutine plot_makeXML(cid,mid,bid,crc250, irc)
-    use model
-    use observations
-    use colocation
-    use parse
+  subroutine plot_strep(str250,nn,src100,rep100,lrep,irc)
     implicit none
-    integer :: cid ! plot session id
-    integer :: mid ! model session id
-    integer :: bid ! observation session id
-    character*250 :: crc250
-    integer :: irc
-    integer, external :: length
-    integer :: lenc,lene
-    character*25 :: myname = "plot_makeXML"
-    integer :: tmod,emod,dmod,tobs,ii,jj,ind_ii,nfunc
-    logical :: bobsexp
-    type(mod_session), pointer :: mss !  current session
-    type(obs_session), pointer :: oss !  current session
-    type(plot_session), pointer :: css !  current session
-    type(parse_session), pointer :: pse
-    type(parse_pointer), pointer :: pss(:) ! parse sessions
-    integer :: locid,locstart
+    ! search for, and replace, key words in string with given information...
+    character*250 str250
+    integer nn
+    character*100 src100(nn)
+    character*100 rep100(nn)
+    logical lrep(nn)
+    integer irc
     !
-    real :: mod_start = 0.0D0
-    real :: mod_stop = 0.0D0
-    real :: obs_start = 0.0D0
-    real :: obs_stop = 0.0D0
-    logical :: mod_lim,obs_lim,bok,first,lok
+    logical bdone
+    character*250 buff250
+    character*1000 buff1000
+    integer ii,jj,length,lens,lenr,leni
     !
-    irc=0
-    bok=.true.
-    ! get session objects
-    call model_getSession(mss,mid,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"model_getSession")
-       return
-    end if
-    call observation_getSession(oss,bid,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"observation_getSession")
-       return
-    end if
-    call plot_getSession(css,cid,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"plot_getSession")
-       return
-    end if
-    ! check what we should plot
-    tmod=model_targetCount(mss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"model_targetCount")
-       return
-    end if
-    emod=model_expressionCount(mss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"model_expressionCount")
-       return
-    end if
-    dmod=model_defaultCount(mss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"model_defaultCount")
-       return
-    end if
-    tobs=observation_targetCount(oss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"observation_targetCount")
-       return
-    end if
-    if (tmod.ne.0.and.tobs.ne.0.and.(emod.ne.tmod.and.dmod.eq.0)) then
-       irc=232
-       call plot_errorappend(crc250,"Missing model target expressions, expected ")
-       call plot_errorappendi(crc250,tmod)
-       call plot_errorappend(crc250," got ")
-       call plot_errorappendi(crc250,emod)
-       return
-    else if (tmod.ne.0.and.tobs.eq.0.and.(emod.eq.0.and.dmod.eq.0)) then
-       irc=233
-       call plot_errorappend(crc250,"Missing model default values.")
-       return
-    end if
+    character*16 myname
+    data myname /'strep'/
     !
-    ! make target lists
-    if (tmod.eq.0) then
-       bobsexp=.false.
-    else
-       bobsexp=observation_hasExpression(oss,crc250,irc)
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,"observation_hasExpression")
-          return
-       end if
-    end if
-    ! make expression lists
-    ! count expressions (match-expressions + obs-index-expression)
-    allocate(pse,pss(emod),stat=irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"allocate")
-       return
-    end if
-    call parse_open (pse,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"parse_open")
-       return
-    end if
-    do ii=1,emod
-       call parse_open (pss(ii)%ptr,crc250,irc)
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,"parse_open")
-          return
-       end if
+    do ii=1,nn
+       call chop0(src100(ii),100)
+       call chop0(rep100(ii),100)
+       leni=length(str250,250,10)
+       lens=length(src100(ii),100,2)
+       lenr=length(rep100(ii),100,2)
+       bdone=(leni.eq.0)
+       do while (.not.bdone)
+          buff250=str250
+          bdone=.true.
+          do jj=1,leni-lens+1
+             !     write(*,*) myname,'"',str250(jj:jj+lens-1),'"',
+             !     &              src100(ii)(1:lens),'"'
+             if (str250(jj:jj+lens-1).eq.&
+                  &              src100(ii)(1:lens)) then
+                buff1000=str250(1:jj-1)//&
+                     &                 rep100(ii)(1:lenr)//&
+                     &                 str250(jj+lens:leni)
+                call chop0(buff1000,251)
+                str250=buff1000(1:250)
+                leni=length(str250,250,10)
+                !     write(*,*) myname,str250(1:leni)
+                lrep(ii)=.true.
+                bdone=(buff250.eq.str250)
+             end if
+          end do
+       end do
     end do
-    ! compile all expressions
-    call model_makeTargetList(mss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"model_makeTargetList")
-       return
-    end if
-    call observation_makeTargetList(oss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"observation_makeTargetList")
-       return
-    end if
-    ind_ii=0  ! mark expression that corresponds to index variable
-    if (bobsexp) then ! obs-index-expression
-       lene=length(oss%ind_exp250,250,10)
-       call parse_parsef(pse, oss%ind_exp250(1:lene), oss%trg80, crc250,irc)
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,"parse_parsef")
-          return
-       end if
-    end if
-    if(plot_bdeb)write(*,*)myname,'Processing expressions.',emod,associated(mss%currentExp)
-    do ii=1,emod ! match-expressions + obs-index-expression
-       call parse_parsef(pss(ii)%ptr, mss%currentExp%e250(ii)(1:mss%currentExp%lene(ii)), &
-            & oss%trg80, crc250,irc)
-       if (irc.ne.0) then
-          ! write(*,*) myname,'Expr:', ii, mss%currentExp%lene(ii),&
-          !      &  mss%currentExp%ntrgexp,  mss%currentExp%e250(ii)(1:mss%currentExp%lene(ii))
-          ! 
-          ! do jj=1,size(oss%trg80)
-          !    write(*,*) myname,'var:',jj,oss%ntrg,oss%ntarget,oss%trg80(jj)(1:oss%trgmodlent(jj))
-          ! end do
-          call plot_errorappend(crc250,"parse_parsef_loop")
-          return
-       end if
-       if (mss%currentExp%n80(ii)(1:mss%currentExp%lenn(ii)).eq.mss%ind_var80(1:mss%ind_lenv)) then
-          ind_ii=ii
-       end if
-    end do
-    if(plot_bdeb)write(*,*)myname,'Calculating limits.'
-    !
-    ! convert obs start/end limits (time) to model start/end limits if possible
-    if(plot_bdeb)write(*,*)myname,'Setting limits.',mss%ind_lim,mss%ind_start,mss%ind_stop,oss%ind_lim(3),oss%ind_start,oss%ind_stop
-    mod_lim=.false. ! are model limits available?
-    if (oss%ind_lim(3) .and. ind_ii.ne.0) then ! convert obs_limits to mod_limits
-       oss%trg_val(oss%ntrg)=oss%ind_start
-       mod_start=parse_evalf(pss(ind_ii)%ptr,oss%trg_val)
-       oss%trg_val(oss%ntrg)=oss%ind_stop
-       mod_stop=parse_evalf(pss(ind_ii)%ptr,oss%trg_val)
-       mod_lim=.true.
-    end if
-    if (mss%ind_lim) then
-       if (mod_lim) then
-          mod_start=max(mod_start,mss%ind_start)
-          mod_stop=min(mod_stop,mss%ind_stop)
-       else
-          mod_start=mss%ind_start
-          mod_stop=mss%ind_stop
-       end if
-       mod_lim=.true.
-    end if
-    ! initial observation limits are for the whole index range
-    if (mod_lim) then
-       obs_lim=mod_lim
-       obs_start=mod_start
-       obs_stop=mod_stop
-    else
-       obs_lim=oss%ind_lim(3)
-       obs_start=oss%ind_start
-       obs_stop=oss%ind_stop
-    end if
-    if(plot_bdeb)write(*,*)myname,'Entering model file loop.',mod_lim,mod_start,mod_stop,obs_lim,obs_start,obs_stop
-    locid=0 ! observation count (= identification)
-    MODFILE: do
-       if (tmod.ne.0) then ! we have model targets specified
-          ! loop over data
-          bok=.true.
-          if(plot_bdeb)write(*,*)myname,'Calling model nextfile.',mod_lim,mod_start,mod_stop
-          call model_getnextfile(mss,mod_lim,mod_start,mod_stop,bok,crc250,irc)
-          if (irc.ne.0) then
-             call plot_errorappend(crc250,"model_getnextfile")
-             return
-          end if
-          if (.not.bok) then
-             if(plot_bdeb)write(*,*)myname,'No more model files.'
-             exit MODFILE ! no more files to process
-          else 
-             if(plot_bdeb)write(*,*)myname,'Found model file.'
-          end if
-          !
-          ! write file opening xml-tag
-          !
-          call model_filestartxml(mss,crc250,irc)
-          if (irc.ne.0) then
-             call plot_errorappend(crc250,"model_fileStartXml")
-             return
-          end if
-          ! get observation file limits    
-          if (mss%currentFile%ind_lim) then
-             obs_lim=mss%currentFile%ind_lim ! are observation limits available?
-             if (mod_lim) then
-                obs_start=max(mod_start,mss%currentFile%ind_start)
-                obs_stop=min(mod_stop,mss%currentFile%ind_stop)
-             else
-                obs_start=mss%currentFile%ind_start
-                obs_stop=mss%currentFile%ind_stop
-             end if
-          end if
-       end if
-       !
-       if(plot_bdeb)write(*,*)myname,'Entering obs file loop.'
-
-       ! loop over model data, using model/obs start/end limits
-       OBSFILE : do
-          if (tobs.ne.0) then ! we have observation targets available
-             bok=.true.
-             if(plot_bdeb)write(*,*)myname,'Calling observation nextfile.',obs_lim,obs_start,obs_stop
-             call observation_getnextfile(oss,obs_lim,obs_start,obs_stop,bok,crc250,irc)
-             if (irc.ne.0) then
-                call plot_errorappend(crc250,"observation_getnextfile")
-                return
-             end if
-             if (.not.bok) then
-                if(plot_bdeb)write(*,*)myname,'No more observation files to process.',obs_lim,obs_start,obs_stop
-                exit OBSFILE ! no more files to process
-             end if
-             !
-             ! write file opening xml-tag
-             !
-             call observation_filestartxml(oss,crc250,irc)
-             if (irc.ne.0) then
-                call plot_errorappend(crc250,"observation_fileStartXml")
-                return
-             end if
-          end if
-          if (tobs.ne.0.and.tmod.ne.0) then ! we have observation targets available
-             ! initialise the location list
-             if(plot_bdeb)write(*,*)myname,'Clear model locations.'
-             call model_locclear(mss,mss%ctarget,mss%trg_v80,crc250,irc)
-             if (irc.ne.0) then
-                call plot_errorappend(crc250,"model_locclear")
-                return
-             end if
-
-             if(plot_bdeb)write(*,*)myname,'Compile expressions.',associated(mss%currentExp)
-             if (associated(mss%currentExp)) then
-                ! compile match-experssions
-                do ii=1,mss%currentExp%ntrgexp
-                   call model_compileExpression(mss,ii,oss%trg80,crc250,irc)
-                   if (irc.ne.0) then
-                      call plot_errorappend(crc250,"model_compileExpression")
-                      return
-                   end if
-                end do
-             else
-                irc=123
-                call plot_errorappend(crc250,"No expressions available")
-                return
-             end if
-             if(plot_bdeb)write(*,*)myname,'Entering observation loop.'
-
-             locstart=locid
-             ! loop over obs data, using model start/end limits
-             LOCATION : do
-                if(plot_bdeb)write(*,*)myname,'Slice observation file.'
-                ! read next observation into static BUFR memory
-                call observation_sliceCurrentFile(oss,bok,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"observation_sliceCurrentFile")
-                   return
-                end if
-                if (.not.bok) then
-                   if(plot_bdeb)write(*,*)myname,'No more observations to process.'
-                   exit LOCATION
-                end if
-                !
-                locid=locid+1
-                !
-                !write(*,*)myname,'Evaluate expressions.'
-                ! evaluate experessions
-                do ii=1,mss%currentExp%ntrgexp
-                   call model_evalExpression(mss,ii,oss%trg_val,crc250,irc)
-                   if (irc.ne.0) then
-                      call plot_errorappend(crc250,"model_evalExpression")
-                      return
-                   end if
-                end do
-
-                ! make target values
-                !write(*,*)myname,'Set model targets.'
-                call  model_setTargetVal(mss,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"model_setTargetVal")
-                   return
-                end if
-
-                ! check target values
-                lok=.true.
-                call  model_checkTargetVal(mss,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"model_setTargetVal")
-                   return
-                end if
-                !
-                ! make new location from observation
-                if(plot_bdeb)write(*,*)myname,'Push location.',locid
-                call model_locpush(mss,locid,mss%ctarget,mss%trg_val,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"model_locPush")
-                   return
-                end if
-             end do LOCATION
-          else if (tmod.ne.0) then ! use model default values
-
-             if(plot_bdeb)write(*,*)myname,'Clearing loc stack.',mss%ctarget,associated(mss%trg_v80)
-
-             ! initialise the location list
-             call model_locclear(mss,mss%ctarget,mss%trg_v80,crc250,irc)
-             if (irc.ne.0) then
-                call plot_errorappend(crc250,"model_locclear")
-                return
-             end if
-             
-             if(plot_bdeb)write(*,*)myname,'Creating locations from default.',associated(mss%firstDef)
-             if(plot_bdeb)write(*,*)myname,'...:',associated(mss%firstDef%next)
-             mss%currentDef=>mss%firstDef%next
-             do while (.not.associated(mss%currentDef,target=mss%lastDef))
-                if(plot_bdeb)write(*,*)myname,'Make target values from default.'
-                ! make target values
-                call  model_setTargetVal(mss,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"model_setTargetVal")
-                   return
-                end if
-                ! make new location from observation
-                locid=locid+1
-                ! check target values
-                lok=.true.
-                call  model_checkTargetVal(mss,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"model_setTargetVal")
-                   return
-                end if
-                !
-                if(plot_bdeb)write(*,*)myname,'Creating location:',locid
-                call model_locpush(mss,locid,mss%ctarget,mss%trg_val,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"model_locPush")
-                   return
-                end if
-                mss%currentDef=>mss%currentDef%next
-             end do
-          end if
-          if (tmod.ne.0) then
-             ! finally slice the model file and write model XML to stdout
-             call model_slicecurrentfile(mss,bok,crc250,irc)
-             if (irc.ne.0) then
-                call plot_errorappend(crc250,"model_stackslicecurrentfile")
-                return
-             end if
-          end if
-          !
-          ! loop over observations, write valid observations to XML...
-          !         
-          if (tobs.ne.0) then
-             first=.true.
-             locid=locstart
-             OBSERVATION : do
-                ! read next observation into static BUFR memory
-                call observation_sliceCurrentFile(oss,bok,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"observation_sliceCurrentFile")
-                   return
-                end if
-                if (.not.bok) then
-                   if(plot_bdeb)write(*,*)myname,'No more observations to process.'
-                   exit OBSERVATION
-                end if
-                !
-                locid=locid+1
-                bok=.true.
-                if (tmod.ne.0) then ! we have match expressions specified
-                   call model_locSearchOk(mss,locid,bok)        
-                   if (bok) then
-                      oss%currentFile%ook(5)=oss%currentFile%ook(5)+1
-                   else
-                      oss%currentFile%orm(5)=oss%currentFile%orm(5)+1
-                   end if
-                else
-                   oss%currentFile%ook(5)=oss%currentFile%ook(5)+1
-                end if
-                !
-                if (bok) then
-                   if (first) then
-                      call observation_obsstartxml(oss,crc250,irc)
-                      if (irc.ne.0) then
-                         call plot_errorappend(crc250,"observation_obsStartXml")
-                         return
-                      end if
-                      first=.false.
-                   end if
-                   call observation_writexml(oss,locid,crc250,irc)
-                   if (irc.ne.0) then
-                      call plot_errorappend(crc250,"observation_writeXML")
-                      return
-                   end if
-                end if
-             end do OBSERVATION
-             if (.not.first) then
-                call observation_obsstopxml(oss,crc250,irc)
-                if (irc.ne.0) then
-                   call plot_errorappend(crc250,"observation_obsstopXml")
-                   return
-                end if
-             end if
-          end if
-          ! end obs data loop
-          if (tobs.ne.0) then
-             call observation_filestopxml(oss,crc250,irc)
-             if (irc.ne.0) then
-                call plot_errorappend(crc250,"observation_fileStopxml")
-                return
-             end if
-          else 
-             exit OBSFILE
-          end if
-       end do OBSFILE
-
-       ! end model loop
-       if (tmod.ne.0)  then
-          call model_writeSummary(mss,crc250,irc)
-          if (irc.ne.0) then
-             call plot_errorappend(crc250,"model_writeSummary")
-             return
-          end if
-          ! write file opening xml-tag
-          call model_filestopxml(mss,crc250,irc)
-          if (irc.ne.0) then
-             call plot_errorappend(crc250,"model_fileStopxml")
-             return
-          end if
-       else 
-          exit MODFILE
-       end if
-    end do MODFILE
-    !
-    call parse_close (pse,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"parse_close")
-       return
-    end if
-    !
-    do ii=1,emod
-       call parse_close (pss(ii)%ptr,crc250,irc)
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,"parse_close_loop")
-          return
-       end if
-    end do
-
-    deallocate(pss,stat=irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,"deallocate")
-       return
-    end if
-    !write(*,*) myname,'Done.'
+    !     
     return
-  end subroutine plot_makeXML
+  end subroutine plot_strep
   !
 end module plot

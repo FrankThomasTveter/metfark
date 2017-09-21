@@ -11,7 +11,8 @@ obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 bufrType : "99",
 				 subType : "9",
 				 typeInfo : "default info.",
-				 targets : { "yy" : {pos:"", descr:"", info:"", min:"", max:""}},
+				 targets : {"yy" : {pos:"", descr:"", info:"", min:"", max:""}},
+				 targeto : ["yy"],
 				 indexTarget : "time",
 				 indexExp : "sec1970(yy,mm,dd,hh,mi)",
 				 files : [],
@@ -59,7 +60,7 @@ function obs_show() {
 	setValue('obsBufrType',obs_config[file]["bufrType"]);
 	setValue('obsSubType',obs_config[file]["subType"]);
 	setValue('obsTypeInfo',obs_config[file]["typeInfo"]);
-	obs_setIndexTargetTable(file,obs_config[file]['targets']);
+	obs_setIndexTargetTable(file);
 	setValue('obsIndexTarget',obs_config[file]["indexTarget"]);
 	setValue('obsIndexExp',obs_config[file]["indexExp"]);
 	setInnerHTML('obsPatternHits',obs_config[file]["hits"]);
@@ -88,8 +89,9 @@ function obs_removeTarget(target) {
     item.children[5].children[0].value=obs_config[file]["targets"][target]["info"];
     item.children[6].children[0].value=obs_config[file]["targets"][target]["min"];
     item.children[7].children[0].value=obs_config[file]["targets"][target]["max"];
+    obs_config[file]["targeto"]=obs_removeByValue(obs_config[file]["targeto"],target)
     delete obs_config[file]["targets"][target];
-    obs_setIndexTargetTable(file,obs_config[file]["targets"]);
+    obs_setIndexTargetTable(file);
 };
 
 function obs_isEmpty(obj) {
@@ -124,7 +126,8 @@ function obs_newObsIndexTarget(item) {
 	obs_config[file]["targets"][target]["info"]=info;
 	obs_config[file]["targets"][target]["min"]=min;
 	obs_config[file]["targets"][target]["max"]=max;
-	obs_setIndexTargetTable(file,obs_config[file]["targets"]);
+	obs_config[file]["targeto"].push(target);
+	obs_setIndexTargetTable(file);
 	item.parentNode.parentNode.children[1].children[0].value="";
 	item.parentNode.parentNode.children[2].children[0].value="";
 	item.parentNode.parentNode.children[4].children[0].value="";
@@ -149,8 +152,11 @@ function obs_saveConfigFile() {
 	stack=stack+"|"+sfile;
     };
     var obsTargets="";
+    var targeto=obs_config[file]["targeto"];
     var targets=obs_config[file]["targets"];
-    for (var target in targets) {
+    //for (var target in targets) {
+    for (var ii =0; ii< targeto.length;ii++) {
+	var target=targeto[ii];
 	var pos=targets[target]["pos"];
 	var descr=targets[target]["descr"];
 	var info=targets[target]["info"];
@@ -158,6 +164,7 @@ function obs_saveConfigFile() {
 	var max=targets[target]["max"];
 	obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info + "~" + min + "~" + max;
     };
+    if (obsTargets == "") {obsTargets="none";}
     obs_configEd++;
     documentLog.innerHTML="Sent obs-save request.";
     $.get("cgi-bin/fark_save.pl",{type:"obs",file:file,password:password,
@@ -185,15 +192,19 @@ function obs_saveConfigFile() {
     makeUrl("obs",file);
 };
 // make new obs-index entry
-function obs_setIndexTargetTable(file,value) {
+function obs_setIndexTargetTable(file) {
     var file=obs_getConfigFile();
     var bufrType = obs_config[file]["bufrType"];
     var subType = obs_config[file]["subType"];
     var item=document.getElementById('obsIndexTargetTable');
     var tail=removeTableChildFromTo(item,"labelsObsIndexTarget","newlineObsIndexTarget");
-    for (var target in value) {
-	obs_insertIndexTargetRow(tail,target,value[target]["pos"],value[target]["descr"],
-				 value[target]["info"],value[target]["min"],value[target]["max"]);
+    var targeto=obs_config[file]["targeto"];
+    var targets=obs_config[file]["targets"];
+    //for (var target in value) {
+    for (var ii =0; ii< targeto.length;ii++) {
+	var target=targeto[ii];
+	obs_insertIndexTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],
+				 targets[target]["info"],targets[target]["min"],targets[target]["max"]);
     }
 }
 function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
@@ -201,12 +212,15 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     var td,inp;
     // make "-" column
     td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("style","min-width:30px;width:30px");
+    td.setAttribute("align","center");
     var btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","obs_removeTarget('"+target+"')");
     btn.setAttribute("style","width:100%");
-    var t=document.createTextNode("-");
-    btn.appendChild(t);
+    //var t=document.createTextNode("--");
+    //btn.appendChild(t);
+    btn.innerHTML="&#45";
+    //btn.setAttribute("align","center");
     td.appendChild(btn);
     row.appendChild(td);
     // make NAME column  ***************************
@@ -219,7 +233,7 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",pos);
-    inp.setAttribute("style","width:100%");
+    //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','pos',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
@@ -233,7 +247,7 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",descr);
-    inp.setAttribute("style","width:100%");
+    //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','descr',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
@@ -243,7 +257,7 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",info);
-    inp.setAttribute("style","width:100%");
+    //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','info',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
@@ -253,7 +267,7 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",min);
-    inp.setAttribute("style","width:100%");
+    //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','min',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
@@ -263,7 +277,7 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",max);
-    inp.setAttribute("style","width:100%");
+    //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','max',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
@@ -271,8 +285,8 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     item.parentNode.insertBefore(row,item);
     return row;
 }
-function obs_updateData(arg = "") {
-    var args=getArgs(arg);
+function obs_updateData() {
+    var args=getArgs(obs_getConfigFile());
     documentLog.innerHTML="Sent obs-load request.";
     $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
 	dataToArray(data,status,documentLog);
@@ -284,7 +298,7 @@ function obs_updateData(arg = "") {
 };
 function obs_fileFind(sfile) {
     var file=obs_getConfigFile();
-    model_config[file]["stack"]=sfile;
+    obs_config[file]["stack"]=sfile;
     var password=document.getElementById("obsConfigFilePsw").value;
     var filterDir = obs_config[file]["filterDir"];
     var filterFile = obs_config[file]["filterFile"];
@@ -363,7 +377,7 @@ function obs_rmfile(path) {
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
-		  alert("Unable to rmdir: "+path+"\n"+msg);
+		  alert("Unable to rmfile: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
 				}
@@ -396,3 +410,14 @@ function obs_mkfile(file) {
     obs_saveConfigFile(file);
 };
 
+// arr=obs_removeByValue(arr,item1,item2...)
+function obs_removeByValue(arr) {
+    var what, a = arguments, ll = a.length, ax;
+    while (ll > 1 && arr.length) {
+        what = a[--ll];
+        while ((ax= arr.indexOf(what)) !== -1) {
+            arr.splice(ax, 1);
+        }
+    }
+    return arr;
+};

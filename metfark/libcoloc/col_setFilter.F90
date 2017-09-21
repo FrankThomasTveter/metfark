@@ -7,7 +7,7 @@ subroutine col_setfilter(sid,filter250, crc250, irc)
   integer :: irc
   character*25 :: myname = "setfilter"
   type(col_session), pointer :: css !  current session
-  !write(*,*) myname, 'Entering.',irc,filter250
+  !write(*,*) myname, 'Entering.',irc,filter250,
   call colocation_getSession(css,sid,crc250,irc)
   if (irc.ne.0) then
      call colocation_errorappend(crc250,myname)

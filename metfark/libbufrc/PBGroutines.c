@@ -871,7 +871,7 @@ gribfile * file;
       if( DEBUG1 ) {
         _fcd pfile;
         copyName(&pfile, filename, filename_len);
-        printf("PBGOFFS: offset of GRIB %d in file %s = %d\n",
+        printf("PBGOFFS: offset of GRIB %d in file %s = %ld\n",
                (index+1), pfile, file->offset[index]);
         free(pfile);
       }
@@ -1758,7 +1758,7 @@ gribfile * file;
 
       offset = file->offset[index];
 
-      if( DEBUG1 ) printf("PBGGET: offset of GRIB number %d = %d\n",
+      if( DEBUG1 ) printf("PBGGET: offset of GRIB number %d = %ld\n",
                           (index+1), offset);
 
       fp = file->fp;
@@ -2442,7 +2442,7 @@ gribfile * file;
 
       offset = file->offset[index];
 
-      if( DEBUG1 ) printf("pbggeth012: offset of GRIB number %d = %d\n",
+      if( DEBUG1 ) printf("pbggeth012: offset of GRIB number %d = %ld\n",
                           (index+1), offset);
 
       fp = file->fp;

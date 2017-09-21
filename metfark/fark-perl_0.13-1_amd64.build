@@ -1,0 +1,182 @@
+ dpkg-buildpackage -rfakeroot -D -us -uc -i -b
+dpkg-buildpackage: source package fark-perl
+dpkg-buildpackage: source version 0.13-1
+dpkg-buildpackage: source distribution ubuntu
+dpkg-buildpackage: source changed by Frank Tveter <frank.tveter@met.no>
+ dpkg-source -i --before-build fark
+dpkg-buildpackage: host architecture amd64
+ fakeroot debian/rules clean
+dh_testdir
+dh_testroot
+dh_clean build-stamp install-stamp
+# Add commands to clean up after the build process here
+[ ! -f Makefile ] || /usr/bin/make realclean
+make[1]: Entering directory '/elysium/git/metfark/metfark/fark'
+rm -f \
+  fark.bso fark.def \
+  fark.exp fark.x \
+  fark.bs blib/arch/auto/fark/extralibs.all \
+  blib/arch/auto/fark/extralibs.ld Makefile.aperl \
+  *.a *.o \
+  *perl.core MYMETA.json \
+  MYMETA.yml blibdirs.ts \
+  core core.*perl.*.? \
+  core.[0-9] core.[0-9][0-9] \
+  core.[0-9][0-9][0-9] core.[0-9][0-9][0-9][0-9] \
+  core.[0-9][0-9][0-9][0-9][0-9] fark.c \
+  libfark.def mon.out \
+  perl perl \
+  perl.exe perlmain.c \
+  pm_to_blib pm_to_blib.ts \
+  so_locations tmon.out 
+rm -rf \
+  blib 
+mv Makefile Makefile.old > /dev/null 2>&1
+rm -f \
+  Makefile fark.o \
+  Makefile.old 
+rm -rf \
+  fark-0.13 
+make[1]: Leaving directory '/elysium/git/metfark/metfark/fark'
+ debian/rules build
+dh_testdir
+# As this is a architecture dependent package, we are not
+# supposed to install stuff to /usr/share. MakeMaker creates
+# the dirs, we prevent this by setting the INSTALLVENDORARCH
+# and VENDORARCHEXP environment variables.
+# Add commands to compile the package here
+/usr/bin/perl Makefile.PL INSTALLDIRS=vendor \
+	INSTALLVENDORARCH=/usr/lib/perl5/ \
+	VENDORARCHEXP=/usr/lib/perl5/
+Checking if your kit is complete...
+Warning: the following files are missing in your kit:
+	lib/coloc.mod
+Please inform the author.
+WARNING: Setting ABSTRACT via file 'lib/fark.pm' failed
+ at /usr/share/perl/5.22/ExtUtils/MakeMaker.pm line 663.
+Warning: -Llib changed to -L/elysium/git/metfark/metfark/fark/lib
+Generating a Unix-style Makefile
+Writing Makefile for fark
+Writing MYMETA.yml and MYMETA.json
+/usr/bin/make OPTIMIZE="-Wall -g -O2" LD_RUN_PATH=""
+make[1]: Entering directory '/elysium/git/metfark/metfark/fark'
+cp lib/observations.mod blib/lib/observations.mod
+cp lib/libobs.a blib/lib/libobs.a
+cp lib/xmlparse.a blib/lib/xmlparse.a
+cp lib/libgenc.a blib/lib/libgenc.a
+cp t.pl blib/lib/t.pl
+cp lib/libbufr.a blib/lib/libbufr.a
+cp farkobs.pl blib/lib/farkobs.pl
+cp check.pl blib/lib/check.pl
+cp lib/xmlparse.mod blib/lib/xmlparse.mod
+cp lib/libmodel.a blib/lib/libmodel.a
+cp lib/libparse.a blib/lib/libparse.a
+cp lib/libcoloc.a blib/lib/libcoloc.a
+cp lib/plot.mod blib/lib/plot.mod
+cp fark2.pl blib/lib/fark2.pl
+cp lib/fark.pm blib/lib/fark.pm
+cp lib/farkdir.pm blib/lib/farkdir.pm
+cp lib/libplot.a blib/lib/libplot.a
+cp lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod
+cp lib/model.mod blib/lib/model.mod
+cp lib/colocation.mod blib/lib/colocation.mod
+cp fark.pl blib/lib/fark.pl
+cp lib/farkdata.pm blib/lib/farkdata.pm
+cp lib/libbufrc.a blib/lib/libbufrc.a
+cp lib/parse.mod blib/lib/parse.mod
+Running Mkbootstrap for fark ()
+chmod 644 "fark.bs"
+"/usr/bin/perl" "/usr/share/perl/5.22/ExtUtils/xsubpp"  -typemap "/usr/share/perl/5.22/ExtUtils/typemap"  fark.xs > fark.xsc && mv fark.xsc fark.c
+Please specify prototyping behavior for fark.xs (see perlxs manual)
+x86_64-linux-gnu-gcc -c  -I. -Ilib -D_REENTRANT -D_GNU_SOURCE -DDEBIAN -fwrapv -fno-strict-aliasing -pipe -I/usr/local/include -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -Wall -g -O2   -DVERSION=\"0.13\" -DXS_VERSION=\"0.13\" -fPIC "-I/usr/lib/x86_64-linux-gnu/perl/5.22/CORE"   fark.c
+rm -f blib/arch/auto/fark/fark.so
+x86_64-linux-gnu-gcc  -shared -L/usr/local/lib -fstack-protector-strong fark.o  -o blib/arch/auto/fark/fark.so 	\
+   -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff  	\
+  
+chmod 755 blib/arch/auto/fark/fark.so
+"/usr/bin/perl" -MExtUtils::Command::MM -e 'cp_nonempty' -- fark.bs blib/arch/auto/fark/fark.bs 644
+Manifying 3 pod documents
+make[1]: Leaving directory '/elysium/git/metfark/metfark/fark'
+/usr/bin/make test
+make[1]: Entering directory '/elysium/git/metfark/metfark/fark'
+Running Mkbootstrap for fark ()
+chmod 644 "fark.bs"
+PERL_DL_NONLAZY=1 "/usr/bin/perl" "-MExtUtils::Command::MM" "-MTest::Harness" "-e" "undef *Test::Harness::Switches; test_harness(0, 'blib/lib', 'blib/arch')" t/*.t
+Subroutine setPlotType redefined at /elysium/git/metfark/metfark/fark/blib/lib/fark.pm line 1208.
+t/fark.t .. ok
+All tests successful.
+Files=1, Tests=1,  0 wallclock secs ( 0.01 usr  0.01 sys +  0.06 cusr  0.00 csys =  0.08 CPU)
+Result: PASS
+make[1]: Leaving directory '/elysium/git/metfark/metfark/fark'
+touch build-stamp
+ fakeroot debian/rules binary
+dh_testdir
+dh_testroot
+dh_clean -k
+dh_clean: dh_clean -k is deprecated; use dh_prep instead
+# Add commands to install the package into debian/ACKAGE_NAME here
+/usr/bin/make install DESTDIR=/elysium/git/metfark/metfark/fark/debian/fark-perl PREFIX=/usr
+make[1]: Entering directory '/elysium/git/metfark/metfark/fark'
+Manifying 3 pod documents
+Files found in blib/arch: installing files in blib/lib into architecture dependent library tree
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/auto/fark/fark.so
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/observations.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libobs.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/xmlparse.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libgenc.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/t.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libbufr.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkobs.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/check.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/xmlparse.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libmodel.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libparse.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libcoloc.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/plot.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark2.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark.pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkdir.pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libplot.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/read_xml_primitives.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/model.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/colocation.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkdata.pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libbufrc.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/parse.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/share/man/man3/fark.3pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/share/man/man3/farkdata.3pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/share/man/man3/farkdir.3pm
+make[1]: Leaving directory '/elysium/git/metfark/metfark/fark'
+touch install-stamp
+dh_testdir
+dh_testroot
+dh_installexamples 
+dh_installdocs README
+dh_installchangelogs Changes
+dh_shlibdeps
+dh_strip
+dh_perl
+dh_compress
+dh_fixperms
+dh_installdeb
+dh_gencontrol
+dh_md5sums
+dh_builddeb
+dpkg-deb: building package 'fark-perl' in '../fark-perl_0.13-1_amd64.deb'.
+ dpkg-genchanges -b >../fark-perl_0.13-1_amd64.changes
+dpkg-genchanges: binary-only upload (no source code included)
+ dpkg-source -i --after-build fark
+dpkg-buildpackage: binary-only upload (no source included)
+Now running lintian...
+E: fark-perl changes: bad-distribution-in-changes-file ubuntu
+E: fark-perl: missing-dependency-on-perlapi
+W: fark-perl: new-package-should-close-itp-bug
+W: fark-perl: copyright-contains-dh-make-perl-boilerplate
+W: fark-perl: copyright-without-copyright-notice
+W: fark-perl: description-contains-dh-make-perl-template
+E: fark-perl: maintainer-address-is-root-user root <frank.tveter@met.no>
+W: fark-perl: manpage-has-errors-from-pod2man usr/share/man/man3/farkdata.3pm.gz:196
+W: fark-perl: manpage-has-bad-whatis-entry usr/share/man/man3/farkdata.3pm.gz
+W: fark-perl: manpage-has-errors-from-man usr/share/man/man3/fark.3pm.gz 402: warning [p 5, 5.0i]: can't break line
+Finished running lintian.

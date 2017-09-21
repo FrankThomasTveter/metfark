@@ -6,7 +6,7 @@
 #
 #       ANY CHANGES MADE HERE WILL BE LOST!
 #
-#   MakeMaker ARGV: ()
+#   MakeMaker ARGV: (q[INSTALLDIRS=vendor], q[INSTALLVENDORARCH=/usr/lib/perl5/], q[VENDORARCHEXP=/usr/lib/perl5/])
 #
 
 #   MakeMaker Parameters:
@@ -17,7 +17,7 @@
 #     CONFIGURE_REQUIRES => {  }
 #     DEFINE => q[]
 #     INC => q[-I. -Ilib]
-#     LIBS => [q[-Llib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff]]
+#     LIBS => [q[-Llib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff]]
 #     NAME => q[fark]
 #     PREREQ_PM => {  }
 #     TEST_REQUIRES => {  }
@@ -50,7 +50,7 @@ RANLIB = :
 SITELIBEXP = /usr/local/share/perl/5.22.1
 SITEARCHEXP = /usr/local/lib/x86_64-linux-gnu/perl/5.22.1
 SO = so
-VENDORARCHEXP = /usr/lib/x86_64-linux-gnu/perl5/5.22
+VENDORARCHEXP = /usr/lib/perl5/
 VENDORLIBEXP = /usr/share/perl5
 
 
@@ -75,9 +75,9 @@ INST_MAN1DIR = blib/man1
 INST_MAN3DIR = blib/man3
 MAN1EXT = 1p
 MAN3EXT = 3pm
-INSTALLDIRS = site
+INSTALLDIRS = vendor
 DESTDIR = 
-PREFIX = $(SITEPREFIX)
+PREFIX = $(VENDORPREFIX)
 PERLPREFIX = /usr
 SITEPREFIX = /usr/local
 VENDORPREFIX = /usr
@@ -91,7 +91,7 @@ INSTALLARCHLIB = /usr/lib/x86_64-linux-gnu/perl/5.22
 DESTINSTALLARCHLIB = $(DESTDIR)$(INSTALLARCHLIB)
 INSTALLSITEARCH = /usr/local/lib/x86_64-linux-gnu/perl/5.22.1
 DESTINSTALLSITEARCH = $(DESTDIR)$(INSTALLSITEARCH)
-INSTALLVENDORARCH = /usr/lib/x86_64-linux-gnu/perl5/5.22
+INSTALLVENDORARCH = /usr/lib/perl5/
 DESTINSTALLVENDORARCH = $(DESTDIR)$(INSTALLVENDORARCH)
 INSTALLBIN = /usr/bin
 DESTINSTALLBIN = $(DESTDIR)$(INSTALLBIN)
@@ -193,7 +193,8 @@ PERL_ARCHIVEDEP    =
 PERL_ARCHIVE_AFTER = 
 
 
-TO_INST_PM = fark.pl \
+TO_INST_PM = check.pl \
+	fark.pl \
 	fark2.pl \
 	farkobs.pl \
 	lib/colocation.mod \
@@ -207,14 +208,19 @@ TO_INST_PM = fark.pl \
 	lib/libmodel.a \
 	lib/libobs.a \
 	lib/libparse.a \
+	lib/libplot.a \
 	lib/model.mod \
 	lib/observations.mod \
 	lib/parse.mod \
+	lib/plot.mod \
 	lib/read_xml_primitives.mod \
+	lib/xmlparse.a \
 	lib/xmlparse.mod \
 	t.pl
 
-PM_TO_BLIB = fark.pl \
+PM_TO_BLIB = check.pl \
+	$(INST_LIB)/check.pl \
+	fark.pl \
 	$(INST_LIB)/fark.pl \
 	fark2.pl \
 	$(INST_LIB)/fark2.pl \
@@ -242,14 +248,20 @@ PM_TO_BLIB = fark.pl \
 	blib/lib/libobs.a \
 	lib/libparse.a \
 	blib/lib/libparse.a \
+	lib/libplot.a \
+	blib/lib/libplot.a \
 	lib/model.mod \
 	blib/lib/model.mod \
 	lib/observations.mod \
 	blib/lib/observations.mod \
 	lib/parse.mod \
 	blib/lib/parse.mod \
+	lib/plot.mod \
+	blib/lib/plot.mod \
 	lib/read_xml_primitives.mod \
 	blib/lib/read_xml_primitives.mod \
+	lib/xmlparse.a \
+	blib/lib/xmlparse.a \
 	lib/xmlparse.mod \
 	blib/lib/xmlparse.mod \
 	t.pl \
@@ -353,8 +365,8 @@ MPOLLUTE =
 # fark might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
-EXTRALIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
-LDLOADLIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+EXTRALIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+LDLOADLIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
 BSLOADLIBS = 
 
 
@@ -782,7 +794,7 @@ distdir : create_distdir distmeta
 
 # --- MakeMaker dist_test section:
 disttest : distdir
-	cd $(DISTVNAME) && $(ABSPERLRUN) Makefile.PL 
+	cd $(DISTVNAME) && $(ABSPERLRUN) Makefile.PL "INSTALLDIRS=vendor" "INSTALLVENDORARCH=/usr/lib/perl5/" "VENDORARCHEXP=/usr/lib/perl5/"
 	cd $(DISTVNAME) && $(MAKE) $(PASTHRU)
 	cd $(DISTVNAME) && $(MAKE) test $(PASTHRU)
 
@@ -1003,7 +1015,7 @@ $(FIRST_MAKEFILE) : Makefile.PL $(CONFIGDEP)
 	-$(NOECHO) $(RM_F) $(MAKEFILE_OLD)
 	-$(NOECHO) $(MV)   $(FIRST_MAKEFILE) $(MAKEFILE_OLD)
 	- $(MAKE) $(USEMAKEFILE) $(MAKEFILE_OLD) clean $(DEV_NULL)
-	$(PERLRUN) Makefile.PL 
+	$(PERLRUN) Makefile.PL "INSTALLDIRS=vendor" "INSTALLVENDORARCH=/usr/lib/perl5/" "VENDORARCHEXP=/usr/lib/perl5/"
 	$(NOECHO) $(ECHO) "==> Your Makefile has been rebuilt. <=="
 	$(NOECHO) $(ECHO) "==> Please rerun the $(MAKE) command.  <=="
 	$(FALSE)
@@ -1024,7 +1036,10 @@ $(MAKE_APERL_FILE) : $(FIRST_MAKEFILE) pm_to_blib
 	$(NOECHO) $(PERLRUNINST) \
 		Makefile.PL DIR="" \
 		MAKEFILE=$(MAKE_APERL_FILE) LINKTYPE=static \
-		MAKEAPERL=1 NORECURS=1 CCCDLFLAGS=
+		MAKEAPERL=1 NORECURS=1 CCCDLFLAGS= \
+		INSTALLDIRS=vendor \
+		INSTALLVENDORARCH=/usr/lib/perl5/ \
+		VENDORARCHEXP=/usr/lib/perl5/
 
 
 # --- MakeMaker test section:
@@ -1076,6 +1091,7 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
+	  check.pl $(INST_LIB)/check.pl \
 	  fark.pl $(INST_LIB)/fark.pl \
 	  fark2.pl $(INST_LIB)/fark2.pl \
 	  farkobs.pl $(INST_LIB)/farkobs.pl \
@@ -1090,10 +1106,13 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  lib/libmodel.a blib/lib/libmodel.a \
 	  lib/libobs.a blib/lib/libobs.a \
 	  lib/libparse.a blib/lib/libparse.a \
+	  lib/libplot.a blib/lib/libplot.a \
 	  lib/model.mod blib/lib/model.mod \
 	  lib/observations.mod blib/lib/observations.mod \
 	  lib/parse.mod blib/lib/parse.mod \
+	  lib/plot.mod blib/lib/plot.mod \
 	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
+	  lib/xmlparse.a blib/lib/xmlparse.a \
 	  lib/xmlparse.mod blib/lib/xmlparse.mod \
 	  t.pl $(INST_LIB)/t.pl 
 	$(NOECHO) $(TOUCH) pm_to_blib

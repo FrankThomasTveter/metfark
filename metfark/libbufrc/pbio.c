@@ -338,7 +338,7 @@ char * namebuff, * modebuff;
       sizeSet = 1;
     }
 
-    if( DEBUG ) printf("PBIO_PBOPEN: file buffer size = %d\n", size);
+    if( DEBUG ) printf("PBIO_PBOPEN: file buffer size = %ld\n", size);
 
     if( fileBuffer[n] == NULL ) {
       fileBuffer[n] = (char *) malloc(size);
@@ -482,20 +482,20 @@ int my_whence = (int) *whence;
 */
     if( DEBUG ) {
       printf("PBIO_PBSEEK: fptable slot = %d\n", *unit);
-      printf("PBIO_PBSEEK: Offset = %d\n", my_offset);
+      printf("PBIO_PBSEEK: Offset = %lld\n", my_offset);
       printf("PBIO_PBSEEK: Type of offset = %d\n", my_whence);
     }
 
     if( my_whence == 2) my_offset = - abs(my_offset);
 
     *iret = fileTell(CURRENT_FILE);
-    if( DEBUG ) printf("PBIO_PBSEEK: current position = %d\n", *iret);
+    if( DEBUG ) printf("PBIO_PBSEEK: current position = %lld\n", *iret);
     if( *iret == my_offset && my_whence == 0)
       *iret = 0;
     else
       *iret = fileSeek(CURRENT_FILE, my_offset, my_whence);
 
-    if( DEBUG ) printf("PBIO_PBSEEK: fileSeek return code = %d\n",*iret);
+    if( DEBUG ) printf("PBIO_PBSEEK: fileSeek return code = %lld\n",*iret);
 
     if( *iret != 0 ) {
       if( ! feof(CURRENT_FILE) ) {
@@ -515,7 +515,7 @@ int my_whence = (int) *whence;
     *iret = fileTell(CURRENT_FILE);
 
     if( DEBUG )
-      printf("PBIO_PBSEEK: byte offset from start of file = %d\n",*iret);
+      printf("PBIO_PBSEEK: byte offset from start of file = %lld\n",*iret);
 
     return;
 
@@ -605,7 +605,7 @@ void pbtell64_(fortint* unit,long long* iret) {
     if( *iret < 0 ) {
       if( DEBUG ) {           /* error in file-handling */
         printf("PBIO_PBTELL64: fptable slot = %d. ", *unit);
-        printf("Error status = %d\n", *iret);
+        printf("Error status = %lld\n", *iret);
       }
       perror("pbtell64");
       *iret = -2;
@@ -613,7 +613,7 @@ void pbtell64_(fortint* unit,long long* iret) {
 
     if( DEBUG ) {
       printf("PBIO_PBTELL: fptable slot = %d. ", *unit);
-      printf("Byte offset from start of file = %d\n",*iret);
+      printf("Byte offset from start of file = %lld\n",*iret);
     }
 
     return;
@@ -1295,7 +1295,7 @@ long offset, loop = 1;
     offset = (fortint) fileTell( CURRENT_FILE);
     if( DEBUG ) {
       printf("PBIO_SIZE: fptable slot = %d. ", *unit);
-      printf("Current file position = %d\n", offset);
+      printf("Current file position = %ld\n", offset);
     }
 
     *plen = BUFFLEN;
@@ -1338,7 +1338,7 @@ long offset, loop = 1;
 //  Put the file pointer back where it started
 */
     if( DEBUG ) {
-      printf("PBIO_SIZE: file pointer set back to: %d\n", offset);
+      printf("PBIO_SIZE: file pointer set back to: %ld\n", offset);
       printf("PBIO_SIZE: Product size = %d\n", *plen);
     }
     offset = (fortint) fileSeek( CURRENT_FILE, offset, SEEK_SET);

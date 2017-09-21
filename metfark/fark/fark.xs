@@ -7,7 +7,6 @@
 void mod_opensession_(int* mid, char* crc250, int* irc, int len1);
 void mod_clearfilestack_(int* mid,char* varname, char* crc250,int* irc, int len1, int len2);
 void mod_cleartargetstack_(int* mid,char* crc250,int* irc, int len1);
-void mod_cleardefaultstack_(int* mid,char* crc250,int* irc, int len1);
 void mod_closesession_(int* mid, char*crc250, int* irc, int len1);
 void mod_setindex_(int* mid, char* varname, char* crc250, int* irc, int len1, int len2, int len3);
 void mod_setindexlimits_(int* mid, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3);
@@ -19,30 +18,51 @@ void mod_peekfilelen_(int* mid,int* maxrep,char* crc250,int* irc, int len1);
 void mod_popfile_(int* mid,char* path250,char* crc250,int* irc, int len1,int len2);
 void mod_pushfile_(int* mid,char* path,char* crc250,int* irc, int len1,int len2);
 void mod_pushtarget_(int* mid,char* trg,char* var,char* min,char* max, char* crc250,int* irc, int len1,int len2,int len3,int len4,int len5);
-void mod_adddefault_(int* mid,char* trg,char* val, char* crc250,int* irc, int len1,int len2,int len3);
-void mod_pushdefault_(int* mid,char* crc250,int* irc, int len1);
-void mod_addexpression_(int* mid, char* modName, char* obsExpr, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
 
-void obs_opensession_(int* bid,char* crc250,int* irc, int len1);
-void obs_clearfilestack_(int* bid,char* crc250,int* irc, int len1);
-void obs_cleartargetstack_(int* bid,char* crc250,int* irc, int len1);
-void obs_closesession_(int* bid,char* crc250,int* irc, int len1);
-void obs_loadcache_(int* bid,char* path,char* crc250,int* irc, int len1,int len2);
-void obs_makecache_(int* bid,char* path,char* crc250,int* irc, int len1,int len2);
-void obs_peekfile_(int* bid,int* maxrep,int* nrep,char* rep250,char* crc250,int* irc,int len1,int len2);
-void obs_peekfilelen_(int* bid,int* maxrep,char* crc250,int* irc, int len1);
-void obs_popfile_(int* bid,char* path250,char* crc250,int* irc, int len1,int len2);
-void obs_pushfile_(int* bid,char* path,char* crc250,int* irc, int len1,int len2);
-void obs_pushtarget_(int* bid,char* trg,char* pos,char* descr,char* info,char* min,char* max, char* crc250,int* irc, int len1,int len2,int len3,int len4,int len5,int len6,int len7);
-void obs_settablepath_(int* bid,char* path250,char* crc250,int* irc, int len1,int len2);
-void obs_setindex_(int* bid,char* trg80,char* exp250, char* crc250,int* irc, int len1,int len2,int len3);
-void obs_setindexlimits_(int* bid,char* s25,char* e25,char* crc250,int* irc, int len1,int len2,int len3);
-void obs_setbufrtype_(int* bid,int* bufrType, int* subType, char* crc250,int* irc, int len1);
+void obs_opensession_(int* oid,char* crc250,int* irc, int len1);
+void obs_clearfilestack_(int* oid,char* crc250,int* irc, int len1);
+void obs_cleartargetstack_(int* oid,char* crc250,int* irc, int len1);
+void obs_closesession_(int* oid,char* crc250,int* irc, int len1);
+void obs_loadcache_(int* oid,char* path,char* crc250,int* irc, int len1,int len2);
+void obs_makecache_(int* oid,char* path,char* crc250,int* irc, int len1,int len2);
+void obs_peekfile_(int* oid,int* maxrep,int* nrep,char* rep250,char* crc250,int* irc,int len1,int len2);
+void obs_peekfilelen_(int* oid,int* maxrep,char* crc250,int* irc, int len1);
+void obs_popfile_(int* oid,char* path250,char* crc250,int* irc, int len1,int len2);
+void obs_pushfile_(int* oid,char* path,char* crc250,int* irc, int len1,int len2);
+void obs_pushtarget_(int* oid,char* trg,char* pos,char* descr,char* info,char* min,char* max, char* crc250,int* irc, int len1,int len2,int len3,int len4,int len5,int len6,int len7);
+void obs_settablepath_(int* oid,char* path250,char* crc250,int* irc, int len1,int len2);
+void obs_setindex_(int* oid,char* trg80,char* exp250, char* crc250,int* irc, int len1,int len2,int len3);
+void obs_setindexlimits_(int* oid,char* s25,char* e25,char* crc250,int* irc, int len1,int len2,int len3);
+void obs_setbufrtype_(int* oid,int* bufrType, int* subType, char* crc250,int* irc, int len1);
 
 void col_opensession_(int* cid, char* crc250, int* irc, int len1);
-void col_makexml_(int* cid, int* mid, int* bid, char* crc250, int* irc, int len1);
 void col_closesession_(int* cid, char* crc250, int* irc, int len1);
 void col_expression_(char* exp250, char* crc250, int* irc, int len1, int len2);
+void col_setmodcache_(int* cid, char* path250, char* crc250, int* irc, int len1, int len2);
+void col_setobscache_(int* cid, char* path250, char* crc250, int* irc, int len1, int len2);
+void col_pushdefault_(int* mid,char* crc250,int* irc, int len1);
+void col_cleardefaultstack_(int* mid,char* crc250,int* irc, int len1);
+void col_adddefault_(int* mid,char* trg,char* val, char* crc250,int* irc, int len1,int len2,int len3);
+void col_addmatch_(int* mid, char* modName, char* obsExpr, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
+void col_clearmatchstack_(int* mid, char* crc250, int* irc, int len1, int len2);
+
+void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
+void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
+void col_setfilter_ (int* cid, char* filter250,  char* crc250, int* irc, int len1, int len2);
+void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,char*  crc250, int* irc, int len1, int len2, int len3);
+void plo_makegraphics_(int* pid, char* tab250, char* gra250, char* crc250, int* irc, int len1, int len2, int len3);
+void plo_settype_(int* pid, char* type250, char* crc250, int* irc, int len1, int len2);
+void plo_clearattrstack_(int* pid, char* crc250, int* irc, int len1, int len2);
+void plo_pushattr_(int* pid, char* name250, char* value250, char* crc250, int* irc, int len1, int len2);
+void plo_clearsetstack_(int* pid, char* crc250, int* irc, int len1, int len2);
+void plo_pushset_(int* pid, int* cid, int* mid, int* oid, char* name250, char* x250, char* y250, 
+		  char* legend250, char* crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
+void plo_settablefile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
+void plo_gettablefile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
+void plo_setgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
+void plo_getgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
+void plo_strepfiles_(int* pid, char* crc250, int* irc, int len1);
+
 MODULE = fark		PACKAGE = fark
 
 #####################################################################################
@@ -71,9 +91,9 @@ xs_openModelSession();
          strcpy(crc250,"No error detected.");
       }
       EXTEND(SP, 3);
-      PUSHs(sv_2mortal(newSViv(mid)));
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSViv(mid)));
       free(crc250);
 
 #
@@ -125,9 +145,9 @@ xs_openObsSession();
          strcpy(crc250,"No error detected.");
       }
       EXTEND(SP, 3);
-      PUSHs(sv_2mortal(newSViv(sid)));
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSViv(sid)));
       free(crc250);
 
 #
@@ -177,9 +197,9 @@ xs_openColocSession();
          strcpy(crc250,"No error detected.");
       }
       EXTEND(SP, 3);
-      PUSHs(sv_2mortal(newSViv(cid)));
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSViv(cid)));
       free(crc250);
 
 #
@@ -228,9 +248,9 @@ void xs_openPlotSession();
          strcpy(crc250,"No error detected.");
       }
       EXTEND(SP, 3);
-      PUSHs(sv_2mortal(newSViv(pid)));
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSViv(pid)));
       free(crc250);
 
 #
@@ -509,7 +529,7 @@ xs_clearModelDefaultStack(int sid);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      mod_cleardefaultstack_(&sid,crc250, &irc, 250);
+      col_cleardefaultstack_(&sid,crc250, &irc, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -654,10 +674,7 @@ xs_popModelFile(int sid, ...);
 
 #
 #  "setModelIndex"  sets the model index
-#      (string) modelTargetName
 #      (string) modelVariable
-#      (string) min
-#      (string) max
 #   Return array:
 #      (integer) error return code (0=ok).
 #      (string)  error return message
@@ -764,7 +781,7 @@ xs_pushModelTarget(int mid, char *modName, char *var, char *vmin, char *vmax);
 #      (string)  error return message
 
 void
-xs_addModelDefault(int mid, char *modName, char *val);
+xs_addModelDefault(int cid, char *modName, char *val);
     PREINIT:
       int  irc;
       char *crc250;
@@ -778,7 +795,7 @@ xs_addModelDefault(int mid, char *modName, char *val);
       strcpy(crc250,"");
       strcpy(m80,modName);
       strcpy(v80,val);
-      mod_adddefault_(&mid, m80, v80, crc250, &irc, 80,80,250);
+      col_adddefault_(&cid, m80, v80, crc250, &irc, 80,80,250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -797,7 +814,7 @@ xs_addModelDefault(int mid, char *modName, char *val);
 #      (string)  error return message
 
 void
-xs_pushModelDefault(int mid);
+xs_pushModelDefault(int cid);
     PREINIT:
       int  irc;
       char *crc250;
@@ -805,7 +822,7 @@ xs_pushModelDefault(int mid);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      mod_pushdefault_(&mid, crc250, &irc, 250);
+      col_pushdefault_(&cid, crc250, &irc, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -823,7 +840,7 @@ xs_pushModelDefault(int mid);
 #      (string)  error return message
 
 void
-xs_clearMatchRuleStack(int mid);
+xs_clearMatchRuleStack(int cid);
     PREINIT:
       int  irc;
       char *crc250;
@@ -831,7 +848,7 @@ xs_clearMatchRuleStack(int mid);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      mod_clearexpressionstack_(&mid,crc250, &irc, 250, 250);
+      col_clearmatchstack_(&cid,crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
@@ -850,7 +867,7 @@ xs_clearMatchRuleStack(int mid);
 #      (string)  error return message
 
 void
-xs_addMatchRule(int mid, char *modName, char *obsExpr, char *vmin, char *vmax);
+xs_addMatchRule(int cid, char *modName, char *obsExpr, char *vmin, char *vmax);
     PREINIT:
       int  irc;
       char *crc250;
@@ -870,7 +887,7 @@ xs_addMatchRule(int mid, char *modName, char *obsExpr, char *vmin, char *vmax);
       strcpy(o250,obsExpr);
       strcpy(l80,vmin);
       strcpy(u80,vmax);
-      mod_addexpression_(&mid, m80, o250, l80, u80,crc250, &irc, 80,250,80,80,250);
+      col_addmatch_(&cid, m80, o250, l80, u80,crc250, &irc, 80,250,80,80,250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -893,7 +910,7 @@ xs_addMatchRule(int mid, char *modName, char *obsExpr, char *vmin, char *vmax);
 #      (string)  error return message
 
 void
-xs_setObsTablePath(int bid, char *path);
+xs_setObsTablePath(int oid, char *path);
     PREINIT:
       int  irc;
       char *path250;
@@ -904,7 +921,7 @@ xs_setObsTablePath(int bid, char *path);
       path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(path250,path);
-      obs_settablepath_(&bid, path250, crc250, &irc, 250, 250);
+      obs_settablepath_(&oid, path250, crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -922,7 +939,7 @@ xs_setObsTablePath(int bid, char *path);
 #      (string)  error return message
 
 void
-xs_clearObsFileStack(int bid);
+xs_clearObsFileStack(int oid);
     PREINIT:
       int  irc;
       char *crc250;
@@ -930,7 +947,7 @@ xs_clearObsFileStack(int bid);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      obs_clearfilestack_(&bid,crc250, &irc, 250);
+      obs_clearfilestack_(&oid,crc250, &irc, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -949,7 +966,7 @@ xs_clearObsFileStack(int bid);
 #
 
 void
-xs_pushObsFile(int bid, ...);
+xs_pushObsFile(int oid, ...);
     PREINIT:
       int  irc;
       char *crc250;
@@ -966,7 +983,7 @@ xs_pushObsFile(int bid, ...);
          path= (char *)SvPV_nolen(ST(i));
          strcpy(path250,path);
 	 irc2=0;
-         obs_pushfile_(&bid, path250, crc250, &irc2, 250, 250);
+         obs_pushfile_(&oid, path250, crc250, &irc2, 250, 250);
          if(irc2 != 0) {
 	    irc=irc2;
 	    i=items;
@@ -991,7 +1008,7 @@ xs_pushObsFile(int bid, ...);
 #
 
 void
-xs_peekObsFile(int bid);
+xs_peekObsFile(int oid);
     PREINIT:
       int maxrep;
       int nrep;
@@ -1003,11 +1020,11 @@ xs_peekObsFile(int bid);
     PPCODE:
 	irc=0;
 	crc250 = calloc(sizeof(char), 251);
-	obs_peekfilelen_(&bid,&maxrep,crc250,&irc,250);
+	obs_peekfilelen_(&oid,&maxrep,crc250,&irc,250);
         nrep=0;
         if (irc == 0) {
 	  rep250 = calloc(sizeof(char), lenr*maxrep+1);
-	  obs_peekfile_(&bid,&maxrep,&nrep,rep250,crc250,&irc,250,250);
+	  obs_peekfile_(&oid,&maxrep,&nrep,rep250,crc250,&irc,250,250);
 	} else {
 	  rep250 = calloc(sizeof(char),1);
         }
@@ -1040,7 +1057,7 @@ xs_peekObsFile(int bid);
 #
 
 void
-xs_popObsFile(int bid, ...);
+xs_popObsFile(int oid, ...);
     INIT:
       int  irc;
       char *crc250;
@@ -1057,7 +1074,7 @@ xs_popObsFile(int bid, ...);
          path= (char *)SvPV_nolen(ST(i));
          strcpy(path250,path);
 	 irc2=0;
-         obs_popfile_(&bid, path250, crc250, &irc2, 250, 250);
+         obs_popfile_(&oid, path250, crc250, &irc2, 250, 250);
          if(irc2 != 0) {
 	    irc=irc2;
          }
@@ -1226,50 +1243,6 @@ xs_setObsBufrType(int sid, int bufrType, int subType);
 
 
 #
-#  "clearColocStack" clears the colocation stack.
-#   Return array:
-#      (integer) error return code (0=ok).
-#      (string)  error return message
-#
-
-void
-xs_clearColocStack(int cid);
-    PREINIT:
-      int  irc;
-      char *crc250;
-    PPCODE:
-        irc=0;
-        crc250 = calloc(sizeof(char), 250);
-        strcpy(crc250,"");
-        col_makexml_(&cid,crc250,&irc,250);
-        EXTEND(SP, 2);
-        PUSHs(sv_2mortal(newSViv(irc)));
-        PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-        free(crc250);
-
-#
-#  "colocXML" gets the next observation array
-#   Return array:
-#      (integer) error return code (0=ok).
-#      (string)  error return message
-#
-
-void
-xs_colocXML(int cid, int mid, int bid);
-    PREINIT:
-      int  irc;
-      char *crc250;
-    PPCODE:
-        irc=0;
-        crc250 = calloc(sizeof(char), 250);
-        strcpy(crc250,"");
-        col_makexml_(&cid,&mid,&bid,crc250,&irc,250);
-        EXTEND(SP, 2);
-        PUSHs(sv_2mortal(newSViv(irc)));
-        PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-        free(crc250);
-
-#
 #  "expression" evaluates expression
 #      (string) expression.
 #   Return array:
@@ -1295,9 +1268,9 @@ xs_expression(char *exp);
       };
       #printf("fark.xs Result: %s\n",exp250); 
       EXTEND(SP, 3);
-      PUSHs(sv_2mortal(newSVpv(exp250,strlen(exp250))));
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSVpv(exp250,strlen(exp250))));
       free(exp250);
       free(crc250);
 
@@ -1311,7 +1284,7 @@ xs_expression(char *exp);
 #      (string)  error return message
 
 void
-xs_setColocFilter(char *filter);
+xs_setColocFilter(int cid, char *filter);
     PREINIT:
       char *filter250;
       int  irc;
@@ -1322,39 +1295,15 @@ xs_setColocFilter(char *filter);
       filter250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(filter250,filter);
-      col_setFilter_(filter250, crc250, &irc, 250, 250);
+      col_setfilter_(&cid,filter250, crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
-      EXTEND(SP, 3);
-      PUSHs(sv_2mortal(newSVpv(filter250,strlen(filter250))));
+      EXTEND(SP, 2);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(filter250);
       free(crc250);
-
-
-#
-#  "colocXML" gets the next observation array
-#   Return array:
-#      (integer) error return code (0=ok).
-#      (string)  error return message
-#
-
-void
-xs_colocXML(int cid, int mid, int bid);
-    PREINIT:
-      int  irc;
-      char *crc250;
-    PPCODE:
-        irc=0;
-        crc250 = calloc(sizeof(char), 250);
-        strcpy(crc250,"");
-        col_makexml_(&cid,&mid,&bid,crc250,&irc,250);
-        EXTEND(SP, 2);
-        PUSHs(sv_2mortal(newSViv(irc)));
-        PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-        free(crc250);
 
 #
 #  "makePlotTable" defines graphics output file path
@@ -1369,29 +1318,29 @@ xs_colocXML(int cid, int mid, int bid);
 void
 xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph);
     PREINIT:
-      char *table250;
-      char *graph250;
+      char *tab250;
+      char *gra250;
       int  irc;
       char *crc250;
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      table250 = calloc(sizeof(char), 250);
-      graph250 = calloc(sizeof(char), 250);
+      tab250 = calloc(sizeof(char), 250);
+      gra250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      strcpy(table250,table);
-      strcpy(graph250,graph);
-      plo_makeTable_(&pid, &cid, &mid, &oid, table250, graph250, crc250, &irc, 250, 250, 250);
+      strcpy(tab250,table);
+      strcpy(gra250,graph);
+      plo_maketable_(&pid, &cid, &mid, &oid, tab250, gra250, crc250, &irc, 250, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
       EXTEND(SP, 4);
-      PUSHs(sv_2mortal(newSVpv(table250,strlen(table250))));
-      PUSHs(sv_2mortal(newSVpv(graph250,strlen(graph250))));
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-      free(table250);
-      free(graph250);
+      PUSHs(sv_2mortal(newSVpv(tab250,strlen(tab250))));
+      PUSHs(sv_2mortal(newSVpv(gra250,strlen(gra250))));
+      free(tab250);
+      free(gra250);
       free(crc250);
 
 #
@@ -1407,27 +1356,27 @@ xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph);
 void
 xs_makePlotGraphics(int pid, char *table, char *graph);
     PREINIT:
-      char *table250;
-      char *graph250;
+      char *tab250;
+      char *gra250;
       int  irc;
       char *crc250;
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      table250 = calloc(sizeof(char), 250);
-      graph250 = calloc(sizeof(char), 250);
+      tab250 = calloc(sizeof(char), 250);
+      gra250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      strcpy(table250,table);
-      strcpy(graph250,graph);
-      plo_makeGraphics_($pid, table250, graph250, crc250, &irc, 250, 250, 250);
+      strcpy(tab250,table);
+      strcpy(gra250,graph);
+      plo_makegraphics_(&pid, tab250, gra250, crc250, &irc, 250, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
       EXTEND(SP, 2);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-      free(table250);
-      free(graph250);
+      free(tab250);
+      free(gra250);
       free(crc250);
 
 #
@@ -1457,6 +1406,148 @@ xs_setPlotType(int pid, char *type);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(type250);
+      free(crc250);
+
+#
+#  "setPlotTableFile" set table file
+#      (string) file name.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setPlotTableFile(int pid, char *fn);
+    PREINIT:
+      char *fn250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(fn250,fn);
+      plo_settablefile_(&pid, fn250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(fn250);
+      free(crc250);
+
+#
+#  "getPlotTableFile" set table file
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+#      (string) file name.
+
+void
+xs_getPlotTableFile(int pid);
+    PREINIT:
+      char *fn250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(fn250,"");
+      plo_gettablefile_(&pid, fn250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 3);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSVpv(fn250,strlen(fn250))));
+      free(fn250);
+      free(crc250);
+
+#
+#  "setPlotGraphicsFile" set graphics file
+#      (string) file name.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setPlotGraphicsFile(int pid, char *fn);
+    PREINIT:
+      char *fn250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(fn250,fn);
+      plo_setgraphicsfile_(&pid, fn250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(fn250);
+      free(crc250);
+
+#
+#  "getPlotGraphicsFile" set graphics file
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+#      (string) file name.
+
+void
+xs_getPlotGraphicsFile(int pid);
+    PREINIT:
+      char *fn250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(fn250,"");
+      plo_getgraphicsfile_(&pid, fn250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 3);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSVpv(fn250,strlen(fn250))));
+      free(fn250);
+      free(crc250);
+
+#
+#  "strepPlotFiles" replace wildcards in files
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_strepPlotFiles(int pid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      plo_strepfiles_(&pid, crc250, &irc, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
 
 #

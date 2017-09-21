@@ -64,6 +64,7 @@
 #	 MIND the ORDER!)
 #
 LIBS = ../libmodel/libmodel.a \
+       ../libobs/libobs.a \
        ../libgenc/libgenc.a
 #
 # Include Directory

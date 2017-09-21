@@ -10,11 +10,13 @@ lib/libbufrc.a
 lib/libmodel.a
 lib/libobs.a
 lib/libcoloc.a
+lib/libplot.a
 lib/libgenc.a
 lib/parse.mod
 lib/model.mod
 lib/observations.mod
 lib/coloc.mod
+lib/plot.mod
 lib/farkdata.pm
 lib/farkdir.pm
 lib/fark.pm
