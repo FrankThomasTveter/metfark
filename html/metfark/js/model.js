@@ -3,7 +3,7 @@ model_config = { "default.cfg" : {filterFile: ".*\.nc",
 				  filterDir: "/opdata",
 				  hits : "?",
 				  index : "",
-				  variables : [["def",""]],
+				  variables : {def:""},
 				  files : [],
 				  stack : "",
 				  password: ""
@@ -32,8 +32,8 @@ function model_getConfigFile() {
 };
 function model_setArray(parameter,value) {
     var file=model_getConfigFile();
-    //console.log("File:",file,parameter,model_config[file]);
-    model_config[file][parameter]=value;
+    console.log("File:",file,parameter,model_config[file],value);
+    model_config[file][parameter]=decodeURI(value);
 };
 function model_show() {
     var file=model_getConfigFile();
@@ -71,10 +71,8 @@ function model_saveConfigFile() {
 	stack=stack+"|"+sfile;
     };
     var variables="";
-    var len=model_config[file]["variables"].length;
-    for (var ii=0; ii<len;ii++) {
-	var variable=model_config[file]["variables"][ii][0];
-	var dims=model_config[file]["variables"][ii][1]//"";
+    for (var variable in model_config[file]["variables"]) {
+	var dims=model_config[file]["variables"][variable]//"";
 	variables=variables+"|"+variable+"~"+dims;
     };
     console.log("Variables:",variables);

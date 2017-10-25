@@ -236,6 +236,7 @@ sub saveColoc {
     my $cls=$param->{type}->[0] || "";
     my $password     = ($param->{password}[0] // "");
     my $host         = ($param->{host}[0] // "localhost");
+    my $xml          = ($param->{xml}[0] // "");
     my $filter       = ($param->{filter}[0] // "");
     my $modelFile    = ($param->{modelFile}[0] // "");
     my $modelStart   = ($param->{modelStart}[0] // "");
@@ -281,6 +282,7 @@ sub saveColoc {
 	$node->setAttribute("password",    $password);
 	$node->setAttribute("file",        $file);
 	$node->setAttribute("host",        $host);
+	$node->setAttribute("xml",         $xml);
 	$node->setAttribute("filter",      $filter);
 	$node->setAttribute("modelFile",   $modelFile);
 	$node->setAttribute("modelStart",  $modelStart);
@@ -504,6 +506,7 @@ sub saveAuto {
     my $password=($param->{password}[0] // "");
     my $modelFiles=($param->{modelFiles}[0] // "");
     my $obsFiles=($param->{obsFiles}[0] // "");
+    my $colocFiles=($param->{colocFiles}[0] // "");
     my $plotFiles=($param->{plotFiles}[0] // "");
     if (! defined ($param->{root}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{root}->[0]||"";
@@ -573,6 +576,28 @@ sub saveAuto {
 		    my $len=$#items;
 		    if ($len == 3) {
 			my $parent = XML::LibXML::Element->new( 'obs' );
+			$parent->setAttribute("file",$items[0]);
+			$parent->setAttribute("last",$items[1]);
+			$parent->setAttribute("info",$items[2]);
+			$parent->setAttribute("auto",$items[3]);
+			$node->addChild( $parent );
+		    }
+		}
+	    }
+	}
+	# remove plot nodes...
+	@oldNodes=$node->findnodes("coloc");
+	foreach my $oldNode (@oldNodes) {
+	    $node->removeChild($oldNode);
+	}
+	@lines = split (/\|/, $colocFiles,-1);
+	if (@lines) { 
+	    foreach my $line (@lines) {
+		if ($line ne "") {
+		    my @items=split (/\~/, $line,-1);
+		    my $len=$#items;
+		    if ($len == 3) {
+			my $parent = XML::LibXML::Element->new( 'coloc' );
 			$parent->setAttribute("file",$items[0]);
 			$parent->setAttribute("last",$items[1]);
 			$parent->setAttribute("info",$items[2]);

@@ -71,7 +71,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2017-09-21" "perl v5.22.1" "User Contributed Perl Documentation"
+.TH fark 3pm "2017-10-25" "perl v5.22.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -184,12 +184,14 @@ Arguments:
 .PD 0
 .IP "(string) file mask." 4
 .IX Item "(string) file mask."
+.IP "(int) test flag (1 or 0), 1= only check input" 4
+.IX Item "(int) test flag (1 or 0), 1= only check input"
 .PD
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-\&\f(CW$fark\fR\->updateModelRegister($xmlfile,$modregfile,\*(L"/opdata/arome/\*(R", \*(L".*\e.nc\*(R");
+\&\f(CW$fark\fR\->updateModelRegister($xmlfile,$modregfile,\*(L"/opdata/arome/\*(R", \*(L".*\e.nc\*(R",0);
 .SS "makeModelCache"
 .IX Subsection "makeModelCache"
 makeModelCache \- makes a cache of the model-file-stack in the session.
@@ -197,11 +199,15 @@ makeModelCache \- makes a cache of the model-file-stack in the session.
 Arguments:
 .IP "(string) path to model cache file." 4
 .IX Item "(string) path to model cache file."
+.PD 0
+.IP "(int) test flag (1 or 0), 1= only check input" 4
+.IX Item "(int) test flag (1 or 0), 1= only check input"
+.PD
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-\&\f(CW$fark\fR\->makeModelCache($modfile);
+\&\f(CW$fark\fR\->makeModelCache($modfile,0);
 .SS "loadModelCache"
 .IX Subsection "loadModelCache"
 loadModelCache \- loads a cache of the model-file-stack created by \*(L"makeModelCache\*(R".
@@ -286,17 +292,17 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->pushModelTarget(\*(L"modeltime\*(R",\*(L"time\*(R","\*(L",\*(R"");
-.SS "clearModelDefaultStack"
-.IX Subsection "clearModelDefaultStack"
-clearModelDefaultStack \-  clears the model default stack. If the model default is used, only models with valid defaults are visible to the system.
+.SS "clearDefaultStack"
+.IX Subsection "clearDefaultStack"
+clearDefaultStack \-  clears the model default stack. If the model default is used, only models with valid defaults are visible to the system.
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-\&\f(CW$fark\fR\->\fIclearModelDefaultStack()\fR;
-.SS "addModelDefault"
-.IX Subsection "addModelDefault"
-addModelDefault \- defines model default target value (in the absence of observations).
+\&\f(CW$fark\fR\->\fIclearDefaultStack()\fR;
+.SS "addDefault"
+.IX Subsection "addDefault"
+addDefault \- defines model default target value (in the absence of observations).
 .PP
 Arguments:
 .IP "(string) name" 4
@@ -309,7 +315,7 @@ Arguments:
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-\&\f(CW$fark\fR\->addModelDefault(\*(L"modeltime\*(R",\*(L"12220.0\*(R");
+\&\f(CW$fark\fR\->addDefault(\*(L"modeltime\*(R",\*(L"12220.0\*(R");
 .SS "pushModelDefault"
 .IX Subsection "pushModelDefault"
 pushModelDefault \- pushes the \*(L"added\*(R" default values to the stack.
@@ -407,6 +413,10 @@ makeObservationCache \- makes a cache of the observation-file-stacks in the sess
 Arguments:
 .IP "(string) path to obs cache file." 4
 .IX Item "(string) path to obs cache file."
+.PD 0
+.IP "(int) test flag (1 or 0), 1= only check input" 4
+.IX Item "(int) test flag (1 or 0), 1= only check input"
+.PD
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
@@ -417,8 +427,8 @@ Arguments:
 loadObservationCache \- loads a cache of the observation-file-stack created by \*(L"makeObservationCache\*(R".
 .PP
 Arguments:
-.IP "(string) parh to obs cache file (optional in repeated calls)." 4
-.IX Item "(string) parh to obs cache file (optional in repeated calls)."
+.IP "(string) path to obs cache file (optional in repeated calls)." 4
+.IX Item "(string) path to obs cache file (optional in repeated calls)."
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
@@ -529,9 +539,9 @@ clearMatchRuleStack \- clear match-rule expressions.
 .Vb 1
 \& $fark\->clearMatchRuleStack();
 .Ve
-.SS "addMatchRule"
-.IX Subsection "addMatchRule"
-addMatchRule \- add a match-rule to the stack
+.SS "pushMatchRule"
+.IX Subsection "pushMatchRule"
+pushMatchRule \- add a match-rule to the stack
 .PP
 Arguments:
 .IP "(string) model targetName" 4
@@ -549,7 +559,17 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 .Vb 1
-\& $fark\->addMatchRule("latitude_model","180.0*latitude_obs/3.14",0,90.0);
+\& $fark\->pushMatchRule("latitude_model","180.0*latitude_obs/3.14",0,90.0);
+.Ve
+.SS "makeMatchList"
+.IX Subsection "makeMatchList"
+makeMatchList \- make match list from match stack
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\& $fark\->makeMatchList();
 .Ve
 .SS "setColocFilter"
 .IX Subsection "setColocFilter"
@@ -565,16 +585,19 @@ Arguments:
 .Vb 1
 \& $fark\->setColocFilter("member(obs_id,1047,1049)");
 .Ve
-.SS "colocXML"
-.IX Subsection "colocXML"
-colocXML \- slice model and observation files, dumping resulting \s-1XML\s0 to standard out...
+.SS "makeColocXML"
+.IX Subsection "makeColocXML"
+makeColocXML \- make \s-1XML\s0 file...
 .PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
+Arguments:
+.IP "(string) Path to \s-1XML\s0 file (with wildcards \s-1YYYY,MM,DD,HH,MI,SS\s0 for timestamp)" 4
+.IX Item "(string) Path to XML file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)"
+.PD 0
+.IP "(int) test flag (1 or 0), 1= only check input" 4
+.IX Item "(int) test flag (1 or 0), 1= only check input"
+.PD
 .PP
-.Vb 1
-\& $fark\->colocXML();
-.Ve
+my \f(CW$xmlFile\fR = \f(CW$fark\fR\->makeColocXML($xmlPattern);
 .SH "PLOT FUNCTIONS"
 .IX Header "PLOT FUNCTIONS"
 .SS "setPlotType"
@@ -706,10 +729,20 @@ Arguments:xs
 .IX Subsection "makePlotTable"
 makePlotTable \- make table file, return name of plot graphics file...
 .PP
+Arguments:
+.IP "(string) Path to table file (with wildcards \s-1YYYY,MM,DD,HH,MI,SS\s0 for timestamp)" 4
+.IX Item "(string) Path to table file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)"
+.PD 0
+.IP "(string) Path to plot file (with wildcards \s-1YYYY,MM,DD,HH,MI,SS\s0 for timestamp)" 4
+.IX Item "(string) Path to plot file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)"
+.IP "(int) test flag (1 or 0), 1= only check input" 4
+.IX Item "(int) test flag (1 or 0), 1= only check input"
+.PD
+.PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-my ($tablefile,$plotfile) = \f(CW$fark\fR\->makePlotTable($tablepattern,$plotpattern);
+my ($tablefile,$plotfile) = \f(CW$fark\fR\->makePlotTable($tablepattern,$plotpattern,0);
 .SS "makePlotGraphics"
 .IX Subsection "makePlotGraphics"
 makePlotGraphics \- generate plot graphics.
@@ -720,6 +753,8 @@ Arguments:
 .PD 0
 .IP "(string) name of graphics output plot file." 4
 .IX Item "(string) name of graphics output plot file."
+.IP "(int) test flag (1 or 0), 1= only check input" 4
+.IX Item "(int) test flag (1 or 0), 1= only check input"
 .PD
 .PP
 \s-1EXAMPLE\s0
@@ -760,3 +795,9 @@ Frank Thomas Tveter, <f.t.tveter@met.no>
 \& ncdump \-h
 \& ncview
 .Ve
+.SH "POD ERRORS"
+.IX Header "POD ERRORS"
+Hey! \fBThe above document had some coding errors, which are explained below:\fR
+.IP "Around line 1199:" 4
+.IX Item "Around line 1199:"
+=back doesn't take any parameters, but you said =back  =head4 \s-1EXAMPLE\s0

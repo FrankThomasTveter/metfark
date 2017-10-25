@@ -222,7 +222,7 @@
 	    <tr>
 	      <td style="white-space: nowrap;"><em>Definition file:</em></td>
 	      <td class="fill" width="100%">
-		<input id="colocConfigFile" type="text" value="" style="width:100%" onblur=""/> 
+		<input id="colocConfigFile" type="text" value="" style="width:100%" onblur="coloc_setConfigFile(this.value);coloc_show();"/> 
 		<div id="colocConfigFileDropdown" class="dropdown-content"/>
 	      </td>
 	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('colocConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
@@ -241,6 +241,14 @@
 		<div id="colocObsConfigFileDropdown" class="dropdown-content"/>
 	      </td>
 	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('colocObsConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
+	    </tr>
+	    <tr>
+	      <td style="white-space: nowrap;">Output XML file:</td>
+	      <td class="fill" width="100%">
+		<input id="colocXML" type="text" value="/elysium/data/default/YYYYMMDDHH.xml" onblur="coloc_setArray('xml',this.value);"/> 
+		<div id="colocXMLDropdown" class="dropdown-content"/>
+	      </td>
+	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('colocXML',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
 	    </tr>
 	  </table>
 	  <table width="100%">
@@ -509,6 +517,7 @@
 	      <th width="200px">Last</th>
 	      <th width="200px">Info</th>
 	      <th style="min-width:50px;width:50px" align="center">Auto</th>
+	      <th style="min-width:50px;width:50px" align="center">Test</th>
 	      <th style="min-width:50px;width:50px" align="center">Run</th>
 	    </tr>
 	    <tr id="newlineAuto">
@@ -527,7 +536,9 @@
 	      <td id="autoLastInfo"></td>
 	      <td style="min-width:30px;width:30px" align="center"><input type="checkbox" id="autoModCheck" onchange="auto_setCheckbox(this,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value);"/></td>
 	      <td style="min-width:30px;width:30px" align="center">
-		<button style="background-color:yellow" onclick="auto_autoNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)">&#9762</button></td>
+		<button class="test" onclick="auto_testNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)">&#9762</button></td>
+	      <td style="min-width:30px;width:30px" align="center">
+		<button class="run" onclick="auto_runNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)">&#9762</button></td>
 	    </tr>
 	  </table>
 	  <table width="100%">

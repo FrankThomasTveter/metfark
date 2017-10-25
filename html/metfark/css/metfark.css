@@ -65,6 +65,25 @@ text-align: left;
 button:hover, button:focus {
     background-color: #0cf;
 }
+.test {
+    background-color: #eef;
+}
+.test:hover, .test:focus {
+    background-color: red;
+}
+.run {
+    background-color: yellow;
+}
+.run:hover, .run:focus {
+    background-color: red;
+}
+.shaded {
+    background-color: #ddf;
+    width:100%;
+}
+.shaded:hover, .shaded:focus {
+    background-color: #0df;
+}
 .dropdown {
 position: relative;
 display: inline-block;

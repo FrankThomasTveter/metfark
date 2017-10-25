@@ -60,20 +60,27 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",
 		  output => {"/lustre/storeA/"    => "rw",
 			     "/lustre/storeB/"    => "rw",
 			     "/elysium/"          => "rw" }, 
-		  obs       => {"/elysium/metfark/obs/"       => "rw" },
-		  obs_use   => {"/elysium/metfark/use/obs/"   => "rw" },
-		  obs_cache => {"/elysium/metfark/cch/obs/"   => "rw" },
-		  obs_reg   => {"/elysium/metfark/reg/obs/"   => "rw" },
-		  obs_old   => {"/elysium/metfark/old/obs/"   => "rw" },
 		  model       => {"/elysium/metfark/mod/"     => "rw" },
 		  model_use   => {"/elysium/metfark/use/mod/" => "rw" },
 		  model_cache => {"/elysium/metfark/cch/mod/" => "rw" },
 		  model_reg   => {"/elysium/metfark/reg/mod/" => "rw" },
 		  model_old   => {"/elysium/metfark/old/mod/" => "rw" },
-		  coloc =>     {"/elysium/metfark/coloc/"   => "rw" },
+		  model_log   => {"/elysium/metfark/log/mod/" => "rw" },
+		  obs       => {"/elysium/metfark/obs/"       => "rw" },
+		  obs_use   => {"/elysium/metfark/use/obs/"   => "rw" },
+		  obs_cache => {"/elysium/metfark/cch/obs/"   => "rw" },
+		  obs_reg   => {"/elysium/metfark/reg/obs/"   => "rw" },
+		  obs_old   => {"/elysium/metfark/old/obs/"   => "rw" },
+		  obs_log   => {"/elysium/metfark/log/obs/"   => "rw" },
+		  coloc       => {"/elysium/metfark/coloc/"   => "rw" },
+		  coloc_use   => {"/elysium/metfark/use/coloc/"   => "rw" },
+		  coloc_reg   => {"/elysium/metfark/reg/coloc/"   => "rw" },
+		  coloc_old   => {"/elysium/metfark/old/coloc/"   => "rw" },
+		  coloc_log   => {"/elysium/metfark/log/coloc/"   => "rw" },
 		  plot =>      {"/elysium/metfark/plot/"    => "rw" },
 		  plot_old =>  {"/elysium/metfark/old/plot/"    => "rw" },
 		  plot_use =>  {"/elysium/metfark/use/plot/"    => "rw" },
+		  plot_log =>  {"/elysium/metfark/log/plot/"    => "rw" },
 		  auto  => {"/elysium/metfark/auto/"    => "rw" },
 		  url  =>  {"/elysium/metfark/url/"     => "rw" },
 		  lock =>  {"/elysium/metfark/lock/"    => "rw" }
@@ -84,9 +91,10 @@ sub makeRoot {
     my @dirs=keys %{$farkdirs{$cls}};
     if (@dirs) {
 	if (! -d $dirs[0] && $farkdirs{$cls}{$dirs[0]} eq "rw") { 
-	    my $ret=makePath($dirs[0]);
+	    return makePath($dirs[0]);
 	};
     }
+    return 0; # fail
 }
 
 sub getRootDir {
@@ -144,7 +152,7 @@ sub splitDir {
     #
     #print "Dir: '$ipath' => '$tdir'\n";
     # get abs path
-    if (-d $tdir) { # total path
+    if (defined $tdir && -d $tdir) { # total path
 	my $adir = abs_path( $tdir ); # absolute total path
 	if (defined $adir) {
 	    $priv = "denied";
@@ -172,7 +180,7 @@ sub splitDir {
 	}
     } else {
 	$root="";
-	$loc=$tdir;
+	$loc=$tdir // "";
 	$priv="missing";
     }
     #print "splitDir '$ipath' '$cls' -> '$root' '$loc' '$priv'\n";
@@ -195,17 +203,23 @@ sub makePath{
 	}
     };my $ret=$@;
     if ($ret) {
-	return($ret);
-    }else {
+	$_=$ret;
 	return(0);
+    }else {
+	return(1); # success
     }
 }
 
 sub touchFile {
     my $path=shift;
     my ($dir,$name)=splitName($path);
-    if (! -d $dir) { makePath($dir);}
-    return touch($path);
+    if (! -d $dir) {makePath($dir);}
+    if (touch($path)) {
+	chmod 0777, $path;
+	return 1;
+    } else {
+	return 0;
+    }
 }
 
 #
@@ -220,10 +234,10 @@ sub removeFile{
 	my $parser = XML::LibXML->new();
 	my $doc = $parser->parse_file($path);
 	my @nodes=();
-	if (! @nodes) {@nodes=$doc->findnodes("obs/obs_config");};
 	if (! @nodes) {@nodes=$doc->findnodes("model/model_config");};
-	if (! @nodes) {@nodes=$doc->findnodes("plot/plot_config");};
+	if (! @nodes) {@nodes=$doc->findnodes("obs/obs_config");};
 	if (! @nodes) {@nodes=$doc->findnodes("coloc/coloc_config");};
+	if (! @nodes) {@nodes=$doc->findnodes("plot/plot_config");};
 	if (@nodes) {
 	    my $size = @nodes;
 	    #print "Found $size nodes in file $path\n";
@@ -245,7 +259,7 @@ sub removeFile{
     } else {
 	&term( "Invalid file $path");
     }
-    return(0);
+    return(1); # success
 }
 
 #
@@ -262,7 +276,8 @@ sub removeDir {
     my $parser = XML::LibXML->new();
     my @dirs = ();
     #print "Here...\n";
-    while ( my $name = readdir(DIR) ){
+    my @entries = sort { $a cmp $b } readdir(DIR);
+    while ( my $name = shift @entries ){
 	next if ($name eq ".");
 	next if ($name eq "..");
 	next if (-l $name ); # skip symlinks
@@ -273,10 +288,10 @@ sub removeDir {
 	} elsif (-f $path ) {
 	    my $doc = $parser->parse_file($path);
 	    my @nodes=();
-	    if (! @nodes) {@nodes=$doc->findnodes("obs/obs_config");};
 	    if (! @nodes) {@nodes=$doc->findnodes("model/model_config");};
-	    if (! @nodes) {@nodes=$doc->findnodes("plot/plot_config");};
+	    if (! @nodes) {@nodes=$doc->findnodes("obs/obs_config");};
 	    if (! @nodes) {@nodes=$doc->findnodes("coloc/coloc_config");};
+	    if (! @nodes) {@nodes=$doc->findnodes("plot/plot_config");};
 	    my $size = @nodes;
 	    #print "Found $size nodes in file $path\n";
 	    foreach my $node (@nodes) { 
@@ -335,7 +350,8 @@ sub find{
     opendir(DIR, $wdir) or die "Unable to open $wdir:$!\n";
     my @dirs = ();
     #print "Here...\n";
-    while ( my $name = readdir(DIR) ){
+    my @entries = sort { $a cmp $b } readdir(DIR);
+    while ( my $name = shift @entries ){
 	#print "Checking $name\n";
 	if (time - $t > 2.0 && $hits > 1) {last;}; # use max 2 seconds if we have hits
 	if (time - $t > 10.0) {last;}; # use max 10 seconds
@@ -366,7 +382,7 @@ sub find{
 	$hits+=@lret;
     }
     chdir($sdir) or die "Unable to change to dir $sdir:$!\n";
-    return @ret;
+    return sort @ret;
 }
 
 #
@@ -378,6 +394,14 @@ sub term {
     $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
     $msg=~s/ +/ /g;
     print "<error message='".$msg."'/>\n";
+    exit 1;
+}
+
+sub info {
+    my $msg=shift;
+    $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
+    $msg=~s/ +/ /g;
+    print "<info message='".$msg."'/>\n";
     exit 1;
 }
 

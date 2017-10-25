@@ -21,7 +21,7 @@ void mod_setindex_(int* mid, char* varname, char* crc250, int* irc, int len1, in
 void mod_setindexlimits_(int* mid, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3);
 void mod_determinefileorder_(int* mid, char* crc250, int* irc, int len1);
 void mod_loadcache_(int* mid,char* path,char* crc250,int* irc, int len1,int len2);
-void mod_makecache_(int* mid,char* path,char* crc250,int* irc, int len1,int len2);
+void mod_makecache_(int* mid,char* path,int* test,char* crc250,int* irc, int len1,int len2);
 void mod_peekfile_(int* mid,int* maxrep,int* nrep,char* rep250,char* crc250,int* irc, int len1,int len2);
 void mod_peekfilelen_(int* mid,int* maxrep,char* crc250,int* irc, int len1);
 void mod_popfile_(int* mid,char* path250,char* crc250,int* irc, int len1,int len2);
@@ -33,7 +33,7 @@ void obs_clearfilestack_(int* oid,char* crc250,int* irc, int len1);
 void obs_cleartargetstack_(int* oid,char* crc250,int* irc, int len1);
 void obs_closesession_(int* oid,char* crc250,int* irc, int len1);
 void obs_loadcache_(int* oid,char* path,char* crc250,int* irc, int len1,int len2);
-void obs_makecache_(int* oid,char* path,char* crc250,int* irc, int len1,int len2);
+void obs_makecache_(int* oid,char* path,int* test,char* crc250,int* irc, int len1,int len2);
 void obs_peekfile_(int* oid,int* maxrep,int* nrep,char* rep250,char* crc250,int* irc,int len1,int len2);
 void obs_peekfilelen_(int* oid,int* maxrep,char* crc250,int* irc, int len1);
 void obs_popfile_(int* oid,char* path250,char* crc250,int* irc, int len1,int len2);
@@ -49,17 +49,21 @@ void col_closesession_(int* cid, char* crc250, int* irc, int len1);
 void col_expression_(char* exp250, char* crc250, int* irc, int len1, int len2);
 void col_setmodcache_(int* cid, char* path250, char* crc250, int* irc, int len1, int len2);
 void col_setobscache_(int* cid, char* path250, char* crc250, int* irc, int len1, int len2);
-void col_pushdefault_(int* mid,char* crc250,int* irc, int len1);
-void col_cleardefaultstack_(int* mid,char* crc250,int* irc, int len1);
-void col_adddefault_(int* mid,char* trg,char* val, char* crc250,int* irc, int len1,int len2,int len3);
-void col_addmatch_(int* mid, char* modName, char* obsExpr, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
+void col_pushdefault_(int* cid,char* crc250,int* irc, int len1);
+void col_cleardefaultstack_(int* cid,char* crc250,int* irc, int len1);
+void col_adddefault_(int* cid,char* trg,char* val, char* crc250,int* irc, int len1,int len2,int len3);
+void col_pushmatch_(int* cid, char* modName, char* obsExpr, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
+void col_makematchlist_(int* cid, int* mid, char* crc250, int* irc, int len1);
 void col_clearmatchstack_(int* mid, char* crc250, int* irc, int len1, int len2);
+void col_makexml_(int* cid, int* mid, int* oid, char* xml250, int* test,char*  crc250, int* irc, int len1, int len2);
+void col_setxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
+void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
 void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
 void col_setfilter_ (int* cid, char* filter250,  char* crc250, int* irc, int len1, int len2);
-void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,char*  crc250, int* irc, int len1, int len2, int len3);
-void plo_makegraphics_(int* pid, char* tab250, char* gra250, char* crc250, int* irc, int len1, int len2, int len3);
+void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,int* test,char*  crc250, int* irc, int len1, int len2, int len3);
+void plo_makegraphics_(int* pid, char* tab250, char* gra250, int* test,char* crc250, int* irc, int len1, int len2, int len3);
 void plo_settype_(int* pid, char* type250, char* crc250, int* irc, int len1, int len2);
 void plo_clearattrstack_(int* pid, char* crc250, int* irc, int len1, int len2);
 void plo_pushattr_(int* pid, char* name250, char* value250, char* crc250, int* irc, int len1, int len2);
@@ -72,7 +76,7 @@ void plo_setgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len
 void plo_getgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 void plo_strepfiles_(int* pid, char* crc250, int* irc, int len1);
 
-#line 76 "fark.c"
+#line 80 "fark.c"
 #ifndef PERL_UNUSED_VAR
 #  define PERL_UNUSED_VAR(var) if (0) var = var
 #endif
@@ -216,7 +220,7 @@ S_croak_xs_usage(const CV *const cv, const char *const params)
 #  define newXS_deffile(a,b) Perl_newXS_deffile(aTHX_ a,b)
 #endif
 
-#line 220 "fark.c"
+#line 224 "fark.c"
 
 XS_EUPXS(XS_fark_xs_openModelSession); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS_fark_xs_openModelSession)
@@ -227,12 +231,12 @@ XS_EUPXS(XS_fark_xs_openModelSession)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 82 "fark.xs"
+#line 86 "fark.xs"
       int  mid;
       int  irc;
       char *crc250;
-#line 235 "fark.c"
-#line 86 "fark.xs"
+#line 239 "fark.c"
+#line 90 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char),251);
       strcpy(crc250,"");
@@ -245,7 +249,7 @@ XS_EUPXS(XS_fark_xs_openModelSession)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       PUSHs(sv_2mortal(newSViv(mid)));
       free(crc250);
-#line 249 "fark.c"
+#line 253 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -263,11 +267,11 @@ XS_EUPXS(XS_fark_xs_closeModelSession)
     {
 	int	mid = (int)SvIV(ST(0))
 ;
-#line 109 "fark.xs"
+#line 113 "fark.xs"
       int  irc;
       char *crc250;
-#line 270 "fark.c"
-#line 112 "fark.xs"
+#line 274 "fark.c"
+#line 116 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 251);
       mod_closesession_(&mid,crc250, &irc, 250);
@@ -278,7 +282,7 @@ XS_EUPXS(XS_fark_xs_closeModelSession)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 282 "fark.c"
+#line 286 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -294,12 +298,12 @@ XS_EUPXS(XS_fark_xs_openObsSession)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 135 "fark.xs"
+#line 139 "fark.xs"
       int  sid;
       int  irc;
       char *crc250;
-#line 302 "fark.c"
-#line 139 "fark.xs"
+#line 306 "fark.c"
+#line 143 "fark.xs"
       sid=0;
       irc=0;
       crc250 = calloc(sizeof(char), 251);
@@ -313,7 +317,7 @@ XS_EUPXS(XS_fark_xs_openObsSession)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       PUSHs(sv_2mortal(newSViv(sid)));
       free(crc250);
-#line 317 "fark.c"
+#line 321 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -331,11 +335,11 @@ XS_EUPXS(XS_fark_xs_closeObsSession)
     {
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 163 "fark.xs"
+#line 167 "fark.xs"
       int  irc;
       char *crc250;
-#line 338 "fark.c"
-#line 166 "fark.xs"
+#line 342 "fark.c"
+#line 170 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 251);
       obs_closesession_(&sid,crc250, &irc, 250);
@@ -346,7 +350,7 @@ XS_EUPXS(XS_fark_xs_closeObsSession)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 350 "fark.c"
+#line 354 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -362,12 +366,12 @@ XS_EUPXS(XS_fark_xs_openColocSession)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 188 "fark.xs"
+#line 192 "fark.xs"
       int  cid;
       int  irc;
       char *crc250;
-#line 370 "fark.c"
-#line 192 "fark.xs"
+#line 374 "fark.c"
+#line 196 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char),251);
       strcpy(crc250,"");
@@ -380,7 +384,7 @@ XS_EUPXS(XS_fark_xs_openColocSession)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       PUSHs(sv_2mortal(newSViv(cid)));
       free(crc250);
-#line 384 "fark.c"
+#line 388 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -398,11 +402,11 @@ XS_EUPXS(XS_fark_xs_closeColocSession)
     {
 	int	cid = (int)SvIV(ST(0))
 ;
-#line 215 "fark.xs"
+#line 219 "fark.xs"
       int  irc;
       char *crc250;
-#line 405 "fark.c"
-#line 218 "fark.xs"
+#line 409 "fark.c"
+#line 222 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 251);
       col_closesession_(&cid,crc250, &irc, 250);
@@ -413,7 +417,7 @@ XS_EUPXS(XS_fark_xs_closeColocSession)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 417 "fark.c"
+#line 421 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -429,12 +433,12 @@ XS_EUPXS(XS_fark_xs_openPlotSession)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 239 "fark.xs"
+#line 243 "fark.xs"
       int  pid;
       int  irc;
       char *crc250;
-#line 437 "fark.c"
-#line 243 "fark.xs"
+#line 441 "fark.c"
+#line 247 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char),251);
       strcpy(crc250,"");
@@ -447,7 +451,7 @@ XS_EUPXS(XS_fark_xs_openPlotSession)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       PUSHs(sv_2mortal(newSViv(pid)));
       free(crc250);
-#line 451 "fark.c"
+#line 455 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -465,11 +469,11 @@ XS_EUPXS(XS_fark_xs_closePlotSession)
     {
 	int	pid = (int)SvIV(ST(0))
 ;
-#line 266 "fark.xs"
+#line 270 "fark.xs"
       int  irc;
       char *crc250;
-#line 472 "fark.c"
-#line 269 "fark.xs"
+#line 476 "fark.c"
+#line 273 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 251);
       plo_closesession_(&pid,crc250, &irc, 250);
@@ -480,7 +484,7 @@ XS_EUPXS(XS_fark_xs_closePlotSession)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 484 "fark.c"
+#line 488 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -491,27 +495,29 @@ XS_EUPXS(XS_fark_xs_makeModelCache); /* prototype to pass -Wmissing-prototypes *
 XS_EUPXS(XS_fark_xs_makeModelCache)
 {
     dVAR; dXSARGS;
-    if (items != 2)
-       croak_xs_usage(cv,  "sid, path");
+    if (items != 3)
+       croak_xs_usage(cv,  "sid, path, test");
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 290 "fark.xs"
+#line 295 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 504 "fark.c"
+#line 508 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 294 "fark.xs"
+	int	test = (int)SvIV(ST(2))
+;
+#line 299 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(path250,path);
-      mod_makecache_(&sid,path250, crc250, &irc, 250, 250);
+      mod_makecache_(&sid,path250,&test, crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -520,7 +526,7 @@ XS_EUPXS(XS_fark_xs_makeModelCache)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 524 "fark.c"
+#line 530 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -531,27 +537,29 @@ XS_EUPXS(XS_fark_xs_makeObsCache); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS_fark_xs_makeObsCache)
 {
     dVAR; dXSARGS;
-    if (items != 2)
-       croak_xs_usage(cv,  "sid, path");
+    if (items != 3)
+       croak_xs_usage(cv,  "sid, path, test");
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 319 "fark.xs"
+#line 325 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 544 "fark.c"
+#line 550 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 323 "fark.xs"
+	int	test = (int)SvIV(ST(2))
+;
+#line 329 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(path250,path);
-      obs_makecache_(&sid, path250, crc250, &irc, 250, 250);
+      obs_makecache_(&sid, path250,&test,crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -560,7 +568,7 @@ XS_EUPXS(XS_fark_xs_makeObsCache)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 564 "fark.c"
+#line 572 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -576,22 +584,22 @@ XS_EUPXS(XS_fark_xs_loadModelCache)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 348 "fark.xs"
+#line 354 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 584 "fark.c"
+#line 592 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 352 "fark.xs"
+#line 358 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(path250,path);
-      mod_loadcache_(&sid, path250, crc250, &irc, 250, 250);
+      mod_loadcache_(&sid,path250,crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -600,7 +608,7 @@ XS_EUPXS(XS_fark_xs_loadModelCache)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 604 "fark.c"
+#line 612 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -616,16 +624,16 @@ XS_EUPXS(XS_fark_xs_setModelCache)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 377 "fark.xs"
+#line 383 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 624 "fark.c"
+#line 632 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 381 "fark.xs"
+#line 387 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
@@ -640,7 +648,7 @@ XS_EUPXS(XS_fark_xs_setModelCache)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 644 "fark.c"
+#line 652 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -656,22 +664,22 @@ XS_EUPXS(XS_fark_xs_loadObsCache)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 406 "fark.xs"
+#line 412 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 664 "fark.c"
+#line 672 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 410 "fark.xs"
+#line 416 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(path250,path);
-      obs_loadcache_(&sid, path250, crc250, &irc, 250, 250);
+      obs_loadcache_(&sid,path250,crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -680,7 +688,7 @@ XS_EUPXS(XS_fark_xs_loadObsCache)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 684 "fark.c"
+#line 692 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -696,16 +704,16 @@ XS_EUPXS(XS_fark_xs_setObsCache)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 435 "fark.xs"
+#line 441 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 704 "fark.c"
+#line 712 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 439 "fark.xs"
+#line 445 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
@@ -720,7 +728,7 @@ XS_EUPXS(XS_fark_xs_setObsCache)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 724 "fark.c"
+#line 732 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -736,15 +744,15 @@ XS_EUPXS(XS_fark_xs_clearModelFileStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 468 "fark.xs"
+#line 474 "fark.xs"
       int  irc;
       char *varname;
       char *crc250;
       char* vararg;
-#line 745 "fark.c"
+#line 753 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 473 "fark.xs"
+#line 479 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       varname = calloc(sizeof(char), 80);
@@ -764,7 +772,7 @@ XS_EUPXS(XS_fark_xs_clearModelFileStack)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(varname);
       free(crc250);
-#line 768 "fark.c"
+#line 776 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -780,13 +788,13 @@ XS_EUPXS(XS_fark_xs_clearModelTargetStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 502 "fark.xs"
+#line 508 "fark.xs"
       int  irc;
       char *crc250;
-#line 787 "fark.c"
+#line 795 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 505 "fark.xs"
+#line 511 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -798,15 +806,15 @@ XS_EUPXS(XS_fark_xs_clearModelTargetStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 802 "fark.c"
+#line 810 "fark.c"
 	PUTBACK;
 	return;
     }
 }
 
 
-XS_EUPXS(XS_fark_xs_clearModelDefaultStack); /* prototype to pass -Wmissing-prototypes */
-XS_EUPXS(XS_fark_xs_clearModelDefaultStack)
+XS_EUPXS(XS_fark_xs_clearDefaultStack); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_clearDefaultStack)
 {
     dVAR; dXSARGS;
     if (items != 1)
@@ -814,13 +822,13 @@ XS_EUPXS(XS_fark_xs_clearModelDefaultStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 526 "fark.xs"
+#line 532 "fark.xs"
       int  irc;
       char *crc250;
-#line 821 "fark.c"
+#line 829 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 529 "fark.xs"
+#line 535 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -832,7 +840,7 @@ XS_EUPXS(XS_fark_xs_clearModelDefaultStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 836 "fark.c"
+#line 844 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -848,17 +856,17 @@ XS_EUPXS(XS_fark_xs_pushModelFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 553 "fark.xs"
+#line 559 "fark.xs"
       int  irc;
       char *crc250;
       int i;
       char *path250;
       char* path;
       int irc2;
-#line 859 "fark.c"
+#line 867 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 560 "fark.xs"
+#line 566 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
@@ -881,7 +889,7 @@ XS_EUPXS(XS_fark_xs_pushModelFile)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 885 "fark.c"
+#line 893 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -897,7 +905,7 @@ XS_EUPXS(XS_fark_xs_peekModelFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 596 "fark.xs"
+#line 602 "fark.xs"
       int maxrep;
       int nrep;
       char *rep250;
@@ -905,10 +913,10 @@ XS_EUPXS(XS_fark_xs_peekModelFile)
       char *crc250;
       int ii;
       int lenr=250;
-#line 909 "fark.c"
+#line 917 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 604 "fark.xs"
+#line 610 "fark.xs"
 	irc=0;
 	crc250 = calloc(sizeof(char), 251);
 	mod_peekfilelen_(&sid,&maxrep,crc250,&irc,250);
@@ -935,7 +943,7 @@ XS_EUPXS(XS_fark_xs_peekModelFile)
 	};
 	free(rep250);
         free(crc250);
-#line 939 "fark.c"
+#line 947 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -953,15 +961,15 @@ XS_EUPXS(XS_fark_xs_popModelFile)
     {
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 645 "fark.xs"
+#line 651 "fark.xs"
       int  irc;
       char *crc250;
       int i;
       char *path250;
       char* path;
       int irc2;
-#line 964 "fark.c"
-#line 652 "fark.xs"
+#line 972 "fark.c"
+#line 658 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 251);
       path250 = calloc(sizeof(char), 250);
@@ -983,7 +991,7 @@ XS_EUPXS(XS_fark_xs_popModelFile)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
       free(path250);
-#line 987 "fark.c"
+#line 995 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -999,15 +1007,15 @@ XS_EUPXS(XS_fark_xs_setModelIndex)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 685 "fark.xs"
+#line 691 "fark.xs"
       int  irc;
       char *crc250;
-#line 1006 "fark.c"
+#line 1014 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	variable = (char *)SvPV_nolen(ST(1))
 ;
-#line 688 "fark.xs"
+#line 694 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1019,7 +1027,7 @@ XS_EUPXS(XS_fark_xs_setModelIndex)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1023 "fark.c"
+#line 1031 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1035,17 +1043,17 @@ XS_EUPXS(XS_fark_xs_setModelIndexLimits)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 712 "fark.xs"
+#line 718 "fark.xs"
       int  irc;
       char *crc250;
-#line 1042 "fark.c"
+#line 1050 "fark.c"
 	int	mid = (int)SvIV(ST(0))
 ;
 	char*	smin = (char *)SvPV_nolen(ST(1))
 ;
 	char*	smax = (char *)SvPV_nolen(ST(2))
 ;
-#line 715 "fark.xs"
+#line 721 "fark.xs"
 	irc=0;
 	crc250 = calloc(sizeof(char), 251);
  	irc=0;
@@ -1054,7 +1062,7 @@ XS_EUPXS(XS_fark_xs_setModelIndexLimits)
 	PUSHs(sv_2mortal(newSViv(irc)));
 	PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
 	free(crc250);
-#line 1058 "fark.c"
+#line 1066 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1070,14 +1078,14 @@ XS_EUPXS(XS_fark_xs_pushModelTarget)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 742 "fark.xs"
+#line 748 "fark.xs"
       int  irc;
       char *crc250;
       char *m80;
       char *v80;
       char *l80;
       char *u80;
-#line 1081 "fark.c"
+#line 1089 "fark.c"
 	int	mid = (int)SvIV(ST(0))
 ;
 	char *	modName = (char *)SvPV_nolen(ST(1))
@@ -1088,7 +1096,7 @@ XS_EUPXS(XS_fark_xs_pushModelTarget)
 ;
 	char *	vmax = (char *)SvPV_nolen(ST(4))
 ;
-#line 749 "fark.xs"
+#line 755 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       m80 = calloc(sizeof(char), 80);
@@ -1112,15 +1120,15 @@ XS_EUPXS(XS_fark_xs_pushModelTarget)
       free(l80);
       free(u80);
       free(crc250);
-#line 1116 "fark.c"
+#line 1124 "fark.c"
 	PUTBACK;
 	return;
     }
 }
 
 
-XS_EUPXS(XS_fark_xs_addModelDefault); /* prototype to pass -Wmissing-prototypes */
-XS_EUPXS(XS_fark_xs_addModelDefault)
+XS_EUPXS(XS_fark_xs_addDefault); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_addDefault)
 {
     dVAR; dXSARGS;
     if (items != 3)
@@ -1128,19 +1136,19 @@ XS_EUPXS(XS_fark_xs_addModelDefault)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 786 "fark.xs"
+#line 792 "fark.xs"
       int  irc;
       char *crc250;
       char *m80;
       char *v80;
-#line 1137 "fark.c"
+#line 1145 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
 	char *	modName = (char *)SvPV_nolen(ST(1))
 ;
 	char *	val = (char *)SvPV_nolen(ST(2))
 ;
-#line 791 "fark.xs"
+#line 797 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       m80 = calloc(sizeof(char), 80);
@@ -1158,15 +1166,15 @@ XS_EUPXS(XS_fark_xs_addModelDefault)
       free(m80);
       free(v80);
       free(crc250);
-#line 1162 "fark.c"
+#line 1170 "fark.c"
 	PUTBACK;
 	return;
     }
 }
 
 
-XS_EUPXS(XS_fark_xs_pushModelDefault); /* prototype to pass -Wmissing-prototypes */
-XS_EUPXS(XS_fark_xs_pushModelDefault)
+XS_EUPXS(XS_fark_xs_pushDefault); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_pushDefault)
 {
     dVAR; dXSARGS;
     if (items != 1)
@@ -1174,13 +1182,13 @@ XS_EUPXS(XS_fark_xs_pushModelDefault)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 819 "fark.xs"
+#line 825 "fark.xs"
       int  irc;
       char *crc250;
-#line 1181 "fark.c"
+#line 1189 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
-#line 822 "fark.xs"
+#line 828 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1192,7 +1200,7 @@ XS_EUPXS(XS_fark_xs_pushModelDefault)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1196 "fark.c"
+#line 1204 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1208,13 +1216,13 @@ XS_EUPXS(XS_fark_xs_clearMatchRuleStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 845 "fark.xs"
+#line 851 "fark.xs"
       int  irc;
       char *crc250;
-#line 1215 "fark.c"
+#line 1223 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
-#line 848 "fark.xs"
+#line 854 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1226,15 +1234,15 @@ XS_EUPXS(XS_fark_xs_clearMatchRuleStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1230 "fark.c"
+#line 1238 "fark.c"
 	PUTBACK;
 	return;
     }
 }
 
 
-XS_EUPXS(XS_fark_xs_addMatchRule); /* prototype to pass -Wmissing-prototypes */
-XS_EUPXS(XS_fark_xs_addMatchRule)
+XS_EUPXS(XS_fark_xs_pushMatchRule); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_pushMatchRule)
 {
     dVAR; dXSARGS;
     if (items != 5)
@@ -1242,14 +1250,14 @@ XS_EUPXS(XS_fark_xs_addMatchRule)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 872 "fark.xs"
+#line 878 "fark.xs"
       int  irc;
       char *crc250;
       char *m80;
       char *o250;
       char *l80;
       char *u80;
-#line 1253 "fark.c"
+#line 1261 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
 	char *	modName = (char *)SvPV_nolen(ST(1))
@@ -1260,7 +1268,7 @@ XS_EUPXS(XS_fark_xs_addMatchRule)
 ;
 	char *	vmax = (char *)SvPV_nolen(ST(4))
 ;
-#line 879 "fark.xs"
+#line 885 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       m80 = calloc(sizeof(char), 80);
@@ -1272,7 +1280,7 @@ XS_EUPXS(XS_fark_xs_addMatchRule)
       strcpy(o250,obsExpr);
       strcpy(l80,vmin);
       strcpy(u80,vmax);
-      col_addmatch_(&cid, m80, o250, l80, u80,crc250, &irc, 80,250,80,80,250);
+      col_pushmatch_(&cid, m80, o250, l80, u80,crc250, &irc, 80,250,80,80,250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -1284,7 +1292,43 @@ XS_EUPXS(XS_fark_xs_addMatchRule)
       free(l80);
       free(u80);
       free(crc250);
-#line 1288 "fark.c"
+#line 1296 "fark.c"
+	PUTBACK;
+	return;
+    }
+}
+
+
+XS_EUPXS(XS_fark_xs_makeMatchList); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_makeMatchList)
+{
+    dVAR; dXSARGS;
+    if (items != 2)
+       croak_xs_usage(cv,  "cid, mid");
+    PERL_UNUSED_VAR(ax); /* -Wall */
+    SP -= items;
+    {
+#line 918 "fark.xs"
+      int  irc;
+      char *crc250;
+#line 1315 "fark.c"
+	int	cid = (int)SvIV(ST(0))
+;
+	int	mid = (int)SvIV(ST(1))
+;
+#line 921 "fark.xs"
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      col_makematchlist_(&cid, &mid, crc250, &irc, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+#line 1332 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1300,16 +1344,16 @@ XS_EUPXS(XS_fark_xs_setObsTablePath)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 915 "fark.xs"
+#line 945 "fark.xs"
       int  irc;
       char *path250;
       char *crc250;
-#line 1308 "fark.c"
+#line 1352 "fark.c"
 	int	oid = (int)SvIV(ST(0))
 ;
 	char *	path = (char *)SvPV_nolen(ST(1))
 ;
-#line 919 "fark.xs"
+#line 949 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
@@ -1324,7 +1368,7 @@ XS_EUPXS(XS_fark_xs_setObsTablePath)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 1328 "fark.c"
+#line 1372 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1340,13 +1384,13 @@ XS_EUPXS(XS_fark_xs_clearObsFileStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 944 "fark.xs"
+#line 974 "fark.xs"
       int  irc;
       char *crc250;
-#line 1347 "fark.c"
+#line 1391 "fark.c"
 	int	oid = (int)SvIV(ST(0))
 ;
-#line 947 "fark.xs"
+#line 977 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1358,7 +1402,7 @@ XS_EUPXS(XS_fark_xs_clearObsFileStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1362 "fark.c"
+#line 1406 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1374,17 +1418,17 @@ XS_EUPXS(XS_fark_xs_pushObsFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 971 "fark.xs"
+#line 1001 "fark.xs"
       int  irc;
       char *crc250;
       int i;
       char *path250;
       char* path;
       int irc2;
-#line 1385 "fark.c"
+#line 1429 "fark.c"
 	int	oid = (int)SvIV(ST(0))
 ;
-#line 978 "fark.xs"
+#line 1008 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       path250 = calloc(sizeof(char), 250);
@@ -1407,7 +1451,7 @@ XS_EUPXS(XS_fark_xs_pushObsFile)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(path250);
       free(crc250);
-#line 1411 "fark.c"
+#line 1455 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1423,7 +1467,7 @@ XS_EUPXS(XS_fark_xs_peekObsFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1013 "fark.xs"
+#line 1043 "fark.xs"
       int maxrep;
       int nrep;
       char *rep250;
@@ -1431,10 +1475,10 @@ XS_EUPXS(XS_fark_xs_peekObsFile)
       char *crc250;
       int ii;
       int lenr=250;
-#line 1435 "fark.c"
+#line 1479 "fark.c"
 	int	oid = (int)SvIV(ST(0))
 ;
-#line 1021 "fark.xs"
+#line 1051 "fark.xs"
 	irc=0;
 	crc250 = calloc(sizeof(char), 251);
 	obs_peekfilelen_(&oid,&maxrep,crc250,&irc,250);
@@ -1461,7 +1505,7 @@ XS_EUPXS(XS_fark_xs_peekObsFile)
 	};
 	free(rep250);
         free(crc250);
-#line 1465 "fark.c"
+#line 1509 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1479,15 +1523,15 @@ XS_EUPXS(XS_fark_xs_popObsFile)
     {
 	int	oid = (int)SvIV(ST(0))
 ;
-#line 1062 "fark.xs"
+#line 1092 "fark.xs"
       int  irc;
       char *crc250;
       int i;
       char *path250;
       char* path;
       int irc2;
-#line 1490 "fark.c"
-#line 1069 "fark.xs"
+#line 1534 "fark.c"
+#line 1099 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 251);
       path250 = calloc(sizeof(char), 250);
@@ -1509,7 +1553,7 @@ XS_EUPXS(XS_fark_xs_popObsFile)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
       free(path250);
-#line 1513 "fark.c"
+#line 1557 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1525,19 +1569,19 @@ XS_EUPXS(XS_fark_xs_setObsIndexLimits)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1102 "fark.xs"
+#line 1132 "fark.xs"
       int  irc;
       char *s25;
       char *e25;
       char *crc250;
-#line 1534 "fark.c"
+#line 1578 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	sindex = (char *)SvPV_nolen(ST(1))
 ;
 	char *	eindex = (char *)SvPV_nolen(ST(2))
 ;
-#line 1107 "fark.xs"
+#line 1137 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       s25 = calloc(sizeof(char), 25);
@@ -1555,7 +1599,7 @@ XS_EUPXS(XS_fark_xs_setObsIndexLimits)
       free(s25);
       free(e25);
       free(crc250);
-#line 1559 "fark.c"
+#line 1603 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1571,13 +1615,13 @@ XS_EUPXS(XS_fark_xs_clearObsTargetStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1137 "fark.xs"
+#line 1167 "fark.xs"
       int  irc;
       char *crc250;
-#line 1578 "fark.c"
+#line 1622 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
-#line 1140 "fark.xs"
+#line 1170 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1589,7 +1633,7 @@ XS_EUPXS(XS_fark_xs_clearObsTargetStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1593 "fark.c"
+#line 1637 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1605,10 +1649,10 @@ XS_EUPXS(XS_fark_xs_pushObsTarget)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1168 "fark.xs"
+#line 1198 "fark.xs"
       int  irc;
       char *crc250;
-#line 1612 "fark.c"
+#line 1656 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	target = (char *)SvPV_nolen(ST(1))
@@ -1623,7 +1667,7 @@ XS_EUPXS(XS_fark_xs_pushObsTarget)
 ;
 	char *	vmax = (char *)SvPV_nolen(ST(6))
 ;
-#line 1171 "fark.xs"
+#line 1201 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1635,7 +1679,7 @@ XS_EUPXS(XS_fark_xs_pushObsTarget)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1639 "fark.c"
+#line 1683 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1651,19 +1695,19 @@ XS_EUPXS(XS_fark_xs_setObsIndex)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1194 "fark.xs"
+#line 1224 "fark.xs"
       int  irc;
       char *crc250;
       char *t80;
       char *e250;
-#line 1660 "fark.c"
+#line 1704 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	char *	target = (char *)SvPV_nolen(ST(1))
 ;
 	char *	expr = (char *)SvPV_nolen(ST(2))
 ;
-#line 1199 "fark.xs"
+#line 1229 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       t80 = calloc(sizeof(char), 80);
@@ -1681,7 +1725,7 @@ XS_EUPXS(XS_fark_xs_setObsIndex)
       free(t80);
       free(e250);
       free(crc250);
-#line 1685 "fark.c"
+#line 1729 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1697,17 +1741,17 @@ XS_EUPXS(XS_fark_xs_setObsBufrType)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1229 "fark.xs"
+#line 1259 "fark.xs"
       int  irc;
       char *crc250;
-#line 1704 "fark.c"
+#line 1748 "fark.c"
 	int	sid = (int)SvIV(ST(0))
 ;
 	int	bufrType = (int)SvIV(ST(1))
 ;
 	int	subType = (int)SvIV(ST(2))
 ;
-#line 1232 "fark.xs"
+#line 1262 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -1719,7 +1763,7 @@ XS_EUPXS(XS_fark_xs_setObsBufrType)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 1723 "fark.c"
+#line 1767 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1735,14 +1779,14 @@ XS_EUPXS(XS_fark_xs_expression)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1256 "fark.xs"
+#line 1286 "fark.xs"
       char *exp250;
       int  irc;
       char *crc250;
-#line 1743 "fark.c"
+#line 1787 "fark.c"
 	char *	exp = (char *)SvPV_nolen(ST(0))
 ;
-#line 1260 "fark.xs"
+#line 1290 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       exp250 = calloc(sizeof(char), 250);
@@ -1758,7 +1802,7 @@ XS_EUPXS(XS_fark_xs_expression)
       PUSHs(sv_2mortal(newSVpv(exp250,strlen(exp250))));
       free(exp250);
       free(crc250);
-#line 1762 "fark.c"
+#line 1806 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1774,16 +1818,16 @@ XS_EUPXS(XS_fark_xs_setColocFilter)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1289 "fark.xs"
+#line 1319 "fark.xs"
       char *filter250;
       int  irc;
       char *crc250;
-#line 1782 "fark.c"
+#line 1826 "fark.c"
 	int	cid = (int)SvIV(ST(0))
 ;
 	char *	filter = (char *)SvPV_nolen(ST(1))
 ;
-#line 1293 "fark.xs"
+#line 1323 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       filter250 = calloc(sizeof(char), 250);
@@ -1798,7 +1842,133 @@ XS_EUPXS(XS_fark_xs_setColocFilter)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(filter250);
       free(crc250);
-#line 1802 "fark.c"
+#line 1846 "fark.c"
+	PUTBACK;
+	return;
+    }
+}
+
+
+XS_EUPXS(XS_fark_xs_setColocXMLFile); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_setColocXMLFile)
+{
+    dVAR; dXSARGS;
+    if (items != 2)
+       croak_xs_usage(cv,  "pid, fn");
+    PERL_UNUSED_VAR(ax); /* -Wall */
+    SP -= items;
+    {
+#line 1348 "fark.xs"
+      char *fn250;
+      int  irc;
+      char *crc250;
+#line 1866 "fark.c"
+	int	pid = (int)SvIV(ST(0))
+;
+	char *	fn = (char *)SvPV_nolen(ST(1))
+;
+#line 1352 "fark.xs"
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(fn250,fn);
+      col_setxmlfile_(&pid, fn250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(fn250);
+      free(crc250);
+#line 1886 "fark.c"
+	PUTBACK;
+	return;
+    }
+}
+
+
+XS_EUPXS(XS_fark_xs_getColocXMLFile); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_getColocXMLFile)
+{
+    dVAR; dXSARGS;
+    if (items != 1)
+       croak_xs_usage(cv,  "pid");
+    PERL_UNUSED_VAR(ax); /* -Wall */
+    SP -= items;
+    {
+#line 1377 "fark.xs"
+      char *fn250;
+      int  irc;
+      char *crc250;
+#line 1906 "fark.c"
+	int	pid = (int)SvIV(ST(0))
+;
+#line 1381 "fark.xs"
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(fn250,"");
+      col_getxmlfile_(&pid, fn250, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 3);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSVpv(fn250,strlen(fn250))));
+      free(fn250);
+      free(crc250);
+#line 1925 "fark.c"
+	PUTBACK;
+	return;
+    }
+}
+
+
+XS_EUPXS(XS_fark_xs_makeColocXML); /* prototype to pass -Wmissing-prototypes */
+XS_EUPXS(XS_fark_xs_makeColocXML)
+{
+    dVAR; dXSARGS;
+    if (items != 5)
+       croak_xs_usage(cv,  "cid, mid, oid, xml, test");
+    PERL_UNUSED_VAR(ax); /* -Wall */
+    SP -= items;
+    {
+#line 1410 "fark.xs"
+      char *xml250;
+      int  irc;
+      char *crc250;
+#line 1945 "fark.c"
+	int	cid = (int)SvIV(ST(0))
+;
+	int	mid = (int)SvIV(ST(1))
+;
+	int	oid = (int)SvIV(ST(2))
+;
+	char *	xml = (char *)SvPV_nolen(ST(3))
+;
+	int	test = (int)SvIV(ST(4))
+;
+#line 1414 "fark.xs"
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      xml250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(xml250,xml);
+      col_makexml_(&cid, &mid, &oid, xml250, &test, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 3);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      PUSHs(sv_2mortal(newSVpv(xml250,strlen(xml250))));
+      free(xml250);
+      free(crc250);
+#line 1972 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1809,17 +1979,17 @@ XS_EUPXS(XS_fark_xs_makePlotTable); /* prototype to pass -Wmissing-prototypes */
 XS_EUPXS(XS_fark_xs_makePlotTable)
 {
     dVAR; dXSARGS;
-    if (items != 6)
-       croak_xs_usage(cv,  "pid, cid, mid, oid, table, graph");
+    if (items != 7)
+       croak_xs_usage(cv,  "pid, cid, mid, oid, table, graph, test");
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1321 "fark.xs"
+#line 1444 "fark.xs"
       char *tab250;
       char *gra250;
       int  irc;
       char *crc250;
-#line 1823 "fark.c"
+#line 1993 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	int	cid = (int)SvIV(ST(1))
@@ -1832,7 +2002,9 @@ XS_EUPXS(XS_fark_xs_makePlotTable)
 ;
 	char *	graph = (char *)SvPV_nolen(ST(5))
 ;
-#line 1326 "fark.xs"
+	int	test = (int)SvIV(ST(6))
+;
+#line 1449 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       tab250 = calloc(sizeof(char), 250);
@@ -1840,7 +2012,7 @@ XS_EUPXS(XS_fark_xs_makePlotTable)
       strcpy(crc250,"");
       strcpy(tab250,table);
       strcpy(gra250,graph);
-      plo_maketable_(&pid, &cid, &mid, &oid, tab250, gra250, crc250, &irc, 250, 250, 250);
+      plo_maketable_(&pid, &cid, &mid, &oid, tab250, gra250, &test, crc250, &irc, 250, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
@@ -1852,7 +2024,7 @@ XS_EUPXS(XS_fark_xs_makePlotTable)
       free(tab250);
       free(gra250);
       free(crc250);
-#line 1856 "fark.c"
+#line 2028 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1863,24 +2035,26 @@ XS_EUPXS(XS_fark_xs_makePlotGraphics); /* prototype to pass -Wmissing-prototypes
 XS_EUPXS(XS_fark_xs_makePlotGraphics)
 {
     dVAR; dXSARGS;
-    if (items != 3)
-       croak_xs_usage(cv,  "pid, table, graph");
+    if (items != 4)
+       croak_xs_usage(cv,  "pid, table, graph, test");
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1359 "fark.xs"
+#line 1483 "fark.xs"
       char *tab250;
       char *gra250;
       int  irc;
       char *crc250;
-#line 1877 "fark.c"
+#line 2049 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	char *	table = (char *)SvPV_nolen(ST(1))
 ;
 	char *	graph = (char *)SvPV_nolen(ST(2))
 ;
-#line 1364 "fark.xs"
+	int	test = (int)SvIV(ST(3))
+;
+#line 1488 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       tab250 = calloc(sizeof(char), 250);
@@ -1888,7 +2062,7 @@ XS_EUPXS(XS_fark_xs_makePlotGraphics)
       strcpy(crc250,"");
       strcpy(tab250,table);
       strcpy(gra250,graph);
-      plo_makegraphics_(&pid, tab250, gra250, crc250, &irc, 250, 250, 250);
+      plo_makegraphics_(&pid, tab250, gra250, &test, crc250, &irc, 250, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
@@ -1898,7 +2072,7 @@ XS_EUPXS(XS_fark_xs_makePlotGraphics)
       free(tab250);
       free(gra250);
       free(crc250);
-#line 1902 "fark.c"
+#line 2076 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1914,16 +2088,16 @@ XS_EUPXS(XS_fark_xs_setPlotType)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1392 "fark.xs"
+#line 1516 "fark.xs"
       char *type250;
       int  irc;
       char *crc250;
-#line 1922 "fark.c"
+#line 2096 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	char *	type = (char *)SvPV_nolen(ST(1))
 ;
-#line 1396 "fark.xs"
+#line 1520 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       type250 = calloc(sizeof(char), 250);
@@ -1938,7 +2112,7 @@ XS_EUPXS(XS_fark_xs_setPlotType)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(type250);
       free(crc250);
-#line 1942 "fark.c"
+#line 2116 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1954,16 +2128,16 @@ XS_EUPXS(XS_fark_xs_setPlotTableFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1421 "fark.xs"
+#line 1545 "fark.xs"
       char *fn250;
       int  irc;
       char *crc250;
-#line 1962 "fark.c"
+#line 2136 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	char *	fn = (char *)SvPV_nolen(ST(1))
 ;
-#line 1425 "fark.xs"
+#line 1549 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       fn250 = calloc(sizeof(char), 250);
@@ -1978,7 +2152,7 @@ XS_EUPXS(XS_fark_xs_setPlotTableFile)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(fn250);
       free(crc250);
-#line 1982 "fark.c"
+#line 2156 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -1994,14 +2168,14 @@ XS_EUPXS(XS_fark_xs_getPlotTableFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1450 "fark.xs"
+#line 1574 "fark.xs"
       char *fn250;
       int  irc;
       char *crc250;
-#line 2002 "fark.c"
+#line 2176 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
-#line 1454 "fark.xs"
+#line 1578 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       fn250 = calloc(sizeof(char), 250);
@@ -2017,7 +2191,7 @@ XS_EUPXS(XS_fark_xs_getPlotTableFile)
       PUSHs(sv_2mortal(newSVpv(fn250,strlen(fn250))));
       free(fn250);
       free(crc250);
-#line 2021 "fark.c"
+#line 2195 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2033,16 +2207,16 @@ XS_EUPXS(XS_fark_xs_setPlotGraphicsFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1480 "fark.xs"
+#line 1604 "fark.xs"
       char *fn250;
       int  irc;
       char *crc250;
-#line 2041 "fark.c"
+#line 2215 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	char *	fn = (char *)SvPV_nolen(ST(1))
 ;
-#line 1484 "fark.xs"
+#line 1608 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       fn250 = calloc(sizeof(char), 250);
@@ -2057,7 +2231,7 @@ XS_EUPXS(XS_fark_xs_setPlotGraphicsFile)
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(fn250);
       free(crc250);
-#line 2061 "fark.c"
+#line 2235 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2073,14 +2247,14 @@ XS_EUPXS(XS_fark_xs_getPlotGraphicsFile)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1509 "fark.xs"
+#line 1633 "fark.xs"
       char *fn250;
       int  irc;
       char *crc250;
-#line 2081 "fark.c"
+#line 2255 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
-#line 1513 "fark.xs"
+#line 1637 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       fn250 = calloc(sizeof(char), 250);
@@ -2096,7 +2270,7 @@ XS_EUPXS(XS_fark_xs_getPlotGraphicsFile)
       PUSHs(sv_2mortal(newSVpv(fn250,strlen(fn250))));
       free(fn250);
       free(crc250);
-#line 2100 "fark.c"
+#line 2274 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2112,13 +2286,13 @@ XS_EUPXS(XS_fark_xs_strepPlotFiles)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1538 "fark.xs"
+#line 1662 "fark.xs"
       int  irc;
       char *crc250;
-#line 2119 "fark.c"
+#line 2293 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
-#line 1541 "fark.xs"
+#line 1665 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -2130,7 +2304,7 @@ XS_EUPXS(XS_fark_xs_strepPlotFiles)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 2134 "fark.c"
+#line 2308 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2146,13 +2320,13 @@ XS_EUPXS(XS_fark_xs_clearPlotAttributeStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1562 "fark.xs"
+#line 1686 "fark.xs"
       int  irc;
       char *crc250;
-#line 2153 "fark.c"
+#line 2327 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
-#line 1565 "fark.xs"
+#line 1689 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -2164,7 +2338,7 @@ XS_EUPXS(XS_fark_xs_clearPlotAttributeStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 2168 "fark.c"
+#line 2342 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2180,19 +2354,19 @@ XS_EUPXS(XS_fark_xs_pushPlotAttribute)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1589 "fark.xs"
+#line 1713 "fark.xs"
       char *name250;
       char *value250;
       int  irc;
       char *crc250;
-#line 2189 "fark.c"
+#line 2363 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	char *	name = (char *)SvPV_nolen(ST(1))
 ;
 	char *	value = (char *)SvPV_nolen(ST(2))
 ;
-#line 1594 "fark.xs"
+#line 1718 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       name250 = calloc(sizeof(char), 250);
@@ -2210,7 +2384,7 @@ XS_EUPXS(XS_fark_xs_pushPlotAttribute)
       free(name250);
       free(value250);
       free(crc250);
-#line 2214 "fark.c"
+#line 2388 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2226,13 +2400,13 @@ XS_EUPXS(XS_fark_xs_clearPlotSetStack)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1621 "fark.xs"
+#line 1745 "fark.xs"
       int  irc;
       char *crc250;
-#line 2233 "fark.c"
+#line 2407 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
-#line 1624 "fark.xs"
+#line 1748 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
@@ -2244,7 +2418,7 @@ XS_EUPXS(XS_fark_xs_clearPlotSetStack)
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
-#line 2248 "fark.c"
+#line 2422 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2260,14 +2434,14 @@ XS_EUPXS(XS_fark_xs_pushPlotSet)
     PERL_UNUSED_VAR(ax); /* -Wall */
     SP -= items;
     {
-#line 1654 "fark.xs"
+#line 1778 "fark.xs"
       char *name250;
       char *x250;
       char *y250;
       char *legend250;
       int  irc;
       char *crc250;
-#line 2271 "fark.c"
+#line 2445 "fark.c"
 	int	pid = (int)SvIV(ST(0))
 ;
 	int	cid = (int)SvIV(ST(1))
@@ -2284,7 +2458,7 @@ XS_EUPXS(XS_fark_xs_pushPlotSet)
 ;
 	char *	legend = (char *)SvPV_nolen(ST(7))
 ;
-#line 1661 "fark.xs"
+#line 1785 "fark.xs"
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       name250 = calloc(sizeof(char), 250);
@@ -2308,7 +2482,7 @@ XS_EUPXS(XS_fark_xs_pushPlotSet)
       free(y250);
       free(legend250);
       free(crc250);
-#line 2312 "fark.c"
+#line 2486 "fark.c"
 	PUTBACK;
 	return;
     }
@@ -2358,17 +2532,18 @@ XS_EXTERNAL(boot_fark)
         newXS_deffile("fark::xs_setObsCache", XS_fark_xs_setObsCache);
         newXS_deffile("fark::xs_clearModelFileStack", XS_fark_xs_clearModelFileStack);
         newXS_deffile("fark::xs_clearModelTargetStack", XS_fark_xs_clearModelTargetStack);
-        newXS_deffile("fark::xs_clearModelDefaultStack", XS_fark_xs_clearModelDefaultStack);
+        newXS_deffile("fark::xs_clearDefaultStack", XS_fark_xs_clearDefaultStack);
         newXS_deffile("fark::xs_pushModelFile", XS_fark_xs_pushModelFile);
         newXS_deffile("fark::xs_peekModelFile", XS_fark_xs_peekModelFile);
         newXS_deffile("fark::xs_popModelFile", XS_fark_xs_popModelFile);
         newXS_deffile("fark::xs_setModelIndex", XS_fark_xs_setModelIndex);
         newXS_deffile("fark::xs_setModelIndexLimits", XS_fark_xs_setModelIndexLimits);
         newXS_deffile("fark::xs_pushModelTarget", XS_fark_xs_pushModelTarget);
-        newXS_deffile("fark::xs_addModelDefault", XS_fark_xs_addModelDefault);
-        newXS_deffile("fark::xs_pushModelDefault", XS_fark_xs_pushModelDefault);
+        newXS_deffile("fark::xs_addDefault", XS_fark_xs_addDefault);
+        newXS_deffile("fark::xs_pushDefault", XS_fark_xs_pushDefault);
         newXS_deffile("fark::xs_clearMatchRuleStack", XS_fark_xs_clearMatchRuleStack);
-        newXS_deffile("fark::xs_addMatchRule", XS_fark_xs_addMatchRule);
+        newXS_deffile("fark::xs_pushMatchRule", XS_fark_xs_pushMatchRule);
+        newXS_deffile("fark::xs_makeMatchList", XS_fark_xs_makeMatchList);
         newXS_deffile("fark::xs_setObsTablePath", XS_fark_xs_setObsTablePath);
         newXS_deffile("fark::xs_clearObsFileStack", XS_fark_xs_clearObsFileStack);
         newXS_deffile("fark::xs_pushObsFile", XS_fark_xs_pushObsFile);
@@ -2381,6 +2556,9 @@ XS_EXTERNAL(boot_fark)
         newXS_deffile("fark::xs_setObsBufrType", XS_fark_xs_setObsBufrType);
         newXS_deffile("fark::xs_expression", XS_fark_xs_expression);
         newXS_deffile("fark::xs_setColocFilter", XS_fark_xs_setColocFilter);
+        newXS_deffile("fark::xs_setColocXMLFile", XS_fark_xs_setColocXMLFile);
+        newXS_deffile("fark::xs_getColocXMLFile", XS_fark_xs_getColocXMLFile);
+        newXS_deffile("fark::xs_makeColocXML", XS_fark_xs_makeColocXML);
         newXS_deffile("fark::xs_makePlotTable", XS_fark_xs_makePlotTable);
         newXS_deffile("fark::xs_makePlotGraphics", XS_fark_xs_makePlotGraphics);
         newXS_deffile("fark::xs_setPlotType", XS_fark_xs_setPlotType);

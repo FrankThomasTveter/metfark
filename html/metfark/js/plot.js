@@ -58,7 +58,7 @@ function plot_getObsConfigFile() {
 function plot_setArray(parameter,value) {
     var file=plot_getConfigFile();
     //console.log("File:",file,parameter,plot_config[file]);
-    plot_config[file][parameter]=value;
+    plot_config[file][parameter]=decodeURI(value);
 };
 function plot_setCat(value) {
     var file=plot_getConfigFile();
@@ -143,7 +143,7 @@ function plot_newPlotDataset(item) {
     var x=item.parentNode.parentNode.children[6].children[0].value;
     var y=item.parentNode.parentNode.children[8].children[0].value;
     var legend=item.parentNode.parentNode.children[10].children[0].value;
-//    console.log("New: trg:",set," file:",coloc," x:",x," y:",y," leg:",legend);
+    console.log("New: trg:",set," file:",coloc," x:",x," y:",y," leg:",legend);
     if (set !== "" && coloc !== "") {
 	var file= plot_getConfigFile();
 	if (plot_config[file] === undefined) {
@@ -151,15 +151,13 @@ function plot_newPlotDataset(item) {
 			       attributes : {},
 			       password: ""};
 	};
-	if (plot_config[file]["dataset"][set] === undefined) {
-	    plot_config[file]["dataset"][set]={coloc:coloc,x:x,y:y,legend:legend};
-	    item.parentNode.parentNode.children[1].children[0].value="";
-	    item.parentNode.parentNode.children[3].children[0].value="";
-	    item.parentNode.parentNode.children[4].children[0].value="";
-	    item.parentNode.parentNode.children[6].children[0].value="";
-	    item.parentNode.parentNode.children[8].children[0].value="";
-	    item.parentNode.parentNode.children[10].children[0].value="";
-	};
+	plot_config[file]["dataset"][set]={coloc:coloc,x:x,y:y,legend:legend};
+	item.parentNode.parentNode.children[1].children[0].value="";
+	item.parentNode.parentNode.children[3].children[0].value="";
+	item.parentNode.parentNode.children[4].children[0].value="";
+	item.parentNode.parentNode.children[6].children[0].value="";
+	item.parentNode.parentNode.children[8].children[0].value="";
+	item.parentNode.parentNode.children[10].children[0].value="";
 	plot_setDatasetTable(file);
     } else {
 	alert("Invalid line set/coloc: ('"+set+"'/'"+coloc+"')");
@@ -218,7 +216,7 @@ function plot_setDatasetTable(file) {
     for (var set in sets) {
 	var cat =plot_config[file]["cat"];
 	var type=plot_cats[cat]["lines"][set]//"";
-	console.log("Looking for:",file,cat,set,type);
+	console.log("Looking for:",file,cat,set,type,sets[set]["coloc"]);
 	plot_insertDatasetRow(tail,set,type,sets[set]["coloc"],sets[set]["x"],
 				 sets[set]["y"],sets[set]["legend"]);
     }

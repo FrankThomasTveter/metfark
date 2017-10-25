@@ -175,7 +175,7 @@ sub findModelFile {
 		my $data = $fark->peekModelFile();
 		if ($data) {
 		    #$data->printTree("Model:");
-		    foreach my $index (sort keys %{$data->{file}->{variable}}) {
+		    foreach my $index (sort {$data->{file}->{variable}->{$a}->{name} cmp $data->{file}->{variable}->{$b}->{name}} keys %{$data->{file}->{variable}}) {
 			my $parent = XML::LibXML::Element->new( 'variable' );
 			if (defined $data->{file}->{variable}->{$index}->{dimension}) {
 			    my $dims="";

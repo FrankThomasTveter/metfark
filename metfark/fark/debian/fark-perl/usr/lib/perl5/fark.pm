@@ -274,20 +274,27 @@ Arguments:
 
 =item (string) file mask.
 
+=item (int) test flag (1 or 0), 1= only check input
+
 =back
 
 =head4 EXAMPLE
 
-$fark->updateModelRegister($xmlfile,$modregfile,"/opdata/arome/", ".*\.nc");
+$fark->updateModelRegister($xmlfile,$modregfile,"/opdata/arome/", ".*\.nc",0);
 
 =cut
 
 sub updateModelRegister { 
-    my ($self, $register_file, $mask_dir, $mask) = @_; 
+    my $self = shift;
+    my $register_file = shift;
+    my $mask_dir = shift;
+    my $mask=shift;
+    my $test=shift // 0;
     my $new_file_cnt = 0;
     my @new_file_list;
     my @push_files;
     my @pop_files;
+    if ($test) {return ();};
     my $write_register_file=0;
     my @new_line_list = GetFiles($mask_dir,$mask) or return @push_files;
     my %new_file_hash;
@@ -301,6 +308,9 @@ sub updateModelRegister {
     }
     my %file_loaded;
     if ( ! -e $register_file ) {
+	# make sure output file directories exist...
+	my ($dir,$name)=farkdir::splitName($register_file);
+	farkdir::makePath($dir);
 	## No files will be retrieved first time...
 	#%file_loaded = map {$_, 1} @new_file_list;
 	#print ">>>> No register file $register_file available.\n";
@@ -350,6 +360,8 @@ sub updateModelRegister {
 	    print REGISTER "$new_file_hash{$_}\n";
 	}
 	CORE::close REGISTER;
+	chmod 0666, $register_file;
+
     }
     return @push_files;
 }
@@ -365,19 +377,25 @@ Arguments:
 
 =item (string) path to model cache file.
 
+=item (int) test flag (1 or 0), 1= only check input
+
 =back
 
 =head4 EXAMPLE
 
-$fark->makeModelCache($modfile);
+$fark->makeModelCache($modfile,0);
 
 =cut
 
 sub makeModelCache { 
     my $self = shift; 
     my $modfile = shift;
-    if (my ($ret,$msg) = xs_makeModelCache($self->{MID},$modfile)){
+    my $test = shift // 0;
+    my ($dir,$name)=farkdir::splitName($modfile);
+    farkdir::makePath($dir);
+    if (my ($ret,$msg) = xs_makeModelCache($self->{MID},$modfile,$test)){
 	if ($ret != 0) {die $msg;}
+	chmod 0666, $modfile;
     }
 }
 
@@ -401,7 +419,7 @@ $fark->loadModelCache($modfile);
 
 sub loadModelCache { 
     my $self = shift; 
-    my $modfile = shift; 
+    my $modfile = shift;
     if (my ($ret,$msg) = xs_loadModelCache($self->{MID},$modfile)){
 	if ($ret != 0) {die $msg;}
     }
@@ -428,6 +446,8 @@ $fark->setModelCache($modfile);
 sub setModelCache { 
     my $self = shift; 
     my $modfile = shift; 
+    my ($dir,$name)=farkdir::splitName($modfile);
+    farkdir::makePath($dir);
     if (my ($ret,$msg) = xs_setModelCache($self->{CID},$modfile)){
 	if ($ret != 0) {die $msg;}
     }
@@ -534,26 +554,26 @@ sub pushModelTarget {
 }
 
 
-=head2 clearModelDefaultStack 
+=head2 clearDefaultStack 
 
-clearModelDefaultStack -  clears the model default stack. If the model default is used, only models with valid defaults are visible to the system.
+clearDefaultStack -  clears the model default stack. If the model default is used, only models with valid defaults are visible to the system.
 
 =head4 EXAMPLE
 
-$fark->clearModelDefaultStack();
+$fark->clearDefaultStack();
 
 =cut
 
-sub clearModelDefaultStack {
+sub clearDefaultStack {
     my ($self)=@_;
-    my ($ret,$msg) = xs_clearModelDefaultStack($self->{OID});
+    my ($ret,$msg) = xs_clearDefaultStack($self->{CID});
     if ($ret != 0) {die $msg;}
     return;
 }
 
-=head2 addModelDefault 
+=head2 addDefault 
 
-addModelDefault - defines model default target value (in the absence of observations).
+addDefault - defines model default target value (in the absence of observations).
 
 Arguments:
 
@@ -567,13 +587,13 @@ Arguments:
 
 =head4 EXAMPLE
 
-$fark->addModelDefault("modeltime","12220.0");
+$fark->addDefault("modeltime","12220.0");
 
 =cut
 
-sub addModelDefault {
+sub addDefault {
     my ($self,$nam,$val)=@_;
-    my ($ret,$msg) = xs_addModelDefault($self->{OID},$nam,$val);
+    my ($ret,$msg) = xs_addDefault($self->{CID},$nam,$val);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -765,12 +785,17 @@ $fark->updateObservationRegister($obsregfile,"/opdata/obs_dec/rdb/temp/temp_*06*
 =cut
 
 sub updateObservationRegister { 
-    my ($self, $register_file, $mask_dir, $mask) = @_; 
+    my $self = shift;
+    my $register_file = shift;
+    my $mask_dir = shift;
+    my $mask = shift;
+    my $test = shift // 0; 
     my $new_file_cnt = 0;
     my @new_file_list;
     my @push_files;
     my @pop_files;
     my $write_register_file=0;
+    if ($test) {return ();};
     my @new_line_list = GetFiles($mask_dir,$mask) or return @push_files;
     my %new_file_hash;
     foreach (@new_line_list) {
@@ -783,6 +808,9 @@ sub updateObservationRegister {
     }
     my %file_loaded;
     if ( ! -e $register_file ) {
+	# make sure output file directories exist...
+	my ($dir,$name)=farkdir::splitName($register_file);
+	farkdir::makePath($dir);
 	## No files will be retrieved first time...
 	#%file_loaded = map {$_, 1} @new_file_list;
 	#print ">>>> No register file $register_file available.\n";
@@ -832,6 +860,7 @@ sub updateObservationRegister {
 	    print REGISTER "$new_file_hash{$_}\n";
 	}
 	CORE::close REGISTER;
+	chmod 0666, $register_file;
     }
     return @push_files;
 }
@@ -847,6 +876,8 @@ Arguments:
 
 =item (string) path to obs cache file.
 
+=item (int) test flag (1 or 0), 1= only check input
+
 =back
 
 =head4 EXAMPLE
@@ -858,8 +889,12 @@ $fark->makeObservationCache($obsfile);
 sub makeObservationCache { 
     my $self = shift; 
     my $obsfile = shift;
-    if (my ($ret,$msg) = xs_makeObsCache($self->{OID},$obsfile)){
+    my $test = shift // 0;
+    my ($dir,$name)=farkdir::splitName($obsfile);
+    farkdir::makePath($dir);
+    if (my ($ret,$msg) = xs_makeObsCache($self->{OID},$obsfile,$test)){
 	if ($ret != 0) {die $msg;}
+	chmod 0666, $obsfile;
     }
 }
 
@@ -871,7 +906,7 @@ Arguments:
 
 =over 4
 
-=item (string) parh to obs cache file (optional in repeated calls).
+=item (string) path to obs cache file (optional in repeated calls).
 
 =back
 
@@ -885,7 +920,9 @@ sub loadObservationCache {
     my $self = shift; 
     my $obsfile = shift;
     if (my ($ret,$msg) = xs_loadObsCache($self->{OID},$obsfile)){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {
+	    die $msg;
+	};
     }
 }
 
@@ -910,6 +947,8 @@ $fark->setObservationCache($obsfile);
 sub setObservationCache { 
     my $self = shift; 
     my $obsfile = shift;
+    my ($dir,$name)=farkdir::splitName($obsfile);
+    farkdir::makePath($dir);
     if (my ($ret,$msg) = xs_setObsCache($self->{CID},$obsfile)){
 	if ($ret != 0) {die $msg;}
     }
@@ -1067,13 +1106,13 @@ clearMatchRuleStack - clear match-rule expressions.
 
 sub clearMatchRuleStack {
     my ($self)=@_;
-    my ($ret,$msg) = xs_clearMatchRuleStack($self->{MID});
+    my ($ret,$msg) = xs_clearMatchRuleStack($self->{CID});
     if ($ret != 0) {die $msg;}
 }
 
-=head2 addMatchRule
+=head2 pushMatchRule
 
-addMatchRule - add a match-rule to the stack
+pushMatchRule - add a match-rule to the stack
 
 Arguments:
 
@@ -1091,13 +1130,29 @@ Arguments:
 
 =head4 EXAMPLE
 
- $fark->addMatchRule("latitude_model","180.0*latitude_obs/3.14",0,90.0);
+ $fark->pushMatchRule("latitude_model","180.0*latitude_obs/3.14",0,90.0);
 
 =cut
 
-sub addMatchRule {
+sub pushMatchRule {
     my ($self,$mod,$exp,$min,$max)=@_;
-    my ($ret,$msg) = xs_addMatchRule($self->{MID},$mod,$exp,$min,$max);
+    my ($ret,$msg) = xs_pushMatchRule($self->{CID},$mod,$exp,$min,$max);
+    if ($ret != 0) {die $msg;}
+}
+
+=head2 makeMatchList
+
+makeMatchList - make match list from match stack
+
+=head4 EXAMPLE
+
+ $fark->makeMatchList();
+
+=cut
+
+sub makeMatchList {
+    my ($self)=@_;
+    my ($ret,$msg) = xs_makeMatchList($self->{CID},$self->{MID});
     if ($ret != 0) {die $msg;}
 }
 
@@ -1122,26 +1177,49 @@ Arguments:
 
 sub setColocFilter {
     my ($self,$filter)=@_;
-    my ($ret,$msg) = xs_setColocFilter($self->{MID},$filter);
+    my ($ret,$msg) = xs_setColocFilter($self->{CID},$filter);
     if ($ret != 0) {die $msg;}
 }
 
 
 
 
-=head2 colocXML
+=head2 makeColocXML
 
-colocXML - slice model and observation files, dumping resulting XML to standard out...
+makeColocXML - make XML file...
 
+Arguments:
+
+=over 4
+
+=item (string) Path to XML file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)
+
+=item (int) test flag (1 or 0), 1= only check input
+
+=back
 =head4 EXAMPLE
 
- $fark->colocXML();
+my $xmlFile = $fark->makeColocXML($xmlPattern);
 
 =cut
 
-sub colocXML {
-    my ($self)=@_;
-    my ($ret,$msg) = xs_colocXML($self->{CID},$self->{MID},$self->{OID});
+sub makeColocXML {
+    my $self = shift;
+    my $patt = shift;
+    my $test = shift//0;
+    my ($ret,$msg)= xs_setColocXMLFile($self->{PID},$patt);
+    if ($ret != 0) {die $msg;}
+    ($ret,$msg,my $xml)= xs_getColocXMLFile($self->{PID});
+    if ($ret != 0) {die $msg;}
+    my ($dir,$name)=farkdir::splitName($xml);
+    if (!$test) {farkdir::makePath($dir);};
+    ($ret,$msg) = xs_makeColocXML($self->{CID},$self->{MID},$self->{OID},$xml,$test);
+    if ($ret != 0) {
+	if (-e $xml) {unlink $xml;};
+	die $msg;
+    } else {
+	if (-e $xml) {chmod 0666, $xml;};
+    }
     return ($ret,$msg);
 }
 
@@ -1202,12 +1280,6 @@ $fark->setPlotTableFile("rms+stdv");
 sub setPlotTableFile {
     my ($self,$tableFile)=@_;
     my ($ret,$msg) = xs_setPlotTableFile($self->{PID},$tableFile);
-    if ($ret != 0) {die $msg;}
-    return;
-}
-sub setPlotType {
-    my ($self,$type)=@_;
-    my ($ret,$msg) = xs_setPlotType($self->{PID},$type);
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1400,36 +1472,53 @@ sub pushPlotAttribute {
     if ($ret != 0) {die $msg;}
     return;
 }
+
 =head2 makePlotTable
 
 makePlotTable - make table file, return name of plot graphics file...
 
+Arguments:
+
+=over 4
+
+=item (string) Path to table file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)
+
+=item (string) Path to plot file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)
+
+=item (int) test flag (1 or 0), 1= only check input
+
+=back
+
 =head4 EXAMPLE
 
-my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern);
+my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern,0);
 
 =cut
 
 sub makePlotTable {
-    my ($self,$tfile,$gfile)=@_;
+    my $self = shift;
+    my $tfile = shift;
+    my $gfile = shift;
+    my $test = shift//0;
     my $ret;
     my $msg;
     my $dir;
     my $name;
     # set file names
-    ($ret,$msg)= xs_setTableFile($self->{PID},$tfile);
+    ($ret,$msg)= xs_setPlotTableFile($self->{PID},$tfile);
     if ($ret != 0) {die $msg;}
-    ($ret,$msg)= xs_setGraphicsFile($self->{PID},$gfile);
+    ($ret,$msg)= xs_setPlotGraphicsFile($self->{PID},$gfile);
     if ($ret != 0) {die $msg;}
     # replace wildcards in file names
     ($ret,$msg)= xs_strepPlotFiles($self->{PID});
     if ($ret != 0) {die $msg;}
     # retrieve file names
-    ($ret,$msg,$tfile)= xs_getTableFile($self->{PID});
+    ($ret,$msg,$tfile)= xs_getPlotTableFile($self->{PID});
     if ($ret != 0) {die $msg;}
-    ($ret,$msg,$gfile)= xs_getGraphicsFile($self->{PID});
+    ($ret,$msg,$gfile)= xs_getPlotGraphicsFile($self->{PID});
     if ($ret != 0) {die $msg;}
     #
+    $| = 1 ;
     # make sure output file directories exist...
     ($dir,$name)=farkdir::splitName($tfile);
     farkdir::makePath($dir);
@@ -1438,8 +1527,15 @@ sub makePlotTable {
     # make the output...
     ($ret,$msg,my $tablefile,my $graphicfile) = 
 	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},
-			 $tfile,$gfile);
-    if ($ret != 0) {die $msg;}
+			 $tfile,$gfile,$test);
+    if ($ret != 0) {
+	if (-e $tablefile) {unlink $tablefile;};
+	if (-e $graphicfile) {unlink $graphicfile;};
+	die $msg;
+    } else {
+	if (-e $tablefile) {chmod 0666, $tablefile;};
+	if (-e $graphicfile) {chmod 0666, $graphicfile;};
+    }
     return ($tablefile,$graphicfile);
 }
 
@@ -1455,6 +1551,8 @@ Arguments:
 
 =item (string) name of graphics output plot file.
 
+=item (int) test flag (1 or 0), 1= only check input
+
 =back
 
 =head4 EXAMPLE
@@ -1464,9 +1562,18 @@ my $file = $fark->makePlotGraphics($tablefile,$graphicfile);
 =cut
 
 sub makePlotGraphics {
-    my ($self,$tablefile,$graphicfile)=@_;
-    my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$graphicfile);
-    if ($ret != 0) {die $msg;}
+    my $self = shift;
+    my $tablefile = shift;
+    my $graphicfile = shift;
+    my $test = shift//0;
+    my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$graphicfile,$test);
+    if ($ret != 0) {
+	if (-e $graphicfile) {unlink $graphicfile;};
+	die $msg;
+    } else {
+	if (-e $graphicfile) {chmod 0666, $graphicfile;};
+    }
+	
     return;
 }
 

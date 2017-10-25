@@ -1,0 +1,30 @@
+subroutine col_setxmlfile(cid, xml250, crc250, irc)
+  use colocation
+  implicit none
+  integer :: cid             ! session id
+  character*250 :: xml250
+  character*250 :: crc250
+  integer :: irc
+  character*25 :: myname = "setxmlfile"
+  type(col_session), pointer :: css !  current session
+  !write(*,*) myname, 'Entering.',irc,xml250
+  !
+  call colocation_getSession(css,cid,crc250,irc)
+  if (irc.ne.0) then
+     call colocation_errorappend(crc250,myname)
+     call colocation_errorappend(crc250," Error return from getSession.")
+     call colocation_errorappendi(crc250,irc)
+     call colocation_errorappend(crc250,"\n")
+     return
+  end if
+  call colocation_setxmlfile(css,xml250,crc250,irc)
+  if (irc.ne.0) then
+     call colocation_errorappend(crc250,"|")
+     call colocation_errorappend(crc250,trim(myname))
+     call colocation_errorappend(crc250," Error return from col_setxmlfile.")
+     call colocation_errorappendi(crc250,irc)
+     return
+  end if
+  !write(*,*) myname,' Done.'
+  return
+end subroutine col_setxmlfile

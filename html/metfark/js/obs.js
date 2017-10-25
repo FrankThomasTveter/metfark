@@ -3,7 +3,7 @@ obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 filterFile : ".*\.bufr",
 				 tablePath : "/home/www/fark-perl_0.15/bufrtables/",
 				 hits : "?",
-				 bufr : { 99 : { info : "default", 9 : { seq: [{pos: 1, descr:99999, info: "default info"}],
+				 bufr : { 99 : { info : "default", 9 : { 1 :{descr:99999, info: "default info"},
 									 info : "more default info"
 						     }
 					       }
@@ -42,7 +42,7 @@ function obs_getConfigFile() {
 function obs_setArray(parameter,value) {
     var file=obs_getConfigFile();
     //console.log("File:",file,parameter,obs_config[file]);
-    obs_config[file][parameter]=value;
+    obs_config[file][parameter]=decodeURI(value);
 };
 function obs_setIndexTarget(target,parameter,value) {
     var file=obs_getConfigFile();
@@ -200,14 +200,27 @@ function obs_setIndexTargetTable(file) {
     var tail=removeTableChildFromTo(item,"labelsObsIndexTarget","newlineObsIndexTarget");
     var targeto=obs_config[file]["targeto"];
     var targets=obs_config[file]["targets"];
+    //
+    var bufr=obs_config[file]["bufr"];
     //for (var target in value) {
     for (var ii =0; ii< targeto.length;ii++) {
 	var target=targeto[ii];
-	obs_insertIndexTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],
+	var color="green";
+	if (bufr !== undefined) {
+	    if (bufr[bufrType][subType] !== undefined) {
+		if (bufr[bufrType][subType][targets[target]["pos"]] !== undefined) {
+		    var descr=bufr[bufrType][subType][targets[target]["pos"]]["descr"];
+		    if (descr!=targets[target]["descr"]) {
+			color="red";
+		    };
+		}
+	    };
+	};
+	obs_insertIndexTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],color,
 				 targets[target]["info"],targets[target]["min"],targets[target]["max"]);
     }
 }
-function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
+function obs_insertIndexTargetRow(item,target,pos,descr,color,info,min,max) {
     var row = document.createElement("TR");
     var td,inp;
     // make "-" column
@@ -247,7 +260,9 @@ function obs_insertIndexTargetRow(item,target,pos,descr,info,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",descr);
-    //inp.setAttribute("style","width:100%");
+    if (color !== "") {
+	inp.setAttribute("style","color:"+color);
+    }
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','descr',this.value);");
     td.appendChild(inp);
     row.appendChild(td);

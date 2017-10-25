@@ -1,7 +1,8 @@
 // data structure
 auto_config = { model : {"default1.cfg" : {last:"",info:"",auto:"",status:""}},
 		obs :   {"default2.cfg" : {last:"",info:"",auto:"",status:""}},
-		plot :  {"default3.cfg" : {last:"",info:"",auto:"",status:""}},
+		coloc : {"default3.cfg" : {last:"",info:"",auto:"",status:""}},
+		plot :  {"default4.cfg" : {last:"",info:"",auto:"",status:""}},
 		password: "franktt"
 	      };
 auto_configEd=0;
@@ -42,6 +43,10 @@ function auto_newConfigFile(item) {
 	    if (auto_config["obs"][file] === undefined) {
 		auto_config["obs"][file]={last:"",info:"",auto:""};
 	    };
+	} else if (type === "coloc") {
+	    if (auto_config["coloc"][file] === undefined) {
+		auto_config["coloc"][file]={last:"",info:"",auto:""};
+	    };
 	} else if (type === "plot") {
 	    if (auto_config["plot"][file] === undefined) {
 		auto_config["plot"][file]={last:"",info:"",auto:""};
@@ -53,12 +58,13 @@ function auto_newConfigFile(item) {
     }
     console.log("Adding ",type,file,auto);
 };
-function auto_autoNow(target,type,file) {
+function auto_testNow(target,type,file) {
     var root="";
+    var password=document.getElementById("autoConfigFilePsw").value;
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
-	$.get("cgi-bin/fark_auto.pl",{root:root,type:type,file:file},
+	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1},
 	      function(data, status){
 		  if (status == "success") {
 		      var errors=data.getElementsByTagName("error");
@@ -71,7 +77,33 @@ function auto_autoNow(target,type,file) {
 			  dataToArray(data,status,documentLog);
 			  auto_setTable();
 		      } else {
-			  target.children[3].innerHTML="manual";
+			  target.children[5].innerHTML="manual test";
+		      }
+		      documentLog.innerHTML="";}
+	      }
+	 );
+    };
+};
+function auto_runNow(target,type,file) {
+    var root="";
+    var password=document.getElementById("autoConfigFilePsw").value;
+    if (target === "") {root="auto.cfg";};
+    if (file !== "") {
+	documentLog.innerHTML="Sent auto-now request ("+file+").";
+	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file},
+	      function(data, status){
+		  if (status == "success") {
+		      var errors=data.getElementsByTagName("error");
+		      if (errors.length > 0 ) {
+			  console.log("Error:",data);
+			  var msg=(errors[0].getAttribute("message")||"");
+			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+		      };
+		      if (target === "") {
+			  dataToArray(data,status,documentLog);
+			  auto_setTable();
+		      } else {
+			  target.children[5].innerHTML="manual run";
 		      }
 		      documentLog.innerHTML="";}
 	      }
@@ -83,6 +115,7 @@ function auto_saveConfig(target) {
     var password=document.getElementById("autoConfigFilePsw").value;
     var modelFiles="";
     var obsFiles="";
+    var colocFiles="";
     var plotFiles="";
     auto_setTable();
     for (var model in auto_config["model"]) {
@@ -97,6 +130,12 @@ function auto_saveConfig(target) {
 	    auto_config["obs"][obs]["info"] + "~" +
 	    auto_config["obs"][obs]["auto"];
     }
+    for (var coloc in auto_config["coloc"]) {
+	colocFiles=colocFiles + "|" + coloc + "~" + 
+	    auto_config["coloc"][coloc]["last"] + "~" +
+	    auto_config["coloc"][coloc]["info"] + "~" +
+	    auto_config["coloc"][coloc]["auto"];
+    }
     for (var plot in auto_config["plot"]) {
 	plotFiles=plotFiles + "|" + plot + "~" + 
 	    auto_config["plot"][plot]["last"] + "~" +
@@ -104,7 +143,7 @@ function auto_saveConfig(target) {
 	    auto_config["plot"][plot]["auto"];
     }
     documentLog.innerHTML="Sent auto-save request.";
-    $.get("cgi-bin/fark_save.pl",{type:"auto",root:root,password:password,modelFiles:modelFiles,obsFiles:obsFiles,plotFiles:plotFiles},
+    $.get("cgi-bin/fark_save.pl",{type:"auto",root:root,password:password,modelFiles:modelFiles,obsFiles:obsFiles,colocFiles:colocFiles,plotFiles:plotFiles},
 	  function(data, status){
 	      if (status == "success") {
 		  var errors=data.getElementsByTagName("error");
@@ -138,6 +177,9 @@ function auto_setTable() {
     }
     for (var obs in auto_config["obs"]) {
 	auto_insertRow(tail,"obs",obs,auto_config["obs"][obs]["last"],auto_config["obs"][obs]["info"],auto_config["obs"][obs]["auto"],auto_config["obs"][obs]["status"]);
+    }
+    for (var coloc in auto_config["coloc"]) {
+	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"]);
     }
     for (var plot in auto_config["plot"]) {
 	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"]);
@@ -209,13 +251,25 @@ function auto_insertRow(item,type,file,last,info,auto,status) {
     chk.setAttribute("onchange","auto_setCheckbox(this,this.parentNode.parentNode.children[1].innerHTML,this.parentNode.parentNode.children[3].innerHTML);");
     td.appendChild(chk);
     row.appendChild(td);
-    // make AUTO NOW column
+    // make TEST NOW column
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
     td.setAttribute("align","center");
     btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","auto_autoNow('','"+type+"','"+file+"')");
-    btn.setAttribute("style","background-color:yellow");
+    btn.setAttribute("onclick","auto_testNow('','"+type+"','"+file+"')");
+    btn.setAttribute("class","test");
+    btn.innerHTML="&#9762"
+    //var t=document.createTextNode();
+    //btn.appendChild(t);
+    td.appendChild(btn);
+    row.appendChild(td);
+    // make RUN NOW column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("align","center");
+    btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","auto_runNow('','"+type+"','"+file+"')");
+    btn.setAttribute("class","run");
     btn.innerHTML="&#9762"
     //var t=document.createTextNode();
     //btn.appendChild(t);

@@ -1,8 +1,9 @@
-subroutine obs_makeCache(sid, path, crc250, irc)
+subroutine obs_makeCache(sid, path, test, crc250, irc)
   use observations
   implicit none
   integer :: sid             ! session id
   character*250 :: path
+  integer :: test
   character*250 :: crc250
   integer :: irc
   character*250 :: buff250
@@ -18,7 +19,7 @@ subroutine obs_makeCache(sid, path, crc250, irc)
      call observation_errorappend(crc250,"\n")
      return
   end if
-  call observation_makecache(css,path,crc250,irc)
+  call observation_makecache(css,path,test,crc250,irc)
   if (irc.ne.0) then
      !write(*,*) 'pushFile Error.'
      call observation_errorappend(crc250,"|")

@@ -1,9 +1,29 @@
 #!/usr/bin/perl -w
-system "touch /home/www/asdf";
-print "Content-type: text/html\r\n\r\n";
-print "Hello there!<br />\nJust testing .<br />\n";
+#
+my $lockfilename="lock";
+if ( not open(MLOCKFILE, ">$lockfilename") ) {
+    die "Unable to open $lockfilename";
+} elsif (flock (MLOCKFILE,2+4)) {
+    system "touch start";
+    sleep 5;
+    system "touch stop";
+} else {
+    die "script already running.";
+};
+close(MLOCKFILE);
 
-for ($i=0; $i<10; $i++)
 {
-print $i."<br />\n";
+    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+	$mtime,$ctime,$blksize,$blocks) = stat("lock");
+    print "Lock  $atime\n";
+}
+{
+    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+	$mtime,$ctime,$blksize,$blocks) = stat("start");
+    print "Start $atime\n";
+}
+{
+    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+	$mtime,$ctime,$blksize,$blocks) = stat("stop");
+    print "Stop  $atime\n";
 }

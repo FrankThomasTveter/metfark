@@ -11,7 +11,7 @@ module observations
   !
   CHARACTER(LEN=50)               :: blank50 = ''
   character*1 :: sep = "|"
-  logical                         :: bdeb=.false.
+  logical                         :: obs_bdeb=.true.
   !
   ! bufrdc PARAMETERS
   integer,parameter :: JSUP   =       9
@@ -109,7 +109,8 @@ module observations
      type(obs_mainCategory) :: lastCategory
      integer :: ncat=0
      integer :: nsub=0
-     integer :: mok(10),mrm(10),ook(10),orm(10)
+     integer :: mok(10),mrm(10),ook(10),orm(10),lenh(10)
+     character*25 :: hint25(10)
      type(obs_file), pointer :: prev => null() ! linked list
      type(obs_file), pointer :: next => null() ! linked list
   end type obs_file
@@ -255,8 +256,6 @@ module observations
      integer :: nsubset=0               ! number of reports
      logical :: reportsReady=.false.    ! are reported data ready for use
      !
-     logical :: pxml =.false.
-     !
      type(obs_session), pointer :: prev => null()         ! linked list
      type(obs_session), pointer :: next => null()         ! linked list
   end type obs_session
@@ -368,7 +367,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "observation_getSession"
-    if(bdeb)write(*,*)myname,' Entering.',irc,sid
+    if(obs_bdeb)write(*,*)myname,' Entering.',irc,sid
     if (.not.associated(firstSession)) then
        irc=911
        call observation_errorappend(crc250,myname)
@@ -380,7 +379,7 @@ CONTAINS
     css => firstSession%next
     do while ( .not.associated(css,target=lastSession))
        if (css%sid .eq. sid) then
-          if(bdeb)write(*,*)myname,' Done.',irc,sid
+          if(obs_bdeb)write(*,*)myname,' Done.',irc,sid
           return
        end if
        css=>css%next
@@ -391,7 +390,7 @@ CONTAINS
     call observation_errorappend(crc250,"Invalid session id:")
     call observation_errorappendi(crc250,sid)
     call observation_errorappend(crc250,"\n")
-    if(bdeb)write(*,*)myname,'Error.',irc,sid
+    if(obs_bdeb)write(*,*)myname,'Error.',irc,sid
     return
   end subroutine observation_getSession
 
@@ -401,7 +400,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     integer :: ii
     character*22 :: myname = "observation_closeSession"
-    if(bdeb)write(*,*)myname,'Entering.',irc
+    if(obs_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        ! remove reportdata
        call observation_clearReports(css,crc250,irc)
@@ -460,15 +459,16 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,'Done.',irc
+    if(obs_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine observation_closeSession
   !
   ! make cache file
   !
-  subroutine observation_makeCache(css,path250,crc250,irc)
+  subroutine observation_makeCache(css,path250,test,crc250,irc)
     type(obs_session), pointer :: css !  current session
     character*250 :: path250
+    integer :: test
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile !  current file
@@ -478,10 +478,11 @@ CONTAINS
     integer :: lenp,unitr
     character*250 :: buff250, str250
     character*22 :: myname = "observation_makeCache"
-    if(bdeb)write(*,*) myname,' Entering.',irc
+    if(obs_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Path.',path250(1:lenp)
+    if(obs_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
+    if (test.eq.1) return
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -503,8 +504,8 @@ CONTAINS
        return
     end if
     ! write number of files: css%nFileIndexes
-    if(bdeb)write(*,*) myname,' Files:',css%nFileIndexes
-    if (css%pxml)write(unitr,'(I0)',iostat=irc) css%nFileIndexes
+    if(obs_bdeb)write(*,*) myname,' Files:',css%nFileIndexes
+    write(unitr,'(I0)',iostat=irc) css%nFileIndexes
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," unable to write to:"//path250(1:lenp))
@@ -543,7 +544,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc
+    if(obs_bdeb)write(*,*)myname,' Done.',irc
   end subroutine observation_makeCache
   !
   ! load cache file
@@ -560,10 +561,10 @@ CONTAINS
     integer :: lenp,lenf,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
     character*22 :: myname = "observation_loadCache"
-    if(bdeb)write(*,*) myname,' Entering.',irc
+    if(obs_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Path.',path250(1:lenp)
+    if(obs_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
     ! clear existing cache
     css%stackReady=.false.
     call observation_removeFiles(css,crc250,irc)
@@ -585,7 +586,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    ! write number of files: css%nFileIndexes
+    ! read number of files: css%nFileIndexes
     read(unitr,'(A)',iostat=irc) buff250
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -594,10 +595,13 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    read(buff250,*,iostat=irc) css%nFileIndexes
+    call chop0(buff250,250)
+    lenb=length(buff250,250,10)
+    read(buff250(1:lenb),*,iostat=irc) css%nFileIndexes
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," unable to interpret:"//path250(1:lenp))
+       call observation_errorappend(crc250,buff250(1:lenb))
        call observation_errorappendi(crc250,irc)
        call observation_errorappend(crc250,"\n")
        return
@@ -623,7 +627,7 @@ CONTAINS
        read(unitr,'(A)',iostat=irc) buff250
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," unable to interpret(2):"//path250(1:lenp))
+          call observation_errorappend(crc250," unable to read (2):"//path250(1:lenp))
           call observation_errorappendi(crc250,irc)
           call observation_errorappend(crc250,"\n")
           return
@@ -724,7 +728,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc
+    if(obs_bdeb)write(*,*)myname,' Done.',irc
   end subroutine observation_loadCache
   !
   !###############################################################################
@@ -740,11 +744,11 @@ CONTAINS
     integer, external :: length
     integer :: lens
     character*22 :: myname = "observation_stackclear"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     ! mark as prepared
     css%stackReady=.false.
     !
-    if(bdeb)write(*,*)myname,' Removing files.'
+    if(obs_bdeb)write(*,*)myname,' Removing files.'
     call observation_removeFiles(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -761,7 +765,7 @@ CONTAINS
        irc=940
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_stackclear
   !
   ! get the bufr table path
@@ -788,10 +792,10 @@ CONTAINS
     integer :: lenb
     character*250 :: buff250
     character*22 :: myname = "observation_setTablePath"
-    if(bdeb)write(*,*)myname,' Entering.'//path250
     buff250=path250
     call chop0(buff250,250)
     lenb=length(buff250,250,10)
+    if(obs_bdeb)write(*,*)myname,' Entering.'//buff250(1:lenb)
     if (lenb.gt.0.and.lenb.lt.250) then
        if (buff250(lenb:lenb).ne."/") then
           buff250=buff250(1:lenb)//"/"
@@ -801,7 +805,7 @@ CONTAINS
     end if
     css%tablepath=buff250
     call chop0(css%tablepath,250)
-    if(bdeb)write(*,*)myname,' Done. "'//buff250(1:lenb)//'"'
+    if(obs_bdeb)write(*,*)myname,' Done. "'//buff250(1:lenb)//'"'
   end subroutine observation_setTablePath
   !
   ! set table c file name
@@ -819,7 +823,7 @@ CONTAINS
     ctableInit=.false.
     c250=path250
     call chop0(c250,250)
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_setTableC
   !
   !
@@ -835,10 +839,10 @@ CONTAINS
     integer, external :: length
     integer :: lens
     character*22 :: myname = "observation_setBufrType"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     css%category=category
     css%subCategory=subCategory
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_setBufrType
   !
   !
@@ -853,10 +857,10 @@ CONTAINS
     integer, external :: length
     integer :: lens
     character*22 :: myname = "observation_getBufrType"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     category=css%category
     subCategory=css%subCategory
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_getBufrType
   !
   ! remove item from bufr stack
@@ -872,9 +876,9 @@ CONTAINS
     do while (.not.associated(currentFile,target=css%lastFile))
        nextFile => currentFile%next
        if (associated(currentFile)) then
-          if(bdeb)write(*,*)myname,' Removing categories.'
+          if(obs_bdeb)write(*,*)myname,' Removing categories.'
           call observation_clearCat(currentFile)
-          if(bdeb)write(*,*)myname,' Updating inventory.'
+          if(obs_bdeb)write(*,*)myname,' Updating inventory.'
           css%nFileIndexes = css%nFileIndexes - 1
           css%stackReady=.false.
           currentFile%next%prev => currentFile%prev
@@ -906,10 +910,10 @@ CONTAINS
     integer :: lenc,leni,lenv,lens,lenp,lend
     logical :: bbok
     character*22 :: myname = "observation_stackpush"
-    if(bdeb)write(*,*) myname,' Entering.',irc
+    if(obs_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(bdeb)write(*,*)myname,' Starting.',path250(1:lenp)
+    if(obs_bdeb)write(*,*)myname,' Starting.',path250(1:lenp)
     ! create new stack-item
     bok=.true.
     allocate(newFile,stat=irc)
@@ -922,7 +926,7 @@ CONTAINS
     end if
     newFile%firstCategory%next => newFile%lastCategory
     newFile%lastCategory%prev => newFile%firstCategory
-    if(bdeb)write(*,*)myname,'Care.'
+    if(obs_bdeb)write(*,*)myname,'Care.'
     ! push onto stack
     if (bok) then
        css%nFileIndexes=css%nFileIndexes + 1
@@ -933,7 +937,7 @@ CONTAINS
        newFile%next%prev => newFile
        css%currentFile=>newFile
     end if
-    if(bdeb)write(*,*)myname,'Dare.'
+    if(obs_bdeb)write(*,*)myname,'Dare.'
     ! open file
     if (bok) then
        ! set file name...
@@ -941,11 +945,11 @@ CONTAINS
        call chop0(newFile%fn250,250)
        newFile%lenf=length(newFile%fn250,250,20)
        newFile%tablepath=css%tablepath
-       if (bdeb) call observation_printStack(css,crc250,irc)
+       if (obs_bdeb) call observation_printStack(css,crc250,irc)
        ! open file
-       if(bdeb)write(*,*)myname,'Flare.',bok
+       if(obs_bdeb)write(*,*)myname,'Flare.',bok
        call observation_scanFile(css,newFile,bok,crc250,irc)
-       if(bdeb)write(*,*)myname,'Share.',bok
+       if(obs_bdeb)write(*,*)myname,'Share.',bok
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from observation_scanFileSortIndexes.")
@@ -966,8 +970,8 @@ CONTAINS
     !       end if
     !    end if
     ! end if
-    if (bdeb) call observation_printStack(css,crc250,irc)
-    if(bdeb)write(*,*)myname,' Done.',irc
+    if (obs_bdeb) call observation_printStack(css,crc250,irc)
+    if(obs_bdeb)write(*,*)myname,' Done.',irc
   end subroutine observation_stackpush
 
   !
@@ -1031,7 +1035,7 @@ CONTAINS
           return
        end if
     end if
-    !if(bdeb)write(*,*)myname,' Done.',associated(css%lastFile%prev,target=css%firstFile)
+    !if(obs_bdeb)write(*,*)myname,' Done.',associated(css%lastFile%prev,target=css%firstFile)
   end subroutine observation_stackpeeklen
   !
   subroutine observation_stackpeek(css,maxrep,nrep,rep250,crc250,irc)
@@ -1048,7 +1052,7 @@ CONTAINS
     integer :: ii,jj
     character*80 :: varname
     character*22 :: myname = "observation_stackpeek"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     currentFile => css%lastFile%prev
     ! report file-name
     nrep=0
@@ -1062,7 +1066,7 @@ CONTAINS
           return
        end if
     end if
-    if(bdeb)write(*,*)myname,' Done.',maxrep,nrep
+    if(obs_bdeb)write(*,*)myname,' Done.',maxrep,nrep
   end subroutine observation_stackpeek
 
   subroutine observation_getFileReportLen(css,currentFile,maxrep,crc250,irc)
@@ -1222,7 +1226,7 @@ CONTAINS
     character*22 :: myname = "observation_clearTargetStack"
     integer :: ii, lens
     integer, external :: length
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     css%reportsReady=.false. ! old reports are discarded...
     ! delete any existing Target-entries
     call observation_removeTarget(css,crc250,irc)
@@ -1262,7 +1266,7 @@ CONTAINS
     integer :: lenc,lenp,lend,lens,lene
     integer, external :: length
     character*22 :: myname = "observation_pushTarget"
-    if(bdeb)write(*,*)myname,' Entering "'//trg(1:len(trg))//'" "'//pos(1:len(pos))//'"'
+    if(obs_bdeb)write(*,*)myname,' Entering "'//trg(1:len(trg))//'" "'//pos(1:len(pos))//'"'
     if (len(trg).eq.0) then
        irc=983
        call observation_errorappend(crc250,myname)
@@ -1301,7 +1305,7 @@ CONTAINS
     newTarget%prev%next => newTarget
     newTarget%next%prev => newTarget
     css%trg_set=.false.
-    if(bdeb)write(*,*)myname,' Done.',trg
+    if(obs_bdeb)write(*,*)myname,' Done.',trg
     return
   end subroutine observation_pushTarget
   !
@@ -1432,7 +1436,7 @@ CONTAINS
        else
           css%ntrg=css%ntarget
        end if
-       if(bdeb)write(*,*)myname,' here.',css%ntrg
+       if(obs_bdeb)write(*,*)myname,' here.',css%ntrg
        currenttarget => css%firsttarget%next
        do while (.not.associated(currenttarget,target=css%lasttarget))
           ii=ii+1
@@ -1466,14 +1470,14 @@ CONTAINS
     type(obs_target), pointer :: currenttarget => null()
     integer :: lent,lenp,lend,lens,lene,ii
     integer, external :: length
-    if(bdeb)write(*,*)myname,' Entering.',irc
+    if(obs_bdeb)write(*,*)myname,' Entering.',irc
     if ( .not. css%trg_set ) then
        if (css%ind_set) then
           css%ntrg=css%ntarget+1
        else
           css%ntrg=css%ntarget
        end if
-       if(bdeb)write(*,*)myname,' here.',css%ntrg
+       if(obs_bdeb)write(*,*)myname,' here.',css%ntrg
        if (allocated(css%trg80)) deallocate(css%trg80)
        if (allocated(css%trg_lent)) deallocate(css%trg_lent)
        if (allocated(css%trg_seq)) deallocate(css%trg_seq)
@@ -1571,7 +1575,7 @@ CONTAINS
        end if
        css%trg_set=.true.
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg
+    if(obs_bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg
     return
   end subroutine observation_makeTargetList
   !
@@ -1584,7 +1588,7 @@ CONTAINS
     type(obs_target), pointer :: currenttarget => null()
     type(obs_target), pointer :: nexntarget => null()
     character*22 :: myname = "observation_removeTarget "
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     currenttarget => css%firsttarget%next
     do while (.not.associated(currenttarget,target=css%lasttarget))
        nexntarget => currenttarget%next
@@ -1611,7 +1615,7 @@ CONTAINS
     if (allocated(css%trg_val)) deallocate(css%trg_val)
     css%ntrg = 0
     css%trg_set=.false.
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine observation_removeTarget
   !
@@ -1624,7 +1628,7 @@ CONTAINS
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname = "observation_checkTarget"
     integer :: seq, ii
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     if (css%ntarget .eq. 0) then ! accept all reports if there is no target...
        bok=.true.
        return
@@ -1632,6 +1636,7 @@ CONTAINS
     if (css%category .eq. ksec1(6) .and. &
          & css%subcategory .eq. ksec1(7)) then
        bok=.true.
+       if(obs_bdeb)write(*,*)myname,' Found BUFR:',ksec1(6),ksec1(7)
        TRG: do ii=1,css%ntrg
           if (bok.and.css%trg_lval(1,ii).or.css%trg_lval(2,ii)) then
              if (css%trg_lval(3,ii)) then ! invert check
@@ -1646,12 +1651,13 @@ CONTAINS
           else
              css%trg_orm(ii)=css%trg_orm(ii)+1
           end if
+          if(obs_bdeb.and..not.bok)write(*,*)myname,' Failed check:',ii,css%trg_val(ii)
           if (.not.bok) exit TRG
        end do TRG
     else
        bok=.false.
     end if
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.',ksec1(6),ksec1(7),bok
     return
   end subroutine observation_checkTarget
   !
@@ -1698,7 +1704,7 @@ CONTAINS
     character*22 :: myname = "observation_sortFiles"
     !
     ! make array of files
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     call observation_sortStack(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -1746,7 +1752,7 @@ CONTAINS
        css%stackReady = .true.
     end if
     call observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
-    !if(bdeb)
+    !if(obs_bdeb)
     ! write(*,*)myname,'There.',css%currentFileSortIndex,css%newnFileSortIndexes
     isubset=1
     nsubset=0
@@ -1779,7 +1785,7 @@ CONTAINS
        end if
     end do SEARCH
     if (css%currentFileSortIndex.gt.0.and.css%currentFileSortIndex.le.css%newnFileSortIndexes) then
-       if(bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex
+       if(obs_bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex
        bok=.true.
     else
        bok=.false.
@@ -1853,7 +1859,7 @@ CONTAINS
        end if
     end do SEARCH
     if (css%currentFileSortIndex.gt.0.and.css%currentFileSortIndex.le.css%newnFileSortIndexes) then
-       if(bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex
+       if(obs_bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex
        bok=.true.
     else
        bok=.false.
@@ -1883,18 +1889,17 @@ CONTAINS
     type(obs_file), pointer :: currentFile => null()
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
-    integer :: lene,lent
     character*22 :: myname = "observation_setIndex"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     css%ind_trg80=trg80
     css%ind_exp250=exp250
     call chop0(css%ind_trg80,80)
     call chop0(css%ind_exp250,250)
     css%ind_lent=length(css%ind_trg80,80,10)
     css%ind_lene=length(css%ind_exp250,250,10)
-    if(bdeb)write(*,*)myname,' Index:'//css%ind_trg80(1:css%ind_lent)
-    css%ind_set=(lene.gt.0)
-    if(bdeb)write(*,*)myname,' Done.',css%ind_set
+    if(obs_bdeb)write(*,*)myname,' Index:'//css%ind_trg80(1:css%ind_lent)
+    css%ind_set=(css%ind_lene.gt.0)
+    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_set
     !write(*,*)myname,'Setting index:',css%ind_trg80(1:css%ind_lent)
   end subroutine observation_setIndex
   !
@@ -1922,12 +1927,12 @@ CONTAINS
     integer, external :: length
     integer :: irc2
     character*22 :: myname = "observation_setIndexLimits"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     call chop0(s25,25)
     lens=length(s25,25,10)
     call chop0(e25,25)
     lene=length(e25,25,10)
-    if(bdeb)write(*,*)myname,' Limits:'//s25(1:lens)//" -> "//e25(1:lene)
+    if(obs_bdeb)write(*,*)myname,' Limits:'//s25(1:lens)//" -> "//e25(1:lene)
     if (lens.ne.0.and.lene.ne.0) then
        css%ind_lim(1)=.true.
        css%ind_lim(2)=.true.
@@ -1949,7 +1954,7 @@ CONTAINS
        css%ind_lim(2)=.false.
        css%ind_lim(3)=.false.
     end if
-    if(bdeb)write(*,*)myname,' Done.',css%ind_lim(3),css%ind_start,css%ind_stop
+    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lim(3),css%ind_start,css%ind_stop
     return
   end subroutine observation_setIndexLimits
   !
@@ -1965,7 +1970,7 @@ CONTAINS
     integer, external :: length
     integer :: lenl
     character*22 :: myname = "observation_ignoreLabel"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     call chop0(lab250,250)
     lenl=length(lab250,250,10)
     if (lenl.eq.0) then
@@ -1990,7 +1995,7 @@ CONTAINS
     else if (lab250(1:lenl).eq."array") then
        css%ignarr=.true.
     end if
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_ignorelabel
   !
   ! set index limits directly
@@ -2031,7 +2036,7 @@ CONTAINS
     character*22 :: myname = "observation_sortStack"
     !
     ! make array of files
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     if (associated(css%fileStack)) deallocate(css%fileStack)
     if (allocated(css%fileStackSort)) deallocate(css%fileStackSort)
     if (allocated(css%fileStackInd)) deallocate(css%fileStackInd)
@@ -2046,7 +2051,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Here.'
+    if(obs_bdeb)write(*,*)myname,' Here.'
     currentFile => css%firstFile%next
     ii=0
     do while (.not.associated(currentFile, target=css%lastFile))
@@ -2058,7 +2063,7 @@ CONTAINS
        end if
        currentFile => currentFile%next
     end do
-    if(bdeb)write(*,*)myname,' There.'
+    if(obs_bdeb)write(*,*)myname,' There.'
     if (ii.ne.css%nFileIndexes) then
        irc=944
        call observation_errorappend(crc250,myname)
@@ -2075,7 +2080,7 @@ CONTAINS
     call observation_heapsort1r(css%nFileIndexes,css%fileStackSort,1.0D-5, &
          & css%newnFileSortIndexes,css%nFileSortIndexes,css%fileStackInd,.false.)
     ! set index range
-    if(bdeb)write(*,*)myname,' Where.'
+    if(obs_bdeb)write(*,*)myname,' Where.'
     call observation_stacklast(css,crc250,irc)   ! start with latest analysis
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -2084,7 +2089,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.',css%newnFileSortIndexes
+    if(obs_bdeb)write(*,*)myname,' Done.',css%newnFileSortIndexes
     return
   end subroutine observation_sortStack
   !
@@ -2102,10 +2107,10 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "observation_stacklast"
-    if(bdeb)write(*,*)myname,' Entering.',associated(css)
+    if(obs_bdeb)write(*,*)myname,' Entering.',associated(css)
     css%currentFileSortIndex=css%newnFileSortIndexes+1
     css%currentFileIndex=0
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_stacklast
   !
   !###############################################################################
@@ -2144,7 +2149,7 @@ CONTAINS
     character*25 :: myname = "observation_locclear"
     integer :: ii, lens
     integer, external :: length
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     call observation_locinit(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -2175,7 +2180,7 @@ CONTAINS
        irc=940
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_locclear
   !
   ! delete loc
@@ -2212,7 +2217,7 @@ CONTAINS
     integer :: lenc
     integer, external :: length
     character*25 :: myname = "observation_locpushTarget"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     ! initialise location stack
     if (css%nloc.eq.0) then
        css%locoffset=locid-1
@@ -2265,7 +2270,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine observation_locpushTarget
   !
@@ -2316,7 +2321,7 @@ CONTAINS
     logical :: bdone
     integer, external :: length
     character*22 :: myname = "observation_sliceCurrentFile"
-    if(bdeb)write(*,*)myname,' Entering.',bok
+    if(obs_bdeb)write(*,*)myname,' Entering.',bok
     ! get next observation from file
     if (.not.css%stackReady) then
        call observation_sortStack(css,crc250,irc)
@@ -2367,7 +2372,7 @@ CONTAINS
        end if
        if (bok) exit obs
     end do obs
-    if(bdeb)write(*,*)myname,' Done.',bok,cnt
+    if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt
     return
   end subroutine observation_sliceCurrentFile
 
@@ -3076,7 +3081,7 @@ CONTAINS
     character*22 :: myname = "observation_scanFile"
     integer :: cnt
     logical :: bbok
-    if(bdeb)write(*,*)myname,' Entering.',irc
+    if(obs_bdeb)write(*,*)myname,' Entering.',irc
     !
     ! open file
     !
@@ -3097,7 +3102,7 @@ CONTAINS
     cnt=0
     if (bok) then
        ! compile index expression
-       if(bdeb)write(*,*)myname,' Calling readfile.'
+       if(obs_bdeb)write(*,*)myname,' Calling readfile.'
        bok=.false. ! must read at least one observation
        bbok=.true.
        do while (bbok)
@@ -3140,7 +3145,7 @@ CONTAINS
           !write(*,*)myname,'Subsets:',newFile%nsubset
        end if
     end if
-    if(bdeb)write(*,*)myname,' Done.',irc
+    if(obs_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine observation_scanFile
   !
@@ -3155,7 +3160,7 @@ CONTAINS
     integer :: yy,mm,dd,hh,mi,cnt
     real :: sec, j2000
     css%currentfile%ook(1)=css%currentfile%ook(1)+1 ! descriptors do not match
-    if(bdeb)write(*,*)myname,' Evaluating expressions.'
+    if(obs_bdeb)write(*,*)myname,' Evaluating expressions.'
     call observation_eval(css,bok,crc250,irc)
     IF(IRC.NE.0) THEN
        call observation_errorappend(crc250,myname)
@@ -3175,7 +3180,7 @@ CONTAINS
              css%currentFile%ind_start=css%ind_val
              css%currentFile%ind_stop=css%ind_val
           end if
-       else if (bdeb) then
+       else if (obs_bdeb) then
           write(*,*)myname,'Index not set, no index limits available.'
        end if
        yy=KSEC1( 9)
@@ -3191,7 +3196,7 @@ CONTAINS
           end if
        end if
        sec=0.0D0
-       if(bdeb)write(*,'(X,A,A,A,5(A,I0))') myname," File '",&
+       if(obs_bdeb)write(*,'(X,A,A,A,5(A,I0))') myname," File '",&
             & css%currentFile%fn250(1:css%currentFile%lenf),"'",&
             & yy,"/",mm,"/",dd," ",hh,":",mi
        call jd2000(j2000,yy,mm,dd,hh,mi,sec)
@@ -3204,7 +3209,7 @@ CONTAINS
           css%currentFile%time_start=j2000
           css%currentFile%time_stop=j2000
        end if
-       !if(bdeb)write(*,*)myname,"MaxMin:",css%ind_set,css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
+       !if(obs_bdeb)write(*,*)myname,"MaxMin:",css%ind_set,css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
        ! write(*,*) myname,"Value:",css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
     else
        css%currentfile%orm(2)=css%currentfile%orm(2)+1 ! evaluation failed
@@ -3226,7 +3231,7 @@ CONTAINS
     ! check against targets
     !
     if (bok) then
-       if(bdeb)write(*,*)myname,' Checking target.'
+       if(obs_bdeb)write(*,*)myname,' Checking target.'
        call observation_checkTarget(css,bok,crc250,irc)
        IF(IRC.NE.0) THEN
           call observation_errorappend(crc250,myname)
@@ -3268,7 +3273,7 @@ CONTAINS
     NVIND=2147483647
     css%currentfile%NSUBSET=0
     css%currentFile%NMESSAGE=0
-    if(bdeb)write(*,*)myname,'Opening file: ',css%currentfile%fn250(1:css%currentfile%lenf)
+    if(obs_bdeb)write(*,*)myname,'Opening file: ',css%currentfile%fn250(1:css%currentfile%lenf)
     CALL PBOPEN(UNIT,css%currentfile%fn250(1:css%currentfile%lenf),'R',irc)
     !write(*,*)myname,'Opened file: ',css%currentfile%fn250(1:css%currentfile%lenf)
     if (irc.ne.0) then
@@ -3294,6 +3299,7 @@ CONTAINS
        css%currentfile%mrm(ii)=0
        css%currentfile%ook(ii)=0
        css%currentfile%orm(ii)=0
+       css%currentfile%hint25(ii)=""
     end do
     do ii=1,css%ntrg
        css%trg_ook(ii)=0
@@ -3312,15 +3318,15 @@ CONTAINS
     integer :: irc           ! error return code (0=ok)
     integer :: ii, jj
     character*22 :: myname = "observation_readMessage"
-    if(bdeb)write(*,*)myname,' Entering.'
+    if(obs_bdeb)write(*,*)myname,' Entering.'
     irc=0
-    bok=.true.
     msg: do
+       bok=.true.
        KBUFL=0
        CALL PBBUFR(UNIT,KBUFF,JBUFL,KBUFL,irc)
        IF (IRC.EQ.-1) THEN ! EOF
-          if(bdeb)PRINT*,'NUMBER OF SUBSETS     ',css%currentFile%NSUBSET
-          if(bdeb)PRINT*,'NUMBER OF MESSAGES    ',css%currentFile%NMESSAGE
+          if(obs_bdeb)PRINT*,'NUMBER OF SUBSETS     ',css%currentFile%NSUBSET
+          if(obs_bdeb)PRINT*,'NUMBER OF MESSAGES    ',css%currentFile%NMESSAGE
           IRC=0
           bok=.false.
           return
@@ -3339,7 +3345,7 @@ CONTAINS
        KBUFL=KBUFL/NBYTPW+1
        !
        css%currentfile%mok(1)=css%currentfile%mok(1)+1
-       if(bdeb)WRITE(*,*)myname,'Calling BUS0123...',kbufl,nbytpw,jbufl,jbpw
+       ! if(obs_bdeb)WRITE(*,*)myname,'Calling BUS0123...',kbufl,nbytpw,jbufl,jbpw
 
        CALL BUS0123( KBUFL,KBUFF,KSUP,KSEC0,&
             & KSEC1,KSEC2,KSEC3,irc)
@@ -3358,7 +3364,7 @@ CONTAINS
        ! check that we have enough space in arrays...
        IF(IRC.NE.0) THEN 
           write(*,*)myname,'Unable to decode message header.',irc
-          if(bdeb)write(*,*)'ERROR IN BUS012: CORRUPTED BUFR MESSAGE.',css%currentfile%nmessage,&
+          if(obs_bdeb)write(*,*)'ERROR IN BUS012: CORRUPTED BUFR MESSAGE.',css%currentfile%nmessage,&
                & ' in file:',css%currentFile%fn250(1:css%currentFile%lenf)
           IRC=0
           css%currentfile%mrm(2)=css%currentfile%mrm(2)+1 ! unable to decode header
@@ -3370,7 +3376,7 @@ CONTAINS
        nsubset=KSEC3(3)
        KEL=KVALS/nsubset
        IF(KEL.GT.KELEM) KEL=KELEM
-       if(bdeb)WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
+       ! if(obs_bdeb)WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
        !
        CALL BUFREX(KBUFL,KBUFF,KSUP,KSEC0 ,&
             & KSEC1,KSEC2 ,KSEC3 ,&
@@ -3398,7 +3404,7 @@ CONTAINS
        if (irc.ne.0) then
           css%currentfile%mrm(4)=css%currentfile%mrm(4)+1 ! unable to decode description
           !write(*,*)myname,'Unable to decode message description.',irc
-          if(bdeb)write(*,*)'ERROR IN BUSEL2: CORRUPTED BUFR MESSAGE.',css%currentfile%nmessage,&
+          if(obs_bdeb)write(*,*)'ERROR IN BUSEL2: CORRUPTED BUFR MESSAGE.',css%currentfile%nmessage,&
                & ' in file:',css%currentFile%fn250(1:css%currentFile%lenf)
           irc=0
           cycle msg
@@ -3410,7 +3416,7 @@ CONTAINS
        ! CALL BUUKEY(KSEC1,KSEC2,KEY,KSUP,IRC)
        ! if (irc.ne.0) then
        !    write(*,*)myname,'Unable to decode message keys.',irc
-       !    if(bdeb)write(*,*)'ERROR IN BUUKEY: CORRUPTED BUFR MESSAGE.',css%currentfile%nmessage,&
+       !    if(obs_bdeb)write(*,*)'ERROR IN BUUKEY: CORRUPTED BUFR MESSAGE.',css%currentfile%nmessage,&
        !         & ' in file:',css%currentFile%fn250(1:css%currentFile%lenf)
        !    irc=0
        !    cycle msg
@@ -3426,16 +3432,16 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           RETURN
        END IF
+       if(obs_bdeb)write(*,'(X,A,A,4(X,I0),X,L1)')myname,' Checked obs.',&
+            & KSEC1( 6),KSEC1( 7),css%category,css%subcategory,bok
        if (.not. bok) then
           irc=0
-          css%currentfile%mrm(5)=css%currentfile%mrm(5)+1 ! descriptors do not match
           cycle msg
        else
-          css%currentfile%mok(5)=css%currentfile%mok(5)+1 ! descriptors match
           exit msg
        end if
     end do msg
-    if(bdeb)write(*,*)myname,' Done.',bok
+    if(obs_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine observation_readMessage
   !
@@ -3637,7 +3643,7 @@ CONTAINS
     end if
     observation_getj2000=j2000
     !lent=length(time50,50,10)
-    if(bdeb)write(*,*)myname,' Time:',time50(1:lent)," Found:",j2000
+    if(obs_bdeb)write(*,*)myname,' Time:',time50(1:lent)," Found:",j2000
   end function observation_getj2000
 
   !
@@ -4285,7 +4291,7 @@ CONTAINS
              dmp=dmp+1
           end if
        end do
-       if(bdeb)write(*,*)"OBSERVATION_HEAPSORT dumped elements:",dmp
+       if(obs_bdeb)write(*,*)"OBSERVATION_HEAPSORT dumped elements:",dmp
     else
        newnn=nn
     end if
@@ -4333,7 +4339,7 @@ CONTAINS
              dmp=dmp+1
           end if
        end do
-       if(bdeb)write(*,*)"OBSERVATION_HEAPSORT dumped elements:",dmp
+       if(obs_bdeb)write(*,*)"OBSERVATION_HEAPSORT dumped elements:",dmp
     else
        newnn=nn
     end if
@@ -4473,7 +4479,7 @@ CONTAINS
     lenb=0
     do ii=1,ndims
        lend=length(dimnames(ii),80,10)
-       if(bdeb)write(*,*) "observation_pretty  dimnames:",dimnames(ii)(1:lend),start(ii),vsize(ii)
+       if(obs_bdeb)write(*,*) "observation_pretty  dimnames:",dimnames(ii)(1:lend),start(ii),vsize(ii)
        if (vsize(ii).gt.1) then
           write(yuff250,*)vsize(ii);call chop0(yuff250,250);lenx=length(yuff250,250,2)
           write(xuff250,'(I8,"+",A)')start(ii),yuff250(1:lenx);call chop0(xuff250,250);lenx=length(xuff250,250,2)
@@ -4481,7 +4487,7 @@ CONTAINS
           write(xuff250,'(I8)')start(ii);call chop0(xuff250,250);lenx=length(xuff250,250,2)
        end if
        xuff250=dimnames(ii)(1:lend)//"["//xuff250(1:lenx)//"]";call chop0(xuff250,250);lenx=length(xuff250,250,2)
-       if(bdeb)write(*,*)'Observation_Pretty here:',xuff250(1:lenx)
+       if(obs_bdeb)write(*,*)'Observation_Pretty here:',xuff250(1:lenx)
        if (lenb.eq.0) then
           buff250=xuff250(1:lenx)
        else
@@ -4491,7 +4497,7 @@ CONTAINS
        lenb=length(buff250,250,10)
     end do
     lenb=length(buff250,250,10)
-    if(bdeb)write(*,*)'Observation_Pretty there:',buff250(1:lenb)
+    if(obs_bdeb)write(*,*)'Observation_Pretty there:',buff250(1:lenb)
     lenv=length(varname,80,10)
     xuff250=varname(1:lenv)//"("//buff250(1:lenb)//")";
     call chop0(xuff250,250);
@@ -4507,8 +4513,8 @@ CONTAINS
     character*22 :: myname = "observation_compile"
     integer :: ii
     type(obs_target), pointer :: currenttarget => null()
-    if(bdeb)write(*,*)myname,' Entering.',bdeb
-    if(bdeb)write(*,*)myname,' Make trg list.'
+    if(obs_bdeb)write(*,*)myname,' Entering.',obs_bdeb
+    if(obs_bdeb)write(*,*)myname,' Make trg list.'
     call observation_makeTargetList(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -4517,16 +4523,16 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(bdeb)write(*,*)myname,' Done making target list.',irc,css%ntarget,css%ntrg
+    if(obs_bdeb)write(*,*)myname,' Done making target list.',irc,css%ntarget,css%ntrg
     do ii=1,css%ntarget
        css%trg_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
     end do
-    if(bdeb)write(*,*)myname,' Assigning index.',css%ind_set
+    if(obs_bdeb)write(*,*)myname,' Assigning index.',css%ind_set
     if (css%ind_set) then
        ii=css%ntrg
        css%trg_var(ii)=css%ind_trg80(1:css%ind_lent)
     end if
-    if(bdeb)write(*,*)myname,' Parsing.',css%ind_set
+    if(obs_bdeb)write(*,*)myname,' Parsing.',css%ind_set
     if (css%ind_set) then
        call parse_open(css%ind_pss,crc250,irc)
        if (irc.ne.0) then
@@ -4543,7 +4549,7 @@ CONTAINS
           return
        end if
     end if
-    if(bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine observation_compile
   !
@@ -4556,7 +4562,7 @@ CONTAINS
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname = "observation_evalf"
     integer :: ii
-    if(bdeb) write(*,*)myname,'Entering.',css%ntarget
+    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
     if (css%ntarget== 0) then ! no targets to evaluate
        return
     else
@@ -4565,10 +4571,10 @@ CONTAINS
           css%trg_val(ii)=values(css%trg_seq(ii)+(isubset-1)*KEL)
        end do
        if (bok.and.css%ind_set) then
-          if(bdeb)write(*,*)myname,"Calling parse_evalf.",associated(css%ind_pss),allocated(css%trg_val)
+          if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",associated(css%ind_pss),allocated(css%trg_val)
           css%trg_val(css%ntrg)=parse_evalf(css%ind_pss,css%trg_val)
           css%ind_val=css%trg_val(css%ntrg)
-          !if(bdeb)write(*,*)myname,"Result:",css%ind_set,css%ind_val
+          !if(obs_bdeb)write(*,*)myname,"Result:",css%ind_set,css%ind_val
        end if
     end if
     return
@@ -4583,24 +4589,50 @@ CONTAINS
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname = "observation_checkDescr"
     integer :: ii
-    !if(bdeb) write(*,*)myname,'Entering.',css%ntarget
-    if (css%category .eq. ksec1(6) .and. &
-         & css%subcategory .eq. ksec1(7)) then
-       bok=.true.
+    logical bok1,bok2
+    !if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
+    bok=.true.
+    if (css%category .eq. ksec1(6) .and.css%subcategory .eq. ksec1(7)) then
+       css%currentfile%mok(5)=css%currentfile%mok(5)+1 ! other BUFRtype/subtype
        if (css%ntarget== 0) then ! no targets to evaluate
           return
        else
+          bok1=.true.
+          bok2=.true.
           do ii=1,css%ntarget
-             if (css%trg_seq(ii).gt.ktdexl) bok=.false.
              if (bok) then
-                if (ktdexp(css%trg_seq(ii)).ne.css%trg_descr(ii)) bok=.false.
+                if (css%trg_seq(ii).gt.ktdexl) then
+                   write(*,*)myname,'Failed limit:',ii,ktdexl,css%trg_seq(ii)
+                   bok1=.false.
+                   bok=.false.
+                end if
+             end if
+             if (bok) then
+                if (ktdexp(css%trg_seq(ii)).ne.css%trg_descr(ii)) then
+                   write(*,*)myname,'Failed sanity:',ii,ktdexp(css%trg_seq(ii)),&
+                        &css%trg_descr(ii)
+                   bok2=.false.
+                   css%currentfile%hint25(7)=css%trg80(ii)(1:25)
+                   bok=.false.
+                end if
              end if
           end do
+          if (bok1) then
+             css%currentfile%mok(6)=css%currentfile%mok(6)+1 ! limits are ok
+             if (bok2) then
+                css%currentfile%mok(7)=css%currentfile%mok(7)+1 ! descriptors match
+             else
+                css%currentfile%mrm(7)=css%currentfile%mrm(7)+1 ! descriptors do not match
+             end if
+          else
+             css%currentfile%mrm(6)=css%currentfile%mrm(6)+1 ! limits not ok
+          end if
        end if
     else
+       css%currentfile%mrm(5)=css%currentfile%mrm(5)+1 ! other BUFRtype/subtype
        bok=.false.
     end if
-    !if(bdeb) write(*,*)myname,'Done.',bok
+    !if(obs_bdeb) write(*,*)myname,'Done.',bok
     return
   end subroutine observation_checkDescr
   !
@@ -4622,38 +4654,37 @@ CONTAINS
     return
   end subroutine observation_terminate
   !
-  subroutine observation_filestartxml(css,crc250,irc)
+  subroutine observation_filestartxml(css,ounit,crc250,irc)
     type(obs_session), pointer :: css !  current session
+    integer :: ounit
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "observation_fileStartXml"
-    if (css%pxml) then
-       if (associated(css%currentFile)) then
-          write(*,'(2X,A)')"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
-       else
-          write(*,'(2X,A)')"<observationFile>"
-       end if
+    if (associated(css%currentFile)) then
+       write(ounit,'(2X,A)')"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
+    else
+       write(ounit,'(2X,A)')"<observationFile>"
     end if
     return
   end subroutine observation_filestartxml
   !
-  subroutine observation_obsstartxml(css,crc250,irc)
+  subroutine observation_obsstartxml(css,ounit,crc250,irc)
     type(obs_session), pointer :: css !  current session
+    integer :: ounit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_fileStartXml"
-    if (css%pxml) then
-       write(*,'(3X,A)')"<observations>"
-    end if
+    character*25 :: myname = "observation_obsStartXml"
+    write(ounit,'(3X,A)')"<observations>"
     return
   end subroutine observation_obsstartxml
   !
-  subroutine observation_writeoutput(css,locid,crc250,irc)
+  subroutine observation_writexml(css,unito,locid,crc250,irc)
     type(obs_session), pointer :: css !  current session
+    integer :: unito
     integer :: locid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_writeoutput"
+    character*25 :: myname = "observation_writexml"
     character*250 :: buff250
     character*50 :: s1, s2, s3, s4
     integer :: ii,jj
@@ -4676,9 +4707,7 @@ CONTAINS
        write(s1,'(I0)') locid
        call chop0(s1,50)
        len1=length(s1,50,10)
-       if (css%pxml) then
-          write(*,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
-       end if
+       write(*,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
        !
        ! add target values
        !
@@ -4717,7 +4746,7 @@ CONTAINS
        !
        ! write BUFR sequence
        !
-       if (bdeb) then
+       if (obs_bdeb) then
           !
           ! section 0
           write(buff250,'(A,I0,A)')"<sec0 pos='1' info='Length of section 0 (bytes)' val='",ksec0(1),"'/>"
@@ -4759,7 +4788,7 @@ CONTAINS
           write(buff250,'(A,I0,A)')"<sec1 pos='7' info='Bufr message subtype' val='",ksec1(7),"' type='"//s2(1:len2)//"'/>"
        end if
        call wo(css,4,buff250)
-       if (bdeb) then
+       if (obs_bdeb) then
           write(buff250,'(A,I0,A)')"<sec1 pos='8' info='Version number of local table' val='",ksec1(8),"'/>"
           call wo(css,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='9' info='Year' val='",ksec1(9),"'/>"
@@ -4950,7 +4979,7 @@ CONTAINS
           call wo(css,4,buff250);
        end if
        !write(*,*)myname,'Report D:',KTDLEN
-       if (bdeb) then
+       if (obs_bdeb) then
           write(buff250,'(A,I0,A)')"<sec3 type='unexpanded' count='",KTDLEN,"'>"
           call wo(css,4,buff250);
           DO II=1,KTDLEN
@@ -5024,13 +5053,11 @@ CONTAINS
           write(buff250,'(A)')"</sec3>"
           call wo(css,4,buff250);
        end if
-       if (css%pxml) then
-          write(*,'(3X,A)')"</obs>"
-       end if
+       write(*,'(3X,A)')"</obs>"
     end if
     return
-  end subroutine observation_writeoutput
-
+  end subroutine observation_writexml
+  !
   subroutine wo(css,ind,buff250)
     type(obs_session), pointer :: css !  current session
     integer :: ind
@@ -5040,26 +5067,24 @@ CONTAINS
     character*20 :: blank20="                    "
     call chop0(buff250,250)
     lenb=length(buff250,250,10)
-    if (css%pxml) then
-       write(*,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
-    end if
+    write(*,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
     return
   end subroutine wo
   !
-  subroutine observation_obsstopxml(css,crc250,irc)
+  subroutine observation_obsstopxml(css,ounit,crc250,irc)
     type(obs_session), pointer :: css !  current session
+    integer :: ounit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_fileStartXml"
-    if (css%pxml) then
-       write(*,'(3X,A)')"</observations>"
-    end if
+    character*25 :: myname = "observation_obsstopxml"
+    write(ounit,'(3X,A)')"</observations>"
     return
   end subroutine observation_obsstopxml
   !
   !
-  subroutine observation_filestopxml(css,crc250,irc)
+  subroutine observation_filestopxml(css,ounit,crc250,irc)
     type(obs_session), pointer :: css !  current session
+    integer :: ounit
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "observation_fileStopXml"
@@ -5067,86 +5092,129 @@ CONTAINS
     integer :: len1,len2,len3,len4
     integer, external :: length
     character*50 :: s1,s2,s3,s4
+    type(obs_mainCategory), pointer :: currentCat !  current file
+    type(obs_subCategory), pointer :: currentSub !  current file
     ! write summary
-    if (css%pxml) then
-       if (associated(css%currentFile)) then
-          write(*,'(3X,A)')"<summary>"
-          if (css%currentFile%mok(1).eq.css%currentFile%mok(5)) then
-             write(*,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
-                  & "' accepted='",css%currentFile%mok(5),"'/>"
-          else
-             write(*,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
-                  & "' accepted='",css%currentFile%mok(5),"'>"
-             if (css%currentFile%mrm(2).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%mrm(2),&
-                  & "' reason='unable to decode header.'/>"
-             if (css%currentFile%mrm(3).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%mrm(3),&
-                  & "' reason='unable to decode body.'/>"
-             if (css%currentFile%mrm(4).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%mrm(4),&
-                  & "' reason='unable to decode description.'/>"
-             if (css%currentFile%mrm(5).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%mrm(5),&
-                  & "' reason='Other BUFR/sub-type.'/>"
-             write(*,'(4X,A)')"</messages>"
-          end if
-          if (css%currentFile%ook(1).eq.css%currentFile%ook(5)) then
-             write(*,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
-                  & "' accepted='",css%currentFile%ook(5),"'/>"
-          else
-             write(*,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
-                  & "' accepted='",css%currentFile%ook(5),"'>"
-             if (css%currentFile%orm(2).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%orm(2),&
-                  & "' reason='evaluation failed.'/>"
-             if (css%currentFile%orm(3).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%orm(3),&
-                  & "' reason='outside index limits.'/>"
-             if (css%currentFile%orm(4).ne.0) then
-                write(*,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(4),&
-                     & "' reason='outside target limits.'>"
-                do ii=1,css%ntrg
-                   if (css%trg_orm(ii).ne.0) then
-                      s1=css%trg80(ii)(1:50) ; call chop0(s1,50); &
-                           & len1=length(s1,50,10)   ! element identification
-                      IF (len1.ne.0) then
-                         s1=" name='"//s1(1:len1)//"'"
-                         len1=len1+8
-                      end if
-                      if (css%trg_lval(1,ii)) then
-                         call observation_wash(css%trg_minval(ii),s3,len3)
-                         if (len3.ne.0) then
-                            s3=" min='"//s3(1:len3)//"'"
-                            len3=len3+7
-                         end if
-                      else
-                         len3=0
-                      end if
-                      if (css%trg_lval(2,ii)) then
-                         call observation_wash(css%trg_maxval(ii),s4,len4)
-                         if (len4.ne.0) then
-                            s4=" max='"//s4(1:len4)//"'"
-                            len4=len4+7
-                         end if
-                      else
-                         len4=0
-                      end if
-                      write(*,'(6X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
-                           & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
-                   end if
-                end do
-                write(*,'(5X,A)')"</check>"
+    if (associated(css%currentFile)) then
+       write(ounit,'(3X,A)')"<summary>"
+       if (css%currentFile%mok(1).eq.css%currentFile%mok(5)) then
+          write(ounit,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
+               & "' accepted='",css%currentFile%mok(5),"'/>"
+       else
+          do ii=1,10
+             call chop0(css%currentFile%hint25(ii),25)
+             css%currentFile%lenh(ii)=length(css%currentFile%hint25(ii),25,1)
+          end do
+          write(ounit,'(4X,A,4(I0,A))')"<messages found='",css%currentFile%mok(1),&
+               & "' accepted='",css%currentFile%mok(5),&
+               & "' type='",css%category,"' subtype='",css%subcategory,"'>"
+          if (css%currentFile%mrm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%mrm(2),&
+               & "' reason='unable to decode header.'/>"
+          if (css%currentFile%mrm(3).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%mrm(3),&
+               & "' reason='unable to decode body.'/>"
+          if (css%currentFile%mrm(4).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%mrm(4),&
+               & "' reason='unable to decode description.'/>"
+          if (css%currentFile%mrm(5).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%mrm(5),&
+               & "' reason='Other BUFR/sub-type.'/>"
+          if (css%currentFile%mrm(6).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%mrm(6),&
+               & "' reason='DESCR out of range.'/>"
+          if (css%currentFile%mrm(7).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%mrm(7),&
+               & "' reason='DESCR mismatch.' hint='"//&
+               & css%currentFile%hint25(7)(1:css%currentFile%lenh(7))//"'/>"
+          ! make list of the messages found
+          currentCat=>css%currentFile%firstCategory%next
+          do while (.not.associated(currentCat,target=css%currentFile%lastCategory)) 
+             call observation_getType(currentCat%category,0,s1,s2,crc250,irc) 
+             call chop0(s1,50); len1=length(s1,50,10)
+             call chop0(s2,50); len2=length(s2,50,10)
+             if (len1.ne.0) then
+                write(ounit,'(5X,A,3(I0,A))',iostat=irc) "<found type='",currentCat%category,&
+                     & "' cnt='",currentCat%cnt,"' nsub='",currentCat%nsub,"' info='"//s1(1:len1)//"'>"
+             else
+                write(ounit,'(5X,A,3(I0,A))',iostat=irc) "<found type='",currentCat%category,&
+                     & "' cnt='",currentCat%cnt,"' nsub='",currentCat%nsub,"'>"
              end if
-             if (css%currentFile%orm(5).ne.0) write(*,'(5X,A,I0,A)')"<check removed='",&
-                  & css%currentFile%orm(5),&
-                  & "' reason='No model data available.'/>"
-             write(*,'(4X,A)')"</sub>"
-          end if
-          write(*,'(3X,A)')"</summary>"
+             currentSub=> currentCat%firstSubCategory%next
+             do while (.not.associated(currentSub,target=currentCat%lastSubCategory)) 
+                call observation_getType(currentCat%category,currentSub%subcategory,s1,s2,crc250,irc) 
+                call chop0(s1,50); len1=length(s1,50,10)
+                call chop0(s2,50); len2=length(s2,50,10)
+                if (len2.ne.0) then
+                   write(ounit,'(7X,A,2(I0,A))',iostat=irc) "<sub type='",&
+                        & currentSub%subcategory,"' cnt='",currentSub%cnt,"' info='"//s2(1:len2)//"'/>"
+                else
+                   write(ounit,'(7X,A,2(I0,A))',iostat=irc) "<sub type='",&
+                        & currentSub%subcategory,"' cnt='",currentSub%cnt,"'/>"
+                end if
+                currentSub=>currentSub%next
+             end do
+             write(ounit,'(5X,A)',iostat=irc) "</found>"
+             currentCat=>currentCat%next
+          end do
+          !
+          write(ounit,'(4X,A)')"</messages>"
        end if
-       write(*,'(2X,A)')" </observationFile>"
+       if (css%currentFile%ook(1).eq.css%currentFile%ook(5)) then
+          write(ounit,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
+               & "' accepted='",css%currentFile%ook(5),"'/>"
+       else
+          write(ounit,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
+               & "' accepted='",css%currentFile%ook(5),"'>"
+          if (css%currentFile%orm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%orm(2),&
+               & "' reason='evaluation failed.'/>"
+          if (css%currentFile%orm(3).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%orm(3),&
+               & "' reason='outside index limits.'/>"
+          if (css%currentFile%orm(4).ne.0) then
+             write(ounit,'(5X,A,I0,A)')"<check removed='",css%currentFile%orm(4),&
+                  & "' reason='outside target limits.'>"
+             do ii=1,css%ntrg
+                if (css%trg_orm(ii).ne.0) then
+                   s1=css%trg80(ii)(1:50) ; call chop0(s1,50); &
+                        & len1=length(s1,50,10)   ! element identification
+                   IF (len1.ne.0) then
+                      s1=" name='"//s1(1:len1)//"'"
+                      len1=len1+8
+                   end if
+                   if (css%trg_lval(1,ii)) then
+                      call observation_wash(css%trg_minval(ii),s3,len3)
+                      if (len3.ne.0) then
+                         s3=" min='"//s3(1:len3)//"'"
+                         len3=len3+7
+                      end if
+                   else
+                      len3=0
+                   end if
+                   if (css%trg_lval(2,ii)) then
+                      call observation_wash(css%trg_maxval(ii),s4,len4)
+                      if (len4.ne.0) then
+                         s4=" max='"//s4(1:len4)//"'"
+                         len4=len4+7
+                      end if
+                   else
+                      len4=0
+                   end if
+                   write(ounit,'(6X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
+                        & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
+                end if
+             end do
+             write(ounit,'(5X,A)')"</check>"
+          end if
+          if (css%currentFile%orm(5).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+               & css%currentFile%orm(5),&
+               & "' reason='No model data available.'/>"
+          write(ounit,'(4X,A)')"</sub>"
+       end if
+       write(ounit,'(3X,A)')"</summary>"
     end if
+    write(ounit,'(2X,A)')" </observationFile>"
     return
   end subroutine observation_filestopxml
   !

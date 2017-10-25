@@ -7,7 +7,7 @@ use farkdir;
 #
 use strict;
 use CGI;
-use CGI::Carp 'fatalsToBrowser';
+#use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
 use Data::Dumper;
 use POSIX 'strftime';
@@ -16,8 +16,7 @@ use File::Basename;
 use File::Compare;
 use File::Copy;
 #
-print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
-my $debug=0;
+my $debug=1;
 my $user=$ENV{USERNAME} // "www";
 my $pub="/metfark/pub";
 #
@@ -25,19 +24,25 @@ my $modelDir=     farkdir::getRootDir("model");
 my $modelOldDir=  farkdir::getRootDir("model_old");
 my $modelCacheDir=farkdir::getRootDir("model_cache");
 my $modelRegDir=  farkdir::getRootDir("model_reg");
-my $useModelDir=  farkdir::getRootDir("model_use");
+my $modelUseDir=  farkdir::getRootDir("model_use");
+my $modelLogDir=  farkdir::getRootDir("model_log");
 #
 my $obsDir=       farkdir::getRootDir("obs");
 my $obsOldDir=    farkdir::getRootDir("obs_old");
 my $obsCacheDir=  farkdir::getRootDir("obs_cache");
 my $obsRegDir=    farkdir::getRootDir("obs_reg");
-my $useObsDir=    farkdir::getRootDir("obs_use");
+my $obsUseDir=    farkdir::getRootDir("obs_use");
+my $obsLogDir=    farkdir::getRootDir("obs_log");
 #
 my $colocDir=     farkdir::getRootDir("coloc");
+my $colocOldDir=  farkdir::getRootDir("coloc_old");
+my $colocUseDir=  farkdir::getRootDir("coloc_use");
+my $colocLogDir=  farkdir::getRootDir("coloc_log");
 #
 my $plotDir=      farkdir::getRootDir("plot");
 my $plotOldDir=   farkdir::getRootDir("plot_old");
-my $usePlotDir=   farkdir::getRootDir("plot_use");
+my $plotUseDir=   farkdir::getRootDir("plot_use");
+my $plotLogDir=   farkdir::getRootDir("plot_log");
 #
 my $autoDir=      farkdir::getRootDir("auto");
 my $lockRoot=     farkdir::getRootDir("lock");
@@ -47,74 +52,90 @@ my $myname = basename($0);
 #
 my $ref=CGI->new();
 
-print "Args:" . @ARGV . "\n";
-
+print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
+#
+if($debug){print "Args:" . @ARGV . "\n";}
 #
 $XML::LibXML::skipXMLDeclaration = 1;
 my $param= $ref->{param};
 my $password=($param->{password}[0] // "");
 if (! defined $param->{root}) {farkdir::term("Undefined root file.".Dumper($param))};
-my $path = $param->{root}[0] // "";
+my $autoFile = $param->{root}[0] // "";
 my $ipath = $param->{file}[0] // "";
-my ($rootDir, $rootName) = farkdir::splitName($path);
-my $save=0;
 my $cls = $param->{type}[0]//"undef";
-my $autofile=$autoDir . $rootName;
+my $save=0;
+my $autopath=$autoDir . $autoFile;
 my ($dir,$name)=farkdir::splitName($ipath);
 my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 my $file = $loc . $name;
-my $lockDir=$lockRoot . $cls . "/";
+my $test = (defined $param->{test}[0]) ? 1 : 0;
+
 # auto config file...
 my $parser = XML::LibXML->new();
-if (-f $autofile) {
+if (-f $autopath) {
     # read config file into memory
-    my $doc = $parser->parse_file($autofile);
+    my $doc = $parser->parse_file($autopath);
     if ( my ($node)=$doc->findnodes("auto/auto_config")) {
-	my $pass=($node->getAttribute("password")||"");
+	my $pass=($node->getAttribute("password")//"");
+	&updateTimes($node);
 	$save=($pass eq $password);
 	if (defined $param->{type}) {
 	    if ($param->{type}->[0] eq "model") {
-		if (!&autoModel($node, $file, $modelDir, $modelCacheDir, $modelRegDir)) {
+		if (!&autoModel($node, $file, $modelDir, $modelCacheDir, 
+				$modelRegDir, $test, $modelLogDir)) {
 		    farkdir::term("Error return from autoModel:$file");
 		};
 	    };
 	    if ($param->{type}->[0] eq "obs") {
-		if (! &autoObs($node, $file, $obsDir, $obsCacheDir, $obsRegDir)) {
+		if (! &autoObs($node, $file, $obsDir, $obsCacheDir, 
+			       $obsRegDir, $test, $obsLogDir)) {
 		    farkdir::term("Error return from autoObs:$file");
+		};
+	    }
+	    if ($param->{type}->[0] eq "coloc") {
+		if (! &autoColoc($node,$file, $colocDir, 
+				$modelDir, $modelCacheDir, $obsDir, 
+				$obsCacheDir, $test, $colocLogDir)) {
+		    farkdir::term("Error return from autoColoc:$file");
 		};
 	    }
 	    if ($param->{type}->[0] eq "plot") {
 		if (! &autoPlot($node,$file, $plotDir, $colocDir, 
-				$modelDir, $modelCacheDir, $obsDir, $obsCacheDir)) {
+				$modelDir, $modelCacheDir, $obsDir, 
+				$obsCacheDir, $test, $plotLogDir)) {
 		    farkdir::term("Error return from autoPlot:$file");
 		};
 	    }
 	} else {
-	    &autoModel($node,"", $modelDir, $modelCacheDir, $modelRegDir);
-	    &autoObs($node,"", $obsDir, $obsCacheDir, $obsRegDir);
+	    &autoModel($node,"", $modelDir, $modelCacheDir, $modelRegDir, $test, $modelLogDir);
+	    &autoObs($node,"", $obsDir, $obsCacheDir, $obsRegDir, $test, $obsLogDir);
+	    &autoColoc($node,"", $colocDir, 
+		       $modelDir, $modelCacheDir, $obsDir, $obsCacheDir, $test, $colocLogDir);
 	    &autoPlot($node,"", $plotDir, $colocDir, 
-		      $modelDir, $modelCacheDir, $obsDir, $obsCacheDir);
+		      $modelDir, $modelCacheDir, $obsDir, $obsCacheDir, $test, $plotLogDir);
 	}
     }
     if ($save) {
-	if (open(my $fh, '>', $autofile)) {
+	if (open(my $fh, '>', $autopath)) {
 	    print $fh $doc->toString;
 	    close $fh;
-	    chmod 0666, $autofile;
+	    chmod 0666, $autopath;
 	} else {
-	    farkdir::term("Unable to open:".$autofile);
+	    farkdir::term("Unable to open:".$autopath);
 	}
+    } else {
+	farkdir::info("Processing complete.");
     };
     print $doc->toString . "\n";
 } else {  #auto file does not exist, create temporary xml-structure
-    if (defined $param->{type} && $path) {
+    if (defined $param->{type}) {
 	my $doc = $parser->parse_string("<auto><auto_config/></auto>");
 	my ($node) = $doc->findnodes("auto/auto_config");
 	if ($param->{type}->[0] eq "model") {
 	    my $parent = XML::LibXML::Element->new( 'model' );
 	    $parent->setAttribute("file",$name);
 	    $node->addChild( $parent );
-	    if (!&autoModel($node, $file, $modelDir, $modelCacheDir, $modelRegDir)) {
+	    if (!&autoModel($node, $file, $modelDir, $modelCacheDir, $modelRegDir, $test, $modelLogDir)) {
 		farkdir::term("File not found:$file");
 	    };
 	};
@@ -122,7 +143,17 @@ if (-f $autofile) {
 	    my $parent = XML::LibXML::Element->new( 'obs' );
 	    $parent->setAttribute("file",$name);
 	    $node->addChild( $parent );
-	    if (!&autoObs($node, $file, $obsDir, $obsCacheDir, $obsRegDir)) {
+	    if (!&autoObs($node, $file, $obsDir, $obsCacheDir, $obsRegDir, $test, $obsLogDir)) {
+		farkdir::term("File not found:$file");
+	    };
+	}
+	if ($param->{type}->[0] eq "coloc") {
+	    my $parent = XML::LibXML::Element->new( 'coloc' );
+	    $parent->setAttribute("file",$name);
+	    $node->addChild( $parent );
+	    if (!&autoColoc($node, $file, $colocDir,
+			   $modelDir, $modelCacheDir, 
+			   $obsDir, $obsCacheDir, $test, $colocLogDir)) {
 		farkdir::term("File not found:$file");
 	    };
 	}
@@ -132,7 +163,7 @@ if (-f $autofile) {
 	    $node->addChild( $parent );
 	    if (!&autoPlot($node, $file, $plotDir, $colocDir,
 			   $modelDir, $modelCacheDir, 
-			   $obsDir, $obsCacheDir)) {
+			   $obsDir, $obsCacheDir, $test, $plotLogDir)) {
 		farkdir::term("File not found:$file");
 	    };
 	}
@@ -147,36 +178,47 @@ sub autoModel {
     my $modelDir = shift;
     my $modelCacheDir = shift;
     my $modelRegDir = shift;
+    my $test = shift;
+    my $modelLogDir = shift;
     my $modelFile = $modelDir . $file;
     my @models=();
     if ($node) {
 	my @modelnodes=$node->findnodes("model");
+	my $found=0;
 	foreach my $model (@modelnodes) {
 	    my $nodefile=$model->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@models,[$nodefile,$model]);
+		    $found++;
 		} 
 	    } else {
 		push(@models,[$nodefile,$model]);
 	    }
 	}
-    } else {
-	push(@models,$file);
+	if ($file && ! $found) {
+	    my $model = XML::LibXML::Element->new( 'model' );
+	    $model->setAttribute("file",$file);
+	    $node->addChild( $model );
+	    push(@models,[$file,$model]);
+	}
+    } elsif ($file) {
+	push(@models,[$file]);
     };
     foreach my $modelRef (@models) {
-	my $lastAuto = "Today";
-	my $lastAccess = "Never used";
+	my $lastAuto = "";
+	my $lastAccess = "";
 	#
 	# check lockfile
 	#
-	my $lockfile = $lockDir . "$file.lock";
-	farkdir::touch($lockfile);
-	if ( not open(MLOCKFILE, ">$lockfile") ) {
-	    farkdir::term("$myname couldnt open Lockfile: $lockfile");
-	} else {
+	my $file=$modelRef->[0];
+	my $lockfile = $lockRoot ."model/$file.lock";
+	my ($dir,$name)=farkdir::splitName($lockfile);
+	farkdir::makePath($dir); # make sure directory exists in case we create lockfile next
+	if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
+	    if (!$test) {farkdir::touchFile($lockfile);}; # this defines processing start time
 	    chmod 0666, $lockfile;
-	    farkdir::term("$myname is already running.") unless (flock (MLOCKFILE,2+4));
+	    my $lastStart=time();
 	    #
 	    # read model config file and get file filter and index variable...
 	    #
@@ -198,27 +240,22 @@ sub autoModel {
 	    if ( my ($modelnode)=$modeldoc->findnodes("model/model_config")) {
 		# get list of processed files
 		if ($debug) {
-		    ($lastAuto,$lastAccess)=
-			processModel($xmlfile,
-				     $modelnode,
-				     $cachefile,
-				     $registerfile,
-				     $useModelDir,
-				     $model,
-				     $lastAuto,
-				     $lastAccess);
+		    print "Processing model $xmlfile\n";
+		    processModel($xmlfile,
+				 $modelnode,
+				 $cachefile,
+				 $registerfile,
+				 $model,
+				 $test,$modelLogDir);
 		} else {
 		    eval {
 		        my $log=capture {
-			    ($lastAuto,$lastAccess)=
-				processModel($xmlfile,
-					     $modelnode,
-					     $cachefile,
-					     $registerfile,
-					     $useModelDir,
-					     $model,
-					     $lastAuto,
-					     $lastAccess);
+			    processModel($xmlfile,
+					 $modelnode,
+					 $cachefile,
+					 $registerfile,
+					 $model,
+					 $test,$modelLogDir);
 			};
 		    };
 		    my $ret=$@;if ($ret) {farkdir::term("$myname model file: $xmlfile: $ret");}
@@ -226,12 +263,17 @@ sub autoModel {
 	    } else {
 		farkdir::term("$myname corrupted file: $xmlfile");
 	    }
-	    close(MLOCKFILE);
-	    if ($node) {
+	    my $modelUseFile=$modelUseDir . $file; 
+	    if (!$test) {farkdir::touchFile($modelUseFile);}; # this defines processing end time
+	    my $lastStop=time();
+	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
+	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    if (! $test && defined $modelRef->[1]) {
 		$modelRef->[1]->setAttribute("last",        $lastAuto);
 		$modelRef->[1]->setAttribute("info",        $lastAccess);
 	    }
 	}
+	close(MLOCKFILE);
     }
     return @models;
 };
@@ -241,35 +283,25 @@ sub processModel {
     my $node = shift;
     my $cachefile = shift;
     my $registerfile = shift;
-    my $useModelDir = shift;
     my $file = shift;
-    my $lastAuto = shift;
-    my $lastAccess = shift;
+    my $test = shift;
+    my $logDir = shift;
+    #
+    my $logFile=$logDir . $file; 
+    # make sure output file directories exist...
+    ($dir,$name)=farkdir::splitName($logFile);
+    farkdir::makePath($dir);
+    #
+    my $fark=fark->open();
+    &setModelConfig($fark,$node,$cachefile,$test);
     #
     my $filterDir=$node->getAttribute("filterDir");
     my $filterFile=$node->getAttribute("filterFile");
-    my $index=$node->getAttribute("index");
-    #print "Processing model: $xmlfile\n";
-    my $fark=fark->open();
-    $fark->clearModelFileStack($index);
-    if (-e $cachefile) {
-	$fark->loadModelCache($cachefile);
-    };
-    $fark->updateModelRegister($registerfile,$filterDir,$filterFile);
-    chmod 0666, $registerfile;
-    $fark->makeModelCache($cachefile);
-    chmod 0666, $cachefile;
+    $fark->updateModelRegister($registerfile,$filterDir,$filterFile,$test);
+    $fark->makeModelCache($cachefile,$test);
+    #
     $fark->close();
-    my $now = time();
-    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($now));
-    my $useModelFile=$useModelDir . $file; 
-    if (-f $useModelFile) {
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-	    $atime,$mtime,$ctime,$blksize,$blocks) 
-	    = stat($useModelFile);
-	$lastAccess=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-    };
-    return ($lastAuto,$lastAccess);
+    return;
 }
 
 sub autoObs {
@@ -278,36 +310,46 @@ sub autoObs {
     my $obsDir = shift;
     my $obsCacheDir = shift;
     my $obsRegDir = shift;
+    my $test = shift;
+    my $obsLogDir = shift;
     my $obsFile = $obsDir . $file;
     my @obses=();
     if ($node) {
 	my @obsnodes=$node->findnodes("obs");
+	my $found=0;
 	foreach my $obs (@obsnodes) {
 	    my $nodefile=$obs->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@obses,[$nodefile,$obs]);
+		    $found++;
 		}
 	    } else {
 		push(@obses,[$nodefile,$obs]);
 	    }
 	}
-    } else {
+	if ($file && ! $found) {
+	    my $obs = XML::LibXML::Element->new( 'obs' );
+	    $obs->setAttribute("file",$file);
+	    $node->addChild( $obs );
+	    push(@obses,[$file,$obs]);
+	}
+    } elsif ($file) {
 	push(@obses,[$file]);
     };
     foreach my $obsRef (@obses) {
-	my $lastAuto = "Today";
-	my $lastAccess = "Never used";
+	my $lastAuto = "";
+	my $lastAccess = "";
 	#
 	# check lockfile...
 	#
-	my $lockfile=$lockDir . "$file.lock";
-	farkdir::touch($lockfile);
-	if ( not open(MLOCKFILE, ">$lockfile") ) {
-	    farkdir::term("$myname couldnt open Lockfile: $lockfile");
-	} else {
+	my $lockfile=$lockRoot . "obs/$file.lock";
+	my ($dir,$name)=farkdir::splitName($lockfile);
+	farkdir::makePath($dir); # make sure directory exists in case we create lockfile next
+	if ( open(MLOCKFILE, ">$lockfile") && flock (MLOCKFILE,2+4)) {
+	    if (!$test) {farkdir::touchFile($lockfile);};
 	    chmod 0666, $lockfile;
-	    farkdir::term("$myname is already running") unless (flock (MLOCKFILE,2+4));
+	    my $lastStart=time();
 	    #
 	    # read obs config file and get file filter and index variable...
 	    #
@@ -328,27 +370,22 @@ sub autoObs {
 	    my $obsdoc = $parser->parse_file($xmlfile);
 	    if ( my ($obsnode)=$obsdoc->findnodes("obs/obs_config")) {
 		if ($debug) {
-		    ($lastAuto,$lastAccess)=
-			processObs($xmlfile,
-				   $obsnode,
-				   $cachefile,
-				   $registerfile,
-				   $useObsDir,
-				   $obs,
-				   $lastAuto,
-				   $lastAccess);
+		    print "Processing obs $xmlfile\n";
+		    processObs($xmlfile,
+			       $obsnode,
+			       $cachefile,
+			       $registerfile,
+			       $obs,
+			       $test,$obsLogDir);
 		} else {
 		    eval {
 		        my $log=capture {
-			    ($lastAuto,$lastAccess)=
-				processObs($xmlfile,
-					   $obsnode,
-					   $cachefile,
-					   $registerfile,
-					   $useObsDir,
-					   $obs,
-					   $lastAuto,
-					   $lastAccess);
+			    processObs($xmlfile,
+				       $obsnode,
+				       $cachefile,
+				       $registerfile,
+				       $obs,
+				       $test,$obsLogDir);
 			};
 		    };
 		    my $ret=$@;if ($ret) {farkdir::term("$myname obs file: $xmlfile: $ret");}
@@ -356,10 +393,17 @@ sub autoObs {
 	    } else {
 		farkdir::term("$myname corrupted file: $xmlfile");
 	    }
-	    close(MLOCKFILE);
-	    $obs->[1]->setAttribute("last",        $lastAuto);
-	    $obs->[1]->setAttribute("info",        $lastAccess);
+	    my $obsUseFile=$obsUseDir . $file; 
+	    if (!$test) {farkdir::touchFile($obsUseFile);}; # this defines processing end time
+	    my $lastStop=time();
+	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
+	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    if (! $test && defined $obsRef->[1]) {
+		$obsRef->[1]->setAttribute("last",        $lastAuto);
+		$obsRef->[1]->setAttribute("info",        $lastAccess);
+	    };
 	}
+	close(MLOCKFILE);
     }
     return @obses;
 };
@@ -369,52 +413,169 @@ sub processObs {
     my $node = shift;
     my $cachefile = shift;
     my $registerfile = shift;
-    my $useObsDir = shift;
     my $file = shift;
-    my $lastAuto = shift;
-    my $lastAccess = shift;
+    my $test = shift;
+    my $logDir = shift;
+    #
+    my $logFile=$logDir . $file; 
+    # make sure output file directories exist...
+    ($dir,$name)=farkdir::splitName($logFile);
+    farkdir::makePath($dir);
+    #
+    my $fark=fark->open();
+    &setObsConfig($fark,$node,$cachefile,$test);
     #
     my $filterDir=$node->getAttribute("filterDir");
     my $filterFile=$node->getAttribute("filterFile");
-    my $tablepath=$node->getAttribute("tablePath");
-    my $indexTarget=$node->getAttribute("indexTarget");
-    my $indexExp=$node->getAttribute("indexExp");
-    my $bufrType=$node->getAttribute("bufrType");
-    my $subType=$node->getAttribute("subType");
-    #print "Processing obs: $xmlfile\n";
-    my $fark=fark->open();
-    $fark->setObservationTablePath($tablepath);
-    $fark->setObservationIndex($indexTarget,$indexExp);
-    $fark->setObservationType($bufrType,$subType);
-    my @targets=$node->findnodes("target");
-    foreach my $trg (@targets) {
-	$fark->pushObservationTarget($trg->getAttribute("name"),
-				     $trg->getAttribute("pos"),
-				     $trg->getAttribute("descr"),
-				     $trg->getAttribute("info"),
-				     $trg->getAttribute("min"),
-				     $trg->getAttribute("max"));
-    }
-    $fark->clearObservationFileStack();
-    if (-e $cachefile) {
-	$fark->loadObservationCache($cachefile);
-    };
-    $fark->updateObservationRegister($registerfile,$filterDir,$filterFile);
-    chmod 0666, $registerfile;
-    $fark->makeObservationCache($cachefile);
-    chmod 0666, $cachefile;
+    $fark->updateObservationRegister($registerfile,$filterDir,$filterFile,$test);
+    $fark->makeObservationCache($cachefile,$test);
+    #
     $fark->close();
-    my $now = time();
-    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($now));
-    my $useObsFile=$useObsDir . $file; 
-    if (-f $useObsFile) {
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-	    $atime,$mtime,$ctime,$blksize,$blocks) 
-	    = stat($useObsFile);
-	$lastAccess=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-    };
-    return ($lastAuto,$lastAccess);
+    return;
 }
+
+sub autoColoc {
+    my $node =shift;
+    my $file = shift;
+    my $colocDir = shift;
+    my $modelDir = shift;
+    my $modelCacheDir = shift;
+    my $obsDir = shift;
+    my $obsCacheDir = shift;
+    my $test = shift;
+    my $plotLogDir = shift;
+    #
+    my $colocFile = $colocDir . $file;
+    my @coloces=();
+    if ($node) {
+	my @colocnodes=$node->findnodes("coloc");
+	my $found=0;
+	foreach my $coloc (@colocnodes) {
+	    my $nodefile=$coloc->getAttribute("file");
+	    if ($file) {
+		if ($nodefile eq $file) {
+		    push(@coloces,[$nodefile,$coloc]);
+		    $found++;
+		}
+	    } else {
+		push(@coloces,[$nodefile,$coloc]);
+	    }
+	}
+	if ($file && ! $found) {
+	    my $coloc = XML::LibXML::Element->new( 'coloc' );
+	    $coloc->setAttribute("file",$file);
+	    $node->addChild( $coloc );
+	    push(@coloces,[$file,$coloc]);
+	}
+    } elsif ($file) {
+	push(@coloces,[$file]);
+    };
+    foreach my $colocRef (@coloces) {
+	my $lastAuto = "";
+	my $lastAccess = "";
+	#
+	# check lockfile...
+	#
+	my $lockfile=$lockRoot . "coloc/$file.lock";
+	my ($dir,$name)=farkdir::splitName($lockfile);
+	farkdir::makePath($dir); # make sure directory exists in case we create lockfile next
+	if ( open(MLOCKFILE, ">$lockfile") && flock (MLOCKFILE,2+4)) {
+	    if (!$test) {farkdir::touchFile($lockfile);};
+	    chmod 0666, $lockfile;
+	    my $lastStart=time();
+	    #
+	    # read coloc config file and get file filter and index variable...
+	    #
+	    my $coloc=$colocRef->[0];
+	    my $xmlfile=$colocDir . $coloc;
+	    my $xmloldfile = $colocOldDir . $coloc;
+	    if (compare($xmlfile,$xmloldfile) != 0) { # file has changed
+		copy ($xmlfile,$xmloldfile);
+	    };
+	    # auto config file...
+	    if ( ! -e $xmlfile) { farkdir::term("$myname unable to find: $xmlfile");}
+	    # read config file into memory
+	    my $parser = XML::LibXML->new();
+	    if($debug){print "Reading $xmlfile\n";}
+	    my $colocdoc = $parser->parse_file($xmlfile);
+	    if ( my ($colocnode)=$colocdoc->findnodes("coloc/coloc_config")) {
+		if ($debug) {
+		    print "Processing coloc $xmlfile\n";
+		    processColoc($xmlfile,
+				 $colocnode,
+				 $colocDir,
+				 $modelDir,
+				 $modelCacheDir,
+				 $obsDir,
+				 $obsCacheDir,
+				 $coloc,
+				 $test,$colocLogDir);
+		} else {
+		    eval {
+		        my $log=capture {
+			    processColoc($xmlfile,
+					 $colocnode,
+					 $colocDir,
+					 $modelDir,
+					 $modelCacheDir,
+					 $obsDir,
+					 $obsCacheDir,
+					 $coloc,
+					 $test,$colocLogDir);
+			};
+		    };
+		    my $ret=$@;if ($ret) {farkdir::term("$myname coloc file: $xmlfile: $ret");}
+		}
+	    } else {
+		farkdir::term("$myname corrupted file: $xmlfile");
+	    }
+	    my $colocUseFile=$colocUseDir . $file; 
+	    if (!$test) {farkdir::touchFile($colocUseFile);}; # this defines processing end time
+	    my $lastStop=time();
+	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
+	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    if (! $test && defined $colocRef->[1]) {
+		$colocRef->[1]->setAttribute("last",        $lastAuto);
+		$colocRef->[1]->setAttribute("info",        $lastAccess);
+	    };
+	}
+	close(MLOCKFILE);
+    }
+    return @coloces;
+};
+
+sub processColoc {
+    my $xmlfile = shift;
+    my $node = shift;
+    my $colocDir = shift;
+    my $modelDir = shift;
+    my $modelCacheDir = shift;
+    my $obsDir = shift;
+    my $obsCacheDir = shift;
+    my $file = shift;
+    my $test = shift;
+    my $logDir = shift;
+    #
+    my $logFile=$logDir . $file; 
+    # make sure output file directories exist...
+    ($dir,$name)=farkdir::splitName($logFile);
+    farkdir::makePath($dir);
+    #
+    if($debug){print "processColoc Entering with '$xmlfile' '$file'\n";}
+    my $fark=fark->open();
+    &setColocConfig($fark,$node,$test);
+    #
+    # make the resulting XML
+    #print "Calling colocXML\n";
+    my $xml       = $node->getAttribute("xml");
+    my ($irc, $msg) = $fark->makeColocXML($xml,$test);
+    #
+    # close session
+    $fark->close();
+    if($debug){print "processColoc Exiting.\n";}
+    return;
+}
+
 sub autoPlot {
     my $node =shift;
     my $file = shift;
@@ -424,37 +585,47 @@ sub autoPlot {
     my $modelCacheDir = shift;
     my $obsDir = shift;
     my $obsCacheDir = shift;
+    my $test = shift;
+    my $plotLogDir = shift;
     #
     my $plotFile = $plotDir . $file;
     my @plotes=();
     if ($node) {
 	my @plotnodes=$node->findnodes("plot");
+	my $found=0;
 	foreach my $plot (@plotnodes) {
 	    my $nodefile=$plot->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@plotes,[$nodefile,$plot]);
+		    $found++;
 		}
 	    } else {
 		push(@plotes,[$nodefile,$plot]);
 	    }
 	}
-    } else {
+	if ($file && ! $found) {
+	    my $plot = XML::LibXML::Element->new( 'plot' );
+	    $plot->setAttribute("file",$file);
+	    $node->addChild( $plot );
+	    push(@plotes,[$file,$plot]);
+	}
+    } elsif ($file) {
 	push(@plotes,[$file]);
     };
     foreach my $plotRef (@plotes) {
-	my $lastAuto = "Today";
-	my $lastAccess = "Never used";
+	my $lastAuto = "";
+	my $lastAccess = "";
 	#
 	# check lockfile...
 	#
-	my $lockfile=$lockDir . "$file.lock";
-	farkdir::touch($lockfile);
-	if ( not open(MLOCKFILE, ">$lockfile") ) {
-	    farkdir::term("$myname couldnt open Lockfile: $lockfile");
-	} else {
+	my $lockfile=$lockRoot . "plot/$file.lock";
+	my ($dir,$name)=farkdir::splitName($lockfile);
+	farkdir::makePath($dir); # make sure directory exists in case we create lockfile next
+	if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4)) {
+	    if (!$test) {farkdir::touchFile($lockfile);};
 	    chmod 0666, $lockfile;
-	    farkdir::term("$myname is already running") unless (flock (MLOCKFILE,2+4));
+	    my $lastStart=time();
 	    #
 	    # read plot config file and get file filter and index variable...
 	    #
@@ -472,33 +643,28 @@ sub autoPlot {
 	    my $plotdoc = $parser->parse_file($xmlfile);
 	    if ( my ($plotnode)=$plotdoc->findnodes("plot/plot_config")) {
 		if ($debug) {
-		    ($lastAuto,$lastAccess)=
-			processPlot($xmlfile,
-				    $plotnode,
-				    $colocDir,
-				    $modelDir,
-				    $modelCacheDir,
-				    $obsDir,
-				    $obsCacheDir,
-				    $usePlotDir,
-				    $plot,
-				    $lastAuto,
-				    $lastAccess);
+		    print "Processing plot $xmlfile\n";
+		    processPlot($xmlfile,
+				$plotnode,
+				$colocDir,
+				$modelDir,
+				$modelCacheDir,
+				$obsDir,
+				$obsCacheDir,
+				$plot,
+				$test,$plotLogDir);
 		} else {
 		    eval {
 		        my $log=capture {
-			    ($lastAuto,$lastAccess)=
-				processPlot($xmlfile,
-					    $plotnode,
-					    $colocDir,
-					    $modelDir,
-					    $modelCacheDir,
-					    $obsDir,
-					    $obsCacheDir,
-					    $usePlotDir,
-					    $plot,
-					    $lastAuto,
-					    $lastAccess);
+			    processPlot($xmlfile,
+					$plotnode,
+					$colocDir,
+					$modelDir,
+					$modelCacheDir,
+					$obsDir,
+					$obsCacheDir,
+					$plot,
+					$test,$plotLogDir);
 			};
 		    };
 		    my $ret=$@;if ($ret) {farkdir::term("$myname plot file: $xmlfile: $ret");}
@@ -506,10 +672,17 @@ sub autoPlot {
 	    } else {
 		farkdir::term("$myname corrupted file: $xmlfile");
 	    }
-	    close(MLOCKFILE);
-	    $plotRef->[1]->setAttribute("last",        $lastAuto);
-	    $plotRef->[1]->setAttribute("info",        $lastAccess);
+	    my $plotUseFile=$plotUseDir . $file; 
+	    if (!$test) {farkdir::touchFile($plotUseFile);}; # this defines processing end time
+	    my $lastStop=time();
+	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
+	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    if (! $test && defined $plotRef->[1]) {
+		$plotRef->[1]->setAttribute("last",        $lastAuto);
+		$plotRef->[1]->setAttribute("info",        $lastAccess);
+	    };
 	}
+	close(MLOCKFILE);
     }
     return @plotes;
 };
@@ -522,13 +695,16 @@ sub processPlot {
     my $modelCacheDir = shift;
     my $obsDir = shift;
     my $obsCacheDir = shift;
-    my $usePlotDir = shift;
     my $file = shift;
-    my $lastAuto = shift;
-    my $lastAccess = shift;
+    my $test = shift;
+    my $logDir = shift;
     #
-    if($debug){print "processPlot Entering with '$xmlfile' '$colocDir' '$modelDir' '$modelCacheDir'" .
-	" '$obsDir' '$obsCacheDir' '$usePlotDir' '$file' '$lastAuto' '$lastAccess'\n";}
+    my $logFile=$logDir . $file; 
+    # make sure output file directories exist...
+    ($dir,$name)=farkdir::splitName($logFile);
+    farkdir::makePath($dir);
+    #
+    if($debug){print "processPlot Entering with '$xmlfile' '$file'\n";}
     my $table=$node->getAttribute("table");
     my $graphics=$node->getAttribute("graphics");
     my $cat=$node->getAttribute("cat");
@@ -548,121 +724,238 @@ sub processPlot {
 	# load XML-data into coloc-, model- and obs-modules
 	my $colocfile=$colocDir.$trg->getAttribute("coloc");
 	if (!-e $colocfile) {farkdir::term("Undefined coloc file '$colocfile'");};
-	&setColocModelObs($fark,$colocfile,$modelDir,$modelCacheDir,$obsDir,$obsCacheDir);
-	# push all the data onto the plot-stack...
-	if($debug){print "Push data to plot-stack obs\n";}
-	$fark->pushPlotSet($trg->getAttribute("name"),
-			   $trg->getAttribute("x"),
-			   $trg->getAttribute("y"),
-			   $trg->getAttribute("legend"));
+	my $parser = XML::LibXML->new();
+	my $doc = $parser->parse_file($colocfile);
+	if ( my ($node) = $doc->findnodes("coloc/coloc_config")) {
+	    eval {
+		&setColocConfig($fark,$node,$test); # set colocation config parameters
+	    };
+	    my $mret=$@;if ($mret) {
+		my $modelFile = $node->getAttribute("modelFile");
+		my $obsFile   = $node->getAttribute("obsFile");
+		die("model:$modelFile obs:$obsFile $mret");
+	    };
+	    # push all the data onto the plot-stack...
+	    if($debug){print "Push data to plot-stack obs\n";}
+	    $fark->pushPlotSet($trg->getAttribute("name"),
+			       $trg->getAttribute("x"),
+			       $trg->getAttribute("y"),
+			       $trg->getAttribute("legend"));
+	}
     }
+    #
+    # colocate and generate table file...
     if($debug){print "****** Make table\n";}
-    my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics); # colocate and generate table file...
+    my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics,$test); 
+    #
     if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}
-    $fark->makePlotGraphics($tablefile,$plotfile); # generate graphics file...
+    $fark->makePlotGraphics($tablefile,$plotfile,$test); # generate graphics file...
+    #
     $fark->close();
-    my $now = time();
-    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($now));
-    my $usePlotFile=$usePlotDir . $file; 
-    if (-f $usePlotFile) {
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-	    $atime,$mtime,$ctime,$blksize,$blocks) 
-	    = stat($usePlotFile);
-	$lastAccess=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-    };
-    if($debug){print "processPlot Exiting with '$lastAuto' '$lastAccess'\n";}
-    return ($lastAuto,$lastAccess);
+    if($debug){print "processPlot Exiting.\n";}
+    return;
 }
 
-# set colocation parameters... &setColoc($fark,$colocfile,...);
-sub setColocModelObs {
-    my $fark= shift;
-    my $coloc = shift;
-    my $modelDir = shift;
-    my $modelCacheDir = shift;
-    my $obsDir = shift;
-    my $obsCacheDir = shift;
-    my $ret=0;
-    my $parser = XML::LibXML->new();
-    eval {
-	my $doc = $parser->parse_file($coloc);
-	if ( my ($node) = $doc->findnodes("coloc/coloc_config")) {
-	    my $filter = $node->getAttribute("filter")//"";
-	    $fark->setColocFilter($filter);
-	    $fark->clearModelTargetStack();
-	    my @mtrgs=$node->findnodes("modelTarget");
-	    foreach my $trg (@mtrgs) {
-		my $name = $trg->getAttribute("name");
-		my $var = $trg->getAttribute("variable");
-		my $min = $trg->getAttribute("min");
-		my $max = $trg->getAttribute("max");	
-		$fark->pushModelTarget($name,$var,$min,$max);
-	    }
-	    $fark->clearObservationTargetStack();
-	    my @otrgs=$node->findnodes("obsTarget");
-	    foreach my $trg (@otrgs) {
-		my $name = $trg->getAttribute("name");
-		my $pos = $trg->getAttribute("pos");
-		my $descr = $trg->getAttribute("descr");
-		my $info = $trg->getAttribute("info");
-		my $min = $trg->getAttribute("min");
-		my $max = $trg->getAttribute("max");
-		$fark->pushObservationTarget($name,$pos,$descr,$info,$min,$max);
-	    }
-	    $fark->clearMatchRuleStack();
-	    my @rls=$node->findnodes("matchRules");
-	    foreach my $rl (@rls) {
-		my $name = $rl->getAttribute("name");
-		my $expr = $rl->getAttribute("expression");
-		$fark->addMatchRule($name,$expr,"","");   # no minimum or maximum
-	    }
-	    my $modelFile = $modelDir . $node->getAttribute("modelFile");
-	    eval {
-		my $mdoc = $parser->parse_file($modelFile);
-		if ( my ($mnode) = $mdoc->findnodes("model/model_config")) {
-		    my $file=$mnode->getAttribute("path");
-		    my $cache=$modelCacheDir . $file;
-		    my $index=$mnode->getAttribute("index");
-		    my $start=$mnode->getAttribute("start");
-		    my $stop=$mnode->getAttribute("stop");
-		    $fark->setModelCache($cache);
-		    $fark->setModelIndex($index);
-		}
-	    };
-	    my $mret=$@;if ($mret) {die("model:$modelFile $mret");};
-	    # push model data...
-	    my $obsFile =$obsDir .  $node->getAttribute("obsFile");
-	    eval {
-		my $odoc = $parser->parse_file($obsFile);
-		if ( my ($onode) = $odoc->findnodes("obs/obs_config")) {
-		    my $file=$onode->getAttribute("path");
-		    my $cache=$obsCacheDir . $file;
-		    my $tablepath = $onode->getAttribute("tablePath");
-		    my $bufrType = $onode->getAttribute("bufrType");
-		    my $subType = $onode->getAttribute("subType");
-		    my $index = $onode->getAttribute("indexTarget");
-		    my $exp = $onode->getAttribute("indexExp");
-		    $fark->setObservationCache($cache);
-		    $fark->setObservationTablePath($tablepath);
-		    $fark->setObservationType($bufrType,$subType);
-		    $fark->setObservationIndex($index,$exp);
-		    $fark->clearObservationTargetStack();
-		    my @trgs=$node->findnodes("target");
-		    foreach my $trg (@trgs) {
-			my $name = $trg->getAttribute("name");
-			my $pos = $trg->getAttribute("pos");
-			my $descr = $trg->getAttribute("descr");
-			my $info = $trg->getAttribute("info");
-			my $min = $trg->getAttribute("min");
-			my $max = $trg->getAttribute("max");
-			$fark->pushObservationTarget($name,$pos,$descr,$info,$min,$max);
-		    }
-		};
-	    };
-	    my $oret=$@;if ($oret) {die("obs:$obsFile $oret");};
+sub updateTimes {
+    my $node=shift;
+    updateTime($node,"model");
+    updateTime($node,"obs");
+    updateTime($node,"coloc");
+    updateTime($node,"plot");
+}
+sub updateTime {
+    my $node= shift;
+    my $cls = shift;
+    my $clsUseDir=    farkdir::getRootDir($cls."_use");
+    my @clss=$node->findnodes("cls");
+    foreach my $cls (@clss) {
+	my $file=$cls->getAttribute("file");
+	my $lastAuto="";
+	my $lastAccess="";
+	my $lastStart=0;
+	my $lastStop=0;
+	my $clsUseFile=$clsUseDir . $file; 
+	#print "Checking $clsUseFile\n";
+	if (-f $clsUseFile) {
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+		$mtime,$ctime,$blksize,$blocks) = stat($clsUseFile);
+	    $lastStop=$atime;
 	};
-	$ret=1;
-    };    
-    my $cret=$@;if ($cret) {die("coloc:$coloc $cret");};
-    return $ret;
+	my $lockfilename=$lockRoot."$cls/$file.lock";
+	if (-f $lockfilename) {
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+		$mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
+	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
+	    $lastStart=$atime;
+	    if ( not open(MLOCKFILE, ">$lockfilename") ) {
+	    } elsif (flock (MLOCKFILE,2+4)) {
+		my $duration = $lastStop-$lastStart;
+		if ($duration < 0) {
+		    $lastAccess="**abort**";
+		} else {
+		    $lastAccess=$duration . "s **done**";
+		}
+	    } else {
+		my $duration = time()-$lastStart;
+		$lastAccess=$duration . "s **running**";
+	    };	
+	    close(MLOCKFILE);
+	};
+	$cls->setAttribute("last",        $lastAuto);
+	$cls->setAttribute("info",        $lastAccess);
+    }
+};
+
+sub setModelConfig {
+    my $fark = shift;
+    my $node = shift;
+    my $cachefile = shift;
+    my $test = shift;
+    print "Setting model\n";
+    my $index=$node->getAttribute("index");
+    $fark->clearModelFileStack($index); # clear model file stack
+    $fark->setModelCache($cachefile);
+    $fark->setModelIndex($index);
+    if (-e $cachefile && ! $test) {
+	$fark->loadModelCache($cachefile);# load cached model file stack
+    };
+    my $modelStart= $node->getAttribute("modelStart");
+    my $modelStop = $node->getAttribute("modelStop");
+    if ($modelStart &&  $modelStop) {
+	$fark->setModelIndexLimits($modelStart, $modelStop); # "target:value"
+    };
+}
+
+sub setObsConfig {
+    my $fark = shift;
+    my $node = shift;
+    my $cachefile = shift;
+    my $test = shift;
+    #
+    $fark->clearObservationFileStack(); # clear observation file stack
+    my $tablepath=  ($node->getAttribute("tablePath")//"");
+    my $indexTarget=($node->getAttribute("indexTarget")//"");
+    my $indexExp=   ($node->getAttribute("indexExp")//"");
+    my $bufrType=   ($node->getAttribute("bufrType")//"999");
+    my $subType=    ($node->getAttribute("subType")//"999");
+    my $obsStart  = ($node->getAttribute("obsStart")//"");
+    my $obsStop   = ($node->getAttribute("obsStop")//"");
+    print "Setting obs\n";
+    $fark->setObservationTablePath($tablepath);
+    if ( $indexTarget && $indexExp) {
+	if($debug){print "Obs index: '$indexTarget' -> '$indexExp'\n";}
+	$fark->setObservationIndex($indexTarget,$indexExp);
+    };
+    $fark->setObservationType($bufrType,$subType);
+    $fark->clearObservationTargetStack();
+    my @targets=$node->findnodes("target");
+    foreach my $trg (@targets) {
+	if($debug){print "Obs target '".$trg->getAttribute("name")."'\n";}
+	$fark->pushObservationTarget($trg->getAttribute("name"),
+				     $trg->getAttribute("pos"),
+				     $trg->getAttribute("descr"),
+				     $trg->getAttribute("info"),
+				     $trg->getAttribute("min"),
+				     $trg->getAttribute("max"));
+    }
+    $fark->clearObservationFileStack();
+    $fark->setObservationCache($cachefile);
+    if (-e $cachefile && ! $test) {
+	$fark->loadObservationCache($cachefile,$test);
+    };
+    if ($obsStart && $obsStop) {
+	if($debug){print "Obs limits: $obsStart $obsStop\n";}
+	$fark->setObservationIndexLimits($obsStart, $obsStop); # "target:value"
+    };
+
+}
+
+sub setColocConfig {
+    my $fark = shift;
+    my $node = shift;
+    my $test = shift;
+    #
+    print "Setting coloc\n";
+    my $modelFile = $node->getAttribute("modelFile");
+    my $obsFile   = $node->getAttribute("obsFile");
+    # get config from model file
+    $fark->clearModelTargetStack();
+    $fark->clearObservationTargetStack();
+    if ($modelFile) {
+	my $modelCache=$modelCacheDir.$modelFile;
+	my $modelConfig = $modelDir.$modelFile;
+	my $parser = XML::LibXML->new();
+	if (-e $modelConfig) { # read config file parameters into memory
+	    my $doc = $parser->parse_file($modelConfig);
+	    if ((my $node)=$doc->findnodes("model/model_config")) {
+		&setModelConfig($fark,$node,$modelCache,$test);
+	    };
+	}
+    };
+    # get config from obs file
+    if ($obsFile) { # initialise any observation processing
+	my $obs=0;
+	#print "Calling clearObservationFileStack\n";
+	my $obsCache=$obsCacheDir.$obsFile;
+	#print "Calling loadObservationCache\n";
+	my $obsConfig = $obsDir.$obsFile;
+	my $parser = XML::LibXML->new();
+	if (-e $obsConfig) {     # read config file parameters into memory
+	    my $doc = $parser->parse_file($obsConfig);
+	    if ((my $node)=$doc->findnodes("obs/obs_config")) {
+		&setObsConfig($fark,$node,$obsCache,$test);
+	    };
+	};
+    };
+    # get config from coloc file
+    my $filter = $node->getAttribute("filter")//"";
+    $fark->setColocFilter($filter);
+    if ($modelFile) {
+	my @oldNodes=$node->findnodes("modelTarget");
+	foreach my $oldnode (@oldNodes) {
+	    print "Setting model target ".$oldnode->getAttribute("name")."\n";
+	    $fark->pushModelTarget( ($oldnode->getAttribute("name")//""),
+				    ($oldnode->getAttribute("variable")//""),
+				    ($oldnode->getAttribute("min")//""),
+				    ($oldnode->getAttribute("max")//""));
+	};
+    };
+    if ($modelFile && ! $obsFile) {
+	my @oldDefault=$node->findnodes("modelDefault");
+	foreach my $default (@oldDefault) {
+	    my @oldDefs=$default->findnodes("def");
+	    if (@oldDefs) {
+		foreach my $def (@oldDefs) {
+		    print "Setting model default ".$def->getAttribute("name")."\n";
+		    $fark->addModelDefault(($def->getAttribute("name")//""),
+					   ($def->getAttribute("value")//""));
+		}
+		$fark->pushModelDefault(); # "target:value"
+	    }
+	};
+    };
+    if ($obsFile) {
+	my @oldNodes=$node->findnodes("obsTarget");
+	foreach my $oldnode (@oldNodes) {
+	    print "Setting obs target ".$oldnode->getAttribute("name")."\n";
+	    $fark->pushObservationTarget(($oldnode->getAttribute("name")//""),
+					 ($oldnode->getAttribute("pos"//"")),
+					 ($oldnode->getAttribute("descr")//""),
+					 ($oldnode->getAttribute("info")//""),
+					 ($oldnode->getAttribute("min")//""),
+					 ($oldnode->getAttribute("max")//""));
+	}
+    };
+    if ($obsFile && $modelFile) {
+	my @oldNodes=$node->findnodes("matchRules");
+	foreach my $oldnode (@oldNodes) {
+	    print "Setting match rule '".
+		$oldnode->getAttribute("name")."' -> '".
+		$oldnode->getAttribute("expression")."'\n";
+	    $fark->pushMatchRule(($oldnode->getAttribute("name")//""),
+				 ($oldnode->getAttribute("expression")//""),
+				 ($oldnode->getAttribute("min")//""),
+				 ($oldnode->getAttribute("max")//""));
+	};
+    }
 }

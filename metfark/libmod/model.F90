@@ -18,7 +18,7 @@ module model
   ! Global constants
   !
   character*1 :: sep = "|"
-  logical     :: model_bdeb=.true.
+  logical     :: model_bdeb=.false.
   !
   ! target variables
   !
@@ -224,7 +224,7 @@ module model
      ! targets
      type(mod_target), pointer :: firstTrg => null()   ! linked list start of target-chain
      type(mod_target), pointer :: lastTrg => null()    ! linked list end of target-chain
-     type(mod_target), pointer :: currentTrg => null()       ! current target
+     type(mod_target), pointer :: currentTrg => null() ! current target loop
      integer :: ntrg=0                                 ! number of items in target-chain
      integer :: ctrg = 0                               ! number of targets allocated in array
      character*80, pointer :: trg80(:) => null()       ! list of target names
@@ -232,9 +232,10 @@ module model
      character*80, pointer :: trg_v80(:) => null()     ! list of variable names
      character*80, pointer :: trg_l80(:) => null()     ! list of lower limits
      character*80, pointer :: trg_u80(:) => null()     ! list of upper limits
-     integer, pointer :: trg_islice(:) => null()       ! is target a slice variable?
      real, pointer :: trg_minval(:) => null()          ! list of lower values
      real, pointer :: trg_maxval(:) => null()          ! list of upper values
+     logical, pointer :: trg_sliceset(:) => null()     ! is target a slice variable?
+     logical, pointer :: trg_valset(:) => null()       ! is target value set by match?
      logical, pointer :: trg_minset(:) => null()       ! list of is lower set?
      logical, pointer :: trg_maxset(:) => null()       ! list of is upper set?
      real, pointer :: trg_val(:) => null()             ! list of values
@@ -243,7 +244,6 @@ module model
      logical :: trg_set=.false.                        ! is target list set?
      !
      ! output
-     logical :: pxml = .false.                ! print XML output?
      integer :: otrg=0                        ! number of allocated output target
      integer :: oloc=0                        ! number of allocated output locations
      real, pointer :: oval(:,:) => null()     ! output values
@@ -465,9 +465,10 @@ CONTAINS
     if (associated(css%trg_v80)) deallocate(css%trg_v80)
     if (associated(css%trg_l80)) deallocate(css%trg_l80)
     if (associated(css%trg_u80)) deallocate(css%trg_u80)
-    if (associated(css%trg_islice)) deallocate(css%trg_islice)
     if (associated(css%trg_minval)) deallocate(css%trg_minval)
     if (associated(css%trg_maxval)) deallocate(css%trg_maxval)
+    if (associated(css%trg_sliceset)) deallocate(css%trg_sliceset)
+    if (associated(css%trg_valset)) deallocate(css%trg_valset)
     if (associated(css%trg_minset)) deallocate(css%trg_minset)
     if (associated(css%trg_maxset)) deallocate(css%trg_maxset)
     if (associated(css%trg_val)) deallocate(css%trg_val)
@@ -1260,9 +1261,10 @@ CONTAINS
   ! CACHE ROUTINES
   !###############################################################################
   !
-  subroutine model_makecache(css,path250,crc250,irc)
+  subroutine model_makecache(css,path250,test,crc250,irc)
     type(mod_session), pointer :: css !  current session
     character*250 :: path250
+    integer :: test
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: currentFile !  current file
@@ -1273,6 +1275,7 @@ CONTAINS
     call chop0(path250,250)
     lenp=length(path250,250,20)
     if(model_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
+    if (test.eq.1) return
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -1605,19 +1608,6 @@ CONTAINS
     integer, external :: length
     type(mod_target), pointer :: newTarget !  the new target
     character*25 :: myname = "model_pushtarget"
-    if (.not.associated(css%firstTrg)) then
-       allocate(css%firstTrg,css%lastTrg, stat=irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate 'firstTrg/lastTrg'.")
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-       css%firstTrg%next => css%lastTrg
-       css%lastTrg%prev => css%firstTrg
-       css%ntrg=0
-       css%trg_set=.false.
-    end if
     allocate(newtarget,stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -1779,9 +1769,10 @@ CONTAINS
        if(associated(css%trg_v80)) deallocate(css%trg_v80)
        if(associated(css%trg_l80)) deallocate(css%trg_l80)
        if(associated(css%trg_u80)) deallocate(css%trg_u80)
-       if(associated(css%trg_islice)) deallocate(css%trg_islice)
        if(associated(css%trg_minval)) deallocate(css%trg_minval)
        if(associated(css%trg_maxval)) deallocate(css%trg_maxval)
+       if(associated(css%trg_sliceset)) deallocate(css%trg_sliceset)
+       if(associated(css%trg_valset)) deallocate(css%trg_valset)
        if(associated(css%trg_minset)) deallocate(css%trg_minset)
        if(associated(css%trg_maxset)) deallocate(css%trg_maxset)
        if(associated(css%trg_val)) deallocate(css%trg_val)
@@ -1789,8 +1780,9 @@ CONTAINS
        if(associated(css%trg_orm)) deallocate(css%trg_orm)
        if (css%ctrg.ne.0) then
           allocate(css%trg80(css%ctrg), css%trg_lent(css%ctrg), css%trg_v80(css%ctrg),  &
-               & css%trg_l80(css%ctrg), css%trg_u80(css%ctrg),css%trg_islice(css%ctrg), &
+               & css%trg_l80(css%ctrg), css%trg_u80(css%ctrg),&
                & css%trg_minval(css%ctrg), css%trg_maxval(css%ctrg), &
+               & css%trg_sliceset(css%ctrg), css%trg_valset(css%ctrg), &
                & css%trg_minset(css%ctrg), css%trg_maxset(css%ctrg), &
                & css%trg_val(css%ctrg), &
                & css%trg_ook(0:css%ctrg), css%trg_orm(0:css%ctrg), stat=irc)
@@ -1811,15 +1803,14 @@ CONTAINS
              css%trg_l80(ii)=currentTarget%l80
              call chop0(css%trg_l80(ii),80)
              lens=length(css%trg_l80(ii),80,10)
+             css%trg_valset(ii)=.true.
              read (css%trg_l80(ii)(1:lens),*,iostat=irc2)css%trg_minval(ii)
              css%trg_minset(ii)=(irc2.eq.0)
              css%trg_u80(ii)=currentTarget%u80
              call chop0(css%trg_u80(ii),80)
              lens=length(css%trg_u80(ii),80,10)
              read (css%trg_u80(ii)(1:lens),*,iostat=irc2)css%trg_maxval(ii)
-             if (currentTarget%lslice) then
-                css%trg_islice(ii)=-1
-             end if
+             css%trg_sliceset(ii)=currentTarget%lslice
              css%trg_maxset(ii)=(irc2.eq.0)
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
@@ -1855,11 +1846,27 @@ CONTAINS
        return
     end if
     do ii=1,css%ctrg
-       css%trg_val(ii)=val(ii)
+       if (css%trg_valset(ii)) then
+          css%trg_val(ii)=val(ii)
+       else
+          css%trg_val(ii)=0.0D0
+       end if
     end do
     return
   end subroutine model_setTargetVal
   !
+  subroutine model_setTarget(css,vset,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    logical :: vset(:)
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_setTarget"
+    integer :: ii
+    do ii=1,css%ctrg
+       css%trg_valset(ii)=vset(II)
+    end do
+    return
+  end subroutine model_setTarget
   !
   subroutine model_checkTargetVal(css,bok,crc250,irc)
     type(mod_session), pointer :: css !  current session
@@ -1871,16 +1878,18 @@ CONTAINS
     bok=.true.
     do ii=1,css%ctrg
        if (bok) then
-          if (css%trg_minset(ii)) then
-             if (css%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
-          end if
-          if (css%trg_maxset(ii)) then
-             if (css%trg_val(ii).gt.css%trg_maxval(ii)) bok=.false.
-          end if
-          if (bok) then
-             css%trg_ook(ii)=css%trg_ook(ii)+1
-          else
-             css%trg_orm(ii)=css%trg_orm(ii)+1
+          if (css%trg_valset(ii)) then
+             if (css%trg_minset(ii)) then
+                if (css%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
+             end if
+             if (css%trg_maxset(ii)) then
+                if (css%trg_val(ii).gt.css%trg_maxval(ii)) bok=.false.
+             end if
+             if (bok) then
+                css%trg_ook(ii)=css%trg_ook(ii)+1
+             else
+                css%trg_orm(ii)=css%trg_orm(ii)+1
+             end if
           end if
        end if
     end do
@@ -2039,7 +2048,7 @@ CONTAINS
     if (allocated(css%gindex)) deallocate(css%gindex)
     ! count number of slice variables (for allocation)
     do ii=1,css%ctrg
-       if (css%trg_islice(ii).ne.0) then
+       if (css%trg_sliceset(ii).and.css%trg_valset(ii)) then
           css%ngslice=css%ngslice+1
        end if
     end do
@@ -2053,11 +2062,10 @@ CONTAINS
     end if
     css%ngslice=0
     do ii=1,css%ctrg
-       if (css%trg_islice(ii).ne.0) then
+       if (css%trg_sliceset(ii).and.css%trg_valset(ii)) then
           css%ngslice=css%ngslice+1
           css%gslice80(css%ngslice)=css%trg80(css%ngslice)
           css%gindex(css%ngslice)=ii
-          css%trg_islice(ii)=css%ngslice
        end if
     end do
     if(model_bdeb)write(*,*)myname,' Done.',css%ngslice
@@ -3961,25 +3969,22 @@ CONTAINS
   !XXXXXXXXXXXXXXXXXX slicefile generates oval(:,:), oset(:,:)- gives value of targets at all locations...
   ! Store oval(:,:) and oset(:,:) in model_session, to be retrieved later...
   ! call model_getSlice(css,nloc,ntrg,oval,oset)
-
-  !
   !
   !###############################################################################
-  ! OUTPUT-XML ROUTINES
+  ! OUTPUT-TABLE ROUTINES
   !###############################################################################
-  ! colocate fields together with locations and write xml to standard output
   !
-  subroutine model_makeOutput(css,nloc,loc,newFile,p,bok,crc250,irc)
-    type(mod_session), pointer :: css !  current session
-    integer :: nloc                 ! number of locations
-    type(mod_locPointer) :: loc(nloc)   !  location pointer
+  subroutine model_makeoutput(css,nloc,loc,newFile,p,bok,crc250,irc)
+    type(mod_session), pointer :: css ! current session
+    integer :: nloc                   ! number of locations
+    type(mod_locPointer) :: loc(nloc) ! location pointer
     type(mod_file),pointer :: newFile
     type(mod_plan),pointer :: p
     logical :: bok ! was any data printed
     character*250 :: crc250
     integer :: irc
     type(mod_batch), pointer :: b
-    character*25 :: myname = "model_makeOutput"
+    character*25 :: myname = "model_makeoutput"
     integer :: ii,ll,varid
     character*250 :: var250
     character*50 :: trg50
@@ -4002,14 +4007,6 @@ CONTAINS
           return
        end if
     end do
-    !
-    ! start xml output
-    !
-    if (css%pxml) write(*,'("  <model>")')
-    !
-    ! write general information
-    !
-
     !
     ! mark all variables as not-processed
     !
@@ -4054,16 +4051,6 @@ CONTAINS
                    call model_errorappend(crc250,"\n")
                    return
                 end if
-                if (css%pxml .and. model_bdeb) then
-                   call model_writeOutputSummary(css,newFile,loc(ll)%ptr,p,crc250,irc)
-                   if (irc.ne.0) then
-                      call model_errorappend(crc250,myname)
-                      call model_errorappend(crc250," Error return from writeOutputSummary.")
-                      call model_errorappendi(crc250,irc)
-                      call model_errorappend(crc250,"\n")
-                      return
-                   end if
-                end if
              end if
           end if
        end do
@@ -4086,7 +4073,7 @@ CONTAINS
              if (loc(ll)%ptr%bok) then
                 call model_getTarget50(loc(ll)%ptr%sliceTarget(b%slivar(ii)),lent,trg50)
                 !
-                call model_writeOutput(css,newFile,varid,lenv,&
+                call model_setLoc(css,newFile,varid,lenv,&
                & var250,lent,trg50,loc(ll)%ptr,p,bok,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
@@ -4143,7 +4130,337 @@ CONTAINS
              ! make XML for variables at location
              !
              lent=0
-             call model_writeOutput(css,newFile,varid,lenv,&
+             call model_setLoc(css,newFile,varid,lenv,&
+               & var250,lent,trg50,loc(ll)%ptr,p,bok,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from writeOutput.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+          end if
+          !
+          ! end loop over locations
+          !
+       end do
+       !
+       ! clear variable from memory
+       !
+       call model_clearVariable(newFile%var(varid)%ptr,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from clearVariable.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! end loop over remaining variables
+       !
+    end do VAR
+    !
+    ! clear location positions
+    !
+    do ll=1,nloc
+       !
+       ! clear location position
+       !
+       call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from initLocPos.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end do
+    if(model_bdeb)write(*,*)myname,'Done.'
+    return
+  end subroutine model_makeoutput
+  !
+  subroutine model_setLoc(css,newFile,varid,lenv,&
+               & var250,lent,trg50,loc,p,bok,crc250,irc)
+    type(mod_session), pointer :: css   ! current session
+    type(mod_file),pointer :: newFile   ! current file
+    integer :: varid                    ! current variable
+    integer :: lenv
+    character*250 :: var250
+    integer :: lent
+    character*50 :: trg50
+    type(mod_location),pointer :: loc   ! location
+    type(mod_plan),pointer :: p         ! pointer to the current plan
+    logical :: bok                      ! was any data printed?
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_setLoc"
+    real :: val
+    logical :: bout, binn
+    integer ::lenb,lenl,lenp,len1
+    character*50 :: s1
+    integer, external :: length
+    character*250 :: buff250, loc250,pos250
+    type(mod_variable),pointer :: v   ! variable pointer
+    integer :: ninn, nout, pinn,cinn
+    real :: sum,tsum,wgt,twgt,tval
+    integer, allocatable :: inn(:), out(:)
+    integer ::cnt,cval,ctot
+    logical :: first
+    if (.not.loc%bok .or. loc%search .ne. 0) return
+    v => newFile%var(varid)%ptr
+    !
+    if(model_bdeb)write(*,*)myname,"Undef:",nf_fill_double
+    !
+    ! get outer and inner loop indexes
+    !
+    if(allocated(out)) deallocate(out)
+      if(allocated(inn)) deallocate(inn)
+    allocate(out(p%ndim),inn(p%ndim))
+    !
+    ! plan the inner (search dimensions) and outer loops
+    !
+    call model_planLoop(v%ndim,v%ind,p,nout,out,ninn,inn)
+    !
+    ! write value information
+    !
+    twgt=0.0D0
+    tsum=0.0D0
+    cnt=0
+    call model_resetPos(nout,out,loc%ndim,loc%pos,loc%istart)
+    bout=.false.
+    do while (.not. bout)
+       pinn=0   ! previous  dimension index
+       call model_resetPos(ninn,inn,loc%ndim,loc%pos,loc%istart)
+       ctot=0 ! total number of grid points
+       cval=0 ! number of valid grid points
+       binn=.false.
+       do while (.not. binn)
+          if(model_bdeb)write(*,*)myname,"Calling getValue."
+          val = model_getValue(newFile,v,loc,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from getValue.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          cnt=cnt+1
+          ctot=ctot+1
+          if(model_bdeb)write(*,*)myname,"Calling Incrementing position."
+          if (val.ne.nf_fill_double) then
+             wgt=model_getWeight(ninn,inn,loc%ndim,&
+               & loc%pos,loc%istart,loc%istop,loc%ff) ! current weight
+             tsum=tsum+wgt*val
+             twgt=twgt+wgt
+             cval=cval+1
+          end if
+          if(model_bdeb)write(*,*) myname,'Weight:',wgt
+          cinn=model_incrementPos(ninn,inn,loc%ndim,&
+               & loc%pos,loc%istart,loc%istop) ! current inn
+          binn=(cnt.gt.250.or.(cinn.eq.0))
+          if(model_bdeb)write(*,*)'Count:',cnt
+       end do
+       if (twgt.gt.1.0D-10.and.ctot.eq.cval.and.ctot.gt.1) then
+          tval=tsum/twgt
+          call model_setOutput(css,tval,v%itrg,loc%iloc,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from setOutput.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       end if
+       bout=(cnt.gt.32.or.(model_incrementPos(nout,out,loc%ndim,&
+               & loc%pos,loc%istart,loc%istop).eq.0))
+       if(model_bdeb)write(*,*)'Count:',cnt
+    end do
+    if(allocated(out)) deallocate(out)
+    if(allocated(inn)) deallocate(inn)
+    return
+  end subroutine model_setLoc
+  !
+  !###############################################################################
+  ! OUTPUT-XML ROUTINES
+  !###############################################################################
+  ! colocate fields together with locations and write xml to standard output
+  !
+  subroutine model_makeXML(css,ounit,nloc,loc,newFile,p,bok,crc250,irc)
+    type(mod_session), pointer :: css ! current session
+    integer :: ounit                  ! output unit
+    integer :: nloc                   ! number of locations
+    type(mod_locPointer) :: loc(nloc) ! location pointer
+    type(mod_file),pointer :: newFile
+    type(mod_plan),pointer :: p
+    logical :: bok ! was any data printed
+    character*250 :: crc250
+    integer :: irc
+    type(mod_batch), pointer :: b
+    character*25 :: myname = "model_makeXML"
+    integer :: ii,ll,varid
+    character*250 :: var250
+    character*50 :: trg50
+    integer :: lenv, lend, lent
+    integer, external :: length
+    if(model_bdeb)write(*,*)myname,'Entering.',nloc
+    !
+    ! initialise location positions
+    !
+    do ll=1,nloc
+       !
+       ! initialise location position
+       !
+       call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from initLocPos.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end do
+    !
+    ! start xml output
+    !
+    write(ounit,'("  <model>")')
+    !
+    ! write general information
+    !
+
+    !
+    ! mark all variables as not-processed
+    !
+    do varid = 1, p%nvar
+       p%proc(varid)=.false.
+    end do
+    !
+    ! loop over batch-jobs
+    !
+    if(model_bdeb)write(*,*)myname,'Batch job loop.'
+    b=>p%first%next
+    do while ( .not.associated(b,target=p%last))
+       !
+       ! read batch-variables into memory
+       !
+       do ii = 1, b%nvar
+          varid=b%var(ii)
+          call model_readVariable(css,newFile,varid,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from readVariable.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       end do
+       !
+       ! loop over locations and determine slice indexes
+       !
+       if(model_bdeb)write(*,*)myname,'Location loop.',nloc,b%nvar
+       do ll=1,nloc
+          if (loc(ll)%ptr%bok) then
+             if (loc(ll)%ptr%search .eq. 0) then
+                !
+                ! search for batch-dimension values
+                !
+                call model_search(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from search.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+                if (model_bdeb) then
+                   call model_writeIgnoredLocXML(css,ounit,newFile,loc(ll)%ptr,p,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from writeSummaryXML.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                end if
+             end if
+          end if
+       end do
+       b=>b%next
+    end do
+    b=>p%first%next
+    do while ( .not.associated(b,target=p%last))
+       !
+       ! clear batch-variables from memory
+       !
+       if(model_bdeb)write(*,*)myname,'Variable loop.',b%nvar
+       do ii = 1, b%nvar 
+          varid=b%var(ii)
+          p%proc(varid)=.true.
+          if(model_bdeb)write(*,*)myname,'Processed:',varid,p%proc(varid)
+          var250=model_getVar250(newFile,varid)
+          lenv=length(var250,250,10)
+          if(model_bdeb)write(*,*)myname,'Variable:'//var250(1:lenv)
+          do ll=1,nloc
+             if (loc(ll)%ptr%bok) then
+                call model_getTarget50(loc(ll)%ptr%sliceTarget(b%slivar(ii)),lent,trg50)
+                !
+                call model_setLocXML(css,ounit,newFile,varid,lenv,&
+               & var250,lent,trg50,loc(ll)%ptr,p,bok,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from writeOutput.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+             end if
+          end do
+          varid=b%var(ii)
+          call model_clearVariable(newFile%var(b%var(ii))%ptr,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from clearVariable.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          if(model_bdeb)write(*,*)myname,'Processed done:',p%proc(1)
+       end do
+       !
+       ! end loop over batch jobs
+       !
+       b=>b%next
+    end do
+    !
+    if(model_bdeb)write(*,*)myname,'Looping over remaining variables.',newFile%nvar, p%nvar
+    !
+    ! loop over remaining variables
+    !
+    VAR: do varid = 1, newFile%nvar
+       if(model_bdeb)write(*,*)myname,'Processed:',varid,p%proc(varid)
+       if (p%proc(varid)) cycle VAR ! already processed
+       var250=model_getvar250(newfile,varid)
+       lenv=length(var250,250,10)
+       !
+       ! read variable into memory
+       !
+       call model_readVariable(css,newFile,varid,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from readVariable.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !
+       ! loop over locations
+       !
+       do ll=1,nloc
+          if (loc(ll)%ptr%bok) then
+             !
+             ! make XML for variables at location
+             !
+             lent=0
+             call model_setLocXML(css,ounit,newFile,varid,lenv,&
                & var250,lent,trg50,loc(ll)%ptr,p,bok,crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
@@ -4175,7 +4492,7 @@ CONTAINS
     !
     ! stop xml output
     !
-    if (css%pxml) write(*,'("  </model>")')
+    write(ounit,'("  </model>")')
     !
     ! clear location positions
     !
@@ -4194,18 +4511,19 @@ CONTAINS
     end do
     if(model_bdeb)write(*,*)myname,'Done.'
     return
-  end subroutine model_makeOutput
+  end subroutine model_makeXML
   !
   ! write location summary
   !
-  subroutine model_writeOutputSummary(css,newFile,loc,p,crc250,irc)
+  subroutine model_writeIgnoredLocXML(css,ounit,newFile,loc,p,crc250,irc)
     type(mod_session), pointer :: css   ! current session
+    integer :: ounit                  ! output unit
     type(mod_file),pointer :: newFile   ! current file
     type(mod_location),pointer :: loc   ! location
     type(mod_plan),pointer :: p         ! pointer to the current plan
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_writeOutputSummary"
+    character*25 :: myname = "model_writeIgnoredLocXML"
     character*250 :: buff250
     character*50 :: s1
     integer :: lenb,len1
@@ -4220,16 +4538,17 @@ CONTAINS
             & newFile%dim80(loc%search)(1:newFile%lend(loc%search))//"'"
        call chop0(buff250,250)
        lenb=length(buff250,250,10)
-       write(*,'(3X,A)') "<loc "//buff250(1:lenb)//"/>"
+       write(ounit,'(3X,A)') "<loc "//buff250(1:lenb)//"/>"
     end if
     return
-  end subroutine model_writeOutputSummary
+  end subroutine model_writeIgnoredLocXML
   !
   ! make XML for variables at location
   !
-  subroutine model_writeOutput(css,newFile,varid,lenv,&
+  subroutine model_setLocXML(css,ounit,newFile,varid,lenv,&
                & var250,lent,trg50,loc,p,bok,crc250,irc)
     type(mod_session), pointer :: css   ! current session
+    integer :: ounit                  ! output unit
     type(mod_file),pointer :: newFile   ! current file
     integer :: varid                    ! current variable
     integer :: lenv
@@ -4241,7 +4560,7 @@ CONTAINS
     logical :: bok                      ! was any data printed?
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_writeOutput"
+    character*25 :: myname = "model_setLocXML"
     real :: val
     logical :: bout, binn
     integer ::lenb,lenl,lenp,len1
@@ -4281,7 +4600,7 @@ CONTAINS
     ! get outer and inner loop indexes
     !
     if(allocated(out)) deallocate(out)
-    if(allocated(inn)) deallocate(inn)
+      if(allocated(inn)) deallocate(inn)
     allocate(out(p%ndim),inn(p%ndim))
     !
     ! plan the inner (search dimensions) and outer loops
@@ -4311,13 +4630,12 @@ CONTAINS
              call model_errorappend(crc250,"\n")
              return
           end if
-          if(model_bdeb)write(*,*)myname,"Calling getXML."
           cnt=cnt+1
           ctot=ctot+1
           if(model_bdeb)write(*,*)myname,"Calling Incrementing position."
           if (val.ne.nf_fill_double) then
              if (first) then
-                if (css%pxml) write(*,'(3X,A)') "<loc "//loc250(1:lenl)//" "//&
+                write(ounit,'(3X,A)') "<loc "//loc250(1:lenl)//" "//&
                      & var250(1:lenv)//pos250(1:lenp)//">"
                 first=.false.
              end if
@@ -4334,7 +4652,7 @@ CONTAINS
              call chop0(buff250,250)
              lenb=length(buff250,250,10)
              if (lenb.ne.0) then
-                if (css%pxml) write(*,'(4X,A)') buff250(1:lenb)
+                write(ounit,'(4X,A)') buff250(1:lenb)
              end if
              tsum=tsum+wgt*val
              twgt=twgt+wgt
@@ -4370,7 +4688,7 @@ CONTAINS
           call chop0(buff250,250)
           lenb=length(buff250,250,10)
           if (lenb.ne.0) then
-             if (css%pxml) write(*,'(4X,A)') buff250(1:lenb)
+             write(ounit,'(4X,A)') buff250(1:lenb)
           end if
        end if
        bout=(cnt.gt.32.or.(model_incrementPos(nout,out,loc%ndim,&
@@ -4378,12 +4696,63 @@ CONTAINS
        if(model_bdeb)write(*,*)'Count:',cnt
     end do
     if (.not.first) then
-       if (css%pxml) write(*,'(3X,A)') "</loc>"
+       write(ounit,'(3X,A)') "</loc>"
     end if
     if(allocated(out)) deallocate(out)
     if(allocated(inn)) deallocate(inn)
     return
-  end subroutine model_writeOutput
+  end subroutine model_setLocXML
+  !
+  subroutine model_writeModelDataXML(css,ounit,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    integer :: ounit                  ! output unit
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname = "model_writeModelDataXML"
+    integer :: len1,len2,len3,len4
+    integer, external :: length
+    character*50 :: s1,s2,s3,s4
+    integer :: ii
+    write(ounit,'(3X,A)')"<modeldata>"
+    if (css%trg_orm(0).ne.0) then
+       write(ounit,'(4X,A,I0,A)')"<check removed='",css%trg_orm(0),&
+               & "' reason='outside target limits.'>"
+    end if
+    do ii=1,css%ctrg
+       if (css%trg_orm(ii).ne.0) then
+          s1=css%trg80(ii)(1:50) ; call chop0(s1,50); len1=length(s1,50,10)!id
+          IF (len1.ne.0) then
+             s1=" name='"//s1(1:len1)//"'"
+             len1=len1+8
+          end if
+          if (css%trg_minset(ii)) then
+             call model_wash(css%trg_minval(ii),s3,len3)
+             if (len3.ne.0) then
+                s3=" min='"//s3(1:len3)//"'"
+                len3=len3+7
+             end if
+          else
+             len3=0
+          end if
+          if (css%trg_maxset(ii)) then
+             call model_wash(css%trg_maxval(ii),s4,len4)
+             if (len4.ne.0) then
+                s4=" max='"//s4(1:len4)//"'"
+                len4=len4+7
+             end if
+          else
+             len4=0
+          end if
+          write(ounit,'(5X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
+               & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
+       end if
+    end do
+    if (css%trg_orm(0).ne.0) then
+       write(ounit,'(4X,A,I0,A)')"</check>"
+    end if
+    write(ounit,'(3X,A)')"</modeldata>"
+    return
+  end subroutine model_writeModelDataXML
   !
   ! variable dimensions
   ! 
@@ -4500,56 +4869,6 @@ CONTAINS
     css%ind_start=ind_start
     css%ind_stop=ind_stop
   end subroutine model_setIndexLimits_
-
-  subroutine model_writeSummary(css,crc250,irc)
-    type(mod_session), pointer :: css !  current session
-    character*250 :: crc250
-    integer :: irc
-    character*25 :: myname = "model_setTargetVal"
-    integer :: len1,len2,len3,len4
-    integer, external :: length
-    character*50 :: s1,s2,s3,s4
-    integer :: ii
-    write(*,'(3X,A)')"<modeldata>"
-    if (css%trg_orm(0).ne.0) then
-       write(*,'(4X,A,I0,A)')"<check removed='",css%trg_orm(0),&
-               & "' reason='outside target limits.'>"
-    end if
-    do ii=1,css%ctrg
-       if (css%trg_orm(ii).ne.0) then
-          s1=css%trg80(ii)(1:50) ; call chop0(s1,50); len1=length(s1,50,10)!id
-          IF (len1.ne.0) then
-             s1=" name='"//s1(1:len1)//"'"
-             len1=len1+8
-          end if
-          if (css%trg_minset(ii)) then
-             call model_wash(css%trg_minval(ii),s3,len3)
-             if (len3.ne.0) then
-                s3=" min='"//s3(1:len3)//"'"
-                len3=len3+7
-             end if
-          else
-             len3=0
-          end if
-          if (css%trg_maxset(ii)) then
-             call model_wash(css%trg_maxval(ii),s4,len4)
-             if (len4.ne.0) then
-                s4=" max='"//s4(1:len4)//"'"
-                len4=len4+7
-             end if
-          else
-             len4=0
-          end if
-          write(*,'(5X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
-               & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
-       end if
-    end do
-    if (css%trg_orm(0).ne.0) then
-       write(*,'(4X,A,I0,A)')"</check>"
-    end if
-    write(*,'(3X,A)')"</modeldata>"
-    return
-  end subroutine model_writeSummary
   !
   ! retrieve target variable list
   !
@@ -4579,30 +4898,28 @@ CONTAINS
     return
   end subroutine model_getvariables
   !
-  subroutine model_filestartxml(css,crc250,irc)
+  subroutine model_filestartxml(css,ounit,crc250,irc)
     type(mod_session), pointer :: css !  current session
+    integer :: ounit                  ! output unit
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "model_filestartxml"
-    if (css%pxml) then
-       if (associated(css%currentFile)) then
-          write(*,'(1X,A)')"<modelFile file='"//&
-               & css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
-       else
-          write(*,'(1X,A)')"<modelFile>"
-       end if
+    if (associated(css%currentFile)) then
+       write(ounit,'(1X,A)')"<modelFile file='"//&
+            & css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
+    else
+       write(ounit,'(1X,A)')"<modelFile>"
     end if
     return
   end subroutine model_filestartxml
   !
-  subroutine model_filestopxml(css,crc250,irc)
+  subroutine model_filestopxml(css,ounit,crc250,irc)
     type(mod_session), pointer :: css !  current session
+    integer :: ounit                  ! output unit
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "model_filestopxml"
-    if (css%pxml) then
-       write(*,'(1X,A)')"</modelFile>"
-    end if
+    write(ounit,'(1X,A)')"</modelFile>"
     return
   end subroutine model_filestopxml
 

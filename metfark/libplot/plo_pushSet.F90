@@ -19,7 +19,7 @@ subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
   type(col_session), pointer ::  css !  current session
   type(mod_session), pointer ::  mss !  current session
   type(obs_session), pointer ::  oss !  current session
-  write(*,*)myname,'Entering:',irc,sid,cid,mid,oid,nam250
+  !write(*,*)myname,'Entering:',irc,sid,cid,mid,oid,nam250
   ! get session objects
   call model_getSession(mss,mid,crc250,irc)
   if (irc.ne.0) then
@@ -63,6 +63,6 @@ subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
      call plot_errorappendi(crc250,irc)
      return
   end if
-  write(*,*)myname,'Exiting:',irc,sid,cid,mid,oid,nam250
+  !write(*,*)myname,'Exiting:',irc,sid,cid,mid,oid,nam250
   return
 end subroutine plo_pushset
