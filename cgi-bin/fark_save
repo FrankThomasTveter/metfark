@@ -1,0 +1,5 @@
+#! /bin/csh
+
+./fark_save.pl '?type=auto&root=auto.cfg&password=&modelFiles=%7Cdefault.cfg~~~&obsFiles=%7Cdefault.cfg~~&plotFiles=%7Cdefault.cfg~~~'
+
+#

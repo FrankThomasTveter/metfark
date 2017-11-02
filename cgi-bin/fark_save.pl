@@ -7,6 +7,7 @@ use XML::LibXML;
 use Capture::Tiny 'capture';
 use Data::Dumper;
 use farkdir;
+#
 #  config directory
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
@@ -35,8 +36,10 @@ sub saveModel {
     my $filterDir=($param->{filterDir}[0] // "");
     my $filterFile=($param->{filterFile}[0] // "");
     my $hits=($param->{hits}[0] // "");
-    my $index=($param->{index}[0] // "");
+    my $indexTarget=($param->{indexTarget}[0] // "");
+    my $indexVariable=($param->{indexVariable}[0] // "");
     my $variables=($param->{variables}[0]// "");
+    my $dimensions=($param->{dimensions}[0]// "");
     my $stack=($param->{stack}[0]// "");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
@@ -65,16 +68,17 @@ sub saveModel {
 	    $doc = $parser->parse_string("<model><model_config/></model>");
 	    ($node) = $doc->findnodes("model/model_config");
 	}
-	$node->setAttribute("path",        $loc . $file);
-	$node->setAttribute("root",        $root);
-	$node->setAttribute("location",    $loc);
-	$node->setAttribute("status",      $priv);
-	$node->setAttribute("password",    $password);
-	$node->setAttribute("file",        $file);
-	$node->setAttribute("filterDir",   $filterDir);
-	$node->setAttribute("filterFile",  $filterFile);
-	$node->setAttribute("hits",        $hits);
-	$node->setAttribute("index",       $index);
+	$node->setAttribute("path",         $loc . $file);
+	$node->setAttribute("root",         $root);
+	$node->setAttribute("location",     $loc);
+	$node->setAttribute("status",       $priv);
+	$node->setAttribute("password",     $password);
+	$node->setAttribute("file",         $file);
+	$node->setAttribute("filterDir",    $filterDir);
+	$node->setAttribute("filterFile",   $filterFile);
+	$node->setAttribute("hits",         $hits);
+	$node->setAttribute("indexTarget",  $indexTarget);
+	$node->setAttribute("indexVariable",$indexVariable);
 	my @oldNodes=$node->findnodes("stack");
 	foreach my $oldNode (@oldNodes) {
 	    $node->removeChild($oldNode);
@@ -88,7 +92,7 @@ sub saveModel {
 		$node->setAttribute("stack",           $sfile);
 	    }
 	}
-	@oldNodes=$node->findnodes("variable");
+	@oldNodes=$node->findnodes('variable');
 	foreach my $oldNode (@oldNodes) {
 	    $node->removeChild($oldNode);
 	};
@@ -102,6 +106,24 @@ sub saveModel {
 		    my $parent = XML::LibXML::Element->new( 'variable' );
 		    $parent->setAttribute("name",$name);
 		    $parent->setAttribute("dims",$dims);
+		    $node->addChild( $parent );
+		}
+	    }
+	}
+	@oldNodes=$node->findnodes('dimension');
+	foreach my $oldNode (@oldNodes) {
+	    $node->removeChild($oldNode);
+	};
+	@lines = split (/\|/, $dimensions,-1);
+	if (@lines) { 
+	    foreach my $line (@lines) {
+		my @items = split (/\~/, $line,-1);
+		my $name=$items[0];
+		my $dimv=$items[1] // "";
+		if ($name) {
+		    my $parent = XML::LibXML::Element->new( 'dimension' );
+		    $parent->setAttribute("name",$name);
+		    $parent->setAttribute("value",$dimv);
 		    $node->addChild( $parent );
 		}
 	    }
@@ -241,6 +263,7 @@ sub saveColoc {
     my $modelFile    = ($param->{modelFile}[0] // "");
     my $modelStart   = ($param->{modelStart}[0] // "");
     my $modelStop    = ($param->{modelStop}[0] // "");
+    my $indexExp     = ($param->{indexExp}[0] // "");
     my $modelTargets = ($param->{modelTargets}[0] // "");
     my $modelDefault = ($param->{modelDefault}[0] // "");
     my $obsFile      = ($param->{obsFile}[0] // "");
@@ -287,6 +310,7 @@ sub saveColoc {
 	$node->setAttribute("modelFile",   $modelFile);
 	$node->setAttribute("modelStart",  $modelStart);
 	$node->setAttribute("modelStop",   $modelStop);
+	$node->setAttribute("indexExp",    $indexExp);
 	$node->setAttribute("obsFile",     $obsFile);
 	$node->setAttribute("obsStart",    $obsStart);
 	$node->setAttribute("obsStop",     $obsStop);

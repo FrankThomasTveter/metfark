@@ -8,7 +8,7 @@ void mod_opensession_(int* mid, char* crc250, int* irc, int len1);
 void mod_clearfilestack_(int* mid,char* varname, char* crc250,int* irc, int len1, int len2);
 void mod_cleartargetstack_(int* mid,char* crc250,int* irc, int len1);
 void mod_closesession_(int* mid, char*crc250, int* irc, int len1);
-void mod_setindex_(int* mid, char* varname, char* crc250, int* irc, int len1, int len2, int len3);
+void mod_setindex_(int* mid, char* trgname, char* varname, char* crc250, int* irc, int len1, int len2, int len3);
 void mod_setindexlimits_(int* mid, char* smin, char* smax, char* crc250, int* irc, int len1, int len2, int len3);
 void mod_determinefileorder_(int* mid, char* crc250, int* irc, int len1);
 void mod_loadcache_(int* mid,char* path,char* crc250,int* irc, int len1,int len2);
@@ -66,6 +66,7 @@ void plo_gettablefile_(int* pid, char* fn250, char* crc250, int* irc, int len1, 
 void plo_setgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 void plo_getgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 void plo_strepfiles_(int* pid, char* crc250, int* irc, int len1);
+void plo_setdebug_(int* ideb);
 
 MODULE = fark		PACKAGE = fark
 
@@ -680,13 +681,14 @@ xs_popModelFile(int sid, ...);
 
 #
 #  "setModelIndex"  sets the model index
+#      (string) targetName
 #      (string) modelVariable
 #   Return array:
 #      (integer) error return code (0=ok).
 #      (string)  error return message
 
 void
-xs_setModelIndex(int sid, char *variable);
+xs_setModelIndex(int sid, char *trgname, char *varname);
     PREINIT:
       int  irc;
       char *crc250;
@@ -694,7 +696,7 @@ xs_setModelIndex(int sid, char *variable);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      mod_setindex_(&sid,variable,crc250, &irc, 25, 25, 250);
+      mod_setindex_(&sid,trgname,varname,crc250, &irc, 25, 25, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       }
@@ -1805,3 +1807,11 @@ xs_pushPlotSet(int pid, int cid, int mid, int oid, char *name, char *x, char *y,
       free(y250);
       free(legend250);
       free(crc250);
+#
+#  "setDebug" set debug flag
+#      (int)  1=on, 0=off
+
+void
+xs_setDebug(int ideb);
+    PPCODE:
+      plo_setdebug_(&ideb);

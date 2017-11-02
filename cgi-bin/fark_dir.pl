@@ -212,7 +212,7 @@ sub cmdrm {
 	$parent->setAttribute("status",$priv);
 	$doc->addChild( $parent );
 	if ($priv eq "rw") {
-	    #print "Priv: $priv, $fpath\n";
+	    #print "Priv: $priv, '$fpath' $cls '$password'\n";
 	    my $ret=farkdir::removeDir($fpath,$password);
 	    if ($ret) {
 		farkdir::term("Unable to remove directory.".Dumper($param));

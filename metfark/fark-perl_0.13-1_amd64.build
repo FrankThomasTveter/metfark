@@ -60,30 +60,30 @@ Writing Makefile for fark
 Writing MYMETA.yml and MYMETA.json
 /usr/bin/make OPTIMIZE="-Wall -g -O2" LD_RUN_PATH=""
 make[1]: Entering directory '/elysium/git/metfark/metfark/fark'
-cp lib/parse.mod blib/lib/parse.mod
-cp check.pl blib/lib/check.pl
-cp lib/libcoloc.a blib/lib/libcoloc.a
-cp lib/observations.mod blib/lib/observations.mod
-cp lib/xmlparse.a blib/lib/xmlparse.a
-cp farkobs.pl blib/lib/farkobs.pl
-cp lib/model.mod blib/lib/model.mod
-cp lib/libgenc.a blib/lib/libgenc.a
-cp lib/farkdir.pm blib/lib/farkdir.pm
-cp lib/libmodel.a blib/lib/libmodel.a
-cp t.pl blib/lib/t.pl
-cp lib/libplot.a blib/lib/libplot.a
-cp lib/libbufrc.a blib/lib/libbufrc.a
-cp lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod
-cp fark.pl blib/lib/fark.pl
-cp lib/fark.pm blib/lib/fark.pm
-cp lib/farkdata.pm blib/lib/farkdata.pm
-cp lib/libparse.a blib/lib/libparse.a
-cp lib/libbufr.a blib/lib/libbufr.a
-cp lib/plot.mod blib/lib/plot.mod
-cp lib/libobs.a blib/lib/libobs.a
-cp fark2.pl blib/lib/fark2.pl
-cp lib/xmlparse.mod blib/lib/xmlparse.mod
 cp lib/colocation.mod blib/lib/colocation.mod
+cp lib/farkdata.pm blib/lib/farkdata.pm
+cp fark2.pl blib/lib/fark2.pl
+cp lib/libbufrc.a blib/lib/libbufrc.a
+cp lib/observations.mod blib/lib/observations.mod
+cp lib/libmodel.a blib/lib/libmodel.a
+cp lib/libplot.a blib/lib/libplot.a
+cp lib/plot.mod blib/lib/plot.mod
+cp lib/libgenc.a blib/lib/libgenc.a
+cp check.pl blib/lib/check.pl
+cp fark.pl blib/lib/fark.pl
+cp lib/libcoloc.a blib/lib/libcoloc.a
+cp lib/xmlparse.a blib/lib/xmlparse.a
+cp lib/farkdir.pm blib/lib/farkdir.pm
+cp t.pl blib/lib/t.pl
+cp lib/fark.pm blib/lib/fark.pm
+cp lib/parse.mod blib/lib/parse.mod
+cp farkobs.pl blib/lib/farkobs.pl
+cp lib/libbufr.a blib/lib/libbufr.a
+cp lib/model.mod blib/lib/model.mod
+cp lib/xmlparse.mod blib/lib/xmlparse.mod
+cp lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod
+cp lib/libparse.a blib/lib/libparse.a
+cp lib/libobs.a blib/lib/libobs.a
 Running Mkbootstrap for fark ()
 chmod 644 "fark.bs"
 "/usr/bin/perl" "/usr/share/perl/5.22/ExtUtils/xsubpp"  -typemap "/usr/share/perl/5.22/ExtUtils/typemap"  fark.xs > fark.xsc && mv fark.xsc fark.c
@@ -104,7 +104,7 @@ chmod 644 "fark.bs"
 PERL_DL_NONLAZY=1 "/usr/bin/perl" "-MExtUtils::Command::MM" "-MTest::Harness" "-e" "undef *Test::Harness::Switches; test_harness(0, 'blib/lib', 'blib/arch')" t/*.t
 t/fark.t .. ok
 All tests successful.
-Files=1, Tests=1,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.06 cusr  0.01 csys =  0.08 CPU)
+Files=1, Tests=1,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.06 cusr  0.02 csys =  0.09 CPU)
 Result: PASS
 make[1]: Leaving directory '/elysium/git/metfark/metfark/fark'
 touch build-stamp
@@ -119,30 +119,30 @@ make[1]: Entering directory '/elysium/git/metfark/metfark/fark'
 Manifying 3 pod documents
 Files found in blib/arch: installing files in blib/lib into architecture dependent library tree
 Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/auto/fark/fark.so
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/parse.mod
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/check.pl
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libcoloc.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/observations.mod
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/xmlparse.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkobs.pl
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/model.mod
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libgenc.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkdir.pm
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libmodel.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/t.pl
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libplot.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libbufrc.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/read_xml_primitives.mod
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark.pl
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark.pm
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkdata.pm
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libparse.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libbufr.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/plot.mod
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libobs.a
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark2.pl
-Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/xmlparse.mod
 Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/colocation.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkdata.pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark2.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libbufrc.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/observations.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libmodel.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libplot.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/plot.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libgenc.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/check.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libcoloc.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/xmlparse.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkdir.pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/t.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/fark.pm
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/parse.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/farkobs.pl
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libbufr.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/model.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/xmlparse.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/read_xml_primitives.mod
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libparse.a
+Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/lib/perl5/libobs.a
 Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/share/man/man3/fark.3pm
 Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/share/man/man3/farkdata.3pm
 Installing /elysium/git/metfark/metfark/fark/debian/fark-perl/usr/share/man/man3/farkdir.3pm
@@ -175,8 +175,8 @@ W: fark-perl: copyright-contains-dh-make-perl-boilerplate
 W: fark-perl: copyright-without-copyright-notice
 W: fark-perl: description-contains-dh-make-perl-template
 E: fark-perl: maintainer-address-is-root-user root <frank.tveter@met.no>
-W: fark-perl: manpage-has-errors-from-pod2man usr/share/man/man3/fark.3pm.gz:798
+W: fark-perl: manpage-has-errors-from-pod2man usr/share/man/man3/fark.3pm.gz:818
 W: fark-perl: manpage-has-errors-from-pod2man usr/share/man/man3/farkdata.3pm.gz:196
 W: fark-perl: manpage-has-bad-whatis-entry usr/share/man/man3/farkdata.3pm.gz
-W: fark-perl: manpage-has-errors-from-man usr/share/man/man3/fark.3pm.gz 408: warning [p 5, 4.8i]: can't break line
+W: fark-perl: manpage-has-errors-from-man usr/share/man/man3/fark.3pm.gz 412: warning [p 5, 5.0i]: can't break line
 Finished running lintian.

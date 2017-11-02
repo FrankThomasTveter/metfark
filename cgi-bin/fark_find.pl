@@ -22,6 +22,14 @@ use farkdir;
 use Capture::Tiny 'capture';
 # must end with slash...
 #
+# 1 = obs
+# 2 = model
+# 5 = parser
+#
+my $debug=0;
+fark::debug($debug);
+#
+#
 my $ref=CGI->new();
 
 $XML::LibXML::skipXMLDeclaration = 1;
@@ -43,9 +51,10 @@ sub findModel {
     my $cls=shift;
     my $ipath=$param->{file}[0];
     my $password=($param->{password}[0] // "");
-    my $filterDir = ($param->{filterDir}->[0] || "/");
+    my $filterDir = ($param->{filterDir}->[0] // "/");
     my $filterFile = ($param->{filterFile}->[0] // "");
-    my $index = ($param->{index}->[0] // "");
+    my $indexTarget = ($param->{indexTarget}->[0] // "");
+    my $indexVariable = ($param->{indexVariable}->[0] // "");
     # get config file paths...
     my ($idir,$ifile) = farkdir::splitName($ipath);
     my ($root, $loc, $priv) = farkdir::splitDir($idir,$cls);
@@ -63,7 +72,7 @@ sub findModel {
     if (-e $fpath && $priv eq "rw") {
 	$doc = $parser->parse_file($fpath);
 	if ( ($node)=$doc->findnodes("model/model_config")) {
-	    my $pass=($node->getAttribute("password")||"");
+	    my $pass=($node->getAttribute("password")//"");
 	    if ($pass ne $password) {
 		$passok=0;
 		$doc = $parser->parse_string("<model><model_config/></model>");
@@ -76,26 +85,28 @@ sub findModel {
 	$doc = $parser->parse_string("<model><model_config/></model>");
 	($node) = $doc->findnodes("model/model_config");
     }
+    # put inventory of first model-file into xml-structure
     my @oldNodes=$node->findnodes("stack");
     foreach my $oldNode (@oldNodes) {
 	$node->removeChild($oldNode);
     };
-    $node->setAttribute("file",      $ifile);
-    $node->setAttribute("class",     $cls);
-    $node->setAttribute("root",      $root);
-    $node->setAttribute("location",  $loc);
-    $node->setAttribute("status",    $priv);
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
 	my @files=farkdir::find($filterFile,$filterDir);
 	if (@files) {
-	    $node->setAttribute("password",        $password);
-	    $node->setAttribute("filterDir",       $filterDir);
-	    $node->setAttribute("filterFile",      $filterFile);
-	    $node->setAttribute("index",           $index);
+	    $node->setAttribute("password",        $password//"");
+	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterFile",      $filterFile//"");
+	    $node->setAttribute("indexTarget",     $indexTarget//"");
+	    $node->setAttribute("indexVariable",   $indexVariable//"");
 	    $node->setAttribute("hits",            scalar @files);
 	    foreach my $sfile (@files) {
 		my $parent = XML::LibXML::Element->new( 'stack' );
-		$parent->setAttribute("name",$sfile);
+		$parent->setAttribute("name",$sfile//"");
 		$node->addChild( $parent );
 	    };
 	    # put xml-structure into file
@@ -141,7 +152,7 @@ sub findModelFile {
     if (-e $fpath && $priv eq "rw") {
 	$doc = $parser->parse_file($fpath);
 	if ( ($node)=$doc->findnodes("model/model_config")) {
-	    my $pass=($node->getAttribute("password")||"");
+	    my $pass=($node->getAttribute("password")//"");
 	    if ($pass ne $password) {
 		$passok=0;
 		$doc = $parser->parse_string("<model><model_config/></model>");
@@ -159,49 +170,31 @@ sub findModelFile {
     foreach my $oldNode (@oldNodes) {
 	$node->removeChild($oldNode);
     };
-    $node->setAttribute("file",      $ifile);
-    $node->setAttribute("class",     $cls);
-    $node->setAttribute("root",      $root);
-    $node->setAttribute("location",  $loc);
-    $node->setAttribute("status",    $priv);
+    @oldNodes=$node->findnodes("dimension");
+    foreach my $oldNode (@oldNodes) {
+	$node->removeChild($oldNode);
+    };
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
+    my $indexTarget=$node->getAttribute("indexTarget")//"";
+    my $indexVariable=$node->getAttribute("indexVariable")//"";
     if (-f $spath) {
-	my $log="";
-	eval {
-	    $log=capture {
-		my $index=$node->getAttribute("index");
-		my $fark=fark->open();
-		$fark->clearModelFileStack($index);
-		$fark->pushModelFile($spath);
-		my $data = $fark->peekModelFile();
-		if ($data) {
-		    #$data->printTree("Model:");
-		    foreach my $index (sort {$data->{file}->{variable}->{$a}->{name} cmp $data->{file}->{variable}->{$b}->{name}} keys %{$data->{file}->{variable}}) {
-			my $parent = XML::LibXML::Element->new( 'variable' );
-			if (defined $data->{file}->{variable}->{$index}->{dimension}) {
-			    my $dims="";
-			    foreach my $dim (sort keys %{$data->{file}->{variable}->{$index}->{dimension}}) {
-				if ($dims) {
-				    $dims=$dims . "," . $data->{file}->{variable}->{$index}->{dimension}->{$dim};
-				} else {
-				    $dims=$data->{file}->{variable}->{$index}->{dimension}->{$dim};
-				}
-			    }
-			    $parent->setAttribute("dims",$dims);
-			};
-			$parent->setAttribute("name",$data->{file}->{variable}->{$index}->{name});
-			$node->addChild( $parent );
-		    }
-		    if (defined $data->{file}->{index}->{start}) {
-			$node->setAttribute("start",$data->{file}->{index}->{start});
-		    };
-		    if (defined $data->{file}->{index}->{stop}) {
-			$node->setAttribute("stop",$data->{file}->{index}->{stop});
-		    };
+	if ($debug) {
+	    &processModelFile($node,$cls,$ipath,$password,$spath,
+			      $indexTarget,$indexVariable);
+	} else {
+	    my $log="";
+	    eval {
+		$log=capture {
+		    &processModelFile($node,$cls,$ipath,$password,$spath,
+				      $indexTarget,$indexVariable);
 		};
-		$fark->close();
 	    };
-	};
-	my $ret=$@;if ($ret) {farkdir::term($ret);}
+	    my $ret=$@;if ($ret) {farkdir::term($ret);}
+	}
 	if ($passok) {
 	    # put xml-structure into file
 	    if (open(my $fh, '>', $fpath)) {
@@ -218,12 +211,67 @@ sub findModelFile {
 	farkdir::term("Unable to open $spath.");
     };
 }
+
+sub processModelFile {
+    my $node       = shift;
+    my $cls         = shift;
+    my $ipath       = shift;
+    my $password    = shift;
+    my $spath       = shift;
+    my $indexTarget = shift;
+    my $indexVariable = shift;
+    #
+    my $fark=fark->open();
+    $fark->clearModelFileStack($indexVariable);
+    $fark->pushModelFile($spath);
+    my $data = $fark->peekModelFile();
+    if ($data) {
+	if($debug){$data->printTree("Model:");}
+	foreach my $index (sort {$data->{file}->{variable}->{$a}->{name} cmp $data->{file}->{variable}->{$b}->{name}} keys %{$data->{file}->{variable}}) {
+	    my $parent = XML::LibXML::Element->new( 'variable' );
+	    if (defined $data->{file}->{variable}->{$index}->{dimension}) {
+		my $dims="";
+		foreach my $dim (sort keys %{$data->{file}->{variable}->{$index}->{dimension}}) {
+		    if ($dims) {
+			$dims=$dims . "," . $data->{file}->{variable}->{$index}->{dimension}->{$dim};
+		    } else {
+			$dims=$data->{file}->{variable}->{$index}->{dimension}->{$dim};
+		    }
+		}
+		$parent->setAttribute("dims",$dims//"");
+	    };
+	    $parent->setAttribute("name",$data->{file}->{variable}->{$index}->{name}//"");
+	    $node->addChild( $parent );
+	}
+	foreach my $index (sort {$data->{file}->{dimension}->{$a} cmp 
+				     $data->{file}->{dimension}->{$b}} 
+			   keys %{$data->{file}->{dimension}}) {
+	    foreach my $name (keys %{$data->{file}->{dimension}->{$index}}) {
+		my $parent = XML::LibXML::Element->new( 'dimension' );
+		$parent->setAttribute("name",$name//"");
+		if (defined $data->{file}->{dimension}->{$index}->{$name}->{"size"}) {
+		    my $value = $data->{file}->{dimension}->{$index}->{$name}->{"size"}+0;
+		    $parent->setAttribute("value",$value//"");
+		}
+		$node->addChild( $parent );
+	    }
+	}
+	if (defined $data->{file}->{index}->{start}) {
+	    $node->setAttribute("start",$data->{file}->{index}->{start}//"");
+	};
+	if (defined $data->{file}->{index}->{stop}) {
+	    $node->setAttribute("stop",$data->{file}->{index}->{stop}//"");
+	};
+    };
+    $fark->close();
+}
+
 sub findObs {
     my $param =shift;
     my $cls=shift;
     my $ipath=$param->{file}[0];
     my $password=($param->{password}[0] // "");
-    my $filterDir = ($param->{filterDir}->[0]||"/tmp");
+    my $filterDir = ($param->{filterDir}->[0]//"/tmp");
     my $filterFile = ($param->{filterFile}->[0] // ".*");
     my $bufrType=($param->{bufrType}[0] // "");
     my $subType=($param->{subType}[0] // "");
@@ -248,7 +296,7 @@ sub findObs {
     if (-e $fpath && $priv eq "rw") {
 	$doc = $parser->parse_file($fpath);
 	if ( ($node)=$doc->findnodes("obs/obs_config")) {
-	    my $pass=($node->getAttribute("password")||"");
+	    my $pass=($node->getAttribute("password")//"");
 	    if ($pass ne $password) {
 		$passok=0;
 		$doc = $parser->parse_string("<obs><obs_config/></obs>");
@@ -265,27 +313,27 @@ sub findObs {
     foreach my $oldNode (@oldNodes) {
 	$node->removeChild($oldNode);
     };
-    $node->setAttribute("file",      $ifile);
-    $node->setAttribute("class",     $cls);
-    $node->setAttribute("root",      $root);
-    $node->setAttribute("location",  $loc);
-    $node->setAttribute("status",    $priv);
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
 	my @files=farkdir::find($filterFile,$filterDir);
 	if (@files) {
-	    $node->setAttribute("password",        $password);
-	    $node->setAttribute("filterDir",       $filterDir);
-	    $node->setAttribute("filterFile",      $filterFile);
-	    $node->setAttribute("tablePath",       $table);
-	    $node->setAttribute("bufrType",        $bufrType);
-	    $node->setAttribute("subType",         $subType);
-	    $node->setAttribute("typeInfo",        $typeInfo);
-	    $node->setAttribute("indexTarget",     $indexTarget);
-	    $node->setAttribute("indexExp",        $indexExp);
+	    $node->setAttribute("password",        $password//"");
+	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterFile",      $filterFile//"");
+	    $node->setAttribute("tablePath",       $table//"");
+	    $node->setAttribute("bufrType",        $bufrType//"");
+	    $node->setAttribute("subType",         $subType//"");
+	    $node->setAttribute("typeInfo",        $typeInfo//"");
+	    $node->setAttribute("indexTarget",     $indexTarget//"");
+	    $node->setAttribute("indexExp",        $indexExp//"");
 	    $node->setAttribute("hits",            scalar @files);
 	    foreach my $spath (@files) {
 		my $parent = XML::LibXML::Element->new( 'stack' );
-		$parent->setAttribute("name",$spath);
+		$parent->setAttribute("name",$spath//"");
 		$node->addChild( $parent );
 	    };
 	    # put xml-structure into file
@@ -338,7 +386,7 @@ sub findObsFile {
     if (-e $fpath && $priv eq "rw") {
 	$doc = $parser->parse_file($fpath);
 	if ( ($node)=$doc->findnodes("obs/obs_config")) {
-	    my $pass=($node->getAttribute("password")||"");
+	    my $pass=($node->getAttribute("password")//"");
 	    if ($pass ne $password) {
 		$passok=0;
 		$doc = $parser->parse_string("<obs><obs_config/></obs>");
@@ -359,113 +407,26 @@ sub findObsFile {
     foreach my $oldNode (@oldNodes) {
 	$node->removeChild($oldNode);
     };
-    $node->setAttribute("file",      $ifile);
-    $node->setAttribute("class",     $cls);
-    $node->setAttribute("root",      $root);
-    $node->setAttribute("location",  $loc);
-    $node->setAttribute("status",    $priv);
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
     if (-f $spath) {
-	my $log="";
-	eval {
-	    $log=capture {
-	        if (! defined $table) {$table=$node->getAttribute("tablePath");}
-		if (! defined $indexTarget) {$indexTarget=$node->getAttribute("indexTarget");}
-		if (! defined $indexExp) {$indexExp=$node->getAttribute("indexExp");}
-		if (! defined $bufrType) {$bufrType=$node->getAttribute("bufrType");}
-		if (! defined $subType) {$subType=$node->getAttribute("subType");}
-		if (! defined $typeInfo) {$typeInfo=$node->getAttribute("typeInfo");}
-	        my $fark=fark->open();
-		print "Starting with:$bufrType,$subType,$table\n";
-		$fark->setObservationTablePath($table);
-		if (defined $bufrType && defined $subType) {
-		    #$fark->setObservationType($bufrType,$subType);
-		    # should probably have tested for "defined $obsTargets" instead (and not used a default)
-		    my @lines = split (/\|/, $obsTargets,-1);
-		    if (! @lines) {
-			my @targets=$node->findnodes("target");
-			foreach my $trg (@targets) {
-			    my $s=sprintf ("%s/%s/%s/%s/%s/%s",
-					   $trg->getAttribute("name"),
-					   $trg->getAttribute("pos"),
-					   $trg->getAttribute("descr"),
-					   $trg->getAttribute("info"),
-					   $trg->getAttribute("min"),
-					   $trg->getAttribute("max"));
-			    push(@lines,$s);
-			}
-		    }
-		    if (@lines) { 
-			foreach my $line (@lines) {
-			    if ($line ne "") {
-				my @items=split (/\~/, $line,-1);
-				my $len=$#items;
-				if ($len == 5) {
-				    #$fark->pushObservationTarget(@items); # name,pos,descr,info,min,max
-				}
-			    }
-			}
-		    }
-		    if ($indexTarget && $indexExp) {
-			print "fark_find.pl Setting observation index $indexTarget, $indexExp\n";
-			#$fark->setObservationIndex($indexTarget,$indexExp);
-#		    } else {
-#			die "No observation index specified.";
-		    }
-#		} else {
-#		    die "No bufr/subType specified.";
-		}
-		$fark->clearObservationFileStack();
-		$fark->pushObservationFile($spath);
-		my $data = $fark->peekObservationFile();
-		if ($data) {
-		    #$data->printTree("Observation:");
-		    if (defined $data->{file}->{"index"}->{start}) {$node->setAttribute("start",$data->{file}->{"index"}->{start});};
-		    if (defined $data->{file}->{"index"}->{stop} ) {$node->setAttribute("stop",$data->{file}->{"index"}->{stop});}
-		    if (defined $data->{file}->{type}) {
-			foreach my $type (sort keys %{$data->{file}->{type}}) {
-			    if (defined $data->{file}->{type}->{$type}->{description}) {
-				my $info=$data->{file}->{type}->{$type}->{description};
-				my $cnt=$data->{file}->{type}->{$type}->{"message count"};
-				my $parent = XML::LibXML::Element->new( 'bufr' );
-				$parent->setAttribute("bufrType",$type);
-				$parent->setAttribute("info",$info);
-				$parent->setAttribute("cnt",$cnt);
-				$node->addChild( $parent );
-			    };
-			    if (defined $data->{file}->{type}->{$type}->{subtype}) {
-				foreach my $subtype (keys %{$data->{file}->{type}->{$type}->{subtype}}) {
-				    my $parent = XML::LibXML::Element->new( 'bufr' );
-				    $parent->setAttribute("bufrType",$type);
-				    $parent->setAttribute("subType",$subtype);
-				    $parent->setAttribute("cnt",$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{"message count"});
-				    $parent->setAttribute("info",$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{"description"});
-				    my $seqno=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{seqno};
-				    my $name=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{name};
-				    my $unit=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{unit};
-				    if (defined $seqno) {
-					foreach my $pos (sort {$a<=>$b} keys %{$seqno}) {
-					    if ($pos < 250) {
-						my $posNode = XML::LibXML::Element->new( 'seq' );
-						$posNode->setAttribute("pos",$pos);
-						$posNode->setAttribute("descr",$seqno->{$pos}||"");
-						$posNode->setAttribute("info",$name->{$pos}||"");
-						$parent->addChild( $posNode );
-					    }
-					}
-				    }
-				    $node->addChild( $parent );
-				}
-			    };
-			};
-		    } else {
-			die "How strange, no valid data was found.";
-		    }
+	if ($debug) {
+	    &processObsFile($node,$cls,$ipath,$password,$spath,$obsTargets,
+			    $indexTarget,$indexExp,$bufrType,$subType,$typeInfo,$table);
+	} else {
+	    my $log="";
+	    eval {
+		$log=capture {
+		    &processObsFile($node,$cls,$ipath,$password,$spath,$obsTargets,
+				    $indexTarget,$indexExp,$bufrType,$subType,$typeInfo,$table);
 		};
-		$fark->close();
 	    };
-	};
-	#print $log;
-	my $ret=$@;if ($ret) {farkdir::term($ret);}
+	    #print $log;
+	    my $ret=$@;if ($ret) {farkdir::term($ret);}
+	}
 	# put xml-structure into file
 	if ($passok) {
 	    if (open(my $fh, '>', $fpath)) {
@@ -482,9 +443,121 @@ sub findObsFile {
 	farkdir::term("Unable to open $spath.");
     }
 };
+
+sub processObsFile {
+    my $node       = shift;
+    my $cls         = shift;
+    my $ipath       = shift;
+    my $password    = shift;
+    my $spath       = shift;
+    my $obsTargets  = shift;
+    my $indexTarget = shift;
+    my $indexExp    = shift;
+    my $bufrType    = shift;
+    my $subType     = shift;
+    my $typeInfo    = shift;
+    my $table       = shift;
+    if (! defined $table) {$table=$node->getAttribute("tablePath");}
+    if (! defined $indexTarget) {$indexTarget=$node->getAttribute("indexTarget");}
+    if (! defined $indexExp) {$indexExp=$node->getAttribute("indexExp");}
+    if (! defined $bufrType) {$bufrType=$node->getAttribute("bufrType");}
+    if (! defined $subType) {$subType=$node->getAttribute("subType");}
+    if (! defined $typeInfo) {$typeInfo=$node->getAttribute("typeInfo");}
+    my $fark=fark->open();
+    if ($debug) {print "Starting with:$bufrType,$subType,$table\n";}
+    $fark->setObservationTablePath($table);
+    if (defined $bufrType && defined $subType) {
+	#$fark->setObservationType($bufrType,$subType);
+	# should probably have tested for "defined $obsTargets" instead (and not used a default)
+	my @lines = split (/\|/, $obsTargets,-1);
+	if (! @lines) {
+	    my @targets=$node->findnodes("target");
+	    foreach my $trg (@targets) {
+		my $s=sprintf ("%s/%s/%s/%s/%s/%s",
+			       $trg->getAttribute("name"),
+			       $trg->getAttribute("pos"),
+			       $trg->getAttribute("descr"),
+			       $trg->getAttribute("info"),
+			       $trg->getAttribute("min"),
+			       $trg->getAttribute("max"));
+		push(@lines,$s);
+	    }
+	}
+	if (@lines) { 
+	    foreach my $line (@lines) {
+		if ($line ne "") {
+		    my @items=split (/\~/, $line,-1);
+		    my $len=$#items;
+		    if ($len == 5) {
+			$fark->pushObservationTarget(@items); # name,pos,descr,info,min,max
+		    }
+		}
+	    }
+	}
+	if ($indexTarget && $indexExp) {
+	    if ($debug) {print "fark_find.pl Setting observation index $indexTarget, $indexExp\n";}
+	    $fark->setObservationIndex($indexTarget,$indexExp);
+	} else {
+	    die "No observation index specified.";
+	}
+    } else {
+	die "No bufr/subType specified.";
+    }
+    $fark->clearObservationFileStack();
+    $fark->pushObservationFile($spath);
+    my $data = $fark->peekObservationFile();
+    if ($data) {
+	if ($debug) {$data->printTree("Observation:");}
+	if (defined $data->{file}->{"index"}->{start}) {$node->setAttribute("start",$data->{file}->{"index"}->{start}//"");};
+	if (defined $data->{file}->{"index"}->{stop} ) {$node->setAttribute("stop",$data->{file}->{"index"}->{stop}//"");}
+	if (defined $data->{file}->{type}) {
+	    foreach my $type (sort keys %{$data->{file}->{type}}) {
+		if (defined $data->{file}->{type}->{$type}->{description}) {
+		    my $info=$data->{file}->{type}->{$type}->{description};
+		    my $cnt=$data->{file}->{type}->{$type}->{"message count"};
+		    my $parent = XML::LibXML::Element->new( 'bufr' );
+		    $parent->setAttribute("bufrType",$type//"");
+		    $parent->setAttribute("info",$info//"");
+		    $parent->setAttribute("cnt",$cnt//"");
+		    $node->addChild( $parent );
+		};
+		if (defined $data->{file}->{type}->{$type}->{subtype}) {
+		    foreach my $subtype (keys %{$data->{file}->{type}->{$type}->{subtype}}) {
+			my $parent = XML::LibXML::Element->new( 'bufr' );
+			if ($debug){print "Bufr: $type Sub: $subtype  \n";}
+			$parent->setAttribute("bufrType",$type//"");
+			$parent->setAttribute("subType",$subtype//"");
+			$parent->setAttribute("cnt",$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{"message count"}//"");
+			$parent->setAttribute("info",$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{"description"}//"");
+			my $seqno=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{seqno};
+			my $name=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{name};
+			my $unit=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{unit};
+			if (defined $seqno) {
+			    foreach my $pos (sort {$a<=>$b} keys %{$seqno}) {
+				if ($pos < 250) {
+				    my $posNode = XML::LibXML::Element->new( 'seq' );
+				    $posNode->setAttribute("pos",$pos//"");
+				    $posNode->setAttribute("descr",$seqno->{$pos}//"");
+				    $posNode->setAttribute("info",$name->{$pos}//"");
+				    $parent->addChild( $posNode );
+				}
+			    }
+			}
+			$node->addChild( $parent );
+		    }
+		};
+	    };
+	} else {
+	    die "How strange, no valid data was found.";
+	}
+    };
+    $fark->close();
+}
+
+
 sub tostring (&) {
-  my $s;
-  open local *STDOUT, '>', \$s;
-  shift->();
-  $s
+    my $s;
+    open local *STDOUT, '>', \$s;
+    shift->();
+    $s
 }

@@ -1,0 +1,5 @@
+#!/bin/csh
+
+./fark_auto.pl '?root=auto.cfg&password=&type=coloc&file=starc%2FaromeSyno20170101.cfg'
+
+#

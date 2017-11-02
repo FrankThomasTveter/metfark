@@ -148,15 +148,17 @@ eval {
 	    #print "Model File=". $modelFile."\n";
 	    #print Dumper($modelFile);
 
-	    my $index="";
+	    my $indexTarget="";
+	    my $indexVariable="";
 	    my $parser = XML::LibXML->new();
 	    if (-e $modelConfig) { # read config file parameters into memory
 		my $doc = $parser->parse_file($modelConfig);
 		if ( (my $node)=$doc->findnodes("model/model_config")) {
-		    $index=$node->getAttribute("index");
+		    $indexTarget=$node->getAttribute("indexTarget");
+		    $indexVariable=$node->getAttribute("indexVariable");
 		};
 	    }
-	    $fark->clearModelFileStack($index); # clear model file stack
+	    $fark->clearModelFileStack($indexVariable); # clear model file stack
 	    $fark->loadModelCache($modelCache);# load cached model file stack
 	    if ( $modelTargets ) { # process model targets
 		#print "Model targets: ". $modelTargets."\n";

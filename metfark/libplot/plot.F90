@@ -76,6 +76,7 @@ module plot
      real                            :: ind_stop=0.0D0          ! highest index
      character*250 :: obs250 ! observation cache file
      character*250 :: mod250 ! model cache file
+     character*80                    :: ind_trg80=""            ! model index target name
      character*80                    :: ind_mod80=""            ! model index variable
      ! obs data
      type(plot_obstrg), pointer :: firstObstrg => null()        ! linked list
@@ -1603,7 +1604,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*22 :: myname ="modImport"
     if (plot_bdeb) write(*,*)myname,'Entering.',irc
-    call model_getIndex(mss,set%ind_mod80,crc250,irc)
+    call model_getIndex(mss,set%ind_trg80,set%ind_mod80,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from getIndex.")
@@ -1642,7 +1643,7 @@ CONTAINS
     integer :: irc
     character*80 :: n80,v80,l80,u80
     character*22 :: myname ="modExport"
-    call model_setIndex(mss,set%ind_mod80,crc250,irc)
+    call model_setIndex(mss,set%ind_trg80,set%ind_mod80,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from setIndex.")

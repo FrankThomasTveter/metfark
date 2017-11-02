@@ -71,7 +71,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2017-10-25" "perl v5.22.1" "User Contributed Perl Documentation"
+.TH fark 3pm "2017-10-30" "perl v5.22.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -237,14 +237,18 @@ Arguments:
 setModelIndex \- sets a target for the model parameters
 .PP
 Arguments:
+.IP "(string) modelTarget" 4
+.IX Item "(string) modelTarget"
+.PD 0
 .IP "(string) modelVariable" 4
 .IX Item "(string) modelVariable"
+.PD
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
 .Vb 1
-\& $fark\->setModelIndex("time");
+\& $fark\->setModelIndex("time_trg","time");
 .Ve
 .SS "setModelIndexLimits"
 .IX Subsection "setModelIndexLimits"
@@ -769,6 +773,22 @@ expression \- evaluate expression
 .IX Subsection "EXAMPLE"
 .PP
 my \f(CW$result\fR = fark\->expression('1+2');
+.SS "debug"
+.IX Subsection "debug"
+debug \- set debug flag.
+.PP
+Arguments:xs
+.IP "(int) 1=debug on, 0=debug off" 4
+.IX Item "(int) 1=debug on, 0=debug off"
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 3
+\&   fark::debug(1);
+\&   ...
+\&   fark::debug(0);
+.Ve
 .SH "INSTALLATION"
 .IX Header "INSTALLATION"
 # fark-perl installation:   
@@ -798,6 +818,6 @@ Frank Thomas Tveter, <f.t.tveter@met.no>
 .SH "POD ERRORS"
 .IX Header "POD ERRORS"
 Hey! \fBThe above document had some coding errors, which are explained below:\fR
-.IP "Around line 1199:" 4
-.IX Item "Around line 1199:"
+.IP "Around line 1205:" 4
+.IX Item "Around line 1205:"
 =back doesn't take any parameters, but you said =back  =head4 \s-1EXAMPLE\s0

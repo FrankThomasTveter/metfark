@@ -3,7 +3,7 @@ module parse
   !
   ! Global constants
   !
-  logical     :: bdebb=.false.
+  logical     :: parse_bdeb=.false.
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Fortran 90 function parser v1.1
@@ -140,7 +140,7 @@ CONTAINS
     !
     INTEGER             :: i
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(bdebb)write(*,*)"Parse_open Opening"
+    if(parse_bdeb)write(*,*)"Parse_open Opening"
     if (.not.allocated(const)) then
        allocate(const(2))
        const(1)='pi'
@@ -154,7 +154,7 @@ CONTAINS
     ! css must be nullified if not declared...
     if (.not.associated(css)) ALLOCATE (css)
     NULLIFY (css%ByteCode,css%Immed,css%Stack)
-    if(bdebb)write(*,*)"Parse_open Done"
+    if(parse_bdeb)write(*,*)"Parse_open Done"
     return
   END SUBROUTINE parse_open
   !
@@ -189,7 +189,7 @@ CONTAINS
     CHARACTER (LEN=LEN(FuncStr))                :: Func      ! Function string, local use
     character*25 :: myname = "parse_parsef"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(bdebb)write(*,*) "Parse_parsef:",funcstr(1:LEN_TRIM(FuncStr))
+    if(parse_bdeb)write(*,*) "Parse_parsef:",funcstr(1:LEN_TRIM(FuncStr))
     ALLOCATE (ipos(LEN_TRIM(FuncStr)))                       ! Char. positions in orig. string
     Func = FuncStr                                           ! Local copy of function string
     CALL Replace ('**','^ ',Func)                            ! Exponent into 1-Char. format
@@ -197,7 +197,7 @@ CONTAINS
     CALL CheckSyntax (Func,FuncStr,Var,crc250,irc)
     DEALLOCATE (ipos)
     if (irc.ne.0) return
-    if(bdebb) write(*,*)'Compiling.'
+    if(parse_bdeb) write(*,*)'Compiling.'
     CALL Parse_compile (css,Func,Var,crc250,irc)                                ! Compile into bytecode
   END SUBROUTINE parse_parsef
   !
@@ -220,7 +220,7 @@ CONTAINS
     character*50 :: str
     !----- -------- --------- --------- --------- --------- --------- --------- -------
 
-    if(bdebb)write(*,*)"Parse_evalf Entering"
+    if(parse_bdeb)write(*,*)"Parse_evalf Entering"
     DP = 1
     SP = 0
     AP = 0
@@ -234,8 +234,8 @@ CONTAINS
           NARGS=AP-css%ArgsIndex(AI)+1;
        end if
 
-       if(bdebb)write(str,'(X,A,I3,100(X,F8.2))') "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,SP)
-       if(bdebb)write(*,'(X,A,2(X,I1),100(X,F8.2))') str,AP,nargs,(css%Args(II),II=1,AP)
+       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,SP)
+       if(parse_bdeb)write(*,'(X,A,2(X,I1),100(X,F8.2))') str,AP,nargs,(css%Args(II),II=1,AP)
 
        SELECT CASE (css%ByteCode(IP))
 
@@ -359,8 +359,8 @@ CONTAINS
     END DO
     EvalErrType = 0
     res = css%Stack(1)
-    if(bdebb)write(*,'(X,A,A,F8.2)') str," result=",res
-    if(bdebb)write(*,*)"Parse_evalf Done."
+    if(parse_bdeb)write(*,'(X,A,A,F27.10)') str," result=",res
+    if(parse_bdeb)write(*,*)"Parse_evalf Done."
   END FUNCTION parse_evalf
   !
   SUBROUTINE CheckSyntax (Func,FuncStr,Var,crc250,irc)
@@ -380,7 +380,7 @@ CONTAINS
     INTEGER                                     :: ParCnt, & ! Parenthesis counter
                                                    j,ib,in,lFunc
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(bdebb)write(*,*)'Checking.',irc
+    if(parse_bdeb)write(*,*)'Checking.',irc
     j = 1
     ParCnt = 0
     lFunc = LEN_TRIM(Func)
@@ -433,14 +433,14 @@ CONTAINS
           IF (j > lFunc) EXIT
           c = Func(j:j)
        ELSE                                                  ! Check for variable
-          if(bdebb)write(*,*)'Checking variables.'
+          if(parse_bdeb)write(*,*)'Checking variables.'
           if (allocated(var)) then
              n = VariableIndex (Func(j:),Var,ib,in)
           else
              n=0
           end if
           IF (n == 0) then
-             if(bdebb)write(*,*)'Checking constants.'
+             if(parse_bdeb)write(*,*)'Checking constants.'
              n = VariableIndex (Func(j:),const,ib,in)
              if (n==0) then
                 CALL ParseErrMsg (j, FuncStr, 'Invalid element: '//Func(j+ib-1:j+in-2),crc250,irc)
@@ -455,7 +455,7 @@ CONTAINS
              IF (j > lFunc) EXIT
              c = Func(j:j)
           end if
-          if(bdebb)write(*,*)'Var/Const:',n
+          if(parse_bdeb)write(*,*)'Var/Const:',n
        END IF
        DO WHILE (c == ')')                                   ! Check for closing parenthesis
           ParCnt = ParCnt-1
@@ -499,7 +499,7 @@ CONTAINS
        CALL ParseErrMsg (j, FuncStr, 'Missing )',crc250,irc)
        return
     end if
-    if(bdebb)write(*,*)'Done checking.',irc
+    if(parse_bdeb)write(*,*)'Done checking.',irc
   END SUBROUTINE CheckSyntax
   !
   FUNCTION parse_EvalErrMsg () RESULT (msg)
@@ -597,7 +597,7 @@ CONTAINS
     INTEGER                                     :: j,ib,in,lstr
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     n = 0
-    if(bdebb)write(*,*)"VariableIndex Entering."
+    if(parse_bdeb)write(*,*)"VariableIndex Entering."
     lstr = LEN_TRIM(str)
     IF (lstr > 0) THEN
        DO ib=1,lstr                                          ! Search for first character in str
@@ -610,14 +610,14 @@ CONTAINS
           IF (str(ib:in-1) == Var(j)) THEN                     
              n = j                                           ! Variable name found
              EXIT
-          ELSE IF (BDEBB) THEN
+          ELSE IF (PARSE_BDEB) THEN
              write(*,*) "Mismatch:"//str(ib:in-1)//":"//Var(j)//":"
           END IF
        END DO
     END IF
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
-    if(bdebb)write(*,*)"VariableIndex Done.",ib,in
+    if(parse_bdeb)write(*,*)"VariableIndex Done.",ib,in
   END FUNCTION VariableIndex
   !
   SUBROUTINE RemoveSpaces (str)
@@ -683,10 +683,10 @@ CONTAINS
     css%ArgsAlloc    = 0
     css%ArgsPtr      = 0
     css%ArgsCnt      = 0
-    if (bdebb) write(*,*)"Compiling:",F(1:LEN_TRIM(F))
+    if (parse_bdeb) write(*,*)"Compiling:",F(1:LEN_TRIM(F))
     CALL CompileSubstr (css,F,1,LEN_TRIM(F),Var)               ! Compile string to determine size
     css%ArgsAlloc    = css%ArgsSize
-    if(bdebb) write(*,*)'>>>>> Arg size:',css%ArgsAlloc
+    if(parse_bdeb) write(*,*)'>>>>> Arg size:',css%ArgsAlloc
     ALLOCATE ( css%ByteCode(css%ByteCodeSize), & 
                css%Immed(css%ImmedSize),       &
                css%Stack(css%StackSize),       &
@@ -795,23 +795,23 @@ CONTAINS
     ! Check for special cases of substring
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     iargs=0
-    if (bdebb) write(*,*) '     Processing:',F(b:e)
+    if (parse_bdeb) write(*,*) '     Processing:',F(b:e)
 
     IF     (F(b:b) == '+') THEN                              ! Case 1: F(b:e) = '+...'
-      if (bdebb) WRITE(*,*)'1. F(b:e) = "+..."'
+      if (parse_bdeb) WRITE(*,*)'1. F(b:e) = "+..."'
        CALL CompileSubstr (css, F, b+1, e, Var)
        RETURN
     ELSEIF (CompletelyEnclosed (F, b, e)) THEN               ! Case 2: F(b:e) = '(...)'
-      if (bdebb) WRITE(*,*)'2. F(b:e) = "(...)"',F(b:e)
+      if (parse_bdeb) WRITE(*,*)'2. F(b:e) = "(...)"',F(b:e)
        CALL CompileSubstr (css, F, b+1, e-1, Var)
        RETURN
     ELSEIF (SCAN(F(b:b),calpha) > 0) THEN        
-       if (bdebb) WRITE(*,*)'3. Found Alphanumeric: ',F(b:b)
+       if (parse_bdeb) WRITE(*,*)'3. Found Alphanumeric: ',F(b:b)
        n = MathFunctionIndex (F(b:e))
        IF (n > 0) THEN
           b2 = b+INDEX(F(b:e),'(')-1
           IF (CompletelyEnclosed(F, b2, e)) THEN             ! Case 3: F(b:e) = 'fcn(...)'
-            if (bdebb) WRITE(*,*)'3. F(b:e) = "fcn(...)"',F(b2+1:e-1)
+            if (parse_bdeb) WRITE(*,*)'3. F(b:e) = "fcn(...)"',F(b2+1:e-1)
             iargs=css%ArgsPtr
             CALL CompileSubstr(css, F, b2+1, e-1, Var)
             css%ArgsCnt=css%ArgsCnt+1
@@ -828,9 +828,9 @@ CONTAINS
           END IF
        END IF
     ELSEIF (F(b:b) == '-') THEN
-       if (bdebb) WRITE(*,*)'3. Found Minus'
+       if (parse_bdeb) WRITE(*,*)'3. Found Minus'
        IF (CompletelyEnclosed (F, b+1, e)) THEN              ! Case 4: F(b:e) = '-(...)'
-         if (bdebb) WRITE(*,*)'4. F(b:e) = "-(...)"'
+         if (parse_bdeb) WRITE(*,*)'4. F(b:e) = "-(...)"'
           CALL CompileSubstr (css, F, b+2, e-1, Var)
           CALL AddCompiledByte (css, cNeg)
           RETURN
@@ -840,7 +840,7 @@ CONTAINS
              b2 = b+INDEX(F(b+1:e),'(')
              IF (CompletelyEnclosed(F, b2, e)) THEN          ! Case 5: F(b:e) = '-fcn(...)'
                 iargs=css%ArgsPtr
-                if (bdebb) WRITE(*,*)'5. F(b:e) = "-fcn(...)"'
+                if (parse_bdeb) WRITE(*,*)'5. F(b:e) = "-fcn(...)"'
                 CALL CompileSubstr(css, F, b2+1, e-1, Var)
                 css%ArgsCnt=css%ArgsCnt+1
                 IF (css%ArgsAlloc .gt. 0) THEN
@@ -870,14 +870,14 @@ CONTAINS
              k = k-1
           END IF
           IF (k == 0 .AND. F(j:j) == Ops(io) .AND. IsBinaryOp (j, F)) THEN
-             if (bdebb) WRITE(*,*)'3. Found Binary op: ', F(j:j)
+             if (parse_bdeb) WRITE(*,*)'3. Found Binary op: ', F(j:j)
              IF (ANY(F(j:j) == Ops(cMul:cPow)) .AND. F(b:b) == '-') THEN ! Case 6: F(b:e) = '-...Op...' with Op > -
-               if (bdebb) WRITE(*,*)'6. F(b:e) = "-...Op..." with Op > -'
+               if (parse_bdeb) WRITE(*,*)'6. F(b:e) = "-...Op..." with Op > -'
                 CALL CompileSubstr (css, F, b+1, e, Var)
                 CALL AddCompiledByte (css, cNeg)
                 RETURN                 
              ELSE                                                        ! Case 7: F(b:e) = '...BinOp...'
-               if (bdebb) WRITE(*,*)'7. Binary operator ',F(j:j)
+               if (parse_bdeb) WRITE(*,*)'7. Binary operator ',F(j:j)
                 CALL CompileSubstr (css, F, b, j-1, Var)
                 CALL CompileSubstr (css, F, j+1, e, Var)
                 CALL AddCompiledByte (css, OperatorIndex(Ops(io)))
@@ -898,7 +898,7 @@ CONTAINS
           k = k-1
        END IF
        IF (k == 0 .AND. F(j:j) == ",") THEN
-          if (bdebb) WRITE(*,*)'3. Found comma: ', F(j:j)
+          if (parse_bdeb) WRITE(*,*)'3. Found comma: ', F(j:j)
           CALL CompileSubstr (css, F, b, j-1, Var)
           CALL CompileSubstr (css, F, j+1, e, Var)
           CALL AddCompiledByte (css, cArgs)
@@ -914,7 +914,7 @@ CONTAINS
     b2 = b
     IF (F(b:b) == '-') b2 = b2+1
     n = MathItemIndex(css, F(b2:e), Var)
-    if (bdebb) WRITE(*,*)'8. AddCompiledByte ',n,css%StackPtr,css%ArgsPtr
+    if (parse_bdeb) WRITE(*,*)'8. AddCompiledByte ',n,css%StackPtr,css%ArgsPtr
     CALL AddCompiledByte (css, n)
     css%StackPtr = css%StackPtr + 1
     IF (css%StackPtr > css%StackSize) css%StackSize = css%StackSize + 1

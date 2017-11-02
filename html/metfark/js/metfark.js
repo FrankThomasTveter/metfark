@@ -362,9 +362,9 @@ function showDropdown(target, arg = "") {
 		} else {
 		    var dd = root["loc"]+dir;
 		};
-		if (dd.substr(dd.length-1) == "/" || dd == "") {
-		    dd=dd + file;
-		}
+		//if (dd.substr(dd.length-1) == "/" || dd == "") {
+		  //  dd=dd + file;
+		//}
 		console.log("Adding dir button: ",dd);
 		addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();");
 	    }
@@ -433,14 +433,17 @@ function showDropdown(target, arg = "") {
 	var password=document.getElementById("modelConfigFilePsw").value;
 	var filterDir = model_config[file]["filterDir"];
 	var filterFile = model_config[file]["filterFile"];
-	var index = model_config[file]["index"];
+	var indexTarget = model_config[file]["indexTarget"];
+	var indexVariable = model_config[file]["indexVariable"];
 	documentLog.innerHTML="Sent model-find request.";
 	$.get("cgi-bin/fark_find.pl",{type:"model",
 				      file:file,
 				      password:password,
 				      filterDir:filterDir,
 				      filterFile:filterFile,
-				      index:index},
+				      indexTarget:indexTarget,
+				      indexVariable:indexVariable
+				     },
 	      function(data, status){
 		  if (status == "success") {
 		      var errors=data.getElementsByTagName("error");
@@ -472,7 +475,7 @@ function showDropdown(target, arg = "") {
 		    var fullname=variable;
 		    var dims=model_config[file]["variables"][variable];
 		    if (dims != null) {fullname=fullname+"("+dims+")";};
-		    addChildButton(item,fullname,"model_setArray('index','"+variable+"');model_show();");
+		    addChildButton(item,fullname,"model_setArray('indexVariable','"+variable+"');model_show();");
 		}
 	    }
 	}
@@ -536,9 +539,9 @@ function showDropdown(target, arg = "") {
 		} else {
 		    var dd = root["loc"]+dir;
 		};
-		if (dd.substr(dd.length-1) == "/" || dd == "") {
-		    dd=dd + file;
-		}
+		//if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //dd=dd + file;
+		//}
 		console.log("Adding dir button: ",dd);
 		addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();");
 	    }
@@ -852,9 +855,9 @@ function showDropdown(target, arg = "") {
 		} else {
 		    var dd = root["loc"]+dir;
 		};
-		if (dd.substr(dd.length-1) == "/" || dd == "") {
-		    dd=dd + file;
-		}
+		//if (dd.substr(dd.length-1) == "/" || dd == "") {
+		  //  dd=dd + file;
+		//}
 		console.log("Adding button: ",dd);
 		addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();");
 	    }
@@ -927,6 +930,12 @@ function showDropdown(target, arg = "") {
 		var dims=model_config[file]["variables"][variable];
 		if (dims!= null) {fullname=fullname+"("+dims+")";};
 		addChildButton(item,fullname,"setValue('colocModelTargetVariable','"+variable+"');");
+	    }
+	    for (var dim in model_config[file]["dimensions"]) {
+		var dimname=dim;
+		var dimv=model_config[file]["dimensions"][dim];
+		if (dims!= null) {dimname="("+dimname+") <= "+dimv;};
+		addChildButton(item,dimname,"setValue('colocModelTargetVariable','("+dim+")');");
 	    }
 	}
     } else if (target === 'colocObsConfigFile') { //***********************************
@@ -1068,45 +1077,27 @@ function showDropdown(target, arg = "") {
 	    }
 	}
     } else if (target.substr(0,15) === 'matchExpression') {
-	var cnt=target.substring(15);
-	var file=coloc_getConfigFile();
+	var cnt = target.substring(15);
+	var file = coloc_getConfigFile();
 	var mfile = coloc_getModelConfigFile();
 	var ofile = coloc_getObsConfigFile();
 	console.log("mfile:" + mfile);
 	removeChildren(item);
 	if ( coloc_config[file] !== undefined &&
-	     coloc_config[file]["obsConfigFile"] !== undefined &&
-	     coloc_config[file]["obsConfigFile"]["targets"] !== undefined 
+	     model_config[mfile] !== undefined &&
+	     obs_config[ofile] !== undefined
 	   ) {
-	    var trg="";
-	    var ii=0;
-	    var targets=coloc_config[file]["modelConfigFile"]["targets"];
-	    for (var t in targets) {
-		ii=ii+1;
-		if (cnt == ii) {
-		    trg=t;
-		}
-	    };
-	    if (coloc_config[file]["modelConfigFile"]["targets"][trg] !== undefined) {
-		var variable=coloc_config[file]["modelConfigFile"]["targets"][trg]["variable"];
-		var index=model_config[mfile]["index"];
+	    if (cnt == 0) {
 		var indexTrg=obs_config[ofile]["indexTarget"];
-		var mark=(index === variable);
-		//console.log("matchExpression ",variable,trg,dropdown);
-		if (mark) {
-		    addChildButton(item,indexTrg,"addValue('"+target+"','"+indexTrg+"');coloc_addConfigFilesTarget('modelConfigFile','"+trg+"','exp','"+indexTrg+"');");
-		} else {
-		    for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
-			addChildButton(item,t,"addValue('"+target+"','"+t+"');coloc_addConfigFilesTarget('modelConfigFile','"+trg+"','exp','"+t+"');");
-		    }
-		}
+		addChildButton(item,indexTrg,"addValue('"+target+"','"+indexTrg+"');coloc_addConfig('modelConfigFile','exp','"+indexTrg+"');","shaded");
 	    } else {
+		var trg=coloc_config[file]["modelConfigFile"]["targeto"][cnt-1];
 		for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
 		    addChildButton(item,t,"addValue('"+target+"','"+t+"');coloc_addConfigFilesTarget('modelConfigFile','"+trg+"','exp','"+t+"');");
 		}
 	    }
-	    addFunctionButtons(item,target);
 	}
+	addFunctionButtons(item,target);
     } else if (target.substr(0,13) === 'colocDebugExp') {
 	removeChildren(item);
 	addFunctionButtons(item,target);
@@ -1174,9 +1165,9 @@ function showDropdown(target, arg = "") {
 		} else {
 		    var dd = root["loc"]+dir;
 		};
-		if (dd.substr(dd.length-1) == "/" || dd == "") {
-		    dd=dd + file;
-		}
+		//if (dd.substr(dd.length-1) == "/" || dd == "") {
+		  //  dd=dd + file;
+		//}
 		console.log("Adding dir button: ",dd);
 		addChildButton(item,dd,"plot_setConfigFile('"+dd+"');");
 	    }
@@ -1362,9 +1353,9 @@ function showDropdown(target, arg = "") {
 			var dd = root["loc"]+dir;
 		    };
 		    if (dd !== null && dd !== undefined) {
-			if (dd.substr(dd.length-1) == "/" || dd == "") {
+			//if (dd.substr(dd.length-1) == "/" || dd == "") {
 			    //dd=dd + file;
-			}
+			//}
 			console.log("Adding dir button: ",dd,ii);
 // colocation file 'dd' must be 'loaded' if it is selected....!!!
 			addChildButton(item,dd,"setValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');");
@@ -1450,9 +1441,9 @@ function showDropdown(target, arg = "") {
 			    var dd = root["loc"]+dir;
 			};
 			if (dd !== null && dd !== undefined) {
-			    if (dd.substr(dd.length-1) == "/" || dd == "") {
+			    //if (dd.substr(dd.length-1) == "/" || dd == "") {
 				//dd=dd + file;
-			    }
+			    //}
 			    console.log("Adding dir button: ",dd,ii);
 			    addChildButton(item,dd,"setValue('autoConfigFile','"+dd+"');");
 			}
@@ -1511,7 +1502,7 @@ function dataToModel(data) {
 	    var path = loc + name;
 	}
 	if (model_config[path] === undefined) {
-	    model_config[path]={variables : {}}
+	    model_config[path]={variables : {},dims:{}}
 	}
 	model_config[path]["filterDir"]=
 	    set(model_config[path]["filterDir"],models[ii].getAttribute("filterDir"));
@@ -1519,8 +1510,10 @@ function dataToModel(data) {
 	    set(model_config[path]["filterFile"],models[ii].getAttribute("filterFile"));
 	model_config[path]["hits"]=
 	    set(model_config[path]["hits"],models[ii].getAttribute("hits"));
-	model_config[path]["index"]=
-	    set(model_config[path]["index"],models[ii].getAttribute("index"));
+	model_config[path]["indexTarget"]=
+	    set(model_config[path]["indexTarget"],models[ii].getAttribute("indexTarget"));
+	model_config[path]["indexVariable"]=
+	    set(model_config[path]["indexVariable"],models[ii].getAttribute("indexVariable"));
 	model_config[path]["start"]=
 	    set(model_config[path]["start"],models[ii].getAttribute("start"));
 	model_config[path]["stop"]=
@@ -1535,6 +1528,17 @@ function dataToModel(data) {
 	    }
 	} else if (model_config[path]["variables"] === undefined) {
 	    model_config[path]["variables"]={};
+	}
+	var dims=models[ii].getElementsByTagName("dimension");
+	if (dims) {
+	    model_config[path]["dimensions"]={};
+	    for (var jj = 0; jj < dims.length; jj++) {
+		var name=dims[jj].getAttribute("name");
+		var dimv=dims[jj].getAttribute("value")||"";
+		model_config[path]["dimensions"][name]=dimv;
+	    }
+	} else if (model_config[path]["dimensions"] === undefined) {
+	    model_config[path]["dimensions"]={};
 	}
 	var files=models[ii].getElementsByTagName("stack");
 	if (files.length>0) {
@@ -1660,8 +1664,8 @@ function dataToColoc(data) {
 	} else {
 	    var path = loc + name;
 	}
-	coloc_config[path]={modelConfigFile:{targets:{},targeto:[],def:[]},
-			    obsConfigFile:{targets:{},targeto:[]},
+	coloc_config[path]={modelConfigFile:{min:"",max:"",exp:"",targets:{},targeto:[],def:[]},
+			    obsConfigFile:{min:"",max:"",targets:{},targeto:[]},
 			    host:"localhost",
 			    xml:"",
 			    filter:""
@@ -1675,10 +1679,12 @@ function dataToColoc(data) {
 	//console.log("Host:",ii,name,coloc_config[path]["host"],colocs[ii].getAttribute("host"));
 	coloc_config[path]["modelConfigFile"]["file"]=
 	    set(coloc_config[path]["modelConfigFile"]["file"],colocs[ii].getAttribute("modelFile"));
-	coloc_config[path]["modelConfigFile"]["start"]=
-	    set(coloc_config[path]["modelConfigFile"]["start"],colocs[ii].getAttribute("modelStart"));
-	coloc_config[path]["modelConfigFile"]["stop"]=
-	    set(coloc_config[path]["modelConfigFile"]["stop"],colocs[ii].getAttribute("modelStop"));
+	coloc_config[path]["modelConfigFile"]["min"]=
+	    set(coloc_config[path]["modelConfigFile"]["min"],colocs[ii].getAttribute("modelStart"));
+	coloc_config[path]["modelConfigFile"]["max"]=
+	    set(coloc_config[path]["modelConfigFile"]["max"],colocs[ii].getAttribute("modelStop"));
+	coloc_config[path]["modelConfigFile"]["exp"]=
+	    set(coloc_config[path]["modelConfigFile"]["max"],colocs[ii].getAttribute("indexExp"));
 	var modelTargets=colocs[ii].getElementsByTagName("modelTarget");
 	for (var jj = 0; jj < modelTargets.length; jj++) {
 	    var target=modelTargets[jj].getAttribute("name");
@@ -1703,10 +1709,10 @@ function dataToColoc(data) {
 	};
 	coloc_config[path]["obsConfigFile"]["file"]=
 	    set(coloc_config[path]["obsConfigFile"]["file"],colocs[ii].getAttribute("obsFile"));
-	coloc_config[path]["obsConfigFile"]["start"]=
-	    set(coloc_config[path]["obsConfigFile"]["start"],colocs[ii].getAttribute("obsStart"));
-	coloc_config[path]["obsConfigFile"]["stop"]=
-	    set(coloc_config[path]["obsConfigFile"]["stop"],colocs[ii].getAttribute("obsStop"));
+	coloc_config[path]["obsConfigFile"]["min"]=
+	    set(coloc_config[path]["obsConfigFile"]["min"],colocs[ii].getAttribute("obsStart"));
+	coloc_config[path]["obsConfigFile"]["max"]=
+	    set(coloc_config[path]["obsConfigFile"]["max"],colocs[ii].getAttribute("obsStop"));
 	var obsTargets=colocs[ii].getElementsByTagName("obsTarget");
 	for (var jj = 0; jj < obsTargets.length; jj++) {
 	    var target=obsTargets[jj].getAttribute("name");
@@ -1718,12 +1724,12 @@ function dataToColoc(data) {
 	    var min=obsTargets[jj].getAttribute("min");
 	    var max=obsTargets[jj].getAttribute("max");
 	    coloc_config[path]["obsConfigFile"]["targets"][target]={bufrType:bufrType,
-								subType:subType,
-								pos:pos,
-								descr:descr,
-								info:info,
-								min:min,
-								max:max};
+								    subType:subType,
+								    pos:pos,
+								    descr:descr,
+								    info:info,
+								    min:min,
+								    max:max};
 	    coloc_config[path]["obsConfigFile"]["targeto"].push(target);
 	};
 	var matchRules=colocs[ii].getElementsByTagName("matchRules");

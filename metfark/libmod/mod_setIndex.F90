@@ -1,7 +1,8 @@
-subroutine mod_setIndex(sid, varname, crc250, irc)
+subroutine mod_setIndex(sid, trgname,varname, crc250, irc)
   use model
   implicit none
   integer :: sid             ! session id
+  character(len=*) :: trgname
   character(len=*) :: varname
   character*250 :: crc250
   integer :: irc
@@ -16,7 +17,7 @@ subroutine mod_setIndex(sid, varname, crc250, irc)
      call model_errorappend(crc250,"\n")
      return
   end if
-  call model_setindex(css,varname, crc250,irc)
+  call model_setindex(css,trgname,varname, crc250,irc)
   if (irc.ne.0) then
      call model_errorappend(crc250,"|")
      call model_errorappend(crc250,trim(myname))

@@ -202,8 +202,10 @@ module model
      integer :: msort                  ! maximum number of "index variables"
      !
      ! index variable
+     character(LEN=80)         :: ind_trg80   ! index name
+     integer :: ind_lent=0                    ! length of sorting variable
      character(LEN=80)         :: ind_var80   ! index sorting variable
-     integer :: ind_lenv                      ! length of sorting variable
+     integer :: ind_lenv=0                    ! length of sorting variable
      real    :: ind_start=0.0D0
      real    :: ind_stop=0.0D0
      logical :: ind_lim = .false.
@@ -4803,14 +4805,18 @@ CONTAINS
   !
   ! set model sorting index variable
   !
-  subroutine model_setIndex(css,varname,crc250,irc)
+  subroutine model_setIndex(css,trgname,varname,crc250,irc)
     type(mod_session), pointer :: css !  current session
+    character(len=*) :: trgname
     character(len=*) :: varname
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "model_setIndex"
     integer,external :: length
     if(model_bdeb)write(*,*)myname,'Entering.',irc
+    css%ind_trg80=trgname
+    call chop0(css%ind_trg80,80)
+    css%ind_lent=length(css%ind_trg80,80,10)
     css%ind_var80=varname
     call chop0(css%ind_var80,80)
     css%ind_lenv=length(css%ind_var80,80,10)
@@ -4818,14 +4824,16 @@ CONTAINS
     return
   end subroutine model_setindex
   !
-  subroutine model_getIndex(css,var80,crc250,irc)
+  subroutine model_getIndex(css,trg80,var80,crc250,irc)
     type(mod_session), pointer :: css !  current session
+    character*80 :: trg80
     character*80 :: var80
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "model_setIndex"
     integer,external :: length
     if(model_bdeb)write(*,*)myname,'Entering.',irc
+    trg80=css%ind_trg80
     var80=css%ind_var80
     if(model_bdeb)write(*,*)myname,'Done.',irc
     return

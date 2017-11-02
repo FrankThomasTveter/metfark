@@ -1,5 +1,8 @@
 coloc_file="default.cfg";
 coloc_config = { "default.cfg" : { modelConfigFile : { file: "default.cfg",
+						       min : "def_min",
+						       max : "def_max",
+						       exp : "",
 						       targets : { "def_model" : { variable : "def",
 										   min: "def_min",
 										   max : "def_max",
@@ -10,8 +13,8 @@ coloc_config = { "default.cfg" : { modelConfigFile : { file: "default.cfg",
 								info:"default info"} ]
 						     },
 				   obsConfigFile : { file: "default.cfg",
-						     start: "def_start",
-						     stop : "def_stop",
+						     min: "def_min",
+						     max : "def_max",
 						     targets : { "def_obs" : {pos:"", 
 									      descr:"", 
 									      info:"",  
@@ -86,6 +89,13 @@ function coloc_setConfig(type,parameter,val) {
     }
     coloc_showCOLOC();
 }
+function coloc_addConfig (type,parameter,val) {
+    var file=coloc_getConfigFile();
+    if (coloc_config[file] !== undefined) {
+	coloc_config[file][type][parameter]=coloc_config[file][type][parameter]+val;
+	coloc_showCOLOC();
+    }
+}
 function coloc_setConfigFilesTarget (type,target,parameter,val) {
     var file=coloc_getConfigFile();
     if (coloc_config[file] !== undefined) {
@@ -140,7 +150,6 @@ function coloc_setConfigFilesDefaultInfo (ii,val) {
 	coloc_showCOLOC();
     }
 }
-
 function coloc_newModelTarget(item) {
     var name=item.parentNode.parentNode.children[1].children[0].value;
     var variable=item.parentNode.parentNode.children[2].children[0].value;
@@ -154,14 +163,15 @@ function coloc_newModelTarget(item) {
 				host:"fark.met.no",
 				password:""};
 	};
+	if (coloc_config[file]["modelConfigFile"]["targets"][name] === undefined) {
+	    coloc_config[file]["modelConfigFile"]["targeto"].push(name);
+	};
 	coloc_config[file]["modelConfigFile"]["targets"][name]={};
 	coloc_config[file]["modelConfigFile"]["targets"][name]["variable"]=(variable || "");
 	coloc_config[file]["modelConfigFile"]["targets"][name]["min"]=(minimum || "");
 	coloc_config[file]["modelConfigFile"]["targets"][name]["max"]=(maximum || "");
 	coloc_config[file]["modelConfigFile"]["targets"][name]["exp"]="";
 	coloc_configEd++;
-	coloc_config[file]["modelConfigFile"]["targeto"].push(name);
-
 	//coloc_showModelTargetTable();
 	//coloc_showModelDefaultTable();
 	coloc_show();
@@ -217,8 +227,8 @@ function coloc_newObsTarget(item) {
 	    if (name !== "" && ((pos !== "" && bufrType !== "" && subType !== "") || (minimum != "" && maximum != ""))) {
 		var file= coloc_getConfigFile();
 		if (coloc_config[file] === undefined) {
-		    coloc_config[file]={modelConfigFile:{targets:{},def:{}},
-					obsConfigFile:{targets:{}},
+		    coloc_config[file]={modelConfigFile:{targets:{},targeto:[],def:{}},
+					obsConfigFile:{targets:{},targeto:[]},
 					host:"fark.met.no",
 					password:""};
 		};
@@ -258,32 +268,140 @@ function coloc_showModelTargetTable() {
     var targeto=coloc_config[file]["modelConfigFile"]["targeto"];
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
     var mfile=coloc_getModelConfigFile();
-    //for (var target in targets) {
-    for (var ii =0; ii< targeto.length;ii++) {
-	var target=targeto[ii];
-	var variable = targets[target]["variable"];
-	var variables=model_config[mfile]["variables"];
+    //
+    if (model_config[mfile] !== undefined) {
+	var indexTarget=model_config[mfile]["indexTarget"];
+	var indexVariable=model_config[mfile]["indexVariable"];
+	var indexMin=coloc_config[file]["modelConfigFile"]["min"];
+	var indexMax=coloc_config[file]["modelConfigFile"]["max"];
 	var color="green";
+	var variables=model_config[mfile]["variables"];
 	if (variables !== undefined) {
-	    if (variables[variable] === undefined) {
+	    if (variables[indexVariable] === undefined) {
 		color="red";
 	    };
+	} else {
+	    color="black";
 	};
-	console.log("*** Target:",target,targets[target]["variable"],color,variables[target]);
-	coloc_insertModelTargetRow(tail,target,targets[target]["variable"],color,
-				   targets[target]["min"],targets[target]["max"]);
-    }
+	coloc_insertModelTargetIndexRow(tail,indexTarget,indexVariable,color,indexMin,indexMax);
+	//for (var target in targets) {
+	var dimensions=model_config[mfile]["dimensions"];
+	for (var ii =0; ii< targeto.length;ii++) {
+	    var target=targeto[ii];
+	    var variable = targets[target]["variable"];
+	    color="green";
+	    var len=variable.length;
+	    //console.log("*** Check:",variable);
+	    if (variable.substring(0,1) == "(" && 
+		variable.substring(len-1,len) == ")") { // dimension
+		    var dim =variable.substring(1,len-1);
+		//console.log("*** Dimension:",dim);
+		if (dimensions !== undefined) {
+		    if (dimensions[dim] === undefined) {
+			color="red";
+		    };
+		} else {
+		    color="black";
+		};
+	    } else {                                    // variable
+		if (variables !== undefined) {
+		    if (variables[variable] === undefined) {
+			color="red";
+		    };
+		} else {
+		    color="black";
+		};
+	    }
+	    console.log("*** Target:",target,targets[target]["variable"],color,variables[target]);
+	    coloc_insertModelTargetRow(tail,target,targets[target]["variable"],color,
+				       targets[target]["min"],targets[target]["max"]);
+	}
+    };
 };
+// create auto table row
+function coloc_insertModelTargetIndexRow(item,target,variable,color,min,max) {
+    var row = document.createElement("TR");
+    var td, inp;
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    row.appendChild(td);
+    //
+    // make target name column
+    td=document.createElement("TD");
+    td.setAttribute("style","color:darkorange");
+    td.innerHTML=target;
+    row.appendChild(td);
+    //
+    // make model variable column
+    td=document.createElement("TD");
+    td.setAttribute("colspan","2");
+    var tb=document.createElement("TABLE");
+    tb.setAttribute("style","width:100%");
+    var trow=document.createElement("TR");
+    var ttd=document.createElement("TD");
+    ttd.setAttribute("style","color:"+color);
+    ttd.innerHTML=variable;
+    trow.appendChild(ttd);
+    // button <-
+    var ttd=document.createElement("TD");
+    ttd.setAttribute("style","align:right;min-width:25px;width:25px");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","coloc_getModelIndexStart('colocModelIndexStart','"+target+"')");
+    btn.setAttribute("style","width:25px");
+    var t=document.createTextNode("←"); // "→"
+    btn.appendChild(t);
+    ttd.appendChild(btn);
+    trow.appendChild(ttd);
+    // button ->
+    var ttd=document.createElement("TD");
+    ttd.setAttribute("style","align:right;min-width:25px;width:25px");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","coloc_getModelIndexStop('colocModelIndexStop','"+target+"')");
+    btn.setAttribute("style","width:25px");
+    var t=document.createTextNode("→"); // "←"
+    btn.appendChild(t);
+    ttd.appendChild(btn);
+    trow.appendChild(ttd);
+    tb.appendChild(trow);
+    td.appendChild(tb);
+    row.appendChild(td);
+    // make minimum column
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",min);
+    inp.setAttribute("id","colocModelIndexStart");
+    inp.setAttribute("style","width:150px");
+    inp.setAttribute("onblur","coloc_setConfig('modelConfigFile','min',this.value);coloc_showModelTargetTable();");
+    td.appendChild(inp);
+
+    row.appendChild(td);
+    // make maximum column
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT"); // 
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",max);
+    inp.setAttribute("id","colocModelIndexStop");
+    inp.setAttribute("style","width:150px");
+    inp.setAttribute("onblur","coloc_setConfig('modelConfigFile','max',this.value);coloc_showModeltargetTable();");
+    td.appendChild(inp);
+    row.appendChild(td);
+    // make add row to table
+    if (item !== undefined) {
+	item.parentNode.insertBefore(row,item);
+    } else {
+	console.log("coloc Undefined item.",target,variable,min,max);
+    };
+    return row;
+}
 // create auto table row
 function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
     var row = document.createElement("TR");
     var file = coloc_getModelConfigFile();
     console.log("coloc: Adding model target row for :",file,target,variable);
-    if (model_config[file] === undefined) {
-	var mark=false;
-    } else {
-	var mark=(variable === model_config[file]["index"]);
-    }
     var td, inp;
     // make "-" column
     td=document.createElement("TD");
@@ -297,11 +415,7 @@ function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
     row.appendChild(td);
     // make target name column
     td=document.createElement("TD");
-    if (mark) {
-	td.setAttribute("style","color:blue");
-    } else {
-	td.setAttribute("style","");
-    }
+    td.setAttribute("style","");
     td.innerHTML=target;
     row.appendChild(td);
     // make model variable column
@@ -310,11 +424,7 @@ function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",variable);
-    if (mark) {
-	inp.setAttribute("style","width:100%;color:blue");
-    } else  {
-	inp.setAttribute("style","width:100%;color:"+color);
-    }
+    inp.setAttribute("style","width:100%;color:"+color);
     inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','variable',this.value);coloc_showModelTargetTable()");
     td.appendChild(inp);
     row.appendChild(td);
@@ -328,23 +438,9 @@ function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",min);
-    if (mark) {
-	inp.setAttribute("id","colocModelIndexStart");
-	inp.setAttribute("style","width:75px");
-	inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','min',this.value);coloc_setArrayPar('modelConfigFile','start',this.value);coloc_showModelTargetTable();");
-    } else {
-	inp.setAttribute("style","width:100px");
-	inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','min',this.value);");
-    }
+    inp.setAttribute("style","width:150px");
+    inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','min',this.value);");
     td.appendChild(inp);
-    if (mark) {
-	var btn=document.createElement("BUTTON");
-	btn.setAttribute("onclick","coloc_getModelIndexStart('colocModelIndexStart','"+target+"')");
-	btn.setAttribute("style","width:25px");
-	var t=document.createTextNode("←"); // "→"
-	btn.appendChild(t);
-	td.appendChild(btn);
-    }
     row.appendChild(td);
     // make maximum column
     td=document.createElement("TD");
@@ -352,24 +448,9 @@ function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
     inp=document.createElement("INPUT"); // 
     inp.setAttribute("type","text");
     inp.setAttribute("value",max);
-    if (mark) {
-	inp.setAttribute("id","colocModelIndexStop");
-	inp.setAttribute("style","width:75px");
-	inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','max',this.value);");
-	inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','max',this.value);coloc_setArrayPar('modelConfigFile','stop',this.value);coloc_showModeltargetTable();");
-    } else {
-	inp.setAttribute("style","width:100px");
-	inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','max',this.value);");
-    }
+    inp.setAttribute("style","width:150px");
+    inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','max',this.value);");
     td.appendChild(inp);
-    if (mark) {
-	var btn=document.createElement("BUTTON");
-	btn.setAttribute("onclick","coloc_getModelIndexStop('colocModelIndexStop','"+target+"')");
-	btn.setAttribute("style","width:25px");
-	var t=document.createTextNode("→"); // "←"
-	btn.appendChild(t);
-	td.appendChild(btn);
-    }
     row.appendChild(td);
     // make add row to table
     if (item !== undefined) {
@@ -523,80 +604,32 @@ function coloc_showObsTargetTable() {
 	    var target=otargeto[ii];
 	    var pos = otargeto[ii]["pos"];
 	    var color="green";
-	    if (bufr !== undefined) {
-		if (bufr[bufrType][subType] !== undefined) {
-		    if (bufr[bufrType][subType][pos] !== undefined) {
-			var descr=bufr[bufrType][subType][pos]["descr"];
-			if (descr!=otargeto[ii]["descr"]) {
+	    if (bufr !== undefined && 
+		bufr[bufrType] !== undefined && 
+		bufr[bufrType][subType] !== undefined &&
+		bufr[bufrType][subType][pos] !== undefined) {
+		var descr=bufr[bufrType][subType][pos]["descr"];
+		if (descr!=otargeto[ii]["descr"]) {
 			    color="red";
-			};
-		    }
 		};
+	    } else {
+		color="black";
 	    };
 	    coloc_insertOTargetRow(tail,target,otargets[target]["pos"],otargets[target]["descr"],color,
 				   otargets[target]["info"],otargets[target]["min"],otargets[target]["max"]);
 	}
     };
-    // insert obs target index expression from obs-config file
-    // make "-" column  ***************************
-    var row = document.createElement("TR");
-    var td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(td);
-    // make NAME column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("style","color:green");
+    // make index row
     if (obs_config[ofile] !== undefined) {
 	var target=obs_config[ofile]["indexTarget"];
+	var exp = obs_config[ofile]["indexExp"];
     } else {
 	var target="";
+	var exp="";
     }
-    td.innerHTML=target;
-    row.appendChild(td);
-    // make pos column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("colspan","4");
-    if (obs_config[ofile] !== undefined) {
-	td.innerHTML=obs_config[ofile]["indexExp"];
-    } else {
-	td.innerHTML="";
-    };
-    row.appendChild(td);
-    // make minimum column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value",coloc_config[file]["obsConfigFile"]["start"]);
-    inp.setAttribute("id","colocObsIndexStart");
-    inp.setAttribute("style","width:75px");
-    inp.setAttribute("onblur","coloc_setArrayPar('obsConfigFile','start',this.value);");
-    td.appendChild(inp);
-    var btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","coloc_getObsIndexStart('colocObsIndexStart','"+target+"')");
-    btn.setAttribute("style","width:25px");
-    var t=document.createTextNode("←"); // "→"
-    btn.appendChild(t);
-    td.appendChild(btn);
-    row.appendChild(td);
-    // make maximum column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value",coloc_config[file]["obsConfigFile"]["stop"]);
-    inp.setAttribute("id","colocObsIndexStop");
-    inp.setAttribute("style","width:75px");
-    inp.setAttribute("onblur","coloc_setArrayPar('obsConfigFile','stop',this.value);");
-    td.appendChild(inp);
-    btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","coloc_getObsIndexStop('colocObsIndexStop','"+target+"')");
-    btn.setAttribute("style","width:25px");
-    var t=document.createTextNode("→"); // "←"
-    btn.appendChild(t);
-    td.appendChild(btn);
-    row.appendChild(td);
-    tail.parentNode.insertBefore(row,tail);
+    var min = coloc_config[file]["obsConfigFile"]["min"];
+    var max = coloc_config[file]["obsConfigFile"]["max"];
+    coloc_insertOTargetIndexRow(tail,target,exp,min,max);
     // insert obs targets from coloc-config file
     var targeto=coloc_config[file]["obsConfigFile"]["targeto"];
     var targets=coloc_config[file]["obsConfigFile"]["targets"];
@@ -609,17 +642,17 @@ function coloc_showObsTargetTable() {
 	    var bufr=obs_config[ofile]["bufr"];
 	    var bufrType=obs_config[ofile]["bufrType"];
 	    var subType =obs_config[ofile]["subType"];
-	    if (bufr !== undefined) {
-		console.log("*** Table ",bufrType,subType,pos,color)
-		if (bufr[bufrType][subType] !== undefined) {
-		    if (bufr[bufrType][subType][pos] !== undefined) {
-			var descr=bufr[bufrType][subType][pos]["descr"];
-			console.log("*** Table ",pos,descr,targets[target]["descr"],color)
-			if (descr!=targets[target]["descr"]) {
-			    color="red";
-			};
-		    }
+	    if (bufr !== undefined &&
+		bufr[bufrType] !== undefined &&
+		bufr[bufrType][subType] !== undefined &&
+		bufr[bufrType][subType][pos] !== undefined) {
+		var descr=bufr[bufrType][subType][pos]["descr"];
+		//console.log("*** Table ",pos,descr,targets[target]["descr"],color)
+		if (descr!=targets[target]["descr"]) {
+		    color="red";
 		};
+	    } else {
+		color="black";
 	    };
 	} else {
 	    color="black";
@@ -628,6 +661,78 @@ function coloc_showObsTargetTable() {
 				 targets[target]["info"],targets[target]["min"],targets[target]["max"]);
     }
 };
+// create obs index target table row
+function coloc_insertOTargetIndexRow(item,target,exp,min,max) {
+    // insert obs target index expression from obs-config file
+    // make "-" column  ***************************
+    var row = document.createElement("TR");
+    var td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    row.appendChild(td);
+    //
+    // make target NAME column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("style","color:blue");
+    td.innerHTML=target;
+    row.appendChild(td);
+    //
+    // make expression column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("colspan","4");
+    var tb=document.createElement("TABLE");
+    tb.setAttribute("style","width:100%");
+    var trow=document.createElement("TR");
+    var ttd=document.createElement("TD");
+    ttd.innerHTML=exp
+    trow.appendChild(ttd);
+    // button <-
+    var ttd=document.createElement("TD");
+    ttd.setAttribute("style","align:right;min-width:25px;width:25px");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","coloc_getObsIndexStart('colocObsIndexStart','"+target+"')");
+    btn.setAttribute("style","width:25px");
+    var t=document.createTextNode("←"); // "→"
+    btn.appendChild(t);
+    ttd.appendChild(btn);
+    trow.appendChild(ttd);
+    // button ->
+    var ttd=document.createElement("TD");
+    ttd.setAttribute("style","align:right;min-width:25px;width:25px");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","coloc_getObsIndexStop('colocObsIndexStop','"+target+"')");
+    btn.setAttribute("style","width:25px");
+    var t=document.createTextNode("→"); // "←"
+    btn.appendChild(t);
+    ttd.appendChild(btn);
+    trow.appendChild(ttd);
+    tb.appendChild(trow);
+    td.appendChild(tb);
+    row.appendChild(td);
+    //
+    // make minimum column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",min);
+    inp.setAttribute("id","colocObsIndexStart");
+    inp.setAttribute("style","width:150px");
+    inp.setAttribute("onblur","coloc_setArrayPar('obsConfigFile','min',this.value);");
+    td.appendChild(inp);
+    row.appendChild(td);
+    // make maximum column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("class","fill");
+    inp=document.createElement("INPUT");
+    inp.setAttribute("type","text");
+    inp.setAttribute("value",max);
+    inp.setAttribute("id","colocObsIndexStop");
+    inp.setAttribute("style","width:150px");
+    inp.setAttribute("onblur","coloc_setArrayPar('obsConfigFile','max',this.value);");
+    td.appendChild(inp);
+    row.appendChild(td);
+    item.parentNode.insertBefore(row,item);
+}
 // create auto table row
 function coloc_insertOTargetRow(item,target,pos,descr,color,info,min,max) {
     var row = document.createElement("TR");
@@ -754,16 +859,23 @@ function coloc_insertObsTargetRow(item,target,pos,descr,color,info,min,max) {
 function coloc_showTargetMatchTable() {
     var item=document.getElementById('targetMatchTable');
     var file=coloc_getConfigFile();
+    var mfile=coloc_getModelConfigFile();
     var tail=removeTableChildFromTo(item,"labelsTargetMatch","newlineTargetMatch");
     var targeto=coloc_config[file]["modelConfigFile"]["targeto"];
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
+    // insert index match
     var cnt=0;
+    var indexTarget=model_config[mfile]["indexTarget"];
+    var indexExp=coloc_config[file]["modelConfigFile"]["exp"];;
+    coloc_insertTargetMatchRow(tail,cnt,indexTarget,indexExp);
+    cnt=cnt+1;
     //for (var target in targets) {
     for (var ii =0; ii< targeto.length;ii++) {
 	var target=targeto[ii];
 	console.log("TargetS:",target);
 	cnt=cnt+1;
-	coloc_insertTargetMatchRow(tail,cnt,target,targets[target]["exp"]);
+	var exp=(targets[target]["exp"]||"");
+	coloc_insertTargetMatchRow(tail,cnt,target,exp);
     };
     for (var target of targeto) {
 	console.log("TargetO:",target);
@@ -779,37 +891,26 @@ function coloc_insertTargetMatchRow(item,cnt,target,expr) {
         var td, inp,div,itemId;
         // make model target column  ***************************
         td=document.createElement("TD");
-        if (model_config[mfile] !== undefined) {
-            if (coloc_config[file]["modelConfigFile"]["targets"][target] !== undefined) {
-                var variable=coloc_config[file]["modelConfigFile"]["targets"][target]["variable"];
-                var mark=(variable === model_config[mfile]["index"]);
-                if (mark) {
-                    td.setAttribute("style","color:blue");
-                };
-            } else {
-                td.setAttribute("style","color:red");
-            }
-        };
+	var indexTarget=model_config[mfile]["indexTarget"];
+	if (target == indexTarget) {
+            td.setAttribute("style","color:darkorange");
+	}
         td.innerHTML=target;
         row.appendChild(td);
         // make obs target expression column  ***************************
 	itemId="matchExpression"+cnt;
         td=document.createElement("TD");
         td.setAttribute("class","fill");
-	expr=(coloc_config[file]["modelConfigFile"]["targets"][target]["exp"]||"");
         inp=document.createElement("INPUT");
 	inp.setAttribute("id",itemId);
         inp.setAttribute("type","text");
         inp.setAttribute("value",expr);
         inp.setAttribute("style","width:100%");
-        inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','exp',this.value);coloc_showTargetMatchTable();");
-        if (obs_config[ofile] !== undefined) {
-            var variable=obs_config[ofile]["indexTarget"];
-            var mark=(expr.indexOf(variable) > -1);
-            if (mark) {
-                inp.setAttribute("style","color:green");
-            };
-        };
+	if (target == indexTarget) {
+            inp.setAttribute("onblur","coloc_setConfig('modelConfigFile','exp',this.value);coloc_showTargetMatchTable();");
+	} else {
+            inp.setAttribute("onblur","coloc_setConfigFilesTarget('modelConfigFile','"+target+"','exp',this.value);coloc_showTargetMatchTable();");
+	}
 	div=document.createElement("DIV");
 	div.setAttribute("id",itemId+"Dropdown");
 	div.setAttribute("class","dropdown-content");
@@ -879,11 +980,11 @@ function coloc_showCOLOC() {
     var href="http://"+host+"/cgi-bin/fark_coloc.pl?colocFile="+file;
     // if (mod) {
     // 	href=href+"?modelFile="+coloc_config[file]["modelConfigFile"]["file"];
-    // 	if (coloc_config[file]["modelConfigFile"]["start"]) {
-    // 	    href=href+"?modelStart="+ coloc_config[file]["modelConfigFile"]["start"];
+    // 	if (coloc_config[file]["modelConfigFile"]["min"]) {
+    // 	    href=href+"?modelStart="+ coloc_config[file]["modelConfigFile"]["min"];
     // 	};
-    // 	if (coloc_config[file]["modelConfigFile"]["stop"]) {
-    // 	    href=href+"?modelStop="+ coloc_config[file]["modelConfigFile"]["stop"];
+    // 	if (coloc_config[file]["modelConfigFile"]["max"]) {
+    // 	    href=href+"?modelStop="+ coloc_config[file]["modelConfigFile"]["max"];
     // 	};
     // 	var targets=coloc_config[file]["modelConfigFile"]["targets"];
     // 	var modelTargets="";
@@ -907,11 +1008,11 @@ function coloc_showCOLOC() {
     // };
     // if (obs) {
     // 	href=href+"?obsFile="+coloc_config[file]["obsConfigFile"]["file"];
-    // 	if (coloc_config[file]["obsConfigFile"]["start"]) {
-    // 	    href=href+"?obsStart="+ coloc_config[file]["obsConfigFile"]["start"];
+    // 	if (coloc_config[file]["obsConfigFile"]["min"]) {
+    // 	    href=href+"?obsStart="+ coloc_config[file]["obsConfigFile"]["min"];
     // 	};
-    // 	if (coloc_config[file]["obsConfigFile"]["stop"]) {
-    // 	    href=href+"?obsStop="+ coloc_config[file]["obsConfigFile"]["stop"];
+    // 	if (coloc_config[file]["obsConfigFile"]["max"]) {
+    // 	    href=href+"?obsStop="+ coloc_config[file]["obsConfigFile"]["max"];
     // 	};
     // 	var targets=coloc_config[file]["obsConfigFile"]["targets"];
     // 	var obsTargets="";
@@ -988,8 +1089,9 @@ function coloc_saveConfigFile(target) {
     var xml = coloc_config[file]["xml"];
     var filter = coloc_config[file]["filter"];
     var modelFile = coloc_config[file]["modelConfigFile"]["file"];
-    var modelStart = coloc_config[file]["modelConfigFile"]["start"];
-    var modelStop = coloc_config[file]["modelConfigFile"]["stop"];
+    var modelStart = coloc_config[file]["modelConfigFile"]["min"];
+    var modelStop = coloc_config[file]["modelConfigFile"]["max"];
+    var exp = coloc_config[file]["modelConfigFile"]["exp"];
     var modelTargets = "";
     var modelTrgo=coloc_config[file]["modelConfigFile"]["targeto"];
     var modelTrg=coloc_config[file]["modelConfigFile"]["targets"];
@@ -1019,8 +1121,8 @@ function coloc_saveConfigFile(target) {
 	};
     };
     var obsFile = coloc_config[file]["obsConfigFile"]["file"];
-    var obsStart = coloc_config[file]["obsConfigFile"]["start"];
-    var obsStop = coloc_config[file]["obsConfigFile"]["stop"];
+    var obsStart = coloc_config[file]["obsConfigFile"]["min"];
+    var obsStop = coloc_config[file]["obsConfigFile"]["max"];
     var obsTargets = "";
     var obsTrgo=coloc_config[file]["obsConfigFile"]["targeto"];
     var obsTrg=coloc_config[file]["obsConfigFile"]["targets"];
@@ -1050,6 +1152,7 @@ function coloc_saveConfigFile(target) {
 				  modelFile:modelFile,
 				  modelStart:modelStart,
 				  modelStop:modelStop,
+				  indexExp:exp,
 				  obsFile:obsFile,
 				  obsStart:obsStart,
 				  obsStop:obsStop,
@@ -1160,7 +1263,7 @@ function coloc_showConfig() {
 	len=children.length;
 	for (var ii=len-1;ii>=0;ii--){
 	    if (children[ii] !== undefined) {
-		if (children[ii].getAttribute !== undefined) {
+		if (children[ii].getAttribute !== undefined && expr !== undefined) {
 		    var att=children[ii].getAttribute("id");
 		    if (att !== "labelsTargetMatch" && att !== "newlineTargetMatch") {
 			var name=children[ii].children[1].innerHTML;
@@ -1228,26 +1331,26 @@ function coloc_getModelIndexStart(inp,target) {
     var file=coloc_getModelConfigFile();
     var item=document.getElementById(inp);
     item.value=Number(model_config[file]["start"]).toString();
-    coloc_setConfigFilesTarget('modelConfigFile',target,'min',model_config[file]["start"]);
+    coloc_setConfig('modelConfigFile','min',item.value);
 };
 function coloc_getModelIndexStop(inp,target) {
     var file=coloc_getModelConfigFile();
     var item=document.getElementById(inp);
     item.value=Number(model_config[file]["stop"]).toString();
-    coloc_setConfigFilesTarget('modelConfigFile',target,'max',model_config[file]["stop"]);
+    coloc_setConfig('modelConfigFile','max',item.value);
 };
 function coloc_getObsIndexStart(inp,target) {
     var file=coloc_getObsConfigFile();
     var item=document.getElementById(inp);
-    //console.log("fark.js start:",file,obs_config[file]["start"])
-    item.value=obs_config[file]["start"];
-    coloc_setArrayPar('obsConfigFile','start',obs_config[file]["start"]);
+    console.log("fark.js start:'"+file+"' '"+obs_config[file]["start"]+"'")
+    item.value=Number(obs_config[file]["start"]).toString();
+    coloc_setArrayPar('obsConfigFile','min',item.value);
 };
 function coloc_getObsIndexStop(inp,target) {
     var file=coloc_getObsConfigFile();
     var item=document.getElementById(inp);
-    item.value=obs_config[file]["stop"];
-    coloc_setArrayPar('obsConfigFile','stop',obs_config[file]["stop"]);
+    item.value=Number(obs_config[file]["stop"]).toString();
+    coloc_setArrayPar('obsConfigFile','max',item.value);
 };
 function coloc_getObsTargetBufrType() {
     var item=document.getElementById("obsTargetTable");

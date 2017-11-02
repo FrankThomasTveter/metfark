@@ -206,14 +206,15 @@ function obs_setIndexTargetTable(file) {
     for (var ii =0; ii< targeto.length;ii++) {
 	var target=targeto[ii];
 	var color="green";
-	if (bufr !== undefined) {
-	    if (bufr[bufrType][subType] !== undefined) {
-		if (bufr[bufrType][subType][targets[target]["pos"]] !== undefined) {
-		    var descr=bufr[bufrType][subType][targets[target]["pos"]]["descr"];
-		    if (descr!=targets[target]["descr"]) {
-			color="red";
-		    };
-		}
+	var pos = targets[target]["pos"];
+	if (pos !== undefined &&
+	    bufr !== undefined && 
+	    bufr[bufrType] !== undefined && 
+	    bufr[bufrType][subType] !== undefined && 
+	    bufr[bufrType][subType][pos] !== undefined) {
+	    var descr=bufr[bufrType][subType][pos]["descr"];
+	    if (descr!=targets[target]["descr"]) {
+		color="red";
 	    };
 	};
 	obs_insertIndexTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],color,

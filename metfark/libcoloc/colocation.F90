@@ -4,7 +4,7 @@ module colocation
   !
   ! Global constants
   !
-  logical     :: col_bdeb=.true.
+  logical     :: col_bdeb=.false.
   !
   ! default values for the model targets
   !

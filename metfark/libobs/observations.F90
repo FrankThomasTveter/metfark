@@ -11,7 +11,7 @@ module observations
   !
   CHARACTER(LEN=50)               :: blank50 = ''
   character*1 :: sep = "|"
-  logical                         :: obs_bdeb=.true.
+  logical                         :: obs_bdeb=.false.
   !
   ! bufrdc PARAMETERS
   integer,parameter :: JSUP   =       9
@@ -196,7 +196,7 @@ module observations
      !
      real                            :: ind_start=0.0D0       ! lowest index
      real                            :: ind_stop=0.0D0        ! highest index
-     logical                         :: ind_lim(3) = .false.     ! are ind_start/ind_stop available
+     logical                         :: ind_lval(3) = .false.     ! are ind_start/ind_stop available
      !
      character*80                    :: ind_trg80=""          ! index target name
      integer                         :: ind_lent              ! length of target name
@@ -478,7 +478,7 @@ CONTAINS
     integer :: lenp,unitr
     character*250 :: buff250, str250
     character*22 :: myname = "observation_makeCache"
-    if(obs_bdeb)write(*,*) myname,' Entering.',irc
+    if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
     if(obs_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
@@ -544,7 +544,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',irc
+    if(obs_bdeb)write(*,*)myname,' *** Done.',irc
   end subroutine observation_makeCache
   !
   ! load cache file
@@ -561,7 +561,7 @@ CONTAINS
     integer :: lenp,lenf,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
     character*22 :: myname = "observation_loadCache"
-    if(obs_bdeb)write(*,*) myname,' Entering.',irc
+    if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
     if(obs_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
@@ -728,7 +728,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',irc
+    if(obs_bdeb)write(*,*)myname,' *** Done.',irc
   end subroutine observation_loadCache
   !
   !###############################################################################
@@ -913,7 +913,7 @@ CONTAINS
     if(obs_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(obs_bdeb)write(*,*)myname,' Starting.',path250(1:lenp)
+    if(obs_bdeb)write(*,*)myname,' *** Adding:',path250(1:lenp)
     ! create new stack-item
     bok=.true.
     allocate(newFile,stat=irc)
@@ -926,7 +926,6 @@ CONTAINS
     end if
     newFile%firstCategory%next => newFile%lastCategory
     newFile%lastCategory%prev => newFile%firstCategory
-    if(obs_bdeb)write(*,*)myname,'Care.'
     ! push onto stack
     if (bok) then
        css%nFileIndexes=css%nFileIndexes + 1
@@ -937,7 +936,6 @@ CONTAINS
        newFile%next%prev => newFile
        css%currentFile=>newFile
     end if
-    if(obs_bdeb)write(*,*)myname,'Dare.'
     ! open file
     if (bok) then
        ! set file name...
@@ -989,6 +987,7 @@ CONTAINS
     logical :: bdone
     integer, external :: length
     integer :: lenp
+    if(obs_bdeb)write(*,*)myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,10)
     currentFile => css%lastFile%prev
@@ -996,6 +995,7 @@ CONTAINS
     do while (.not. bdone) 
        prevFile=>currentFile%prev
        if (currentFile%fn250(1:currentFile%lenf).eq.path250(1:lenp).or.lenp.eq.0) then
+          if(obs_bdeb)write(*,*)myname,' *** Popping:',currentFile%fn250(1:currentFile%lenf)
           css%nFileIndexes=css%nFileIndexes - 1
           css%stackReady=.false.
           currentFile%next%prev => currentFile%prev
@@ -1009,6 +1009,8 @@ CONTAINS
        currentFile=>prevFile
        bdone=(bdone.or.associated(currentFile,target=css%firstFile))
     end do
+    if(obs_bdeb)write(*,*)myname,' Done.',irc
+    return
   end subroutine observation_stackpop
 
   !
@@ -1182,11 +1184,13 @@ CONTAINS
        cat => cat%next
     end do
 
-    !do ii=1,nrep
-    !   call chop0(rep250(II),250)
-    !   lenr=length(rep250(ii),250,100)
-    !   write(*,*) myname,'REP:',ii,maxrep,rep250(ii)(1:lenr)
-    !end do
+    if (obs_bdeb) then
+       do ii=1,nrep
+          call chop0(rep250(II),250)
+          lenr=length(rep250(ii),250,100)
+          write(*,*) myname,' REP:',ii,maxrep,rep250(ii)(1:lenr)
+       end do
+    end if
 
     return
   end subroutine observation_getFileReport
@@ -1384,7 +1388,7 @@ CONTAINS
     integer :: offset
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_maketargetlist"
+    character*25 :: myname = "observation_getTrg80"
     integer ii
     do ii=1,css%ntrg
        var80(ii+offset)=css%trg80(ii)
@@ -1401,7 +1405,7 @@ CONTAINS
     integer :: offset
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_maketargetlist"
+    character*25 :: myname = "observation_getVal"
     integer ii
     do ii=1,css%ntrg
        val(ii+offset)=css%locdata(iloc)%ptr%trg_val(ii)
@@ -1436,7 +1440,7 @@ CONTAINS
        else
           css%ntrg=css%ntarget
        end if
-       if(obs_bdeb)write(*,*)myname,' here.',css%ntrg
+       if(obs_bdeb)write(*,*)myname,' Targets:',css%ntrg
        currenttarget => css%firsttarget%next
        do while (.not.associated(currenttarget,target=css%lasttarget))
           ii=ii+1
@@ -1451,7 +1455,7 @@ CONTAINS
           lend=length(currenttarget%descr80,80,10)
           lens=length(currenttarget%min80,80,10)
           lene=length(currenttarget%max80,80,10)
-          write(*,*) myname,' Stack:',ii,' file="'//currenttarget%pos250//'" target="'//currenttarget%trg80(1:lent)//'"'
+          write(*,*) myname,' Stack:',ii,' pos="'//currenttarget%pos250(1:lenp)//'" target="'//currenttarget%trg80(1:lent)//'"'
           currenttarget => currenttarget%next
        end do
     end if
@@ -1470,14 +1474,14 @@ CONTAINS
     type(obs_target), pointer :: currenttarget => null()
     integer :: lent,lenp,lend,lens,lene,ii
     integer, external :: length
-    if(obs_bdeb)write(*,*)myname,' Entering.',irc
+    if(obs_bdeb)write(*,*)myname,' Entering.',irc,css%ntarget,css%trg_set,css%ind_set
     if ( .not. css%trg_set ) then
        if (css%ind_set) then
           css%ntrg=css%ntarget+1
        else
           css%ntrg=css%ntarget
        end if
-       if(obs_bdeb)write(*,*)myname,' here.',css%ntrg
+       if(obs_bdeb)write(*,*)myname,' Targets:',css%ntrg
        if (allocated(css%trg80)) deallocate(css%trg80)
        if (allocated(css%trg_lent)) deallocate(css%trg_lent)
        if (allocated(css%trg_seq)) deallocate(css%trg_seq)
@@ -1563,8 +1567,8 @@ CONTAINS
           ii=ii+1
           css%trg80(ii)=css%ind_trg80(1:css%ind_lent)
           css%trg_lent(ii)=css%ind_lent
-          css%trg_lval(1,ii)=css%ind_lim(1)
-          css%trg_lval(2,ii)=css%ind_lim(2)
+          css%trg_lval(1,ii)=css%ind_lval(1)
+          css%trg_lval(2,ii)=css%ind_lval(2)
           css%trg_lval(3,ii)=.false. ! inverted tests are not implemented...
 !          css%trg_lval(3,ii)=(css%trg_lval(1,ii).and.&
 !               & css%trg_lval(2,ii).and.&
@@ -1575,7 +1579,7 @@ CONTAINS
        end if
        css%trg_set=.true.
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg
+    if(obs_bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg,css%ind_set
     return
   end subroutine observation_makeTargetList
   !
@@ -1719,8 +1723,8 @@ CONTAINS
   !
   !
   !
-  subroutine observation_getPrevFile(css,ind_lim,ind_start,ind_stop,bok,crc250,irc)
-    logical :: ind_lim
+  subroutine observation_getPrevFile(css,ind_lval,ind_start,ind_stop,bok,crc250,irc)
+    logical :: ind_lval
     real    :: ind_start
     real    :: ind_stop
     logical :: bok
@@ -1751,9 +1755,8 @@ CONTAINS
        end if
        css%stackReady = .true.
     end if
-    call observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
-    !if(obs_bdeb)
-    ! write(*,*)myname,'There.',css%currentFileSortIndex,css%newnFileSortIndexes
+    call observation_setIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
+    if(obs_bdeb)write(*,*)myname,' Sorting:',css%currentFileSortIndex,css%newnFileSortIndexes
     isubset=1
     nsubset=0
     bdone=.false.
@@ -1765,7 +1768,7 @@ CONTAINS
        css%currentFile => css%fileStack(css%currentFileIndex)%pointer
     end if
     SEARCH : do while (.not.bdone)
-       if (css%currentFile%ind_lim .and. css%ind_lim(3)) then
+       if (css%currentFile%ind_lim .and. css%ind_lval(3)) then
           if ((css%currentFile%ind_start.le.css%ind_stop .and.css%currentFile%ind_start.ge.css%ind_start) .or.  &
                & (css%currentFile%ind_stop.le.css%ind_stop .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
                & (css%currentFile%ind_start.le.css%ind_start .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
@@ -1795,8 +1798,8 @@ CONTAINS
   !
   !
   !
-  subroutine observation_getNextFile(css,ind_lim,ind_start,ind_stop,bok,crc250,irc)
-    logical :: ind_lim
+  subroutine observation_getNextFile(css,ind_lval,ind_start,ind_stop,bok,crc250,irc)
+    logical :: ind_lval
     real    :: ind_start
     real    :: ind_stop
     logical :: bok
@@ -1827,7 +1830,7 @@ CONTAINS
        end if
        css%stackReady = .true.
     end if
-    call observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
+    call observation_setIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
     isubset=1
     nsubset=0
     bdone=.false.
@@ -1839,7 +1842,7 @@ CONTAINS
        css%currentFile => css%fileStack(css%currentFileIndex)%pointer
     end if
     SEARCH : do while (.not.bdone)
-       if (css%currentFile%ind_lim .and. css%ind_lim(3)) then
+       if (css%currentFile%ind_lim .and. css%ind_lval(3)) then
           if ((css%currentFile%ind_start.le.css%ind_stop .and.css%currentFile%ind_start.ge.css%ind_start) .or.  &
                & (css%currentFile%ind_stop.le.css%ind_stop .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
                & (css%currentFile%ind_start.le.css%ind_start .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
@@ -1934,27 +1937,27 @@ CONTAINS
     lene=length(e25,25,10)
     if(obs_bdeb)write(*,*)myname,' Limits:'//s25(1:lens)//" -> "//e25(1:lene)
     if (lens.ne.0.and.lene.ne.0) then
-       css%ind_lim(1)=.true.
-       css%ind_lim(2)=.true.
+       css%ind_lval(1)=.true.
+       css%ind_lval(2)=.true.
        if (lens.ne.0) then
           read(s25(1:lens),*,iostat=irc2) css%ind_start
           if (irc2.ne.0) then
-             css%ind_lim(1)=.false.
+             css%ind_lval(1)=.false.
           end if
        end if
        if (lene.ne.0) then
           read(e25(1:lene),*,iostat=irc2)css%ind_stop
           if (irc2.ne.0) then
-             css%ind_lim(2)=.false.
+             css%ind_lval(2)=.false.
           end if
        end if
-       css%ind_lim(3)=(css%ind_lim(1).and.css%ind_lim(2))
+       css%ind_lval(3)=(css%ind_lval(1).and.css%ind_lval(2))
     else
-       css%ind_lim(1)=.false.
-       css%ind_lim(2)=.false.
-       css%ind_lim(3)=.false.
+       css%ind_lval(1)=.false.
+       css%ind_lval(2)=.false.
+       css%ind_lval(3)=.false.
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lim(3),css%ind_start,css%ind_stop
+    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lval(3),css%ind_start,css%ind_stop
     return
   end subroutine observation_setIndexLimits
   !
@@ -2000,26 +2003,26 @@ CONTAINS
   !
   ! set index limits directly
   !
-  subroutine observation_setIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
+  subroutine observation_setIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
     type(obs_session), pointer :: css !  current session
-    logical :: ind_lim
+    logical :: ind_lval
     real :: ind_start,ind_stop
     integer :: irc2
     character*22 :: myname="observation_setIndexLimitsRaw"
-    css%ind_lim(1)=ind_lim
-    css%ind_lim(2)=ind_lim
-    css%ind_lim(3)=ind_lim
+    css%ind_lval(1)=ind_lval
+    css%ind_lval(2)=ind_lval
+    css%ind_lval(3)=ind_lval
     css%ind_start=ind_start
     css%ind_stop=ind_stop
   end subroutine observation_setIndexLimitsRaw
   !
-  subroutine observation_getIndexLimitsRaw(css,ind_lim,ind_start,ind_stop)
+  subroutine observation_getIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
     type(obs_session), pointer :: css !  current session
-    logical :: ind_lim
+    logical :: ind_lval
     real :: ind_start,ind_stop
     integer :: irc2
     character*22 :: myname="observation_getIndexLimitsRaw"
-    ind_lim=css%ind_lim(3)
+    ind_lval=css%ind_lval(3)
     ind_start=css%ind_start
     ind_stop=css%ind_stop
     return
@@ -2051,7 +2054,6 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(obs_bdeb)write(*,*)myname,' Here.'
     currentFile => css%firstFile%next
     ii=0
     do while (.not.associated(currentFile, target=css%lastFile))
@@ -2063,7 +2065,6 @@ CONTAINS
        end if
        currentFile => currentFile%next
     end do
-    if(obs_bdeb)write(*,*)myname,' There.'
     if (ii.ne.css%nFileIndexes) then
        irc=944
        call observation_errorappend(crc250,myname)
@@ -2080,7 +2081,6 @@ CONTAINS
     call observation_heapsort1r(css%nFileIndexes,css%fileStackSort,1.0D-5, &
          & css%newnFileSortIndexes,css%nFileSortIndexes,css%fileStackInd,.false.)
     ! set index range
-    if(obs_bdeb)write(*,*)myname,' Where.'
     call observation_stacklast(css,crc250,irc)   ! start with latest analysis
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -3160,7 +3160,6 @@ CONTAINS
     integer :: yy,mm,dd,hh,mi,cnt
     real :: sec, j2000
     css%currentfile%ook(1)=css%currentfile%ook(1)+1 ! descriptors do not match
-    if(obs_bdeb)write(*,*)myname,' Evaluating expressions.'
     call observation_eval(css,bok,crc250,irc)
     IF(IRC.NE.0) THEN
        call observation_errorappend(crc250,myname)
@@ -3214,11 +3213,13 @@ CONTAINS
     else
        css%currentfile%orm(2)=css%currentfile%orm(2)+1 ! evaluation failed
     end if
+    if(obs_bdeb)write(*,*)myname,' Expressions:',css%ind_set,css%ind_val,&
+         & css%currentFile%ind_lim,css%currentFile%ind_start,css%currentFile%ind_stop
     !
     ! check against index limits
     !
     if (bok) then
-       if (css%ind_lim(3) .and. css%ind_set) then
+       if (css%ind_lval(3) .and. css%ind_set) then
           bok= ((css%ind_val.le.css%ind_stop .and.css%ind_val.ge.css%ind_start))
        end if
        if (bok) then
@@ -4487,7 +4488,7 @@ CONTAINS
           write(xuff250,'(I8)')start(ii);call chop0(xuff250,250);lenx=length(xuff250,250,2)
        end if
        xuff250=dimnames(ii)(1:lend)//"["//xuff250(1:lenx)//"]";call chop0(xuff250,250);lenx=length(xuff250,250,2)
-       if(obs_bdeb)write(*,*)'Observation_Pretty here:',xuff250(1:lenx)
+       if(obs_bdeb)write(*,*)myname,'XUFF:',xuff250(1:lenx)
        if (lenb.eq.0) then
           buff250=xuff250(1:lenx)
        else
@@ -4497,7 +4498,7 @@ CONTAINS
        lenb=length(buff250,250,10)
     end do
     lenb=length(buff250,250,10)
-    if(obs_bdeb)write(*,*)'Observation_Pretty there:',buff250(1:lenb)
+    if(obs_bdeb)write(*,*)myname,'Buff:',buff250(1:lenb)
     lenv=length(varname,80,10)
     xuff250=varname(1:lenv)//"("//buff250(1:lenb)//")";
     call chop0(xuff250,250);
@@ -4514,7 +4515,6 @@ CONTAINS
     integer :: ii
     type(obs_target), pointer :: currenttarget => null()
     if(obs_bdeb)write(*,*)myname,' Entering.',obs_bdeb
-    if(obs_bdeb)write(*,*)myname,' Make trg list.'
     call observation_makeTargetList(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -4527,7 +4527,7 @@ CONTAINS
     do ii=1,css%ntarget
        css%trg_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
     end do
-    if(obs_bdeb)write(*,*)myname,' Assigning index.',css%ind_set
+    if(obs_bdeb)write(*,*)myname,' Assigned index?',css%ind_set
     if (css%ind_set) then
        ii=css%ntrg
        css%trg_var(ii)=css%ind_trg80(1:css%ind_lent)

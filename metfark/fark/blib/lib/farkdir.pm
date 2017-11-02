@@ -62,13 +62,13 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",
 			     "/elysium/"          => "rw" }, 
 		  model       => {"/elysium/metfark/mod/"     => "rw" },
 		  model_use   => {"/elysium/metfark/use/mod/" => "rw" },
-		  model_cache => {"/elysium/metfark/cch/mod/" => "rw" },
+		  model_cache => {"/elysium/metfark/index/mod/" => "rw" },
 		  model_reg   => {"/elysium/metfark/reg/mod/" => "rw" },
 		  model_old   => {"/elysium/metfark/old/mod/" => "rw" },
 		  model_log   => {"/elysium/metfark/log/mod/" => "rw" },
 		  obs       => {"/elysium/metfark/obs/"       => "rw" },
 		  obs_use   => {"/elysium/metfark/use/obs/"   => "rw" },
-		  obs_cache => {"/elysium/metfark/cch/obs/"   => "rw" },
+		  obs_cache => {"/elysium/metfark/index/obs/"   => "rw" },
 		  obs_reg   => {"/elysium/metfark/reg/obs/"   => "rw" },
 		  obs_old   => {"/elysium/metfark/old/obs/"   => "rw" },
 		  obs_log   => {"/elysium/metfark/log/obs/"   => "rw" },
@@ -270,7 +270,7 @@ sub removeFile{
 sub removeDir {
     my $root = shift;
     my $password = shift;
-    my ($sdir) = &cwd;  # current working directory
+    my ($sdir) = &cwd; 
     my $ret=0;
     opendir(DIR, $root) or &term("Unable to open $root: $!");
     my $parser = XML::LibXML->new();
@@ -315,13 +315,14 @@ sub removeDir {
 	#print "Processing $name\n";
 	if (! &removeDir($name,$password)) {$ret=1;};
     }
-    chdir($sdir) or &term("Unable to change to dir $sdir: $!");
+    chdir($root) or &term("Unable to change to dir $root: $!");
     if ($ret) {
-	&term("Keeping $sdir");
+	&term("Keeping $root");
     } else {
-	#print "Removing $sdir\n";
-	rmdir($sdir) or &term("Unable to rmdir $sdir: $!");
+	#print "Removing $root\n";
+	rmdir($root) or &term("Unable to rmdir $root: $!");
     };
+    chdir($sdir) or die "Unable to change to dir $sdir:$!\n";
     return($ret);
 }
 

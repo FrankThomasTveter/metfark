@@ -2,8 +2,12 @@ model_file="default.cfg";
 model_config = { "default.cfg" : {filterFile: ".*\.nc",
 				  filterDir: "/opdata",
 				  hits : "?",
-				  index : "",
+				  indexTarget : "",
+				  indexVariable : "",
+				  min:"",
+				  max:"",
 				  variables : {def:""},
+				  dimensions : {def:1},
 				  files : [],
 				  stack : "",
 				  password: ""
@@ -43,10 +47,26 @@ function model_show() {
 	setValue('modelConfigFileSave',file);
 	setValue('modelFilterDir',model_config[file]["filterDir"]);
 	setValue('modelFilterFile',model_config[file]["filterFile"]);
-	setValue('modelIndexVariable',model_config[file]["index"]);
+	setValue('modelIndexTarget',model_config[file]["indexTarget"]);
+	setValue('modelIndexVariable',model_config[file]["indexVariable"]);
+	model_checkVariable(document.getElementById("modelIndexVariable"));
 	setInnerHTML('modelPatternHits',model_config[file]["hits"]);
+
     }
 };
+// model check variable
+function model_checkVariable(item) {
+    var file=model_getConfigFile();
+    var variable=item.value;
+    var color="green";
+    var variables=model_config[file]["variables"];
+    if (variables !== undefined) {
+	if (variables[variable] === undefined) {
+	    color="red";
+	};
+    };
+    item.setAttribute("style","color:"+color);
+}
 // model config methods
 function model_checkPassword() {
     var password=document.getElementById("modelConfigFilePsw").value;
@@ -75,7 +95,12 @@ function model_saveConfigFile() {
 	var dims=model_config[file]["variables"][variable]//"";
 	variables=variables+"|"+variable+"~"+dims;
     };
-    console.log("Variables:",variables);
+    var dims="";
+    for (var dim in model_config[file]["dimensions"]) {
+	var dimv=model_config[file]["dimensions"][dim]//"";
+	dims=dims+"|"+dim+"~"+dimv;
+    };
+    console.log("Variables:",variables," dimensions:",dims);
     documentLog.innerHTML="Sent model-save request.";
     $.get("cgi-bin/fark_save.pl",{type:"model",
 			     file:file,
@@ -83,9 +108,11 @@ function model_saveConfigFile() {
 			     filterDir:model_config[file]["filterDir"],
 			     filterFile:model_config[file]["filterFile"],
 			     hits:model_config[file]["hits"],
-			     index:model_config[file]["index"],
+			     indexTarget:model_config[file]["indexTarget"],
+			     indexVariable:model_config[file]["indexVariable"],
                              stack:stack,
-			     variables:variables
+			     variables:variables,
+			     dimensions:dims
 			    },
 	  function(data, status){if (status == "success") {
 	      var errors=data.getElementsByTagName("error");

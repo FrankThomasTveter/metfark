@@ -462,19 +462,21 @@ Arguments:
 
 =over 4
 
+=item (string) modelTarget
+
 =item (string) modelVariable
 
 =back
 
 =head4 EXAMPLE
 
- $fark->setModelIndex("time");
+ $fark->setModelIndex("time_trg","time");
 
 =cut
 
 sub setModelIndex {
-    my ($self,$var)=@_;
-    my ($ret,$msg) = xs_setModelIndex($self->{MID},$var);
+    my ($self,$trg,$var)=@_;
+    my ($ret,$msg) = xs_setModelIndex($self->{MID},$trg,$var);
     if ($ret != 0) {die $msg;}
 }
 
@@ -1207,12 +1209,14 @@ sub makeColocXML {
     my $self = shift;
     my $patt = shift;
     my $test = shift//0;
+    #print "fark.pm Pattern $patt";
     my ($ret,$msg)= xs_setColocXMLFile($self->{PID},$patt);
     if ($ret != 0) {die $msg;}
     ($ret,$msg,my $xml)= xs_getColocXMLFile($self->{PID});
     if ($ret != 0) {die $msg;}
     my ($dir,$name)=farkdir::splitName($xml);
     if (!$test) {farkdir::makePath($dir);};
+    #print " -> $xml\n";
     ($ret,$msg) = xs_makeColocXML($self->{CID},$self->{MID},$self->{OID},$xml,$test);
     if ($ret != 0) {
 	if (-e $xml) {unlink $xml;};
@@ -1522,19 +1526,15 @@ sub makePlotTable {
     # make sure output file directories exist...
     ($dir,$name)=farkdir::splitName($tfile);
     farkdir::makePath($dir);
-    ($dir,$name)=farkdir::splitName($gfile);
-    farkdir::makePath($dir);
     # make the output...
     ($ret,$msg,my $tablefile,my $graphicfile) = 
 	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},
 			 $tfile,$gfile,$test);
     if ($ret != 0) {
 	if (-e $tablefile) {unlink $tablefile;};
-	if (-e $graphicfile) {unlink $graphicfile;};
 	die $msg;
     } else {
 	if (-e $tablefile) {chmod 0666, $tablefile;};
-	if (-e $graphicfile) {chmod 0666, $graphicfile;};
     }
     return ($tablefile,$graphicfile);
 }
@@ -1566,6 +1566,8 @@ sub makePlotGraphics {
     my $tablefile = shift;
     my $graphicfile = shift;
     my $test = shift//0;
+    my ($dir,$name)=farkdir::splitName($graphicfile);
+    farkdir::makePath($dir);
     my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$graphicfile,$test);
     if ($ret != 0) {
 	if (-e $graphicfile) {unlink $graphicfile;};
@@ -1663,6 +1665,33 @@ sub expression {
     }
     return $res;
 }
+
+=head2 debug
+
+debug - set debug flag.
+
+Arguments:xs
+
+=over 4
+
+=item (int) 1=debug on, 0=debug off
+
+=back
+
+=head4 EXAMPLE
+
+   fark::debug(1);
+   ...
+   fark::debug(0);
+
+=cut
+
+sub debug {
+    my ($ideb)=@_;
+    xs_setDebug($ideb);
+    return;
+}
+
 
 1;
 __END__

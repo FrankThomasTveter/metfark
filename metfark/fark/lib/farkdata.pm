@@ -390,7 +390,9 @@ sub printTree_ {
 	    }
 	    $pre=$pos;
         } else {
-            $s=$s . "$pre$ref $rid\n";
+	    my $di="$pre$ref $rid";
+	    $di =~ s/[^[:graph:]\s]//g;
+            $s=$s . "$di\n";
             $pre=$pos;
         }
     }

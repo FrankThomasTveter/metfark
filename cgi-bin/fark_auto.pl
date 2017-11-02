@@ -16,9 +16,17 @@ use File::Basename;
 use File::Compare;
 use File::Copy;
 #
-my $debug=1;
+# obs=1
+# mod=2
+# col=3
+# plot=4
+# parse=5
+#
+my $debug=0;
 my $user=$ENV{USERNAME} // "www";
 my $pub="/metfark/pub";
+#
+fark::debug($debug);
 #
 my $modelDir=     farkdir::getRootDir("model");
 my $modelOldDir=  farkdir::getRootDir("model_old");
@@ -228,8 +236,11 @@ sub autoModel {
 	    my $cachefile=$modelCacheDir . $model;
 	    my $registerfile=$modelRegDir . $model;
 	    if (compare($xmlfile,$xmloldfile) != 0) { # file has changed
+		if($debug){print "************ Unlinking '$registerfile' '$xmlfile' '$xmloldfile'\n";}
 		unlink $cachefile;
 		unlink $registerfile;
+		my ($dir,$name)=farkdir::splitName($xmloldfile);
+		farkdir::makePath($dir);
 		copy ($xmlfile,$xmloldfile);
 	    };
 	    # auto config file...
@@ -359,8 +370,11 @@ sub autoObs {
 	    my $cachefile=$obsCacheDir . $obs;
 	    my $registerfile=$obsRegDir . $obs;
 	    if (compare($xmlfile,$xmloldfile) != 0) { # file has changed
+		if($debug){print "************ Unlinking '$registerfile' '$xmlfile' '$xmloldfile'\n";}
 		unlink $cachefile;
 		unlink $registerfile;
+		my ($dir,$name)=farkdir::splitName($xmloldfile);
+		farkdir::makePath($dir);
 		copy ($xmlfile,$xmloldfile);
 	    };
 	    # auto config file...
@@ -490,6 +504,8 @@ sub autoColoc {
 	    my $xmlfile=$colocDir . $coloc;
 	    my $xmloldfile = $colocOldDir . $coloc;
 	    if (compare($xmlfile,$xmloldfile) != 0) { # file has changed
+		my ($dir,$name)=farkdir::splitName($xmloldfile);
+		farkdir::makePath($dir);
 		copy ($xmlfile,$xmloldfile);
 	    };
 	    # auto config file...
@@ -633,6 +649,8 @@ sub autoPlot {
 	    my $xmlfile=$plotDir . $plot;
 	    my $xmloldfile = $plotOldDir . $plot;
 	    if (compare($xmlfile,$xmloldfile) != 0) { # file has changed
+		my ($dir,$name)=farkdir::splitName($xmloldfile);
+		farkdir::makePath($dir);
 		copy ($xmlfile,$xmloldfile);
 	    };
 	    # auto config file...
@@ -812,10 +830,11 @@ sub setModelConfig {
     my $cachefile = shift;
     my $test = shift;
     print "Setting model\n";
-    my $index=$node->getAttribute("index");
-    $fark->clearModelFileStack($index); # clear model file stack
+    my $indexTarget=$node->getAttribute("indexTarget");
+    my $indexVariable=$node->getAttribute("indexVariable");
+    $fark->clearModelFileStack($indexVariable); # clear model file stack
     $fark->setModelCache($cachefile);
-    $fark->setModelIndex($index);
+    $fark->setModelIndex($indexTarget,$indexVariable);
     if (-e $cachefile && ! $test) {
 	$fark->loadModelCache($cachefile);# load cached model file stack
     };
