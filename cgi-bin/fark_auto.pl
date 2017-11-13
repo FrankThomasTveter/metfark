@@ -16,17 +16,15 @@ use File::Basename;
 use File::Compare;
 use File::Copy;
 #
-# obs=1
-# mod=2
-# col=3
-# plot=4
-# parse=5
-#
-my $debug=0;
+my $debug=1;       # debug this script...
 my $user=$ENV{USERNAME} // "www";
 my $pub="/metfark/pub";
 #
-fark::debug($debug);
+#fark::debug(1);  # debug observations
+#fark::debug(2);  # debug models
+#fark::debug(3);  # debug colocation
+#fark::debug(4);  # debug plot
+#fark::debug(5);  # debug parse
 #
 my $modelDir=     farkdir::getRootDir("model");
 my $modelOldDir=  farkdir::getRootDir("model_old");
@@ -278,7 +276,7 @@ sub autoModel {
 	    if (!$test) {farkdir::touchFile($modelUseFile);}; # this defines processing end time
 	    my $lastStop=time();
 	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
-	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    $lastAccess="**done** (".($lastStop-$lastStart) . "s)";
 	    if (! $test && defined $modelRef->[1]) {
 		$modelRef->[1]->setAttribute("last",        $lastAuto);
 		$modelRef->[1]->setAttribute("info",        $lastAccess);
@@ -411,7 +409,7 @@ sub autoObs {
 	    if (!$test) {farkdir::touchFile($obsUseFile);}; # this defines processing end time
 	    my $lastStop=time();
 	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
-	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    $lastAccess="**done** (".($lastStop-$lastStart) . "s)";
 	    if (! $test && defined $obsRef->[1]) {
 		$obsRef->[1]->setAttribute("last",        $lastAuto);
 		$obsRef->[1]->setAttribute("info",        $lastAccess);
@@ -549,7 +547,7 @@ sub autoColoc {
 	    if (!$test) {farkdir::touchFile($colocUseFile);}; # this defines processing end time
 	    my $lastStop=time();
 	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
-	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    $lastAccess="**done** (".($lastStop-$lastStart) . "s)";
 	    if (! $test && defined $colocRef->[1]) {
 		$colocRef->[1]->setAttribute("last",        $lastAuto);
 		$colocRef->[1]->setAttribute("info",        $lastAccess);
@@ -694,7 +692,7 @@ sub autoPlot {
 	    if (!$test) {farkdir::touchFile($plotUseFile);}; # this defines processing end time
 	    my $lastStop=time();
 	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
-	    $lastAccess=($lastStop-$lastStart) . "s **done**";
+	    $lastAccess="**done** (".($lastStop-$lastStart) . "s)";
 	    if (! $test && defined $plotRef->[1]) {
 		$plotRef->[1]->setAttribute("last",        $lastAuto);
 		$plotRef->[1]->setAttribute("info",        $lastAccess);
@@ -811,11 +809,11 @@ sub updateTime {
 		if ($duration < 0) {
 		    $lastAccess="**abort**";
 		} else {
-		    $lastAccess=$duration . "s **done**";
+		    $lastAccess="**done** (".$duration . "s)";
 		}
 	    } else {
 		my $duration = time()-$lastStart;
-		$lastAccess=$duration . "s **running**";
+		$lastAccess="**running** (".$duration . "s)";
 	    };	
 	    close(MLOCKFILE);
 	};
@@ -829,19 +827,14 @@ sub setModelConfig {
     my $node = shift;
     my $cachefile = shift;
     my $test = shift;
-    print "Setting model\n";
     my $indexTarget=$node->getAttribute("indexTarget");
     my $indexVariable=$node->getAttribute("indexVariable");
     $fark->clearModelFileStack($indexVariable); # clear model file stack
     $fark->setModelCache($cachefile);
+    print "Setting model index '$indexTarget' '$indexVariable'\n";
     $fark->setModelIndex($indexTarget,$indexVariable);
     if (-e $cachefile && ! $test) {
 	$fark->loadModelCache($cachefile);# load cached model file stack
-    };
-    my $modelStart= $node->getAttribute("modelStart");
-    my $modelStop = $node->getAttribute("modelStop");
-    if ($modelStart &&  $modelStop) {
-	$fark->setModelIndexLimits($modelStart, $modelStop); # "target:value"
     };
 }
 
@@ -857,8 +850,6 @@ sub setObsConfig {
     my $indexExp=   ($node->getAttribute("indexExp")//"");
     my $bufrType=   ($node->getAttribute("bufrType")//"999");
     my $subType=    ($node->getAttribute("subType")//"999");
-    my $obsStart  = ($node->getAttribute("obsStart")//"");
-    my $obsStop   = ($node->getAttribute("obsStop")//"");
     print "Setting obs\n";
     $fark->setObservationTablePath($tablepath);
     if ( $indexTarget && $indexExp) {
@@ -882,11 +873,6 @@ sub setObsConfig {
     if (-e $cachefile && ! $test) {
 	$fark->loadObservationCache($cachefile,$test);
     };
-    if ($obsStart && $obsStop) {
-	if($debug){print "Obs limits: $obsStart $obsStop\n";}
-	$fark->setObservationIndexLimits($obsStart, $obsStop); # "target:value"
-    };
-
 }
 
 sub setColocConfig {
@@ -977,4 +963,16 @@ sub setColocConfig {
 				 ($oldnode->getAttribute("max")//""));
 	};
     }
+    my $modelStart= ($node->getAttribute("modelStart"//""));
+    my $modelStop = ($node->getAttribute("modelStop")//"");
+    my $obsStart  = ($node->getAttribute("obsStart")//"");
+    my $obsStop   = ($node->getAttribute("obsStop")//"");
+    if ($modelStart &&  $modelStop) {
+	if($debug){print "Setting model index limits '$modelStart' '$modelStop'\n";}
+	$fark->setModelIndexLimits($modelStart, $modelStop); # "target:value"
+    };
+    if ($obsStart && $obsStop) {
+	if($debug){print "Setting obs index limits '$obsStart' '$obsStop'\n";}
+	$fark->setObservationIndexLimits($obsStart, $obsStop); # "target:value"
+    };
 }

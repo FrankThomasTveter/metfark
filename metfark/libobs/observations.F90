@@ -934,30 +934,30 @@ CONTAINS
        newFile%next => css%lastFile
        newFile%prev%next => newFile
        newFile%next%prev => newFile
-       css%currentFile=>newFile
-    end if
-    ! open file
-    if (bok) then
        ! set file name...
        newFile%fn250=path250
        call chop0(newFile%fn250,250)
        newFile%lenf=length(newFile%fn250,250,20)
        newFile%tablepath=css%tablepath
        if (obs_bdeb) call observation_printStack(css,crc250,irc)
+       css%currentFile=>newFile
+    end if
+    ! open file
+    if (bok) then
        ! open file
        if(obs_bdeb)write(*,*)myname,'Flare.',bok
-       call observation_scanFile(css,newFile,bok,crc250,irc)
+       call observation_scanFile(css,bok,crc250,irc)
        if(obs_bdeb)write(*,*)myname,'Share.',bok
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from observation_scanFileSortIndexes.")
+          call observation_errorappend(crc250," Error return from observation_scanFile.")
           call observation_errorappendi(crc250,irc)
           call observation_errorappend(crc250,"\n")
           return
        end if
     end if
     ! if (.not.bok) then
-    !    if (associated(newFile)) then
+    !    if (associated(css%currentFile)) then
     !       call observation_stackpop(css,path250,crc250,irc)
     !       if (irc.ne.0) then
     !          call observation_errorappend(crc250,myname)
@@ -3072,9 +3072,8 @@ CONTAINS
   ! ROUTINES FOR EXTRACTING BASIC DATA FROM ECMWF BUFR FILES -> FILE OBJECT
   !###############################################################################
   !
-  subroutine observation_scanFile(css,newFile,bok,crc250,irc)
-    type(obs_session), pointer :: css !  current sessio
-    type(obs_file), pointer :: newFile !  current session
+  subroutine observation_scanFile(css,bok,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     logical :: bok
     character*250 :: crc250
     integer :: irc
@@ -3094,8 +3093,6 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    !
-    call observation_clearCat(css%currentFile)
     !
     ! loop over file
     !
@@ -3139,10 +3136,10 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
-       if (newFile%nsubset.eq.0) then
+       if (css%currentFile%nsubset.eq.0) then
           write(*,*)myname,'No subsets found.'
        else
-          !write(*,*)myname,'Subsets:',newFile%nsubset
+          !write(*,*)myname,'Subsets:',css%currentFile%nsubset
        end if
     end if
     if(obs_bdeb)write(*,*)myname,' Done.',irc
@@ -3214,7 +3211,7 @@ CONTAINS
        css%currentfile%orm(2)=css%currentfile%orm(2)+1 ! evaluation failed
     end if
     if(obs_bdeb)write(*,*)myname,' Expressions:',css%ind_set,css%ind_val,&
-         & css%currentFile%ind_lim,css%currentFile%ind_start,css%currentFile%ind_stop
+         & css%currentFile%ind_lim,css%currentFile%ind_start,css%currentFile%ind_stop,bok
     !
     ! check against index limits
     !
@@ -3223,9 +3220,9 @@ CONTAINS
           bok= ((css%ind_val.le.css%ind_stop .and.css%ind_val.ge.css%ind_start))
        end if
        if (bok) then
-          css%currentfile%ook(3)=css%currentfile%ook(3)+1 ! out of index limits
+          css%currentfile%ook(3)=css%currentfile%ook(3)+1 ! inside index limits
        else
-          css%currentfile%orm(3)=css%currentfile%orm(3)+1 ! inside index limits
+          css%currentfile%orm(3)=css%currentfile%orm(3)+1 ! out of index limits
        end if
     end if
     !
@@ -3306,6 +3303,7 @@ CONTAINS
        css%trg_ook(ii)=0
        css%trg_orm(ii)=0
     end do
+    call observation_clearCat(css%currentFile)
     fopen=.true.
     return
   end subroutine observation_openFile
@@ -3377,7 +3375,7 @@ CONTAINS
        nsubset=KSEC3(3)
        KEL=KVALS/nsubset
        IF(KEL.GT.KELEM) KEL=KELEM
-       ! if(obs_bdeb)WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
+       if(obs_bdeb)WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
        !
        CALL BUFREX(KBUFL,KBUFF,KSUP,KSEC0 ,&
             & KSEC1,KSEC2 ,KSEC3 ,&
@@ -3413,6 +3411,7 @@ CONTAINS
           css%currentfile%mok(4)=css%currentfile%mok(4)+1 ! able to decode description
        end if
        ! store category:
+       if(obs_bdeb)write(*,*)myname,'Found BUFR cat:',KSEC1( 6),KSEC1( 7)
        call observation_storeCat(css%currentFile,KSEC1( 6),KSEC1( 7))
        ! CALL BUUKEY(KSEC1,KSEC2,KEY,KSUP,IRC)
        ! if (irc.ne.0) then
@@ -3426,6 +3425,7 @@ CONTAINS
        !
        ! check descr
        !
+       if(obs_bdeb)write(*,*)myname,'Checking obs.'
        call observation_checkDescr(css,bok,crc250,irc)
        IF(IRC.NE.0) THEN
           call observation_errorappend(crc250,myname)
@@ -3500,6 +3500,8 @@ CONTAINS
        currentFile%ncat=0
        currentFile%nsub=0
     end if
+    currentFile%firstCategory%next => currentFile%lastCategory
+    currentFile%lastCategory%prev => currentFile%firstCategory
     !write(*,*) 'observation_clearCat Done.'
   end subroutine observation_clearCat
   !
@@ -4563,12 +4565,13 @@ CONTAINS
     character*22 :: myname = "observation_evalf"
     integer :: ii
     if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
+    bok=.true.
     if (css%ntarget== 0) then ! no targets to evaluate
        return
     else
-       bok=.true.
        do ii=1,css%ntarget
           css%trg_val(ii)=values(css%trg_seq(ii)+(isubset-1)*KEL)
+          if (css%trg_val(ii).eq.rvind) bok=.false. ! missing target value
        end do
        if (bok.and.css%ind_set) then
           if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",associated(css%ind_pss),allocated(css%trg_val)
@@ -4590,7 +4593,7 @@ CONTAINS
     character*22 :: myname = "observation_checkDescr"
     integer :: ii
     logical bok1,bok2
-    !if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
+    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
     bok=.true.
     if (css%category .eq. ksec1(6) .and.css%subcategory .eq. ksec1(7)) then
        css%currentfile%mok(5)=css%currentfile%mok(5)+1 ! other BUFRtype/subtype
@@ -4602,14 +4605,14 @@ CONTAINS
           do ii=1,css%ntarget
              if (bok) then
                 if (css%trg_seq(ii).gt.ktdexl) then
-                   write(*,*)myname,'Failed limit:',ii,ktdexl,css%trg_seq(ii)
+                   if(obs_bdeb)write(*,*)myname,'Failed limit:',ii,ktdexl,css%trg_seq(ii)
                    bok1=.false.
                    bok=.false.
                 end if
              end if
              if (bok) then
                 if (ktdexp(css%trg_seq(ii)).ne.css%trg_descr(ii)) then
-                   write(*,*)myname,'Failed sanity:',ii,ktdexp(css%trg_seq(ii)),&
+                   if(obs_bdeb)write(*,*)myname,'Failed sanity:',ii,ktdexp(css%trg_seq(ii)),&
                         &css%trg_descr(ii)
                    bok2=.false.
                    css%currentfile%hint25(7)=css%trg80(ii)(1:25)
@@ -4622,6 +4625,7 @@ CONTAINS
              if (bok2) then
                 css%currentfile%mok(7)=css%currentfile%mok(7)+1 ! descriptors match
              else
+                !write(*,*)myname,'***FAILED SANITY:',ii,ktdexp(css%trg_seq(ii)),css%trg_descr(ii)
                 css%currentfile%mrm(7)=css%currentfile%mrm(7)+1 ! descriptors do not match
              end if
           else
@@ -4632,7 +4636,7 @@ CONTAINS
        css%currentfile%mrm(5)=css%currentfile%mrm(5)+1 ! other BUFRtype/subtype
        bok=.false.
     end if
-    !if(obs_bdeb) write(*,*)myname,'Done.',bok
+    if(obs_bdeb) write(*,*)myname,'Done.',bok
     return
   end subroutine observation_checkDescr
   !
@@ -4678,9 +4682,9 @@ CONTAINS
     return
   end subroutine observation_obsstartxml
   !
-  subroutine observation_writexml(css,unito,locid,crc250,irc)
+  subroutine observation_writexml(css,ounit,locid,crc250,irc)
     type(obs_session), pointer :: css !  current session
-    integer :: unito
+    integer :: ounit
     integer :: locid
     character*250 :: crc250
     integer :: irc
@@ -4707,7 +4711,7 @@ CONTAINS
        write(s1,'(I0)') locid
        call chop0(s1,50)
        len1=length(s1,50,10)
-       write(*,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
+       write(ounit,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
        !
        ! add target values
        !
@@ -4741,7 +4745,7 @@ CONTAINS
              len4=0
           end if
           write(buff250,'(A)')"<target "//s1(1:len1)//s2(1:len2)//s3(1:len3)//s4(1:len4)//"/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
        end do
        !
        ! write BUFR sequence
@@ -4750,27 +4754,27 @@ CONTAINS
           !
           ! section 0
           write(buff250,'(A,I0,A)')"<sec0 pos='1' info='Length of section 0 (bytes)' val='",ksec0(1),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec0 pos='2' info='Total length of Bufr message (bytes)' val='",ksec0(2),"'/>";
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec0 pos='3' info='Bufr Edition number' val='",ksec0(3),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           !
           ! section 1
           write(buff250,'(A,I0,A)')"<sec1 pos='1' info='Length of section 1 (bytes)' val='",ksec1(1),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='2' info='Bufr Edition number' val='",ksec1(2),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           if(ksec1(2).ge.3) then
              write(buff250,'(A,I0,A)')"<sec1 pos='16' info='Originating sub-centre' val='",ksec1(16),"'/>"
-             call wo(css,4,buff250)
+             call wo(ounit,4,buff250)
           end if
           write(buff250,'(A,I0,A)')"<sec1 pos='3' info='Originating centre' val='",ksec1(3),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='4' info='Update sequence number' val='",ksec1(4),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='5' info='Flag (presence of section 2)' val='",ksec1(5),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
        end if
        call observation_getType(ksec1(6),ksec1(7),s1,s2,crc250,irc) 
        call chop0(s1,50); len1=length(s1,50,10)
@@ -4781,38 +4785,38 @@ CONTAINS
        else
           write(buff250,'(A,I0,A)')"<sec1 pos='6' info='Bufr message type' val='",ksec1(6),"' type='"//s1(1:len1)//"'/>"
        end if
-       call wo(css,4,buff250)
+       call wo(ounit,4,buff250)
        if (len2.eq.0) then
           write(buff250,'(A,I0,A)')"<sec1 pos='7' info='Bufr message subtype' val='",ksec1(7),"'/>"
        else
           write(buff250,'(A,I0,A)')"<sec1 pos='7' info='Bufr message subtype' val='",ksec1(7),"' type='"//s2(1:len2)//"'/>"
        end if
-       call wo(css,4,buff250)
+       call wo(ounit,4,buff250)
        if (obs_bdeb) then
           write(buff250,'(A,I0,A)')"<sec1 pos='8' info='Version number of local table' val='",ksec1(8),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='9' info='Year' val='",ksec1(9),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='10' info='Month' val='",ksec1(10),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='11' info='Day' val='",ksec1(11),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='12' info='Hour' val='",ksec1(12),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='13' info='Minute' val='",ksec1(13),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='15' info='Version number of Master table' val='",ksec1(15),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           write(buff250,'(A,I0,A)')"<sec1 pos='14' info='Bufr Master table' val='",ksec1(14),"'/>"
-          call wo(css,4,buff250)
+          call wo(ounit,4,buff250)
           !
           ! section 2
           IF(KSUP(2).LE.1) THEN
              write(buff250,'(A)')"<sec2 info='RDB key not defined in section 2'/>"
-             call wo(css,4,buff250)
+             call wo(ounit,4,buff250)
           else
              write(buff250,'(A,I0,A)')"<sec3 pos='1' info='Length of section 2' val='",key(1),"'/>"
-             call wo(css,4,buff250)
+             call wo(ounit,4,buff250)
              IKTYPE=0
              IF(KEY(2).EQ.2) IKTYPE=2
              IF(KEY(2).EQ.3) IKTYPE=2
@@ -4831,69 +4835,69 @@ CONTAINS
                    write(s3,*) rlat2; call chop0(s3,50); len3=length(s3,50,10)
                    write(s4,*) rlon2; call chop0(s4,50); len4=length(s4,50,10)
                    write(buff250,'(A,I0,A)')"<sec2 pos='2' info='RDB data type' val='",key(2),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='3' info=''RDB data subtype' val='",key(3),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='4' info='Year' val='",key(4),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='5' info='Month' val='",key(5),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='6' info='Day' val='",key(6),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='7' info='Hour' val='",key(7),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='8' info='Minute' val='",key(8),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='9' info='Second' val='",key(9),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='10' info='Longitude 1' val='"//s2(1:len2)//"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='11' info='Latitude  1' val='"//S1(1:len1)//"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='12' info='Longitude 2' val='"//S4(1:len4)//"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A)')"<sec2 pos='13' info='Latitude  2' val='"//S3(1:len3)//"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='14' info='Number of observations' val='",key(14),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='15' info='Identifier' val='",key(15),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='25' info='Total Bufr message length' val='",key(25),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='26' info='Day    (RDB insertion' val='",key(26),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='27' info='Hour   (RDB insertion' val='",key(27),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='28' info='Minute( (RDB insertion' val='",key(28),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='29' info='Second (RDB insertion' val='",key(29),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='30' info='Day    (MDB arrival' val='",key(30),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='31' info='Hour   (MDB arrival' val='",key(31),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='32' info='Minute (MDB arrival' val='",key(32),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='33' info='Second (MDB arrival' val='",key(33),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='34' info='Correction number' val='",key(34),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='35' info='Part of message' val='",key(35),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='37' info='Correction number' val='",key(37),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='38' info='Part of message' val='",key(38),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='40' info='Correction number' val='",key(40),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='41' info='Part of message' val='",key(41),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='43' info='Correction number' val='",key(43),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='44' info='Part of message' val='",key(44),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                    write(buff250,'(A,I0,A)')"<sec2 pos='46' info='Quality control % conf' val='",key(46),"'/>"
-                   call wo(css,4,buff250)
+                   call wo(ounit,4,buff250)
                 ELSE
                    RLAT1=(KEY(11)-9000000)/100000.
                    RLON1=(KEY(10)-18000000)/100000.
@@ -4906,63 +4910,63 @@ CONTAINS
                       CIDENT(IDD:IDD)=CHAR(KEY(ID))
                    end do
                    write(buff250,'(A,I0,A)')"<sec2 pos='2' info='RDB data type' val='", KEY(2),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='3' info='RDB data subtype' val='", KEY(3),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='4' info='Year' val='", KEY(4),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='5' info='Month' val='", KEY(5),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='6' info='Day' val='", KEY(6),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='7' info='Hour' val='", KEY(7),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='8' info='Minute' val='", KEY(8),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='9' info='Second' val='", KEY(9),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A)')"<sec2 pos='11' info='Latitude  1'"//s1(1:len1)//"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A)')"<sec2 pos='10' info='Longitude 1'"//s2(1:len2)//"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 info='Identifier' val='", CIDENT,"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='25' info='Total Bufr message length' val='", KEY(25),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='26' info='Day    (RDB insertion' val='", KEY(26),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='27' info='Hour   (RDB insertion' val='", KEY(27),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='28' info='Minute (RDB insertion' val='", KEY(28),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='29' info='Second (RDB insertion' val='", KEY(29),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='30' info='Day    (MDB arrival' val='", KEY(30),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='31' info='Hour   (MDB arrival' val='", KEY(31),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='32' info='Minute (MDB arrival' val='", KEY(32),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='33' info='Second (MDB arrival' val='", KEY(33),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='34' info='Correction number' val='", KEY(34),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='35' info='Part of message' val='", KEY(35),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='37' info='Correction number' val='", KEY(37),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='38' info='Part of message' val='", KEY(38),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='40' info='Correction number' val='", KEY(40),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='41' info='Part of message' val='", KEY(41),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='43' info='Correction number' val='", KEY(43),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='44' info='Part of message' val='", KEY(44),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                    write(buff250,'(A,I0,A)')"<sec2 pos='46' info='Quality control % conf'", KEY(46),"'/>"
-                   call wo(css,4,buff250);
+                   call wo(ounit,4,buff250);
                 END IF
              end if
           end if
@@ -4970,30 +4974,30 @@ CONTAINS
           ! section 3
           !
           write(buff250,'(A,I0,A)')"<sec3 pos='1' info='Length of section 3 (bytes)'", ksec3(1),"'/>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
           write(buff250,'(A,I0,A)')"<sec3 pos='2' info='Reserved'", ksec3(2),"'/>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
           write(buff250,'(A,I0,A)')"<sec3 pos='3' info='Number of data subsets'", ksec3(3),"'/>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
           write(buff250,'(A,I0,A)')"<sec3 pos='4' info='Flag (data type/data compression)'", ksec3(4),"'/>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
        end if
        !write(*,*)myname,'Report D:',KTDLEN
        if (obs_bdeb) then
           write(buff250,'(A,I0,A)')"<sec3 type='unexpanded' count='",KTDLEN,"'>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
           DO II=1,KTDLEN
              write(buff250,'(A,I0,A,I0,A)')"<unexpanded pos='",ii,"' descr='",KTDLST(II),"'/>"
-             call wo(css,4,buff250);
+             call wo(ounit,4,buff250);
           end do
           write(buff250,'(A)')"</sec3>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
        end if
        !write(*,*)myname,'Report D:',KTDEXL
        !
        if (.not.css%ignuni.or..not.css%ignden.or..not.css%ignval) then
           write(buff250,'(A,I0,A)')"<sec3 type='expanded' count='",KTDEXL,"'>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
           cnt=0
           EXPANDED: DO II=1,KTDEXL
              IPOS=II+(isubset-1)*KEL
@@ -5043,7 +5047,7 @@ CONTAINS
                          lenb=length(buff250,250,20)
                       end if
                       buff250=buff250(1:lenb)//"/>"
-                      call wo(css,5,buff250);
+                      call wo(ounit,5,buff250);
                       cnt=cnt+1
                       !if (cnt.gt.5000) exit EXPANDED
                    end if
@@ -5051,15 +5055,15 @@ CONTAINS
              end if
           end do EXPANDED
           write(buff250,'(A)')"</sec3>"
-          call wo(css,4,buff250);
+          call wo(ounit,4,buff250);
        end if
-       write(*,'(3X,A)')"</obs>"
+       write(ounit,'(3X,A)')"</obs>"
     end if
     return
   end subroutine observation_writexml
   !
-  subroutine wo(css,ind,buff250)
-    type(obs_session), pointer :: css !  current session
+  subroutine wo(ounit,ind,buff250)
+    integer :: ounit
     integer :: ind
     character*250 :: buff250
     integer :: lenb
@@ -5067,7 +5071,7 @@ CONTAINS
     character*20 :: blank20="                    "
     call chop0(buff250,250)
     lenb=length(buff250,250,10)
-    write(*,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
+    write(ounit,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
     return
   end subroutine wo
   !
@@ -5097,16 +5101,16 @@ CONTAINS
     ! write summary
     if (associated(css%currentFile)) then
        write(ounit,'(3X,A)')"<summary>"
-       if (css%currentFile%mok(1).eq.css%currentFile%mok(5)) then
+       if (css%currentFile%mok(1).eq.css%currentFile%mok(7)) then
           write(ounit,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
-               & "' accepted='",css%currentFile%mok(5),"'/>"
+               & "' accepted='",css%currentFile%mok(7),"'/>"
        else
           do ii=1,10
              call chop0(css%currentFile%hint25(ii),25)
              css%currentFile%lenh(ii)=length(css%currentFile%hint25(ii),25,1)
           end do
           write(ounit,'(4X,A,4(I0,A))')"<messages found='",css%currentFile%mok(1),&
-               & "' accepted='",css%currentFile%mok(5),&
+               & "' accepted='",css%currentFile%mok(8),&
                & "' type='",css%category,"' subtype='",css%subcategory,"'>"
           if (css%currentFile%mrm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%mrm(2),&
@@ -5134,10 +5138,10 @@ CONTAINS
              call chop0(s1,50); len1=length(s1,50,10)
              call chop0(s2,50); len2=length(s2,50,10)
              if (len1.ne.0) then
-                write(ounit,'(5X,A,3(I0,A))',iostat=irc) "<found type='",currentCat%category,&
+                write(ounit,'(5X,A,3(I0,A))',iostat=irc) "<msg type='",currentCat%category,&
                      & "' cnt='",currentCat%cnt,"' nsub='",currentCat%nsub,"' info='"//s1(1:len1)//"'>"
              else
-                write(ounit,'(5X,A,3(I0,A))',iostat=irc) "<found type='",currentCat%category,&
+                write(ounit,'(5X,A,3(I0,A))',iostat=irc) "<msg type='",currentCat%category,&
                      & "' cnt='",currentCat%cnt,"' nsub='",currentCat%nsub,"'>"
              end if
              currentSub=> currentCat%firstSubCategory%next
@@ -5154,21 +5158,21 @@ CONTAINS
                 end if
                 currentSub=>currentSub%next
              end do
-             write(ounit,'(5X,A)',iostat=irc) "</found>"
+             write(ounit,'(5X,A)',iostat=irc) "</msg>"
              currentCat=>currentCat%next
           end do
           !
           write(ounit,'(4X,A)')"</messages>"
        end if
        if (css%currentFile%ook(1).eq.css%currentFile%ook(5)) then
-          write(ounit,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
+          write(ounit,'(4X,A,I0,A,I0,A)')"<obs found='",css%currentFile%ook(1),&
                & "' accepted='",css%currentFile%ook(5),"'/>"
        else
-          write(ounit,'(4X,A,I0,A,I0,A)')"<sub found='",css%currentFile%ook(1),&
+          write(ounit,'(4X,A,I0,A,I0,A)')"<obs found='",css%currentFile%ook(1),&
                & "' accepted='",css%currentFile%ook(5),"'>"
           if (css%currentFile%orm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(2),&
-               & "' reason='evaluation failed.'/>"
+               & "' reason='evaluation error.'/>"
           if (css%currentFile%orm(3).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(3),&
                & "' reason='outside index limits.'/>"
@@ -5210,7 +5214,7 @@ CONTAINS
           if (css%currentFile%orm(5).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(5),&
                & "' reason='No model data available.'/>"
-          write(ounit,'(4X,A)')"</sub>"
+          write(ounit,'(4X,A)')"</obs>"
        end if
        write(ounit,'(3X,A)')"</summary>"
     end if

@@ -207,11 +207,11 @@ sub loadAuto {
 			    if ($duration < 0) {
 				$lastAccess="**abort**";
 			    } else {
-				$lastAccess=$duration . "s **done**";
+				$lastAccess="**done** (".$duration . "s)";
 			    }
 			} else {
 			    my $duration = time()-$lastStart;
-			    $lastAccess=$duration . "s **running**";
+			    $lastAccess="**running** (".$duration . "s)";
 			};	
 			close(MLOCKFILE);
 		    };
@@ -243,11 +243,11 @@ sub loadAuto {
 			    if ($duration < 0) {
 				$lastAccess="**abort**";
 			    } else {
-				$lastAccess=$duration . "s **done**";
+				$lastAccess="**done** (".$duration . "s)";
 			    };
 			} else {
 			    my $duration = time()-$lastStart;
-			    $lastAccess=$duration . "s **running**";
+			    $lastAccess="**running** (".$duration . "s)";
 			};
 			close(MLOCKFILE);
 		    };	
@@ -279,11 +279,11 @@ sub loadAuto {
 			    if ($duration < 0) {
 				$lastAccess="**abort**";
 			    } else {
-				$lastAccess=$duration . "s **done**";
+				$lastAccess="**done** (".$duration . "s)";
 			    };
 			} else {
 			    my $duration = time()-$lastStart;
-			    $lastAccess=$duration . "s **running**";
+			    $lastAccess="**running** (".$duration . "s)";
 			};	
 			close(MLOCKFILE);
 		    };
@@ -315,11 +315,11 @@ sub loadAuto {
 			    if ($duration < 0) {
 				$lastAccess="**abort**";
 			    } else {
-				$lastAccess=$duration . "s **done**";
+				$lastAccess="**done** (".$duration . "s)";
 			    };
 			} else {
 			    my $duration = time()-$lastStart;
-			    $lastAccess=$duration . "s **running**";
+			    $lastAccess="**running** (".$duration . "s)";
 			};	
 			close(MLOCKFILE);
 		    };
