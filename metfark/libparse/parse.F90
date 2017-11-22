@@ -35,6 +35,15 @@ module parse
 !  !------- -------- --------- --------- --------- --------- --------- --------- -------
 !  PRIVATE
 !  SAVE
+  integer,                                  PARAMETER :: parse_laa=ichar('a')
+  integer,                                  PARAMETER :: parse_lzz=ichar('z')
+  integer,                                  PARAMETER :: parse_uaa=ichar('A')
+  integer,                                  PARAMETER :: parse_uzz=ichar('Z')
+  integer,                                  PARAMETER :: parse_und=ichar('_')
+  INTEGER(is),                              PARAMETER :: parse_empty       = 0,&
+                                                         parse_constant    = 1,&
+                                                         parse_variable    = 2,&
+                                                         parse_expression  = 3
   INTEGER(is),                              PARAMETER :: cImmed   = 1,          &
                                                          cNeg     = 2,          &
                                                          cAdd     = 3,          & 
@@ -122,6 +131,8 @@ module parse
      INTEGER                            :: ArgsPtr
      INTEGER,     DIMENSION(:), POINTER :: ArgsIndex => null()
      INTEGER                            :: ArgsCnt
+     character*100 :: funcStr100=""
+     integer :: lenf =0
   END TYPE parse_session
   
   type parse_pointer
@@ -137,10 +148,9 @@ CONTAINS
     type(parse_session), pointer :: css
     character*250 :: crc250
     integer :: irc
-    !
-    INTEGER             :: i
+    character*22 :: myname ="parse_open"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(parse_bdeb)write(*,*)"Parse_open Opening"
+    if(parse_bdeb)write(*,*)myname,"Opening"
     if (.not.allocated(const)) then
        allocate(const(2))
        const(1)='pi'
@@ -154,7 +164,12 @@ CONTAINS
     ! css must be nullified if not declared...
     if (.not.associated(css)) ALLOCATE (css)
     NULLIFY (css%ByteCode,css%Immed,css%Stack)
-    if(parse_bdeb)write(*,*)"Parse_open Done"
+    !css%parse_laa=ichar('a')
+    !css%parse_lzz=ichar('z')
+    !css%parse_uaa=ichar('A')
+    !css%parse_uzz=ichar('Z')
+    !css%parse_und=ichar('_')
+    if(parse_bdeb)write(*,*)myname,"Done"
     return
   END SUBROUTINE parse_open
   !
@@ -163,7 +178,6 @@ CONTAINS
     type(parse_session), pointer :: css
     character*250 :: crc250
     integer :: irc
-    integer :: ii
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if (associated(css)) then
        IF (ASSOCIATED(css%ByteCode)) DEALLOCATE ( css%ByteCode, stat=irc)
@@ -176,9 +190,51 @@ CONTAINS
     return
   END SUBROUTINE parse_close
   !
+  integer function parse_type(funcstr,crc250,irc)
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    ! Identify type of function (empty, constant, variable or expression)
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    IMPLICIT NONE
+    CHARACTER (LEN=*),               INTENT(in) :: FuncStr   ! Function string
+    character*250 :: crc250
+    integer :: irc
+    CHARACTER (LEN=LEN(FuncStr))                :: Func      ! Function string, local use
+    integer :: irc2
+    integer :: ii,lfunc
+    integer :: c
+    integer :: ival
+    real :: rval
+    character*25 :: myname = "parse_type"
+    Func = trim(FuncStr)                                           ! Local copy of function string
+    lFunc = LEN_TRIM(Func)
+    if (lfunc.eq.0) then
+       parse_type=parse_empty
+       return
+    end if
+    read (func(1:lfunc),*,iostat=irc2) ival
+    if (irc2.ne.0) then
+       read (func(1:lfunc),*,iostat=irc2) rval
+    end if
+    if (irc2.eq.0) then ! constant
+       parse_type=parse_constant
+       return
+    end if
+    DO ii=1,lFunc
+       c=ichar(func(ii:ii))
+       if (.not.((c.ge.parse_laa.and. c.le.parse_lzz).or.&
+            & (c.ge.parse_uaa.and. c.le.parse_uzz).or.&
+            & (c.eq.parse_und)))then
+          parse_type=parse_expression
+          return
+       end if
+    end do
+    parse_type=parse_variable
+    return
+  end function parse_type
+  !
   SUBROUTINE parse_parsef (css, FuncStr, Var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    ! Parse ith function string FuncStr and compile it into bytecode
+    ! Parse function string FuncStr and compile it into bytecode
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
     type(parse_session), pointer :: css
@@ -187,18 +243,24 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     CHARACTER (LEN=LEN(FuncStr))                :: Func      ! Function string, local use
+    integer, external :: length
     character*25 :: myname = "parse_parsef"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(parse_bdeb)write(*,*) "Parse_parsef:",funcstr(1:LEN_TRIM(FuncStr))
+    if(parse_bdeb)write(*,*) myname,"Parsing '"//funcstr(1:LEN_TRIM(FuncStr))//"'"
     ALLOCATE (ipos(LEN_TRIM(FuncStr)))                       ! Char. positions in orig. string
     Func = FuncStr                                           ! Local copy of function string
     CALL Replace ('**','^ ',Func)                            ! Exponent into 1-Char. format
     CALL RemoveSpaces (Func)                                 ! Condense function string
-    CALL CheckSyntax (Func,FuncStr,Var,crc250,irc)
+    CALL parse_CheckSyntax (Func,FuncStr,Var,crc250,irc)
     DEALLOCATE (ipos)
     if (irc.ne.0) return
-    if(parse_bdeb) write(*,*)'Compiling.'
+    if(parse_bdeb) write(*,*)myname,"Compiling '"//funcstr(1:LEN_TRIM(FuncStr))//"'"
     CALL Parse_compile (css,Func,Var,crc250,irc)                                ! Compile into bytecode
+    css%funcStr100=FuncStr
+    call chop0(css%funcStr100,100)
+    css%lenf=length(css%funcStr100,100,10)
+    if(parse_bdeb)write(*,*) myname,"Done '"//funcstr(1:LEN_TRIM(FuncStr))//"'"
+    return
   END SUBROUTINE parse_parsef
   !
   FUNCTION parse_evalf (css, Val) RESULT (res)
@@ -218,9 +280,10 @@ CONTAINS
     REAL(rn),                PARAMETER :: zero = 0._rn
     integer :: ii, nargs
     character*50 :: str
+    character*22 :: myname ="parse_evalf"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
 
-    if(parse_bdeb)write(*,*)"Parse_evalf Entering"
+    if(parse_bdeb)write(*,*)myname,"Entering"
     DP = 1
     SP = 0
     AP = 0
@@ -234,8 +297,10 @@ CONTAINS
           NARGS=AP-css%ArgsIndex(AI)+1;
        end if
 
-       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,SP)
-       if(parse_bdeb)write(*,'(X,A,2(X,I1),100(X,F8.2))') str,AP,nargs,(css%Args(II),II=1,AP)
+       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') &
+            & "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,min(SP,100))
+       if(parse_bdeb)write(*,'(X,A,X,A,2(X,I1),100(X,F8.2))') myname,&
+            & str,AP,nargs,(css%Args(II),II=1,min(AP,100))
 
        SELECT CASE (css%ByteCode(IP))
 
@@ -278,24 +343,24 @@ CONTAINS
        CASE  (c1970);AI=AI+1;
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
-             css%Stack(SP)=css%Stack(SP)+f_1970(real(values(1)),real(values(2)),&
+             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
                   &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
-             css%Stack(SP)=f_1970(css%Stack(SP), &
+             css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Args(css%ArgsIndex(AI)+1), &
                   css%Args(css%ArgsIndex(AI)+2), &
                   css%Args(css%ArgsIndex(AI)+3), &
                   css%Args(css%ArgsIndex(AI)+4), &
                   css%Args(css%ArgsIndex(AI)+5));
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
-             css%Stack(SP)=f_1970(css%Stack(SP), &
+             css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Args(css%ArgsIndex(AI)+1), &
                   css%Args(css%ArgsIndex(AI)+2), &
                   css%Args(css%ArgsIndex(AI)+3), &
                   css%Args(css%ArgsIndex(AI)+4), &
                   0.0D0);
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
-             css%Stack(SP)=f_1970(css%Stack(SP), &
+             css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Args(css%ArgsIndex(AI)+1), &
                   css%Args(css%ArgsIndex(AI)+2), &
                   css%Args(css%ArgsIndex(AI)+3), &
@@ -306,32 +371,32 @@ CONTAINS
              EvalErrType=5; res=zero; RETURN; 
           END IF;
           AP=css%ArgsIndex(AI)
-       CASE  (c1970yy); css%Stack(SP)=f_1970_yy(css%Stack(SP))
-       CASE  (c1970mm); css%Stack(SP)=f_1970_mm(css%Stack(SP))
-       CASE  (c1970dd); css%Stack(SP)=f_1970_dd(css%Stack(SP))
-       CASE  (c1970hh); css%Stack(SP)=f_1970_hh(css%Stack(SP))
-       CASE  (c1970mi); css%Stack(SP)=f_1970_mi(css%Stack(SP))
+       CASE  (c1970yy); css%Stack(SP)=parse_f1970_yy(css%Stack(SP))
+       CASE  (c1970mm); css%Stack(SP)=parse_f1970_mm(css%Stack(SP))
+       CASE  (c1970dd); css%Stack(SP)=parse_f1970_dd(css%Stack(SP))
+       CASE  (c1970hh); css%Stack(SP)=parse_f1970_hh(css%Stack(SP))
+       CASE  (c1970mi); css%Stack(SP)=parse_f1970_mi(css%Stack(SP))
        CASE  (cjulian);AI=AI+1;
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
-             css%Stack(SP)=css%Stack(SP)+f_julian(real(values(1)),real(values(2)),&
+             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
                   &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
-             css%Stack(SP)=f_julian(css%Stack(SP), &
+             css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Args(css%ArgsIndex(AI)+1), &
                   css%Args(css%ArgsIndex(AI)+2), &
                   css%Args(css%ArgsIndex(AI)+3), &
                   css%Args(css%ArgsIndex(AI)+4), &
                   css%Args(css%ArgsIndex(AI)+5));
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
-             css%Stack(SP)=f_julian(css%Stack(SP), &
+             css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Args(css%ArgsIndex(AI)+1), &
                   css%Args(css%ArgsIndex(AI)+2), &
                   css%Args(css%ArgsIndex(AI)+3), &
                   css%Args(css%ArgsIndex(AI)+4), &
                   0.0D0);
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
-             css%Stack(SP)=f_julian(css%Stack(SP), &
+             css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Args(css%ArgsIndex(AI)+1), &
                   css%Args(css%ArgsIndex(AI)+2), &
                   css%Args(css%ArgsIndex(AI)+3), &
@@ -342,11 +407,11 @@ CONTAINS
              EvalErrType=5; res=zero; RETURN; 
           END IF;
           AP=css%ArgsIndex(AI)
-       CASE  (cjulianyy); css%Stack(SP)=f_julian_yy(css%Stack(SP))
-       CASE  (cjulianmm); css%Stack(SP)=f_julian_mm(css%Stack(SP))
-       CASE  (cjuliandd); css%Stack(SP)=f_julian_dd(css%Stack(SP))
-       CASE  (cjulianhh); css%Stack(SP)=f_julian_hh(css%Stack(SP))
-       CASE  (cjulianmi); css%Stack(SP)=f_julian_mi(css%Stack(SP))
+       CASE  (cjulianyy); css%Stack(SP)=parse_fjulian_yy(css%Stack(SP))
+       CASE  (cjulianmm); css%Stack(SP)=parse_fjulian_mm(css%Stack(SP))
+       CASE  (cjuliandd); css%Stack(SP)=parse_fjulian_dd(css%Stack(SP))
+       CASE  (cjulianhh); css%Stack(SP)=parse_fjulian_hh(css%Stack(SP))
+       CASE  (cjulianmi); css%Stack(SP)=parse_fjulian_mi(css%Stack(SP))
        CASE  (cAtan); css%Stack(SP)=ATAN(css%Stack(SP))
        CASE  (cArgs); AP=AP+1;css%Args(AP)=css%Stack(SP);SP=SP-1;
        CASE  DEFAULT; SP=SP+1; 
@@ -359,11 +424,11 @@ CONTAINS
     END DO
     EvalErrType = 0
     res = css%Stack(1)
-    if(parse_bdeb)write(*,'(X,A,A,F27.10)') str," result=",res
-    if(parse_bdeb)write(*,*)"Parse_evalf Done."
+    if(parse_bdeb)write(*,'(X,A,X,A,A,F27.10)') myname,str," result=",res
+    if(parse_bdeb)write(*,*)myname,"Done."
   END FUNCTION parse_evalf
   !
-  SUBROUTINE CheckSyntax (Func,FuncStr,Var,crc250,irc)
+  SUBROUTINE parse_CheckSyntax (Func,FuncStr,Var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check syntax of function string,  returns 0 if syntax is ok
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -379,14 +444,15 @@ CONTAINS
     LOGICAL                                     :: err
     INTEGER                                     :: ParCnt, & ! Parenthesis counter
                                                    j,ib,in,lFunc
+    character*22 :: myname ="parse_checkSyntax"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(parse_bdeb)write(*,*)'Checking.',irc
+    if(parse_bdeb)write(*,*)myname,'Entering.',irc
     j = 1
     ParCnt = 0
     lFunc = LEN_TRIM(Func)
     step: DO
        IF (j > lFunc) then
-          CALL ParseErrMsg (j, FuncStr,"",crc250,irc)
+          CALL parse_ParseErrMsg (j, FuncStr,"",crc250,irc)
           return
        end if
        c = Func(j:j)
@@ -396,25 +462,25 @@ CONTAINS
        IF (c == '-' .OR. c == '+') THEN                      ! Check for leading - or +
           j = j+1
           IF (j > lFunc) then
-             CALL ParseErrMsg (j, FuncStr, 'Missing operand',crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr, 'Missing operand',crc250,irc)
              return
           end IF
           c = Func(j:j)
           IF (ANY(c == Ops)) then
-             CALL ParseErrMsg (j, FuncStr, 'Multiple operators',crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr, 'Multiple operators',crc250,irc)
              return
           end IF
        END IF
-       n = MathFunctionIndex (Func(j:))
+       n = parse_MathFunctionIndex (Func(j:))
        IF (n > 0) THEN                                       ! Check for math function
           j = j+LEN_TRIM(Funcs(n))
           IF (j > lFunc) then
-             CALL ParseErrMsg (j, FuncStr, 'Missing function argument',crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr, 'Missing function argument',crc250,irc)
              return
           end IF
           c = Func(j:j)
           IF (c /= '(') then
-             CALL ParseErrMsg (j, FuncStr, 'Missing opening parenthesis',crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr, 'Missing opening parenthesis',crc250,irc)
              return
           end IF
        END IF
@@ -424,26 +490,26 @@ CONTAINS
           CYCLE step
        END IF
        IF (SCAN(c,'0123456789.') > 0) THEN                   ! Check for number
-          r = RealNum (Func(j:),ib,in,err)
+          r = parse_RealNum (Func(j:),ib,in,err)
           IF (err) then
-             CALL ParseErrMsg (j, FuncStr, 'Invalid number format:  '//Func(j+ib-1:j+in-2),crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr, 'Invalid number format:  '//Func(j+ib-1:j+in-2),crc250,irc)
              return
           end IF
           j = j+in-1
           IF (j > lFunc) EXIT
           c = Func(j:j)
        ELSE                                                  ! Check for variable
-          if(parse_bdeb)write(*,*)'Checking variables.'
+          if(parse_bdeb)write(*,*)myname,'Checking variables.'
           if (allocated(var)) then
-             n = VariableIndex (Func(j:),Var,ib,in)
+             n = parse_VariableIndex (Func(j:),Var,ib,in)
           else
              n=0
           end if
           IF (n == 0) then
-             if(parse_bdeb)write(*,*)'Checking constants.'
-             n = VariableIndex (Func(j:),const,ib,in)
+             if(parse_bdeb)write(*,*)myname,'Checking constants.'
+             n = parse_VariableIndex (Func(j:),const,ib,in)
              if (n==0) then
-                CALL ParseErrMsg (j, FuncStr, 'Invalid element: '//Func(j+ib-1:j+in-2),crc250,irc)
+                CALL parse_ParseErrMsg (j, FuncStr, 'Invalid element: '//Func(j+ib-1:j+in-2),crc250,irc)
                 return
              else 
                 j = j+in-1
@@ -455,16 +521,16 @@ CONTAINS
              IF (j > lFunc) EXIT
              c = Func(j:j)
           end if
-          if(parse_bdeb)write(*,*)'Var/Const:',n
+          if(parse_bdeb)write(*,*)myname,'Var/Const:',n
        END IF
        DO WHILE (c == ')')                                   ! Check for closing parenthesis
           ParCnt = ParCnt-1
           IF (ParCnt < 0) then
-             CALL ParseErrMsg (j, FuncStr, 'Mismatched parenthesis',crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr, 'Mismatched parenthesis',crc250,irc)
              return
           end IF
           IF (Func(j-1:j-1) == '(') then
-             CALL ParseErrMsg (j-1, FuncStr, 'Empty parentheses',crc250,irc)
+             CALL parse_ParseErrMsg (j-1, FuncStr, 'Empty parentheses',crc250,irc)
              return
           end if
           j = j+1
@@ -477,16 +543,16 @@ CONTAINS
        IF (j > lFunc) EXIT
        IF (ANY(c == Ops)) THEN                               ! Check for multiple operators
           IF (j+1 > lFunc) then
-             CALL ParseErrMsg (j, FuncStr,"",crc250,irc)
+             CALL parse_ParseErrMsg (j, FuncStr,"",crc250,irc)
              return
           end if
           IF (ANY(Func(j+1:j+1) == Ops)) then
-             CALL ParseErrMsg (j+1, FuncStr, 'Multiple operators',crc250,irc)
+             CALL parse_ParseErrMsg (j+1, FuncStr, 'Multiple operators',crc250,irc)
              return
           end if
        ELSE IF (c == ",") THEN
        ELSE ! Check for next operand
-          CALL ParseErrMsg (j, FuncStr, 'Missing operator',crc250,irc)
+          CALL parse_ParseErrMsg (j, FuncStr, 'Missing operator',crc250,irc)
           return
        END IF
        !-- -------- --------- --------- --------- --------- --------- --------- -------
@@ -496,11 +562,11 @@ CONTAINS
        j = j+1
     END DO step
     IF (ParCnt > 0) then
-       CALL ParseErrMsg (j, FuncStr, 'Missing )',crc250,irc)
+       CALL parse_ParseErrMsg (j, FuncStr, 'Missing )',crc250,irc)
        return
     end if
-    if(parse_bdeb)write(*,*)'Done checking.',irc
-  END SUBROUTINE CheckSyntax
+    if(parse_bdeb)write(*,*)myname,'Done checking.',irc
+  END SUBROUTINE parse_CheckSyntax
   !
   FUNCTION parse_EvalErrMsg () RESULT (msg)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -522,7 +588,7 @@ CONTAINS
     ENDIF
   END FUNCTION parse_EvalErrMsg
   !
-  SUBROUTINE ParseErrMsg (j, FuncStr, Msg, crc250,irc)
+  SUBROUTINE parse_ParseErrMsg (j, FuncStr, Msg, crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Print error message and terminate program
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -533,7 +599,6 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "fparse"
-    INTEGER                                 :: k
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     call parse_errorappend(crc250,myname)
     call parse_errorappend(crc250,'*** Error in syntax of function string: ')
@@ -544,9 +609,9 @@ CONTAINS
     call parse_errorappend(crc250,"\n")
     irc=348
     return
-  END SUBROUTINE ParseErrMsg
+  END SUBROUTINE parse_ParseErrMsg
   !
-  FUNCTION OperatorIndex (c) RESULT (n)
+  FUNCTION parse_OperatorIndex (c) RESULT (n)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Return operator index
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -561,9 +626,9 @@ CONTAINS
           EXIT
        END IF
     END DO
-  END FUNCTION OperatorIndex
+  END FUNCTION parse_OperatorIndex
   !
-  FUNCTION MathFunctionIndex (str) RESULT (n)
+  FUNCTION parse_MathFunctionIndex (str) RESULT (n)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Return index of math function beginnig at 1st position of string str
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -576,15 +641,15 @@ CONTAINS
     n = 0
     DO j=cAbs,cAtan                                          ! Check all math functions
        k = MIN(LEN_TRIM(Funcs(j)), LEN(str))   
-       CALL LowCase (str(1:k), fun)
+       CALL parse_LowCase (str(1:k), fun)
        IF (fun == Funcs(j)) THEN                             ! Compare lower case letters
           n = j                                              ! Found a matching function
           EXIT
        END IF
     END DO
-  END FUNCTION MathFunctionIndex
+  END FUNCTION parse_MathFunctionIndex
   !
-  FUNCTION VariableIndex (str, Var, ibegin, inext) RESULT (n)
+  FUNCTION parse_VariableIndex (str, Var, ibegin, inext) RESULT (n)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Return index of variable at begin of string str (returns 0 if no variable found)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -595,9 +660,10 @@ CONTAINS
     INTEGER, OPTIONAL,              INTENT(out) :: ibegin, & ! Start position of variable name
                                                    inext     ! Position of character after name
     INTEGER                                     :: j,ib,in,lstr
+    character*25 :: myname = "parse_VariableIndex"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     n = 0
-    if(parse_bdeb)write(*,*)"VariableIndex Entering."
+    !if(parse_bdeb)write(*,*)myname,"Entering."
     lstr = LEN_TRIM(str)
     IF (lstr > 0) THEN
        DO ib=1,lstr                                          ! Search for first character in str
@@ -607,18 +673,22 @@ CONTAINS
           IF (SCAN(str(in:in),'+-*/^) ,') > 0) EXIT
        END DO
        DO j=1,SIZE(Var)
-          IF (str(ib:in-1) == Var(j)) THEN                     
+          IF (str(ib:in-1) == trim(Var(j))) THEN                     
              n = j                                           ! Variable name found
+             IF (PARSE_BDEB) THEN
+                write(*,*) myname,"** Match:"//str(ib:in-1)//" == "//trim(Var(j))//":"
+             end if
              EXIT
           ELSE IF (PARSE_BDEB) THEN
-             write(*,*) "Mismatch:"//str(ib:in-1)//":"//Var(j)//":"
+             !write(*,*) myname,"Mismatch:"//str(ib:in-1)//" != "//trim(Var(j))//":"
           END IF
        END DO
     END IF
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
-    if(parse_bdeb)write(*,*)"VariableIndex Done.",ib,in
-  END FUNCTION VariableIndex
+    if (n.eq.0.and.parse_bdeb)write(*,*) myname,"No match for:"//str(ib:in-1)
+    !if(parse_bdeb)write(*,*)myname,"Done.",ib,in
+  END FUNCTION parse_VariableIndex
   !
   SUBROUTINE RemoveSpaces (str)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -683,10 +753,10 @@ CONTAINS
     css%ArgsAlloc    = 0
     css%ArgsPtr      = 0
     css%ArgsCnt      = 0
-    if (parse_bdeb) write(*,*)"Compiling:",F(1:LEN_TRIM(F))
-    CALL CompileSubstr (css,F,1,LEN_TRIM(F),Var)               ! Compile string to determine size
+    if (parse_bdeb) write(*,*)myname,"Compiling:",F(1:LEN_TRIM(F))
+    CALL parse_CompileSubstr (css,F,1,LEN_TRIM(F),Var)               ! Compile string to determine size
     css%ArgsAlloc    = css%ArgsSize
-    if(parse_bdeb) write(*,*)'>>>>> Arg size:',css%ArgsAlloc
+    if(parse_bdeb) write(*,*)myname,'>>>>> Arg size:',css%ArgsAlloc
     ALLOCATE ( css%ByteCode(css%ByteCodeSize), & 
                css%Immed(css%ImmedSize),       &
                css%Stack(css%StackSize),       &
@@ -707,12 +777,12 @@ CONTAINS
        css%ArgsSize     = 0
        css%ArgsPtr      = 0
        css%ArgsCnt      = 0
-       CALL CompileSubstr (css,F,1,LEN_TRIM(F),Var)            ! Compile string into bytecode
+       CALL parse_CompileSubstr (css,F,1,LEN_TRIM(F),Var)            ! Compile string into bytecode
     END IF
     !
   END SUBROUTINE Parse_compile
   !
-  SUBROUTINE AddCompiledByte (css, b)
+  SUBROUTINE parse_AddCompiledByte (css, b)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Add compiled byte to bytecode
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -722,9 +792,9 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     css%ByteCodeSize = css%ByteCodeSize + 1
     IF (ASSOCIATED(css%ByteCode)) css%ByteCode(css%ByteCodeSize) = b
-  END SUBROUTINE AddCompiledByte
+  END SUBROUTINE parse_AddCompiledByte
   !
-  FUNCTION MathItemIndex (css, F, Var) RESULT (n)
+  FUNCTION parse_MathItemIndex (css, F, Var) RESULT (n)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Return math item index, if item is real number, enter it into Comp-structure
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -737,22 +807,22 @@ CONTAINS
     n = 0
     IF (SCAN(F(1:1),'0123456789.') > 0) THEN                 ! Check for begin of a number
        css%ImmedSize = css%ImmedSize + 1
-       IF (ASSOCIATED(css%Immed)) css%Immed(css%ImmedSize) = RealNum (F)
+       IF (ASSOCIATED(css%Immed)) css%Immed(css%ImmedSize) = parse_RealNum (F)
        n = cImmed
     ELSE                                                     ! Check for a variable
-       n = VariableIndex (F, Var)
+       n = parse_VariableIndex (F, Var)
        IF (n > 0) then
           n = VarBegin+n-1
        else
-          n = VariableIndex (F, Const)
+          n = parse_VariableIndex (F, Const)
           IF (n > 0) then
              n = VarEnd+n
           end if
        end if
     END IF
-  END FUNCTION MathItemIndex
+  END FUNCTION parse_MathItemIndex
   !
-  FUNCTION CompletelyEnclosed (F, b, e) RESULT (res)
+  FUNCTION parse_CompletelyEnclosed (F, b, e) RESULT (res)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check if function substring F(b:e) is completely enclosed by a pair of parenthesis
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -775,9 +845,9 @@ CONTAINS
        END DO
        IF (k == 0) res=.true.                                ! All opened parenthesis closed
     END IF
-  END FUNCTION CompletelyEnclosed
+  END FUNCTION parse_CompletelyEnclosed
   !
-  RECURSIVE SUBROUTINE CompileSubstr (css, F, b, e, Var)
+  RECURSIVE SUBROUTINE parse_CompileSubstr (css, F, b, e, Var)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Compile css function string F into bytecode
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -791,29 +861,30 @@ CONTAINS
     CHARACTER (LEN=*),                PARAMETER :: calpha = 'abcdefghijklmnopqrstuvwxyz'// &
                                                             'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     integer :: iargs
+    character*22 :: myname ="parse_compileSustr"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check for special cases of substring
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     iargs=0
-    if (parse_bdeb) write(*,*) '     Processing:',F(b:e)
+    if (parse_bdeb) write(*,*) myname,'Processing:',F(b:e)
 
     IF     (F(b:b) == '+') THEN                              ! Case 1: F(b:e) = '+...'
-      if (parse_bdeb) WRITE(*,*)'1. F(b:e) = "+..."'
-       CALL CompileSubstr (css, F, b+1, e, Var)
+      if (parse_bdeb) WRITE(*,*)myname,'1. F(b:e) = "+..."'
+       CALL parse_CompileSubstr (css, F, b+1, e, Var)
        RETURN
-    ELSEIF (CompletelyEnclosed (F, b, e)) THEN               ! Case 2: F(b:e) = '(...)'
-      if (parse_bdeb) WRITE(*,*)'2. F(b:e) = "(...)"',F(b:e)
-       CALL CompileSubstr (css, F, b+1, e-1, Var)
+    ELSEIF (parse_CompletelyEnclosed (F, b, e)) THEN               ! Case 2: F(b:e) = '(...)'
+      if (parse_bdeb) WRITE(*,*)myname,'2. F(b:e) = "(...)"',F(b:e)
+       CALL parse_CompileSubstr (css, F, b+1, e-1, Var)
        RETURN
     ELSEIF (SCAN(F(b:b),calpha) > 0) THEN        
-       if (parse_bdeb) WRITE(*,*)'3. Found Alphanumeric: ',F(b:b)
-       n = MathFunctionIndex (F(b:e))
+       if (parse_bdeb) WRITE(*,*)myname,'3. Found Alphanumeric: ',F(b:b)
+       n = parse_MathFunctionIndex (F(b:e))
        IF (n > 0) THEN
           b2 = b+INDEX(F(b:e),'(')-1
-          IF (CompletelyEnclosed(F, b2, e)) THEN             ! Case 3: F(b:e) = 'fcn(...)'
-            if (parse_bdeb) WRITE(*,*)'3. F(b:e) = "fcn(...)"',F(b2+1:e-1)
+          IF (parse_CompletelyEnclosed(F, b2, e)) THEN             ! Case 3: F(b:e) = 'fcn(...)'
+            if (parse_bdeb) WRITE(*,*)myname,'3. F(b:e) = "fcn(...)"',F(b2+1:e-1)
             iargs=css%ArgsPtr
-            CALL CompileSubstr(css, F, b2+1, e-1, Var)
+            CALL parse_CompileSubstr(css, F, b2+1, e-1, Var)
             css%ArgsCnt=css%ArgsCnt+1
             IF (css%ArgsAlloc .gt. 0) THEN
 !               write(*,*) 'Argscnt:',i,css%ArgsCnt,css%ArgsSize,lbound(css%ArgsIndex),ubound(css%ArgsIndex)
@@ -823,25 +894,25 @@ CONTAINS
                ! throw error...
             !end if
             css%ArgsPtr=iargs
-            CALL AddCompiledByte (css, n)
+            CALL parse_AddCompiledByte (css, n)
             RETURN
           END IF
        END IF
     ELSEIF (F(b:b) == '-') THEN
-       if (parse_bdeb) WRITE(*,*)'3. Found Minus'
-       IF (CompletelyEnclosed (F, b+1, e)) THEN              ! Case 4: F(b:e) = '-(...)'
-         if (parse_bdeb) WRITE(*,*)'4. F(b:e) = "-(...)"'
-          CALL CompileSubstr (css, F, b+2, e-1, Var)
-          CALL AddCompiledByte (css, cNeg)
+       if (parse_bdeb) WRITE(*,*)myname,'3. Found Minus'
+       IF (parse_CompletelyEnclosed (F, b+1, e)) THEN              ! Case 4: F(b:e) = '-(...)'
+         if (parse_bdeb) WRITE(*,*)myname,'4. F(b:e) = "-(...)"'
+          CALL parse_CompileSubstr (css, F, b+2, e-1, Var)
+          CALL parse_AddCompiledByte (css, cNeg)
           RETURN
        ELSEIF (SCAN(F(b+1:b+1),calpha) > 0) THEN
-          n = MathFunctionIndex (F(b+1:e))
+          n = parse_MathFunctionIndex (F(b+1:e))
           IF (n > 0) THEN
              b2 = b+INDEX(F(b+1:e),'(')
-             IF (CompletelyEnclosed(F, b2, e)) THEN          ! Case 5: F(b:e) = '-fcn(...)'
+             IF (parse_CompletelyEnclosed(F, b2, e)) THEN          ! Case 5: F(b:e) = '-fcn(...)'
                 iargs=css%ArgsPtr
-                if (parse_bdeb) WRITE(*,*)'5. F(b:e) = "-fcn(...)"'
-                CALL CompileSubstr(css, F, b2+1, e-1, Var)
+                if (parse_bdeb) WRITE(*,*)myname,'5. F(b:e) = "-fcn(...)"'
+                CALL parse_CompileSubstr(css, F, b2+1, e-1, Var)
                 css%ArgsCnt=css%ArgsCnt+1
                 IF (css%ArgsAlloc .gt. 0) THEN
 !                   write(*,*) 'Argscnt:',i,css%ArgsCnt,css%ArgsSize,lbound(css%ArgsIndex),ubound(css%ArgsIndex)
@@ -851,8 +922,8 @@ CONTAINS
                 ! throw error...
                 !end if
                 css%ArgsPtr=iargs
-                CALL AddCompiledByte (css, n)
-                CALL AddCompiledByte (css, cNeg)
+                CALL parse_AddCompiledByte (css, n)
+                CALL parse_AddCompiledByte (css, cNeg)
                 RETURN
              END IF
           END IF
@@ -869,18 +940,18 @@ CONTAINS
           ELSEIF (F(j:j) == '(') THEN
              k = k-1
           END IF
-          IF (k == 0 .AND. F(j:j) == Ops(io) .AND. IsBinaryOp (j, F)) THEN
-             if (parse_bdeb) WRITE(*,*)'3. Found Binary op: ', F(j:j)
+          IF (k == 0 .AND. F(j:j) == Ops(io) .AND. parse_IsBinaryOp (j, F)) THEN
+             if (parse_bdeb) WRITE(*,*)myname,'3. Found Binary op: ', F(j:j)
              IF (ANY(F(j:j) == Ops(cMul:cPow)) .AND. F(b:b) == '-') THEN ! Case 6: F(b:e) = '-...Op...' with Op > -
-               if (parse_bdeb) WRITE(*,*)'6. F(b:e) = "-...Op..." with Op > -'
-                CALL CompileSubstr (css, F, b+1, e, Var)
-                CALL AddCompiledByte (css, cNeg)
+               if (parse_bdeb) WRITE(*,*)myname,'6. F(b:e) = "-...Op..." with Op > -'
+                CALL parse_CompileSubstr (css, F, b+1, e, Var)
+                CALL parse_AddCompiledByte (css, cNeg)
                 RETURN                 
              ELSE                                                        ! Case 7: F(b:e) = '...BinOp...'
-               if (parse_bdeb) WRITE(*,*)'7. Binary operator ',F(j:j)
-                CALL CompileSubstr (css, F, b, j-1, Var)
-                CALL CompileSubstr (css, F, j+1, e, Var)
-                CALL AddCompiledByte (css, OperatorIndex(Ops(io)))
+               if (parse_bdeb) WRITE(*,*)myname,'7. Binary operator ',F(j:j)
+                CALL parse_CompileSubstr (css, F, b, j-1, Var)
+                CALL parse_CompileSubstr (css, F, j+1, e, Var)
+                CALL parse_AddCompiledByte (css, parse_OperatorIndex(Ops(io)))
                 css%StackPtr = css%StackPtr - 1
                 RETURN
              END IF
@@ -898,10 +969,10 @@ CONTAINS
           k = k-1
        END IF
        IF (k == 0 .AND. F(j:j) == ",") THEN
-          if (parse_bdeb) WRITE(*,*)'3. Found comma: ', F(j:j)
-          CALL CompileSubstr (css, F, b, j-1, Var)
-          CALL CompileSubstr (css, F, j+1, e, Var)
-          CALL AddCompiledByte (css, cArgs)
+          if (parse_bdeb) WRITE(*,*)myname,'3. Found comma: ', F(j:j)
+          CALL parse_CompileSubstr (css, F, b, j-1, Var)
+          CALL parse_CompileSubstr (css, F, j+1, e, Var)
+          CALL parse_AddCompiledByte (css, cArgs)
           css%ArgsPtr = css%ArgsPtr +1
           !write(*,*) '>>>ARGS:',css%ArgsSize, css%ArgsPtr
           IF (css%ArgsPtr > css%ArgsSize) css%ArgsSize = css%ArgsPtr
@@ -913,15 +984,15 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     b2 = b
     IF (F(b:b) == '-') b2 = b2+1
-    n = MathItemIndex(css, F(b2:e), Var)
-    if (parse_bdeb) WRITE(*,*)'8. AddCompiledByte ',n,css%StackPtr,css%ArgsPtr
-    CALL AddCompiledByte (css, n)
+    n = parse_MathItemIndex(css, F(b2:e), Var)
+    if (parse_bdeb) WRITE(*,*)myname,'8. parse_AddCompiledByte ',n,css%StackPtr,css%ArgsPtr
+    CALL parse_AddCompiledByte (css, n)
     css%StackPtr = css%StackPtr + 1
     IF (css%StackPtr > css%StackSize) css%StackSize = css%StackSize + 1
-    IF (b2 > b) CALL AddCompiledByte (css, cNeg)
-  END SUBROUTINE CompileSubstr
+    IF (b2 > b) CALL parse_AddCompiledByte (css, cNeg)
+  END SUBROUTINE parse_CompileSubstr
   !
-  FUNCTION IsBinaryOp (j, F) RESULT (res)
+  FUNCTION parse_IsBinaryOp (j, F) RESULT (res)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check if operator F(j:j) in string F is binary operator
     ! Special cases already covered elsewhere:              (that is corrected in v1.1)
@@ -961,9 +1032,9 @@ CONTAINS
           IF (Dflag .AND. (k == 1 .OR. SCAN(F(k:k),'+-*/^(') > 0)) res = .false.
        END IF
     END IF
-  END FUNCTION IsBinaryOp
+  END FUNCTION parse_IsBinaryOp
   !
-  FUNCTION RealNum (str, ibegin, inext, error) RESULT (res)
+  FUNCTION parse_RealNum (str, ibegin, inext, error) RESULT (res)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Get real number from string - Format: [blanks][+|-][nnn][.nnn][e|E|d|D[+|-]nnn]
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -1038,9 +1109,9 @@ CONTAINS
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
     IF (PRESENT(error))  error  = err
-  END FUNCTION RealNum
+  END FUNCTION parse_RealNum
   !  
-  SUBROUTINE LowCase (str1, str2)
+  SUBROUTINE parse_LowCase (str1, str2)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Transform upper case letters in str1 into lower case letters, result is str2
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -1056,9 +1127,9 @@ CONTAINS
        k = INDEX(uc,str1(j:j))
        IF (k > 0) str2(j:j) = lc(k:k)
     END DO
-  END SUBROUTINE LowCase
+  END SUBROUTINE parse_LowCase
   !
-  real(rn) function f_1970(yy,mm,dd,hh,mi,sec)
+  real(rn) function parse_f1970(yy,mm,dd,hh,mi,sec)
     implicit none
     real(rn)  :: yy,mm,dd,hh,mi,sec
     !     returns "seconds since 1970-01-01 00:00:00 +00:00"
@@ -1072,11 +1143,11 @@ CONTAINS
     !     write(*,*) 'S1970 1970-reference in J2000:',days!  2440587.5
     call date2jd(days,nint(yy),nint(mm),nint(dd),nint(hh),nint(mi),sec) ! get days since 2000/1/1 0:0
     days = days - 2440587.5  ! convert to days since reference
-    f_1970=days*86400.0D0      ! convert to seconds
+    parse_f1970=days*86400.0D0      ! convert to seconds
     return
-  end function f_1970
+  end function parse_f1970
   !
-  real(rn) function f_1970_yy(secs)
+  real(rn) function parse_f1970_yy(secs)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "seconds since 1970-01-01 00:00:00 +00:00"
@@ -1090,11 +1161,11 @@ CONTAINS
     !     write(*,*) 'S1970 1970-reference in J2000:',days!  2440587.5
     days=secs/86400.0D0+2440587.5
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_1970_yy=yy      ! convert to seconds
+    parse_f1970_yy=yy      ! convert to seconds
     return
-  end function f_1970_yy
+  end function parse_f1970_yy
   !
-  real(rn) function f_1970_mm(secs)
+  real(rn) function parse_f1970_mm(secs)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "seconds since 1970-01-01 00:00:00 +00:00"
@@ -1108,11 +1179,11 @@ CONTAINS
     !     write(*,*) 'S1970 1970-reference in J2000:',days!  2440587.5
     days=secs/86400.0D0+2440587.5
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_1970_mm=mm      ! convert to seconds
+    parse_f1970_mm=mm      ! convert to seconds
     return
-  end function f_1970_mm
+  end function parse_f1970_mm
   !
-  real(rn) function f_1970_dd(secs)
+  real(rn) function parse_f1970_dd(secs)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "seconds since 1970-01-01 00:00:00 +00:00"
@@ -1126,11 +1197,11 @@ CONTAINS
     !     write(*,*) 'S1970 1970-reference in J2000:',days!  2440587.5
     days=secs/86400.0D0+2440587.5
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_1970_dd=dd      ! convert to seconds
+    parse_f1970_dd=dd      ! convert to seconds
     return
-  end function f_1970_dd
+  end function parse_f1970_dd
   !
-  real(rn) function f_1970_hh(secs)
+  real(rn) function parse_f1970_hh(secs)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "seconds since 1970-01-01 00:00:00 +00:00"
@@ -1144,11 +1215,11 @@ CONTAINS
     !     write(*,*) 'S1970 1970-reference in J2000:',days!  2440587.5
     days=secs/86400.0D0+2440587.5
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_1970_hh=hh      ! convert to seconds
+    parse_f1970_hh=hh      ! convert to seconds
     return
-  end function f_1970_hh
+  end function parse_f1970_hh
   !
-  real(rn) function f_1970_mi(secs)
+  real(rn) function parse_f1970_mi(secs)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "seconds since 1970-01-01 00:00:00 +00:00"
@@ -1162,69 +1233,69 @@ CONTAINS
     !     write(*,*) 'S1970 1970-reference in J2000:',days!  2440587.5
     days=secs/86400.0D0+2440587.5
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_1970_mi=mi      ! convert to seconds
+    parse_f1970_mi=mi      ! convert to seconds
     return
-  end function f_1970_mi
+  end function parse_f1970_mi
   !
-  real(rn) function f_julian(yy,mm,dd,hh,mi,sec)
+  real(rn) function parse_fjulian(yy,mm,dd,hh,mi,sec)
     implicit none
     real(rn)  :: yy,mm,dd,hh,mi
     !     returns "julian days since 2000
     real(rn) days,sec
     call date2jd(days,nint(yy),nint(mm),nint(dd),nint(hh),nint(mi),sec) ! get days since 2000/1/1 0:0
-    f_julian=days
+    parse_fjulian=days
     return
-  end function f_julian
+  end function parse_fjulian
   !
-  real(rn) function f_julian_yy(days)
+  real(rn) function parse_fjulian_yy(days)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "julian days since 2000
     real(rn) days,sec
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_julian_yy=yy
+    parse_fjulian_yy=yy
     return
-  end function f_julian_yy
+  end function parse_fjulian_yy
   !
-  real(rn) function f_julian_mm(days)
+  real(rn) function parse_fjulian_mm(days)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "julian days since 2000
     real(rn) days,sec
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_julian_mm=real(mm)
+    parse_fjulian_mm=real(mm)
     return
-  end function f_julian_mm
+  end function parse_fjulian_mm
   !
-  real(rn) function f_julian_dd(days)
+  real(rn) function parse_fjulian_dd(days)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "julian days since 2000
     real(rn) days,sec
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_julian_dd=real(dd)
+    parse_fjulian_dd=real(dd)
     return
-  end function f_julian_dd
+  end function parse_fjulian_dd
   !
-  real(rn) function f_julian_hh(days)
+  real(rn) function parse_fjulian_hh(days)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "julian days since 2000
     real(rn) days,sec
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_julian_hh=real(hh)
+    parse_fjulian_hh=real(hh)
     return
-  end function f_julian_hh
+  end function parse_fjulian_hh
   !
-  real(rn) function f_julian_mi(days)
+  real(rn) function parse_fjulian_mi(days)
     implicit none
     integer  :: yy,mm,dd,hh,mi
     !     returns "julian days since 2000
     real(rn) days,sec
     call jd2date(days,yy,mm,dd,hh,mi,sec) ! get days since 2000/1/1 0:0
-    f_julian_mi=real(mi)
+    parse_fjulian_mi=real(mi)
     return
-  end function f_julian_mi
+  end function parse_fjulian_mi
   !
   subroutine DATE2JD (JD, YEAR,MONTH,DAY,HOUR,MINUTES,SECONDS)
     !     (corresponds to JD2000)
@@ -1264,7 +1335,7 @@ CONTAINS
     INTEGER YEAR,MONTH,DAY,HOUR,MINUTES
     REAL SECONDS
     REAL DJ
-    INTEGER*8 I,J,K,L,M,N,IJ
+    INTEGER*8 I,J,K,L,N,IJ
     IJ= INT(JD+0.5D0)
     DJ=(JD+0.5D0)-real(ij)
     L= IJ+68569
@@ -1277,9 +1348,9 @@ CONTAINS
     L= J/11
     J= J+2-12*L
     I= 100*(N-49)+I+L
-    YEAR= I
-    MONTH= J
-    DAY= K
+    YEAR= INT(I)
+    MONTH= INT(J)
+    DAY= INT(K)
     DJ=DJ*86400.0D0 ! seconds
     HOUR=int(DJ/3600.0D0)
     Dj=DJ-HOUR*3600.0D0
@@ -1308,6 +1379,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
+    if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
   end subroutine parse_errorappend
   subroutine parse_errorappendi(crc250,inum)
     implicit none
@@ -1327,5 +1399,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
+    if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
   end subroutine parse_errorappendi
 end module parse
+ 

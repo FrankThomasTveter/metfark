@@ -267,6 +267,7 @@ sub saveColoc {
     my $modelTargets = ($param->{modelTargets}[0] // "");
     my $modelDefault = ($param->{modelDefault}[0] // "");
     my $obsFile      = ($param->{obsFile}[0] // "");
+    my $obsFilter    = ($param->{obsFilter}[0] // "");
     my $obsStart     = ($param->{obsStart}[0] // "");
     my $obsStop      = ($param->{obsStop}[0] // "");
     my $obsTargets   = ($param->{obsTargets}[0] // "");
@@ -312,6 +313,7 @@ sub saveColoc {
 	$node->setAttribute("modelStop",   $modelStop);
 	$node->setAttribute("indexExp",    $indexExp);
 	$node->setAttribute("obsFile",     $obsFile);
+	$node->setAttribute("obsFilter",   $obsFilter);
 	$node->setAttribute("obsStart",    $obsStart);
 	$node->setAttribute("obsStop",     $obsStop);
 	# remove model nodes...

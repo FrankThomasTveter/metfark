@@ -810,16 +810,17 @@ sub updateObservationRegister {
     }
     my %file_loaded;
     if ( ! -e $register_file ) {
+	#print "updateObservationRegister >>>> No register file '$register_file'\n";
 	# make sure output file directories exist...
 	my ($dir,$name)=farkdir::splitName($register_file);
 	farkdir::makePath($dir);
 	## No files will be retrieved first time...
 	#%file_loaded = map {$_, 1} @new_file_list;
-	#print ">>>> No register file $register_file available.\n";
+	#print "updateObservationRegister >>>> No register file $register_file available.\n";
 	$write_register_file=1;
     } else {
 	# Load register file 
-	#print ">>>> Reading register file: $register_file\n";
+	#print "updateObservationRegister >>>> Reading register file: '$register_file'\n";
 	if (CORE::open(REGISTER, "<$register_file")) { 
 	    while (<REGISTER>) {
 		chomp;
@@ -827,14 +828,17 @@ sub updateObservationRegister {
 		(my $file) = ($list =~ m/^.*?\s+(\S+)$/);
 		if (defined $new_file_hash{$file}) {
 		    if ($list eq $new_file_hash{$file}) {
+			#print "updateObservationRegister Un-changed: '$file' '$list'\n";
 			$file_loaded{$file} = 1;
 		    } else { # file has changed, need to remove and rescan
 			$write_register_file=1;
+			#print "updateObservationRegister Re-reading: '$file' '$list' '".$new_file_hash{$file}."'\n";
 			push (@pop_files,$file);
 			push (@push_files,$file);
 		    }
 		} else { # old file, need to remove
 		    $write_register_file=1;
+		    #print "updateObservationRegister Old: '$file' '$list'\n";
 		    push (@pop_files,$file);
 		}
 	    }

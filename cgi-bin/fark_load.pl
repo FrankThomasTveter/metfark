@@ -122,6 +122,11 @@ sub loadCls {
 			if ( $node ) {$node->removeAttribute("password");
 				      $node->setAttribute("root",      $root);
 				      $node->setAttribute("location",  $loc);
+				      if(defined $node->getAttribute("filterDir")){
+					  if (! -d $node->getAttribute("filterDir")) {
+					      $node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+					  }
+				      }
 				      #print "**********Ref: " . ref($node) . "\n";
 				      #print "*******Dumper: " . Dumper($node);
 				      $parent->addChild( $node );

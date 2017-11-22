@@ -68,7 +68,7 @@ LIBS = ../libgenc/libgenc.a
 # Include Directory
 #	(Specify directories to pick up include files (MIND the ORDER!)
 #
- INCL = ./ ../libxml ../libparse
+ INCL = ./ ../libxml ../libparse ../libsort
 # /usr/include
 #
 # Compilation flags 

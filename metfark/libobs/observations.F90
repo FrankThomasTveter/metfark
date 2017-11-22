@@ -40,6 +40,7 @@ module observations
   !
   integer :: nsubset=0           ! number of subsets in file
   integer :: isubset=1           ! current subset
+  logical :: nopos=.true.
   integer :: nitem = 0           ! number of items in a subset
   integer :: irep=0
   integer :: NBYTPW
@@ -110,13 +111,13 @@ module observations
      integer :: ncat=0
      integer :: nsub=0
      integer :: mok(10),mrm(10),ook(10),orm(10),lenh(10)
-     character*25 :: hint25(10)
+     character*80 :: hint80(10)
      type(obs_file), pointer :: prev => null() ! linked list
      type(obs_file), pointer :: next => null() ! linked list
   end type obs_file
   !
   type :: obs_filePointer
-     type(obs_file), pointer :: pointer => null()
+     type(obs_file), pointer :: ptr => null()
   end type obs_filePointer
   !
   ! Target item
@@ -124,6 +125,8 @@ module observations
   type :: obs_target
      character*80 :: trg80      ! target name
      character*250 :: pos250    ! position/sequence number
+     integer :: type            ! empty, constant, variable, expression
+     integer :: ind             ! index to internal variable (0=none)
      character*80 :: descr80    ! descriptor
      character*250 :: info250   ! information
      character*80 :: min80      ! min value
@@ -183,28 +186,34 @@ module observations
      type(obs_file), pointer :: currentFile => null()
      type(obs_file), pointer :: nextFile => null()
      type(obs_filePointer), pointer   :: fileStack(:) => null() ! array of the stack elements
-     real, allocatable            :: fileStackSort(:)
-     integer, allocatable         :: fileStackInd(:)
+     real, allocatable            :: fileStackSort(:,:)
+     integer, allocatable         :: fileStackInd(:,:)
      integer :: nFileIndexes = 0              ! total number of files on the stack
      integer :: nFileSortIndexes = 0          ! number of file indexes on the stack
-     integer :: newnFileSortIndexes = 0       ! new number of file indexes on the stack
+     integer :: newnFileSortIndexes(2)        ! new number of file indexes on the stack
      integer :: currentFileSortIndex = 0      ! current stack index element
      integer :: currentFileIndex = 0          ! current stack element
      logical :: stackReady =.false.           ! are sorted data ready for use?
+     integer :: leftFileSortIndex=0           ! ref fileStackSort(*,2) - maxvalues
+     integer :: rightFileSortIndex=0          ! ref fileStackSort(*,1) - minvalues
+     logical :: sortLimitsOk  = .false.
+     logical :: lastIteration  = .false.
      !
      ! data selection
      !
-     real                            :: ind_start=0.0D0       ! lowest index
-     real                            :: ind_stop=0.0D0        ! highest index
-     logical                         :: ind_lval(3) = .false.     ! are ind_start/ind_stop available
+     real                            :: ind_minval=0.0D0      ! lowest index
+     real                            :: ind_maxval=0.0D0      ! highest index
+     logical                         :: ind_lval(2) = .false. ! are ind_minval/ind_maxval available
      !
      character*80                    :: ind_trg80=""          ! index target name
      integer                         :: ind_lent              ! length of target name
      character*250                   :: ind_exp250=""         ! index target expression
      integer                         :: ind_lene              ! length of target expression
-     real                            :: ind_val=0.0D0         ! index target expression value
-     logical                         :: ind_set = .false.     ! is index value set
-     type(parse_session), pointer    :: ind_pss => null()
+     real                            :: ind_val=0.0D0         ! index value (=trg_val(ntrg))
+     logical                         :: ind_eset = .false.    ! is index value set
+     type(parse_session), pointer    :: ind_pe => null()      ! index expression
+     logical                         :: ind_tset = .false.
+     type(parse_session), pointer    :: ind_pt => null()     ! index transformation
      !
      ! TARGET
      !
@@ -217,8 +226,14 @@ module observations
      integer :: subCategory                ! filter subcategory/subType
      !
      character*80, allocatable       :: trg80(:)        ! target name
-     integer, allocatable            :: trg_lent(:)     ! target name
-     integer, allocatable            :: trg_seq(:)      ! position/sequence number
+     integer, allocatable            :: trg_lent(:)     ! target name length
+     character*250, allocatable      :: trg_pos250(:)   ! target position
+     integer, allocatable            :: trg_lenp(:)     ! target position length
+     !  position can be empty,constant,variable or expression
+     integer, allocatable            :: trg_type(:)     ! type of sequence
+     integer, allocatable            :: trg_seq(:)      ! constant
+     integer, allocatable            :: trg_ind(:)      ! index to internal variable
+     type(parse_pointer), pointer    :: trg_psp(:) => null() ! expression parser
      integer, allocatable            :: trg_descr(:)    ! descriptor
      logical, allocatable            :: trg_lval(:,:)   ! above/below/between limits?
      real, allocatable               :: trg_minval(:)
@@ -226,8 +241,17 @@ module observations
      integer, allocatable            :: trg_ook(:)
      integer, allocatable            :: trg_orm(:)
      CHARACTER (LEN=80), allocatable :: trg_var(:)      ! target variable names
+     integer, allocatable            :: trg_lenv(:)      ! target variable name length
      REAL(rn),           allocatable :: trg_val(:)      ! target variable values
      logical                         :: trg_set=.false. ! is target list set?
+     !
+     ! internal position/sequence variables
+     integer                         :: nint = 0        ! number of internal variables
+     CHARACTER (LEN=80), allocatable :: int_var(:)      ! internal variable name
+     integer,            allocatable :: int_lenv(:)     ! internal variable name length
+     REAL(rn),           allocatable :: int_val(:)      ! internal variable values
+     integer :: int_pos=0                               ! internal search position
+     logical                         :: int_set=.false. ! is internal list set?
      !
      ! locations
      type(obs_location), pointer :: firstLoc => null()   ! linked list start
@@ -422,8 +446,8 @@ CONTAINS
        ! remove file-stack
        if (associated(css%filestack)) then
           do ii=1,size(css%filestack)
-             if (associated(css%filestack(ii)%pointer)) then
-                nullify(css%filestack(ii)%pointer)
+             if (associated(css%filestack(ii)%ptr)) then
+                nullify(css%filestack(ii)%ptr)
              end if
           end do
           deallocate(css%filestack)
@@ -1218,6 +1242,9 @@ CONTAINS
        css%firsttarget%next => css%lasttarget
        css%lasttarget%prev => css%firsttarget
        css%ntarget=0
+       css%nint=0
+       css%trg_set=.false.
+       css%int_set=.false.
     end if
   end subroutine observation_targetinit
   !
@@ -1255,6 +1282,7 @@ CONTAINS
   !
   subroutine observation_pushtarget(css,trg,pos,descr,info,&
        & min,max,crc250,irc)
+    implicit none
     type(obs_session), pointer :: css !  current session
     character(len=*) :: trg      ! target name
     character(len=*) :: pos      ! target position
@@ -1302,6 +1330,14 @@ CONTAINS
     newTarget%info250=info
     newTarget%min80=min
     newTarget%max80=max
+    newTarget%type=parse_type(pos,crc250,irc) ! get position type...
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from parse_type.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
     ! push onto stack
     css%ntarget=css%ntarget + 1
     newTarget%prev => css%lasttarget%prev
@@ -1309,6 +1345,13 @@ CONTAINS
     newTarget%prev%next => newTarget
     newTarget%next%prev => newTarget
     css%trg_set=.false.
+    css%int_set=.false.
+    if (newTarget%type.eq.parse_variable) then
+       css%nint=css%nint+1
+       newTarget%ind=css%nint
+    else
+       newTarget%ind=0
+    end if
     if(obs_bdeb)write(*,*)myname,' Done.',trg
     return
   end subroutine observation_pushTarget
@@ -1420,7 +1463,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "observation_hasValidIndex "
-    observation_hasValidIndex=css%ind_set
+    observation_hasValidIndex=css%ind_eset
   end function observation_hasValidIndex
   !
   ! print stack
@@ -1435,11 +1478,6 @@ CONTAINS
     integer, external :: length
     ii=0
     if ( .not. css%trg_set ) then
-       if (css%ind_set) then
-          css%ntrg=css%ntarget+1
-       else
-          css%ntrg=css%ntarget
-       end if
        if(obs_bdeb)write(*,*)myname,' Targets:',css%ntrg
        currenttarget => css%firsttarget%next
        do while (.not.associated(currenttarget,target=css%lasttarget))
@@ -1474,17 +1512,25 @@ CONTAINS
     type(obs_target), pointer :: currenttarget => null()
     integer :: lent,lenp,lend,lens,lene,ii
     integer, external :: length
-    if(obs_bdeb)write(*,*)myname,' Entering.',irc,css%ntarget,css%trg_set,css%ind_set
+    if(obs_bdeb)write(*,*)myname,' Entering.',irc,css%ntarget,css%trg_set,css%ind_eset
     if ( .not. css%trg_set ) then
-       if (css%ind_set) then
+       if (css%ind_eset) then
           css%ntrg=css%ntarget+1
        else
           css%ntrg=css%ntarget
        end if
+       !
+       ! set target arrays
+       !
        if(obs_bdeb)write(*,*)myname,' Targets:',css%ntrg
        if (allocated(css%trg80)) deallocate(css%trg80)
        if (allocated(css%trg_lent)) deallocate(css%trg_lent)
+       if (allocated(css%trg_pos250)) deallocate(css%trg_pos250)
+       if (allocated(css%trg_lenp)) deallocate(css%trg_lenp)
+       if (allocated(css%trg_type)) deallocate(css%trg_type)
        if (allocated(css%trg_seq)) deallocate(css%trg_seq)
+       if (allocated(css%trg_ind)) deallocate(css%trg_ind)
+       if (associated(css%trg_psp)) deallocate(css%trg_psp)
        if (allocated(css%trg_descr)) deallocate(css%trg_descr)
        if (allocated(css%trg_lval)) deallocate(css%trg_lval)
        if (allocated(css%trg_minval)) deallocate(css%trg_minval)
@@ -1492,18 +1538,39 @@ CONTAINS
        if (allocated(css%trg_ook)) deallocate(css%trg_ook)
        if (allocated(css%trg_orm)) deallocate(css%trg_orm)
        if (allocated(css%trg_var)) deallocate(css%trg_var)
+       if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
        if (allocated(css%trg_val)) deallocate(css%trg_val)
-       allocate(css%trg80(css%ntrg),css%trg_lent(css%ntrg),css%trg_seq(css%ntrg),css%trg_descr(css%ntrg),&
-            & css%trg_lval(3,css%ntrg),css%trg_minval(css%ntrg),css%trg_maxval(css%ntrg),&
+       allocate(css%trg80(css%ntrg),css%trg_lent(css%ntrg),&
+            & css%trg_pos250(css%ntrg),css%trg_lenp(css%ntrg),&
+            & css%trg_type(css%ntrg),css%trg_seq(css%ntrg), &
+            & css%trg_ind(css%ntrg),css%trg_psp(css%ntrg), &
+            & css%trg_descr(css%ntrg),css%trg_lval(3,css%ntrg),&
+            & css%trg_minval(css%ntrg),css%trg_maxval(css%ntrg),&
             & css%trg_ook(css%ntrg),css%trg_orm(css%ntrg),&
-            & css%trg_var(css%ntrg),css%trg_val(css%ntrg),stat=irc)
+            & css%trg_var(css%ntrg),css%trg_lenv(css%ntrg),&
+            & css%trg_val(css%ntrg),stat=irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Unable to allocate 'targetList'.")
           call observation_errorappend(crc250,"\n")
           return
        end if
-       ii=0
+       !
+       ! set internal variable arrays...
+       !
+       if (allocated(css%int_var)) deallocate(css%int_var)
+       if (allocated(css%int_lenv)) deallocate(css%int_lenv)
+       if (allocated(css%int_val)) deallocate(css%int_val)
+       allocate(css%int_var(css%nint),css%int_lenv(css%nint),css%int_val(css%nint),stat=irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250,"Unable to allocate 'intlist'.")
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       css%int_pos=0 ! floating position
+       !
+       ii=0 ! target
        currenttarget => css%firsttarget%next
        do while (.not.associated(currenttarget,target=css%lasttarget))
           ii=ii+1
@@ -1520,24 +1587,50 @@ CONTAINS
           lene=length(currenttarget%max80,80,10)
           css%trg80(ii)=currenttarget%trg80(1:lent)
           css%trg_lent(ii)=lent
-          if (lenp.eq.0) then
+          if (lend.eq.0) then
              irc=999
-             write(*,*) myname,' Processing sequence "'//currenttarget%pos250//'"',lenp,associated(currenttarget)
+             write(*,*) myname,' Empty descriptor "'//currenttarget%trg80(1:lent)//'"',&
+                  & lenp,associated(currenttarget)
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250," Undefined sequence found, no:")
+             call observation_errorappend(crc250," Undefined descriptor found, no:")
              call observation_errorappendi(crc250,ii)
              call observation_errorappend(crc250,"\n")
              return
           end if
-
-          read(currenttarget%pos250(1:lenp),*,iostat=irc) css%trg_seq(ii)
-          if (irc.ne.0) then
-             call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250," Unable to read seq from '"//currenttarget%pos250(1:lenp)//"'")
-             call observation_errorappendi(crc250,irc)
-             call observation_errorappend(crc250,"\n")
-             return
-          end if
+          css%trg_pos250(ii)=currenttarget%pos250
+          css%trg_lenp(ii)=lenp
+          css%trg_type(ii)=currenttarget%type
+          select case (currenttarget%type) ! process position (empty,const,var,expr=
+          case (parse_empty)
+             css%trg_seq(ii)=0
+             css%trg_ind(ii)=0
+          case (parse_constant)
+             css%trg_ind(ii)=0
+             read(currenttarget%pos250(1:lenp),*,iostat=irc) css%trg_seq(ii)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Unable to read seq from '"&
+                     & //currenttarget%pos250(1:lenp)//"'")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+          case (parse_variable);
+             css%trg_seq(ii)=0
+             css%trg_ind(ii)=currenttarget%ind
+             css%int_var(currenttarget%ind)=currenttarget%pos250(1:min(80,lenp))
+             css%int_lenv(currenttarget%ind)=lenp
+             css%int_val(currenttarget%ind)=0
+          case (parse_expression);
+             css%trg_seq(ii)=0
+             css%trg_ind(ii)=0
+             call parse_open(css%trg_psp(ii)%ptr,crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250,"Error return from 'parse_open'.")
+                return
+             end if
+          end select
           read(currenttarget%descr80(1:lend),*,iostat=irc) css%trg_descr(ii)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
@@ -1563,7 +1656,7 @@ CONTAINS
                & css%trg_minval(ii).gt.css%trg_maxval(ii))
           currenttarget => currenttarget%next
        end do
-       if (css%ind_set) then
+       if (css%ind_eset) then
           ii=ii+1
           css%trg80(ii)=css%ind_trg80(1:css%ind_lent)
           css%trg_lent(ii)=css%ind_lent
@@ -1573,13 +1666,13 @@ CONTAINS
 !          css%trg_lval(3,ii)=(css%trg_lval(1,ii).and.&
 !               & css%trg_lval(2,ii).and.&
 !               & css%trg_minval(ii).gt.css%trg_maxval(ii))
-          css%trg_minval(ii)=css%ind_start
-          css%trg_maxval(ii)=css%ind_stop
-
+          css%trg_minval(ii)=css%ind_minval
+          css%trg_maxval(ii)=css%ind_maxval
        end if
        css%trg_set=.true.
+       css%int_set=.true.
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg,css%ind_set
+    if(obs_bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg,css%ind_eset
     return
   end subroutine observation_makeTargetList
   !
@@ -1597,7 +1690,10 @@ CONTAINS
     do while (.not.associated(currenttarget,target=css%lasttarget))
        nexntarget => currenttarget%next
        if (associated(currenttarget)) then
-          css%ntarget = css%ntarget - 1
+          css%ntarget=css%ntarget - 1
+          if (currenttarget%type.eq.parse_variable)then
+             css%nint=css%nint - 1
+          end if
           currenttarget%next%prev => currenttarget%prev
           currenttarget%prev%next => currenttarget%next
           nullify(currenttarget%prev)
@@ -1608,7 +1704,12 @@ CONTAINS
     end do
     if (allocated(css%trg80)) deallocate(css%trg80)
     if (allocated(css%trg_lent)) deallocate(css%trg_lent)
+    if (allocated(css%trg_pos250)) deallocate(css%trg_pos250)
+    if (allocated(css%trg_lenp)) deallocate(css%trg_lenp)
+    if (allocated(css%trg_type)) deallocate(css%trg_type)
     if (allocated(css%trg_seq)) deallocate(css%trg_seq)
+    if (allocated(css%trg_ind)) deallocate(css%trg_ind)
+    if (associated(css%trg_psp)) deallocate(css%trg_psp)
     if (allocated(css%trg_descr)) deallocate(css%trg_descr)
     if (allocated(css%trg_lval)) deallocate(css%trg_lval)
     if (allocated(css%trg_minval)) deallocate(css%trg_minval)
@@ -1616,7 +1717,11 @@ CONTAINS
     if (allocated(css%trg_ook)) deallocate(css%trg_ook)
     if (allocated(css%trg_orm)) deallocate(css%trg_orm)
     if (allocated(css%trg_var)) deallocate(css%trg_var)
+    if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
     if (allocated(css%trg_val)) deallocate(css%trg_val)
+    if (allocated(css%int_var)) deallocate(css%int_var)
+    if (allocated(css%int_lenv)) deallocate(css%int_lenv)
+    if (allocated(css%int_val)) deallocate(css%int_val)
     css%ntrg = 0
     css%trg_set=.false.
     if(obs_bdeb)write(*,*)myname,' Done.'
@@ -1691,11 +1796,8 @@ CONTAINS
   !###############################################################################
   ! Forecasts from one analysis is reportsReady at a time... (=the same parameters)
   ! Used in this way
-  ! 1)  observation_sortFiles: make index of all analysis in stack
-  ! 2a) observation_stackfirst: put pointer to before first analysis
-  ! 3a) observation_getNextFile: report to prev analysis and get forecast times
-  ! 2b) observation_stacklast: put pointer to after last analysis
-  ! 3b) observation_getPrevFile: report to next analysis and get forecast times
+  ! 1) observation_setFileStackLimits: make index limits of files in stack
+  ! 2) observation_loopFileStack: loop over files until false return...
   !
   ! Reset indexes for looping over analysis
   !
@@ -1721,154 +1823,214 @@ CONTAINS
     return
   end subroutine observation_sortFiles
   !
+  ! get next observation file within limits...
   !
-  !
-  subroutine observation_getPrevFile(css,ind_lval,ind_start,ind_stop,bok,crc250,irc)
-    logical :: ind_lval
-    real    :: ind_start
-    real    :: ind_stop
-    logical :: bok
+  logical function observation_loopFileStack(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*50 :: s1, s2, s3
-    integer :: len1,len2,len3,lenr,lens,jj
-    integer, external :: length
-    type(obs_session), pointer :: css !  current session
-    character*22 :: myname = "observation_getPrevFile"
-    logical :: bdone
-    if (.not.css%stackReady) then
-       call observation_sortStack(css,crc250,irc)
-       if (irc.ne.0) then
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from observation_sortStack.")
-          call observation_errorappendi(crc250,irc)
-          call observation_errorappend(crc250,"\n")
-          return
-       end if
-       call observation_stacklast(css,crc250,irc)
-       if (irc.ne.0) then
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from observation_stacklast.")
-          call observation_errorappendi(crc250,irc)
-          call observation_errorappend(crc250,"\n")
-          return
-       end if
-       css%stackReady = .true.
-    end if
-    call observation_setIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
-    if(obs_bdeb)write(*,*)myname,' Sorting:',css%currentFileSortIndex,css%newnFileSortIndexes
-    isubset=1
-    nsubset=0
-    bdone=.false.
-    css%currentFileSortIndex=css%currentFileSortIndex-1                ! count down...
-    if (css%currentFileSortIndex.le.0) then
-       bdone=.true.
-    else
-       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
-       css%currentFile => css%fileStack(css%currentFileIndex)%pointer
-    end if
-    SEARCH : do while (.not.bdone)
-       if (css%currentFile%ind_lim .and. css%ind_lval(3)) then
-          if ((css%currentFile%ind_start.le.css%ind_stop .and.css%currentFile%ind_start.ge.css%ind_start) .or.  &
-               & (css%currentFile%ind_stop.le.css%ind_stop .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
-               & (css%currentFile%ind_start.le.css%ind_start .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
-               & (css%currentFile%ind_start.le.css%ind_stop .and.css%currentFile%ind_stop.ge.css%ind_stop)) then ! overlap
-             bdone=.true.
-          else ! next
-             css%currentFileSortIndex=css%currentFileSortIndex-1                ! count down...
-             if (css%currentFileSortIndex.le.0) then
-                bdone=.true.
-             else
-                css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
-                css%currentFile => css%fileStack(css%currentFileIndex)%pointer
-             end if
-          end if
-       else ! no search necessary
-          bdone=.true.
-       end if
-    end do SEARCH
-    if (css%currentFileSortIndex.gt.0.and.css%currentFileSortIndex.le.css%newnFileSortIndexes) then
-       if(obs_bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex
-       bok=.true.
-    else
-       bok=.false.
-    end if
-    !write(*,*)myname,' Done.',nrep
-  end subroutine observation_getPrevFile
-  !
-  !
-  !
-  subroutine observation_getNextFile(css,ind_lval,ind_start,ind_stop,bok,crc250,irc)
-    logical :: ind_lval
-    real    :: ind_start
-    real    :: ind_stop
-    logical :: bok
-    character*250 :: crc250
-    integer :: irc
-    character*50 :: s1, s2, s3
-    integer :: len1,len2,len3,lenr,lens,jj
-    integer, external :: length
-    type(obs_session), pointer :: css !  current session
     character*22 :: myname = "observation_getNextFile"
-    logical :: bdone
-    if (.not.css%stackReady) then
-       call observation_sortStack(css,crc250,irc)
-       if (irc.ne.0) then
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from observation_sortStack.")
-          call observation_errorappendi(crc250,irc)
-          call observation_errorappend(crc250,"\n")
-          return
-       end if
-       call observation_stackfirst(css,crc250,irc)
-       if (irc.ne.0) then
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from observation_stackfirst.")
-          call observation_errorappendi(crc250,irc)
-          call observation_errorappend(crc250,"\n")
-          return
-       end if
-       css%stackReady = .true.
-    end if
-    call observation_setIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
-    isubset=1
-    nsubset=0
-    bdone=.false.
-    css%currentFileSortIndex=css%currentFileSortIndex+1                ! count down...
-    if (css%currentFileSortIndex.gt.css%newnFileSortIndexes) then
-       bdone=.true.
-    else
-       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
-       css%currentFile => css%fileStack(css%currentFileIndex)%pointer
-    end if
-    SEARCH : do while (.not.bdone)
-       if (css%currentFile%ind_lim .and. css%ind_lval(3)) then
-          if ((css%currentFile%ind_start.le.css%ind_stop .and.css%currentFile%ind_start.ge.css%ind_start) .or.  &
-               & (css%currentFile%ind_stop.le.css%ind_stop .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
-               & (css%currentFile%ind_start.le.css%ind_start .and.css%currentFile%ind_stop.ge.css%ind_start) .or. &
-               & (css%currentFile%ind_start.le.css%ind_stop .and.css%currentFile%ind_stop.ge.css%ind_stop)) then ! overlap
-             bdone=.true.
-          else ! next
-             css%currentFileSortIndex=css%currentFileSortIndex+1                ! count down...
-             if (css%currentFileSortIndex.gt.css%newnFileSortIndexes) then
-                bdone=.true.
-             else
-                css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex)
-                css%currentFile => css%fileStack(css%currentFileIndex)%pointer
-             end if
-          end if
-       else ! no search necessary
+    logical :: bdone,found
+    found=.false.
+    bdone=(css%lastIteration.or..not. css%sortLimitsOk)
+    do while (.not.bdone)
+       css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
+       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
+       css%currentFile => css%fileStack(css%currentFileIndex)%ptr
+       if ((css%currentFileIndex.eq.css%fileStackInd(css%rightFileSortIndex,1))) then ! last iteration
+          css%lastIteration=.true.
           bdone=.true.
        end if
-    end do SEARCH
-    if (css%currentFileSortIndex.gt.0.and.css%currentFileSortIndex.le.css%newnFileSortIndexes) then
-       if(obs_bdeb)write(*,*)myname,'More data.',css%currentFileSortIndex
-       bok=.true.
+       ! check if inside limits
+       if (.not.(css%ind_minval.gt.css%currentFile%ind_stop .or.&
+            & css%ind_maxval.lt.css%currentFile%ind_start)) then ! overlap
+          found=.true.
+          bdone=.true.
+          if (obs_bdeb) write(*,*)myname,' Found:',css%sortLimitsOk,&
+               & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+       end if
+    end do
+    if (found) then
+       observation_loopFileStack=.true.
     else
-       bok=.false.
+       css%currentFileIndex=0
+       nullify(css%currentFile)
+       observation_loopFileStack=.false.
     end if
     return
-  end subroutine observation_getNextFile
+  end function observation_loopFileStack
+  !
+  ! sort the file stack
+  !
+  subroutine observation_sortStack(css,crc250,irc)
+    use sort
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(obs_file), pointer :: currentFile => null()
+    integer :: ii,jj
+    character*22 :: myname = "observation_sortStack"
+    real :: buff
+    !
+    ! make array of files
+    if(obs_bdeb)write(*,*)myname,' Entering.'
+    if (associated(css%fileStack)) deallocate(css%fileStack)
+    if (allocated(css%fileStackSort)) deallocate(css%fileStackSort)
+    if (allocated(css%fileStackInd)) deallocate(css%fileStackInd)
+    if (obs_bdeb) write(*,*)myname,'Allocating sort stack:',css%nFileIndexes
+    allocate(css%fileStack(css%nFileIndexes),css%fileStackSort(css%nFileIndexes,2),&
+         &css%fileStackInd(css%nFileIndexes,2),stat=irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from allocate (")
+       call observation_errorappendi(crc250,css%nFileIndexes)
+       call observation_errorappend(crc250,")")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    currentFile => css%firstFile%next
+    ii=0
+    do while (.not.associated(currentFile, target=css%lastFile))
+       ii=ii+1
+       if (ii.le.css%nFileIndexes) then
+          css%fileStack(ii)%ptr => currentFile
+          if (currentFile%ind_lim) then
+             css%fileStackInd(ii,1)=ii
+             css%fileStackInd(ii,2)=ii
+             buff=css%trg_val(css%ntrg)
+             css%trg_val(css%ntrg)=currentFile%ind_start
+             if (obs_bdeb) then
+                write(*,*)myname,'Eval:',css%ntrg,css%trg_val(css%ntrg),"'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
+                do jj=1,css%ntrg
+                   write(*,'(X,A,A,I0,A,F27.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
+                end do
+             end if
+             if (css%ind_tset) then
+                css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val)
+             else
+                css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
+             end if
+             css%trg_val(css%ntrg)=currentFile%ind_stop
+             if (css%ind_tset) then
+                css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val)
+             else
+                css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
+             end if
+             if (obs_bdeb)write(*,*)myname,'Eval:',ii,css%fileStackSort(ii,1),css%fileStackSort(ii,2),&
+                  & currentFile%ind_start,currentFile%ind_stop
+             css%trg_val(css%ntrg)=buff
+          else
+             if (obs_bdeb)then
+                write(*,*)myname,"Missing index limits in '"//&
+                     & currentFile%fn250(1:currentFile%lenf)//"', ignoring file."
+                write(*,*)myname,'Indexes ',currentFile%ind_lim,&
+                     & currentFile%ind_start,currentFile%ind_stop
+             end if
+             ii=ii-1 ! ignore file...
+          end if
+       end if
+       currentFile => currentFile%next
+    end do
+    if (ii.ne.css%nFileIndexes) then
+       irc=944
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Missing indexes:")
+       call observation_errorappendi(crc250,css%nFileIndexes)
+       call observation_errorappend(crc250,"!=")
+       call observation_errorappendi(crc250,ii)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    ! make sorted index (chronologically)
+    css%nFileSortIndexes=css%nFileIndexes
+    css%newnFileSortIndexes(1)=css%nFileIndexes
+    css%newnFileSortIndexes(2)=css%nFileIndexes
+    call sort_heapsort1r(css%nFileIndexes,css%fileStackSort(1,1),1.0D-5, &
+         & css%newnFileSortIndexes(1),css%nFileSortIndexes,css%fileStackInd(1,1),.false.)
+    call sort_heapsort1r(css%nFileIndexes,css%fileStackSort(1,2),1.0D-5, &
+         & css%newnFileSortIndexes(2),css%nFileSortIndexes,css%fileStackInd(1,2),.false.)
+    ! set index range
+    if(obs_bdeb)write(*,*)myname,' Done.',css%newnFileSortIndexes
+    return
+  end subroutine observation_sortStack
+  !
+  subroutine observation_stackfirst(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "observation_stackfirst"
+    css%currentFileSortIndex=0
+    css%currentFileIndex=0
+  end subroutine observation_stackfirst
+  !
+  subroutine observation_findStackLimits(css,crc250,irc)
+    use sort
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "observation_findStackLimits"
+    integer :: leftmin,rightmin,leftmax,rightmax
+    ! leftFileSortIndex refers to fileStackSort(*,2)
+    ! rightFileSortIndex refers to fileStackSort(*,2)
+    ! check 
+    if (css%ind_lval(1)) then
+       call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,2),1.0D-5, &
+            & css%nFileSortIndexes,css%fileStackInd(1,2),css%ind_minval,leftmin,rightmin)
+       rightmin=max(leftmin,rightmin) ! ignore before first entry
+       if (obs_bdeb) write(*,*)myname,' Minval:',css%ind_minval,&
+            & css%fileStackSort(:,2),css%fileStackInd(:,2),&
+            & leftmin,rightmin
+    else
+       leftmin=1
+       rightmin=1
+    end if
+    if (css%ind_lval(2)) then
+       call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,1),1.0D-5, &
+            & css%nFileSortIndexes,css%fileStackInd(1,1),css%ind_maxval,leftmax,rightmax)
+       leftmax=min(rightmax,leftmax) ! ignore after last entry
+       if (obs_bdeb) write(*,*)myname,' Maxval:',css%ind_maxval,&
+            & css%fileStackSort(:,1),css%fileStackInd(:,1),&
+            & leftmax,rightmax
+    else
+       leftmax=css%nFileSortIndexes
+       rightmax=css%nFileSortIndexes
+    end if
+    css%sortLimitsOk= (leftmin.le.css%nFileSortIndexes.and.rightmax.ge.1) ! check for overlap...
+    if (css%sortLimitsOk) then
+       css%leftFileSortIndex=min(leftmin,rightmin)
+       css%rightFileSortIndex=max(leftmax,rightmax)
+    else
+       css%leftFileSortIndex=0
+       css%rightFileSortIndex=0
+    end if
+    css%currentFileIndex=0
+    if (obs_bdeb)write(*,*)myname,'Done.', css%sortLimitsOk,&
+         & css%leftFileSortIndex, css%rightFileSortIndex,css%nFileIndexes
+    return
+  end subroutine observation_findStackLimits
+  !
+  ! set index transformation
+  !
+  subroutine observation_setTransformation(css,pit,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    type(parse_session), pointer :: pit
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname = "observation_setTransformation"
+    if (obs_bdeb)write(*,*)myname," Transformation:'"//pit%funcStr100(1:pit%lenf)//"'"
+    css%ind_pt => pit
+    css%ind_tset=associated(css%ind_pt)
+    if (css%ind_eset .and. css%ind_tset .and. css%ind_lval(1)) then
+       css%trg_val(css%ntrg)=css%ind_minval
+       css%ind_minval=parse_evalf(css%ind_pt,css%trg_val)
+    end if
+    if (css%ind_eset .and. css%ind_tset .and. css%ind_lval(2)) then
+       css%trg_val(css%ntrg)=css%ind_maxval
+       css%ind_maxval=parse_evalf(css%ind_pt,css%trg_val)
+    end if
+    return
+  end subroutine observation_setTransformation
   !
   ! set the observation time span
   !
@@ -1901,8 +2063,8 @@ CONTAINS
     css%ind_lent=length(css%ind_trg80,80,10)
     css%ind_lene=length(css%ind_exp250,250,10)
     if(obs_bdeb)write(*,*)myname,' Index:'//css%ind_trg80(1:css%ind_lent)
-    css%ind_set=(css%ind_lene.gt.0)
-    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_set
+    css%ind_eset=(css%ind_lene.gt.0)
+    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_eset
     !write(*,*)myname,'Setting index:',css%ind_trg80(1:css%ind_lent)
   end subroutine observation_setIndex
   !
@@ -1914,8 +2076,8 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer :: irc2
-    write(s25,*,iostat=irc2) css%ind_start
-    write(e25,*,iostat=irc2) css%ind_stop
+    write(s25,*,iostat=irc2) css%ind_minval
+    write(e25,*,iostat=irc2) css%ind_maxval
     return
   end subroutine observation_getIndexLimits
   !
@@ -1936,28 +2098,25 @@ CONTAINS
     call chop0(e25,25)
     lene=length(e25,25,10)
     if(obs_bdeb)write(*,*)myname,' Limits:'//s25(1:lens)//" -> "//e25(1:lene)
-    if (lens.ne.0.and.lene.ne.0) then
-       css%ind_lval(1)=.true.
-       css%ind_lval(2)=.true.
-       if (lens.ne.0) then
-          read(s25(1:lens),*,iostat=irc2) css%ind_start
-          if (irc2.ne.0) then
-             css%ind_lval(1)=.false.
-          end if
+    css%ind_lval(1)=.true.
+    css%ind_lval(2)=.true.
+    if (lens.ne.0) then
+       read(s25(1:lens),*,iostat=irc2) css%ind_minval
+       if (irc2.ne.0) then
+          css%ind_lval(1)=.false.
        end if
-       if (lene.ne.0) then
-          read(e25(1:lene),*,iostat=irc2)css%ind_stop
-          if (irc2.ne.0) then
-             css%ind_lval(2)=.false.
-          end if
-       end if
-       css%ind_lval(3)=(css%ind_lval(1).and.css%ind_lval(2))
     else
        css%ind_lval(1)=.false.
-       css%ind_lval(2)=.false.
-       css%ind_lval(3)=.false.
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lval(3),css%ind_start,css%ind_stop
+    if (lene.ne.0) then
+       read(e25(1:lene),*,iostat=irc2)css%ind_maxval
+       if (irc2.ne.0) then
+          css%ind_lval(2)=.false.
+       end if
+    else
+       css%ind_lval(2)=.false.
+    end if
+    if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lval,css%ind_minval,css%ind_maxval
     return
   end subroutine observation_setIndexLimits
   !
@@ -2001,117 +2160,71 @@ CONTAINS
     if(obs_bdeb)write(*,*)myname,' Done.'
   end subroutine observation_ignorelabel
   !
+  ! set stack file limits
+  !
+  subroutine observation_setFileStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    logical :: ind_lval(2)
+    real :: ind_minval,ind_maxval
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="observation_setFileStackLimits"
+    integer :: irc2
+    ! set limits
+    call observation_setIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
+    ! make sure file stack is sorted
+    if (.not.css%stackReady) then
+       call observation_sortStack(css,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from observation_sortStack.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       css%stackReady = .true.
+    end if
+    ! find index start/stop...
+    call observation_findStackLimits(css,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from observation_makeStackLimits.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    return
+  end subroutine observation_setFileStackLimits
+  !
   ! set index limits directly
   !
-  subroutine observation_setIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
+  subroutine observation_setIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
     type(obs_session), pointer :: css !  current session
-    logical :: ind_lval
-    real :: ind_start,ind_stop
+    logical :: ind_lval(2)
+    real :: ind_minval,ind_maxval
     integer :: irc2
     character*22 :: myname="observation_setIndexLimitsRaw"
-    css%ind_lval(1)=ind_lval
-    css%ind_lval(2)=ind_lval
-    css%ind_lval(3)=ind_lval
-    css%ind_start=ind_start
-    css%ind_stop=ind_stop
+    ! set limits
+    css%ind_lval(1)=ind_lval(1)
+    css%ind_lval(2)=ind_lval(2)
+    css%ind_minval=ind_minval
+    css%ind_maxval=ind_maxval
+    return
   end subroutine observation_setIndexLimitsRaw
   !
-  subroutine observation_getIndexLimitsRaw(css,ind_lval,ind_start,ind_stop)
+  !
+  subroutine observation_getIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
     type(obs_session), pointer :: css !  current session
-    logical :: ind_lval
-    real :: ind_start,ind_stop
+    logical :: ind_lval(2)
+    real :: ind_minval,ind_maxval
     integer :: irc2
     character*22 :: myname="observation_getIndexLimitsRaw"
-    ind_lval=css%ind_lval(3)
-    ind_start=css%ind_start
-    ind_stop=css%ind_stop
+    ind_lval(1)=css%ind_lval(1)
+    ind_lval(2)=css%ind_lval(2)
+    ind_minval=css%ind_minval
+    ind_maxval=css%ind_maxval
     return
   end subroutine observation_getIndexLimitsRaw
-  !
-  ! private subroutine for sorting the stack
-  !
-  subroutine observation_sortStack(css,crc250,irc)
-    type(obs_session), pointer :: css !  current session
-    character*250 :: crc250
-    integer :: irc
-    type(obs_file), pointer :: currentFile => null()
-    integer :: ii
-    character*22 :: myname = "observation_sortStack"
-    !
-    ! make array of files
-    if(obs_bdeb)write(*,*)myname,' Entering.'
-    if (associated(css%fileStack)) deallocate(css%fileStack)
-    if (allocated(css%fileStackSort)) deallocate(css%fileStackSort)
-    if (allocated(css%fileStackInd)) deallocate(css%fileStackInd)
-    allocate(css%fileStack(css%nFileIndexes),css%fileStackSort(css%nFileIndexes),&
-         &css%fileStackInd(css%nFileIndexes),stat=irc)
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from allocate (")
-       call observation_errorappendi(crc250,css%nFileIndexes)
-       call observation_errorappend(crc250,")")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
-    currentFile => css%firstFile%next
-    ii=0
-    do while (.not.associated(currentFile, target=css%lastFile))
-       ii=ii+1
-       if (ii.le.css%nFileIndexes) then
-          css%fileStack(ii)%pointer => currentFile
-          css%fileStackInd(ii)=ii
-          css%fileStackSort(ii)=css%fileStack(ii)%pointer%ind_start
-       end if
-       currentFile => currentFile%next
-    end do
-    if (ii.ne.css%nFileIndexes) then
-       irc=944
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," System error C:")
-       call observation_errorappendi(crc250,css%nFileIndexes)
-       call observation_errorappend(crc250,"!=")
-       call observation_errorappendi(crc250,ii)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
-    ! make sorted index (chronologically)
-    css%nFileSortIndexes=css%nFileIndexes
-    css%newnFileSortIndexes=css%nFileIndexes
-    call observation_heapsort1r(css%nFileIndexes,css%fileStackSort,1.0D-5, &
-         & css%newnFileSortIndexes,css%nFileSortIndexes,css%fileStackInd,.false.)
-    ! set index range
-    call observation_stacklast(css,crc250,irc)   ! start with latest analysis
-    if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from observation_setLast.")
-       call observation_errorappendi(crc250,irc)
-       call observation_errorappend(crc250,"\n")
-       return
-    end if
-    if(obs_bdeb)write(*,*)myname,' Done.',css%newnFileSortIndexes
-    return
-  end subroutine observation_sortStack
-  !
-  subroutine observation_stackfirst(css,crc250,irc)
-    type(obs_session), pointer :: css !  current session
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname = "observation_stackfirst"
-    css%currentFileSortIndex=0
-    css%currentFileIndex=0
-  end subroutine observation_stackfirst
-  !
-  subroutine observation_stacklast(css,crc250,irc)
-    type(obs_session), pointer :: css !  current session
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname = "observation_stacklast"
-    if(obs_bdeb)write(*,*)myname,' Entering.',associated(css)
-    css%currentFileSortIndex=css%newnFileSortIndexes+1
-    css%currentFileIndex=0
-    if(obs_bdeb)write(*,*)myname,' Done.'
-  end subroutine observation_stacklast
   !
   !###############################################################################
   ! LOCATION ROUTINES
@@ -2322,6 +2435,7 @@ CONTAINS
     integer, external :: length
     character*22 :: myname = "observation_sliceCurrentFile"
     if(obs_bdeb)write(*,*)myname,' Entering.',bok
+    if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     ! get next observation from file
     if (.not.css%stackReady) then
        call observation_sortStack(css,crc250,irc)
@@ -2335,7 +2449,7 @@ CONTAINS
        call observation_stackfirst(css,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from observation_stacklast.")
+          call observation_errorappend(crc250," Error return from observation_stackfirst.")
           call observation_errorappendi(crc250,irc)
           call observation_errorappend(crc250,"\n")
           return
@@ -2345,8 +2459,11 @@ CONTAINS
     end if
     cnt=0
     obs: do
-       isubset=isubset+1
-       if (isubset > nsubset) then
+
+! do not increment isubset unless pos-loop is done (nopos is true)
+       if (nopos)isubset=isubset+1
+       if (isubset > nsubset) then ! read next message into memory
+          if(obs_bdeb)write(*,*)myname,' Reading message.',bok
           call observation_autoMessage(css,bok,crc250,irc)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
@@ -2359,9 +2476,16 @@ CONTAINS
        else
           bok=.true.
        end if
+       if(obs_bdeb)write(*,*)myname,' Checking obs.',bok
        if (bok) then
-          cnt=cnt+1
-          call observation_checkObs(css,bok,crc250,irc)
+          if (observation_checkObs(css,bok,crc250,irc)) then
+             nopos=.false.
+             cnt=cnt+1
+             if(obs_bdeb)write(*,*)myname,' checkObs Done.',bok,cnt,nopos
+          else
+             nopos=.true.
+             if(obs_bdeb)write(*,*)myname,' CheckObs Read message.',bok
+          end if
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
              call observation_errorappend(crc250," Error return from observation_checkObs.")
@@ -2372,7 +2496,8 @@ CONTAINS
        end if
        if (bok) exit obs
     end do obs
-    if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt
+    if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
+    if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset,nopos
     return
   end subroutine observation_sliceCurrentFile
 
@@ -3098,7 +3223,6 @@ CONTAINS
     !
     cnt=0
     if (bok) then
-       ! compile index expression
        if(obs_bdeb)write(*,*)myname,' Calling readfile.'
        bok=.false. ! must read at least one observation
        bbok=.true.
@@ -3112,8 +3236,9 @@ CONTAINS
              return
           end if
           if (bbok) then
-             cnt=cnt+1
-             call observation_checkObs(css,bok,crc250,irc)
+             do while (observation_checkObs(css,bok,crc250,irc))
+                cnt=cnt+1
+             end do
              if (irc.ne.0) then
                 call observation_errorappend(crc250,myname)
                 call observation_errorappend(crc250," Error return from observation_checkObs.")
@@ -3146,9 +3271,10 @@ CONTAINS
     return
   end subroutine observation_scanFile
   !
-  ! check if obs is ok, store statistics
+  ! check if obs is ok, store statistics. 
+  ! Returns .false. with bok=.false. if no more obs in message.
   !
-  subroutine observation_checkObs(css,bok,crc250,irc)
+  logical function observation_checkObs(css,bok,crc250,irc)
     type(obs_session), pointer :: css
     logical :: bok           ! is everything ok?
     character*250 :: crc250  ! error message string
@@ -3156,95 +3282,110 @@ CONTAINS
     character*22 :: myname = "observation_checkObs"
     integer :: yy,mm,dd,hh,mi,cnt
     real :: sec, j2000
-    css%currentfile%ook(1)=css%currentfile%ook(1)+1 ! descriptors do not match
-    call observation_eval(css,bok,crc250,irc)
+    if (observation_eval(css,bok,crc250,irc)) then
+       css%currentfile%ook(1)=css%currentfile%ook(1)+1
+       observation_checkObs=.true. ! we have a valid observation in memory
+       ! store max/min values and counts
+       if (bok) then
+          css%currentfile%ook(2)=css%currentfile%ook(2)+1 ! successful evaluation
+          if (css%ind_eset) then
+             if (css%currentFile%ind_lim) then
+                css%currentFile%ind_start=min(css%currentFile%ind_start,css%ind_val)
+                css%currentFile%ind_stop=max(css%currentFile%ind_stop,css%ind_val)
+             else
+                css%currentFile%ind_lim=.true.
+                css%currentFile%ind_start=css%ind_val
+                css%currentFile%ind_stop=css%ind_val
+             end if
+          else if (obs_bdeb) then
+             write(*,*)myname,'Index not set, no index limits available.'
+          end if
+          yy=KSEC1( 9)
+          mm=KSEC1(10)
+          dd=KSEC1(11)
+          hh=KSEC1(12)
+          mi=KSEC1(13)
+          if (yy <= 99) then
+             if (yy < 78) then
+                yy = yy + 2000
+             else
+                yy = yy + 1900
+             end if
+          end if
+          sec=0.0D0
+          if(obs_bdeb)write(*,'(X,A,A,A,5(A,I0))') myname," File '",&
+               & css%currentFile%fn250(1:css%currentFile%lenf),"'",&
+               & yy,"/",mm,"/",dd," ",hh,":",mi
+          call jd2000(j2000,yy,mm,dd,hh,mi,sec)
+          !read file and get start/end indexs...
+          if (css%currentFile%time_lim) then
+             css%currentFile%time_start=min(css%currentFile%time_start,j2000)
+             css%currentFile%time_stop=max(css%currentFile%time_stop,j2000)
+          else
+             css%currentFile%time_lim=.true.
+             css%currentFile%time_start=j2000
+             css%currentFile%time_stop=j2000
+          end if
+          !if(obs_bdeb)write(*,*)myname,"MaxMin:",css%ind_eset,css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
+          ! write(*,*) myname,"Value:",css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
+       else
+          css%currentfile%orm(2)=css%currentfile%orm(2)+1 ! evaluation failed
+       end if
+       if(obs_bdeb)write(*,*)myname,' Expressions:',css%ind_eset,css%ind_val,&
+            & css%currentFile%ind_lim,css%currentFile%ind_start,css%currentFile%ind_stop,bok
+       !
+       ! check against index limits
+       !
+       if (bok) then
+          if (css%ind_eset) then
+             if (css%ind_lval(1) .and. css%ind_lval(2)) then ! between
+                bok= (css%ind_val.ge.css%ind_minval .and.css%ind_val.le.css%ind_maxval)
+             else if (css%ind_lval(1)) then ! above
+                bok= (css%ind_val.ge.css%ind_minval)
+             else if (css%ind_lval(2)) then ! below
+                bok= (css%ind_val.le.css%ind_maxval)
+             end if
+          end if
+          if (bok) then
+             css%currentfile%ook(3)=css%currentfile%ook(3)+1 ! inside index limits
+          else
+             if (obs_bdeb)write(*,*)myname,' Outside index limits:',css%ind_lval,css%ind_val,css%ind_minval,css%ind_maxval
+             css%currentfile%orm(3)=css%currentfile%orm(3)+1 ! out of index limits
+          end if
+       end if
+       !
+       ! check against targets
+       !
+       if (bok) then
+          if(obs_bdeb)write(*,*)myname,' Checking target.'
+          call observation_checkTarget(css,bok,crc250,irc)
+          IF(IRC.NE.0) THEN
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250,"Error return from checkTarget.");
+             call observation_errorappend(crc250,"\n")
+             observation_checkObs=.false. ! exit loop
+             RETURN
+          END IF
+          if (bok) then
+             css%currentfile%ook(4)=css%currentfile%ook(4)+1 ! target check ok
+          else
+             css%currentfile%orm(4)=css%currentfile%orm(4)+1 ! target check failed
+          end if
+       else
+       end if
+    else
+       bok=.false. ! "observation" is no good..
+       observation_checkObs=.false. ! exit loop
+    end if
     IF(IRC.NE.0) THEN
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250,"Error return from eval.");
        call observation_errorappend(crc250,"\n")
+       observation_checkObs=.false. ! exit loop
        RETURN
     END IF
-    ! store max/min values and counts
-    if (bok) then
-       css%currentfile%ook(2)=css%currentfile%ook(2)+1 ! successful evaluation
-       if (css%ind_set) then
-          if (css%currentFile%ind_lim) then
-             css%currentFile%ind_start=min(css%currentFile%ind_start,css%ind_val)
-             css%currentFile%ind_stop=max(css%currentFile%ind_stop,css%ind_val)
-          else
-             css%currentFile%ind_lim=.true.
-             css%currentFile%ind_start=css%ind_val
-             css%currentFile%ind_stop=css%ind_val
-          end if
-       else if (obs_bdeb) then
-          write(*,*)myname,'Index not set, no index limits available.'
-       end if
-       yy=KSEC1( 9)
-       mm=KSEC1(10)
-       dd=KSEC1(11)
-       hh=KSEC1(12)
-       mi=KSEC1(13)
-       if (yy <= 99) then
-          if (yy < 78) then
-             yy = yy + 2000
-          else
-             yy = yy + 1900
-          end if
-       end if
-       sec=0.0D0
-       if(obs_bdeb)write(*,'(X,A,A,A,5(A,I0))') myname," File '",&
-            & css%currentFile%fn250(1:css%currentFile%lenf),"'",&
-            & yy,"/",mm,"/",dd," ",hh,":",mi
-       call jd2000(j2000,yy,mm,dd,hh,mi,sec)
-       !read file and get start/end indexs...
-       if (css%currentFile%time_lim) then
-          css%currentFile%time_start=min(css%currentFile%time_start,j2000)
-          css%currentFile%time_stop=max(css%currentFile%time_stop,j2000)
-       else
-          css%currentFile%time_lim=.true.
-          css%currentFile%time_start=j2000
-          css%currentFile%time_stop=j2000
-       end if
-       !if(obs_bdeb)write(*,*)myname,"MaxMin:",css%ind_set,css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
-       ! write(*,*) myname,"Value:",css%ind_val,css%currentFile%ind_start,css%currentFile%ind_stop
-    else
-       css%currentfile%orm(2)=css%currentfile%orm(2)+1 ! evaluation failed
-    end if
-    if(obs_bdeb)write(*,*)myname,' Expressions:',css%ind_set,css%ind_val,&
-         & css%currentFile%ind_lim,css%currentFile%ind_start,css%currentFile%ind_stop,bok
-    !
-    ! check against index limits
-    !
-    if (bok) then
-       if (css%ind_lval(3) .and. css%ind_set) then
-          bok= ((css%ind_val.le.css%ind_stop .and.css%ind_val.ge.css%ind_start))
-       end if
-       if (bok) then
-          css%currentfile%ook(3)=css%currentfile%ook(3)+1 ! inside index limits
-       else
-          css%currentfile%orm(3)=css%currentfile%orm(3)+1 ! out of index limits
-       end if
-    end if
-    !
-    ! check against targets
-    !
-    if (bok) then
-       if(obs_bdeb)write(*,*)myname,' Checking target.'
-       call observation_checkTarget(css,bok,crc250,irc)
-       IF(IRC.NE.0) THEN
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from checkTarget.");
-          call observation_errorappend(crc250,"\n")
-          RETURN
-       END IF
-       if (bok) then
-          css%currentfile%ook(4)=css%currentfile%ook(4)+1 ! target check ok
-       else
-          css%currentfile%orm(4)=css%currentfile%orm(4)+1 ! target check failed
-       end if
-    end if
     return
-  end subroutine observation_checkObs
+  end function observation_checkObs
   !
   !###############################################################################
   ! ECMWF LIBEMOS ROUTINES FOR READING BUFR FILES
@@ -3297,7 +3438,7 @@ CONTAINS
        css%currentfile%mrm(ii)=0
        css%currentfile%ook(ii)=0
        css%currentfile%orm(ii)=0
-       css%currentfile%hint25(ii)=""
+       css%currentfile%hint80(ii)=""
     end do
     do ii=1,css%ntrg
        css%trg_ook(ii)=0
@@ -3318,6 +3459,7 @@ CONTAINS
     integer :: ii, jj
     character*22 :: myname = "observation_readMessage"
     if(obs_bdeb)write(*,*)myname,' Entering.'
+    css%int_pos=0               ! reset internal position search index
     irc=0
     msg: do
        bok=.true.
@@ -3442,7 +3584,7 @@ CONTAINS
           exit msg
        end if
     end do msg
-    if(obs_bdeb)write(*,*)myname,' Done.'
+    if(obs_bdeb)write(*,*)myname,' Done.',css%currentFile%ook
     return
   end subroutine observation_readMessage
   !
@@ -3901,6 +4043,7 @@ CONTAINS
  end subroutine observation_getType
 
   character*250 function observation_getCodeValue(icode,isubcode,crc250,irc) 
+    use sort
     implicit none
     integer :: icode
     integer :: isubcode
@@ -3921,11 +4064,11 @@ CONTAINS
        end if
        ctableInit=.true.
     end if
-    call observation_heapsearch1i(ctable%maxnn,ctable%codes, &
+    call sort_heapsearch1i(ctable%maxnn,ctable%codes, &
          & ctable%nn,ctable%index,icode,left,right)
     if (left.eq.right) then
        bingo=left
-       call observation_heapsearch1i(ctable%tables(bingo)%maxnn,ctable%tables(bingo)%subcodes, &
+       call sort_heapsearch1i(ctable%tables(bingo)%maxnn,ctable%tables(bingo)%subcodes, &
             & ctable%tables(bingo)%nn,ctable%tables(bingo)%index,isubcode,left,right)
        if (left.eq.right) then
           observation_getCodeValue=ctable%tables(bingo)%values(left)
@@ -4079,393 +4222,6 @@ CONTAINS
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
   end subroutine observation_errorappendi
-  !
-  ! S O R T I N G   R O U T I N E S
-  !
-  subroutine observation_heapsearch1r(maxnn,key,eps,nn,ind,tkey,left,right)
-    !
-    implicit none
-    !
-    integer :: maxnn
-    real :: key(maxnn)
-    real :: eps ! tolerance
-    integer :: nn
-    integer :: ind(nn)
-    real :: tkey
-    integer :: left
-    integer :: right
-    !
-    real :: mid
-    integer :: mfl,mcl,kfl,kcl,mch
-    logical bdone
-    !
-    if (nn.eq.0) then
-       left=-1                ! first element regardless of value
-       return
-    end if
-    !
-    left = 1
-    right = nn
-    do
-       mid=float(left+right)/2.0D0
-       mfl=floor(mid)
-       mcl=ceiling(mid)
-       kfl=observation_compiler(tkey,key(ind(mfl)),eps)
-       kcl=observation_compiler(tkey,key(ind(mcl)),eps)
-       !write(*,'(X,A,X,I3,F0.2,5(X,I3),3(X,F0.2),2(X,I0))')'observation_heapsearch:',left,mid,right,mfl,mcl,kfl,kcl,&
-       !& tkey,key(ind(mfl)),key(ind(mcl)),ind(mfl),ind(mcl)
-       if (kfl.eq.0) then        ! target is at ceiling => exit
-          left=mfl
-          right=mfl
-          exit
-       else if (kcl.eq.0) then   ! target is at floor => exit
-          left=mcl
-          right=mcl
-          exit
-       else if (kfl.gt.0) then   ! target is lower than floor
-          IF (left.eq.right) then
-             right=mfl-1
-             exit ! out of bounds -> exit
-          else
-             right=mfl
-          end if
-       else if (kcl.lt.0) then   ! target is higher than ceiling
-          if (left.eq.right) then
-             left=mcl+1
-             exit ! out of bounds -> exit
-          else
-             left=mcl
-          end if
-       else                      ! target is between floor and ceiling => exit
-          left=mfl
-          right=mcl
-          exit
-       end if
-    end do
-    IF (left > right) return
-    !find first match...
-    bdone=(left<2)
-    do while (.not.bdone)
-       mch=observation_compiler(tkey, key(ind(left-1)),eps)
-       if (mch == 0) then ! equal or target is below
-          left=left-1
-          bdone=(left<2)
-       else
-          bdone=.true.
-       end if
-    end do
-    !find last match
-    bdone=(right>nn-1)
-    do while (.not.bdone)
-       mch=observation_compiler(tkey, key(ind(right+1)),eps)
-       if (mch == 0) then ! equal or target is above
-          right=right+1
-          bdone=(right>nn-1)
-       else
-          bdone=.true.
-       end if
-    end do
-    !
-  end subroutine observation_heapsearch1r
-  !
-  subroutine observation_heapsearch1i(maxnn,key,nn,ind,tkey,left,right)
-    !
-    implicit none
-    !
-    integer :: maxnn
-    integer, allocatable :: key(:)
-    integer :: nn
-    integer,allocatable :: ind(:)
-    integer :: tkey
-    integer :: left
-    integer :: right
-    !
-    real :: mid
-    integer :: mfl,mcl,kfl,kcl,mch
-    logical bdone
-    !
-    if (nn.eq.0) then
-       left=-1                ! first element regardless of value
-       return
-    end if
-    !
-    left = 1
-    right = nn
-    do
-       mid=float(left+right)/2.0D0
-       mfl=floor(mid)
-       mcl=ceiling(mid)
-       kfl=observation_compilei(tkey,key(ind(mfl)))
-       kcl=observation_compilei(tkey,key(ind(mcl)))
-       !write(*,'(X,A,X,I3,F0.2,5(X,I3),3(X,F0.2),2(X,I0))')'observation_heapsearch:',left,mid,right,mfl,mcl,kfl,kcl,&
-       !& tkey,key(ind(mfl)),key(ind(mcl)),ind(mfl),ind(mcl)
-       if (kfl.eq.0) then        ! target is at ceiling => exit
-          left=mfl
-          right=mfl
-          exit
-       else if (kcl.eq.0) then   ! target is at floor => exit
-          left=mcl
-          right=mcl
-          exit
-       else if (kfl.gt.0) then   ! target is lower than floor
-          IF (left.eq.right) then
-             right=mfl-1
-             exit ! out of bounds -> exit
-          else
-             right=mfl
-          end if
-       else if (kcl.lt.0) then   ! target is higher than ceiling
-          if (left.eq.right) then
-             left=mcl+1
-             exit ! out of bounds -> exit
-          else
-             left=mcl
-          end if
-       else                      ! target is between floor and ceiling => exit
-          left=mfl
-          right=mcl
-          exit
-       end if
-    end do
-    IF (left > right) return
-    !find first match...
-    bdone=(left<2)
-    do while (.not.bdone)
-       mch=observation_compilei(tkey, key(ind(left-1)))
-       if (mch == 0) then ! equal or target is below
-          left=left-1
-          bdone=(left<2)
-       else
-          bdone=.true.
-       end if
-    end do
-    !find last match
-    bdone=(right>nn-1)
-    do while (.not.bdone)
-       mch=observation_compilei(tkey, key(ind(right+1)))
-       if (mch == 0) then ! equal or target is above
-          right=right+1
-          bdone=(right>nn-1)
-       else
-          bdone=.true.
-       end if
-    end do
-    !
-  end subroutine observation_heapsearch1i
-  !
-  subroutine observation_heapsort1r(mm,key1,eps,newnn,nn,ind,uniq)
-    !
-    !! Generate sorted index for key1 
-    !
-    implicit none
-
-    integer :: mm                ! Number of elements
-    real :: key1(mm)             ! key
-    real :: eps                  ! key tolerance (when are they equal)
-    integer :: newnn             ! new number of keys
-    integer :: nn                ! Number of elements
-    integer :: ind(nn)           ! Resulting sorted index
-    logical uniq               ! Ignore duplicate records
-    !
-    integer :: ii,dmp
-
-    if (nn.eq.0) then
-       newnn=0
-       return
-    end if
-    !
-    do ii = nn/2, 1, -1
-       call observation_pushdownr(ii, nn, mm,key1,eps,newnn,nn,ind)
-    end do
-    do ii = nn, 2, -1
-       call observation_swap(ind(1), ind(ii))
-       call observation_pushdownr(1, ii-1, mm,key1,eps,newnn,nn,ind)
-    end do
-    !
-    if (uniq) then
-       dmp=0
-       newnn=1
-       do ii=2,nn
-          if (observation_compiler(key1(ind(ii-1)),key1(ind(ii)),eps) /= 0) then
-             ! Keep ind(ii)
-             newnn = newnn+1
-             ind(newnn) = ind(ii)
-          else
-             dmp=dmp+1
-          end if
-       end do
-       if(obs_bdeb)write(*,*)"OBSERVATION_HEAPSORT dumped elements:",dmp
-    else
-       newnn=nn
-    end if
-    !
-    !
-  end subroutine observation_heapsort1r
-  !
-  subroutine observation_heapsort1i(mm,key1,newnn,nn,ind,uniq)
-    !
-    !! Generate sorted index for key1 
-    !
-    implicit none
-
-    integer :: mm                ! Number of elements
-    integer :: key1(mm)             ! key
-    integer :: newnn             ! new number of keys
-    integer :: nn                ! Number of elements
-    integer :: ind(nn)           ! Resulting sorted index
-    logical uniq               ! Ignore duplicate records
-    !
-    integer :: ii,dmp
-
-    if (nn.eq.0) then
-       newnn=0
-       return
-    end if
-    !
-    do ii = nn/2, 1, -1
-       call observation_pushdowni(ii, nn, mm,key1,newnn,nn,ind)
-    end do
-    do ii = nn, 2, -1
-       call observation_swap(ind(1), ind(ii))
-       call observation_pushdowni(1, ii-1, mm,key1,newnn,nn,ind)
-    end do
-    !
-    if (uniq) then
-       dmp=0
-       newnn=1
-       do ii=2,nn
-          if (observation_compilei(key1(ind(ii-1)),key1(ind(ii))) /= 0) then
-             ! Keep ind(ii)
-             newnn = newnn+1
-             ind(newnn) = ind(ii)
-          else
-             dmp=dmp+1
-          end if
-       end do
-       if(obs_bdeb)write(*,*)"OBSERVATION_HEAPSORT dumped elements:",dmp
-    else
-       newnn=nn
-    end if
-    !
-    !
-  end subroutine observation_heapsort1i
-  !
-  subroutine observation_pushdownr(first, last,mm,key1,eps,newnn,nn,ind)
-    !
-    integer :: first
-    integer :: last
-    integer :: mm                ! Number of elements
-    real :: key1(mm)             ! key
-    real :: eps                  ! key tolerance (when are they equal)
-    integer :: newnn             ! new number of keys
-    integer :: nn                ! Number of elements
-    integer :: ind(nn)           ! Resulting sorted index
-    !
-    integer :: r
-    !
-    r = first
-    !
-    MAINLOOP: do while (r <= last/2)
-       if (last == 2*r) then
-          if (observation_compiler(key1(ind(r)),key1(ind( 2*r)),eps) > 0) then
-             call observation_swap(ind(r), ind(2*r))
-          end if
-          exit MAINLOOP
-       else
-          if (observation_compiler(key1(ind(r)),key1(ind(2*r)),eps) > 0 .and. &
-               & observation_compiler(key1(ind(2*r)),key1(ind(2*r+1)),eps) <= 0) then
-             call observation_swap(ind(r), ind(2*r))
-             r = 2*r
-          else if (observation_compiler(key1(ind(r)),key1(ind(2*r+1)),eps)>0 .and. &
-               & observation_compiler(key1(ind(2*r+1)),key1(ind(2*r)),eps)<0) then
-             call observation_swap(ind(r), ind(2*r+1))
-             r = 2*r+1
-          else
-             exit MAINLOOP
-          end if
-       end if
-    end do MAINLOOP
-    !
-  end subroutine observation_pushdownr
-  !
-  subroutine observation_pushdowni(first, last,mm,key1,newnn,nn,ind)
-    !
-    integer :: first
-    integer :: last
-    integer :: mm                ! Number of elements
-    integer :: key1(mm)          ! key
-    integer :: newnn             ! new number of keys
-    integer :: nn                ! Number of elements
-    integer :: ind(nn)           ! Resulting sorted index
-    !
-    integer :: r
-    !
-    r = first
-    !
-    MAINLOOP: do while (r <= last/2)
-       if (last == 2*r) then
-          if (observation_compilei(key1(ind(r)),key1(ind( 2*r))) > 0) then
-             call observation_swap(ind(r), ind(2*r))
-          end if
-          exit MAINLOOP
-       else
-          if (observation_compilei(key1(ind(r)),key1(ind(2*r))) > 0 .and. &
-               & observation_compilei(key1(ind(2*r)),key1(ind(2*r+1))) <= 0) then
-             call observation_swap(ind(r), ind(2*r))
-             r = 2*r
-          else if (observation_compilei(key1(ind(r)),key1(ind(2*r+1)))>0 .and. &
-               & observation_compilei(key1(ind(2*r+1)),key1(ind(2*r)))<0) then
-             call observation_swap(ind(r), ind(2*r+1))
-             r = 2*r+1
-          else
-             exit MAINLOOP
-          end if
-       end if
-    end do MAINLOOP
-    !
-  end subroutine observation_pushdowni
-  !
-  !
-  integer function observation_compiler(a,b,eps)
-    real :: a
-    real :: b
-    real :: eps
-    if (abs(a-b) < eps) then
-       observation_compiler = 0
-    else if (a < b) then
-       observation_compiler = 1
-    else
-       observation_compiler = -1
-    end if
-  end function observation_compiler
-  !
-  integer function observation_compilei(a,b)
-    integer :: a
-    integer :: b
-    if (a == b) then
-       observation_compilei = 0
-    else if (a < b) then
-       observation_compilei = 1
-    else
-       observation_compilei = -1
-    end if
-  end function observation_compilei
-  !
-  !
-  subroutine observation_swap(k1, k2)
-    !
-    implicit none
-    !
-    integer :: k1
-    integer :: k2
-    !
-    integer :: tmp
-    !
-    tmp = k1
-    k1 = k2
-    k2 = tmp
-    !
-  end subroutine observation_swap
 
   character*250 function observation_pretty(varname,ndims,dimnames,start,vsize)
     character*80 :: varname
@@ -4514,7 +4270,7 @@ CONTAINS
     character*250 :: crc250         ! error message string
     integer :: irc                  ! error return code (0=ok)
     character*22 :: myname = "observation_compile"
-    integer :: ii
+    integer :: ii,jj
     type(obs_target), pointer :: currenttarget => null()
     if(obs_bdeb)write(*,*)myname,' Entering.',obs_bdeb
     call observation_makeTargetList(css,crc250,irc)
@@ -4528,21 +4284,23 @@ CONTAINS
     if(obs_bdeb)write(*,*)myname,' Done making target list.',irc,css%ntarget,css%ntrg
     do ii=1,css%ntarget
        css%trg_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
+       css%trg_lenv(ii)=css%trg_lent(ii)
     end do
-    if(obs_bdeb)write(*,*)myname,' Assigned index?',css%ind_set
-    if (css%ind_set) then
+    if(obs_bdeb)write(*,*)myname,' Assigned index?',css%ind_eset
+    if (css%ind_eset) then
        ii=css%ntrg
        css%trg_var(ii)=css%ind_trg80(1:css%ind_lent)
+       css%trg_lenv(ii)=css%ind_lent
     end if
-    if(obs_bdeb)write(*,*)myname,' Parsing.',css%ind_set
-    if (css%ind_set) then
-       call parse_open(css%ind_pss,crc250,irc)
+    if(obs_bdeb)write(*,*)myname,' Parsing.',css%ind_eset
+    if (css%ind_eset) then
+       call parse_open(css%ind_pe,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Error return from 'parse_open'.")
           return
        end if
-       call parse_parsef(css%ind_pss,css%ind_exp250(1:css%ind_lene),css%trg_var,crc250,irc)
+       call parse_parsef(css%ind_pe,css%ind_exp250(1:css%ind_lene),css%trg_var,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from parsef.")
@@ -4551,37 +4309,160 @@ CONTAINS
           return
        end if
     end if
+    if (css%int_set) then
+       ! parse position expressions
+       do ii=1,css%ntarget
+          if (css%trg_type(ii).eq.parse_expression) then
+             if(obs_bdeb)then
+                write(*,*)myname," Compiling pos: '"//&
+                  & css%trg_pos250(ii)(1:css%trg_lenp(ii))//"'",ii
+                do jj=1,size(css%int_var)
+                   write(*,'(A,A,I0,A)')myname,"     int_var(",jj,") = '"//&
+                        & css%int_var(jj)(1:css%int_lenv(jj))//"'"
+                end do
+             end if
+             call parse_parsef(css%trg_psp(ii)%ptr,&
+                  & css%trg_pos250(ii)(1:css%trg_lenp(ii)),&
+                  & css%int_var,crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from parsef.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+          end if
+       end do
+    end if
     if(obs_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine observation_compile
   !
   ! check if descr match observation targets, and evaluate expression
+  ! ...load next target into memory...
   !
-  subroutine observation_eval(css,bok,crc250,irc)
+  logical function observation_eval(css,bok,crc250,irc)
     type(obs_session), pointer :: css
     logical :: bok           ! is everything ok?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_evalf"
-    integer :: ii
-    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
+    character*22 :: myname = "observation_eval"
+    integer :: ii,int_pos
+    logical :: bbok
+    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget,css%int_pos
+    !
+    ! get next position
+    !
+    bbok=(css%int_pos.le.ktdexl)
+    observation_eval=bbok
+    if (.not.bbok) return
     bok=.true.
     if (css%ntarget== 0) then ! no targets to evaluate
        return
     else
+       if (obs_bdeb)write(*,*)myname,' Assigning:',css%ntarget,ktdexl
        do ii=1,css%ntarget
-          css%trg_val(ii)=values(css%trg_seq(ii)+(isubset-1)*KEL)
-          if (css%trg_val(ii).eq.rvind) bok=.false. ! missing target value
+          select case (css%trg_type(ii))
+          case (parse_empty)
+             if (observation_getPos(css,css%trg_descr(ii))) then
+                css%trg_seq(ii)=css%int_pos
+                css%trg_val(ii)=values(&
+                     & css%trg_seq(ii)+(isubset-1)*KEL)
+                if (css%trg_val(ii).eq.rvind) then
+                   write(css%currentfile%hint80(2),'(A," (",I0,"), value=undefined")')&
+                     & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,int_pos
+                   bok=.false. ! missing target value
+                end if
+                if (obs_bdeb)write(*,*)myname,' Found:',css%trg_seq(ii),css%trg_descr(ii)
+             else
+                bbok=.false.
+             end if
+          case (parse_constant)
+             css%trg_val(ii)=values(&
+                  & css%trg_seq(ii)+(isubset-1)*KEL)
+             if (css%trg_val(ii).eq.rvind) then
+                write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
+                     & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+                bok=.false. ! missing target value
+             end if
+          case (parse_variable)
+             if (observation_getPos(css,css%trg_descr(ii))) then
+                css%trg_seq(ii)=css%int_pos
+                css%trg_val(ii)=values(&
+                     & css%trg_seq(ii)+(isubset-1)*KEL)
+                css%int_val(css%trg_ind(ii))=css%int_pos
+                if (css%trg_val(ii).eq.rvind) then
+                   write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
+                        & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+                   bok=.false. ! missing target value
+                end if
+                if (obs_bdeb)write(*,*)myname,' Found:',css%trg_seq(ii),css%trg_descr(ii)
+             else
+                bbok=.false.
+             end if
+          case (parse_expression)
+             int_pos=nint(parse_evalf(css%trg_psp(ii)%ptr,css%int_val))
+             if (int_pos.ge.1.and.int_pos.le.ktdexl) then ! out of bounds...
+                css%trg_seq(ii)=int_pos
+                if (css%trg_descr(ii).ne.ktdexp(int_pos)) then
+                   write(css%currentfile%hint80(2),&
+                        & '(A," (",I0,"), DESCR(",I0,")=",I0," expected ",I0)')&
+                        & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,int_pos,&
+                        & ktdexp(int_pos),css%trg_descr(ii)
+                   bok=.false.
+                else
+                   css%trg_val(ii)=values(css%trg_seq(ii)+(isubset-1)*KEL)
+                   if (css%trg_val(ii).eq.rvind) then
+                      write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
+                           & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+                      
+                      bok=.false. ! missing target value
+                   end if
+                end if
+             else
+                write(css%currentfile%hint80(2),'(A," (",I0,"), out of bounds at:",I0)')&
+                     & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,int_pos
+                bok=.false. ! reject observation...
+             end if
+          end select
        end do
-       if (bok.and.css%ind_set) then
-          if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",associated(css%ind_pss),allocated(css%trg_val)
-          css%trg_val(css%ntrg)=parse_evalf(css%ind_pss,css%trg_val)
+       if (bok.and.css%ind_eset) then
+          if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",&
+               & associated(css%ind_pe),allocated(css%trg_val),css%int_pos
+          css%trg_val(css%ntrg)=parse_evalf(css%ind_pe,css%trg_val)
+       end if
+       if (bok.and.css%ind_tset) then
+          css%trg_val(css%ntrg)=parse_evalf(css%ind_pt,css%trg_val)
+       end if
+       if (bok) then
           css%ind_val=css%trg_val(css%ntrg)
-          !if(obs_bdeb)write(*,*)myname,"Result:",css%ind_set,css%ind_val
+          !if(obs_bdeb)write(*,*)myname,"Result:",css%ind_eset,css%ind_val
        end if
     end if
+    if (css%int_pos.eq.0) then ! no search, which means 1 iteration only
+       css%int_pos=ktdexl+1 ! force stop next time...
+    end if
+    observation_eval=bbok
     return
-  end subroutine observation_eval
+  end function observation_eval
+  !
+  ! search for next descriptor
+  !
+  logical function observation_getPos(css,descr)
+    type(obs_session), pointer :: css
+    integer :: descr
+    SEARCH : do
+       css%int_pos=css%int_pos+1
+       if (css%int_pos.gt.ktdexl) then
+          observation_getPos=.false.
+          exit SEARCH
+       else if (descr.eq.KTDEXP(css%int_pos)) then
+          observation_getPos=.true.
+          exit SEARCH
+       end if
+    end do SEARCH
+    return
+  end function observation_getPos
   !
   ! check if message descriptors match target descriptors
   !
@@ -4603,22 +4484,28 @@ CONTAINS
           bok1=.true.
           bok2=.true.
           do ii=1,css%ntarget
-             if (bok) then
-                if (css%trg_seq(ii).gt.ktdexl) then
-                   if(obs_bdeb)write(*,*)myname,'Failed limit:',ii,ktdexl,css%trg_seq(ii)
-                   bok1=.false.
-                   bok=.false.
+             select case (css%trg_type(ii))
+             case (parse_empty)
+             case (parse_constant)
+                if (bok) then
+                   if (css%trg_seq(ii).lt.1.or.css%trg_seq(ii).gt.ktdexl) then
+                      if(obs_bdeb)write(*,*)myname,'Failed limit:',ii,ktdexl,css%trg_seq(ii)
+                      bok1=.false.
+                      bok=.false.
+                   end if
                 end if
-             end if
-             if (bok) then
-                if (ktdexp(css%trg_seq(ii)).ne.css%trg_descr(ii)) then
-                   if(obs_bdeb)write(*,*)myname,'Failed sanity:',ii,ktdexp(css%trg_seq(ii)),&
-                        &css%trg_descr(ii)
-                   bok2=.false.
-                   css%currentfile%hint25(7)=css%trg80(ii)(1:25)
-                   bok=.false.
+                if (bok) then
+                   if (ktdexp(css%trg_seq(ii)).ne.css%trg_descr(ii)) then
+                      if(obs_bdeb)write(*,*)myname,'Failed sanity:',ii,ktdexp(css%trg_seq(ii)),&
+                           &css%trg_descr(ii)
+                      bok2=.false.
+                      css%currentfile%hint80(7)=css%trg80(ii)(1:25)
+                      bok=.false.
+                   end if
                 end if
-             end if
+             case (parse_variable)
+             case (parse_expression)
+             end select
           end do
           if (bok1) then
              css%currentfile%mok(6)=css%currentfile%mok(6)+1 ! limits are ok
@@ -4647,8 +4534,8 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname = "observation_terminate"
-    if (css%ind_set) then
-       call parse_close(css%ind_pss,crc250,irc)
+    if (css%ind_eset) then
+       call parse_close(css%ind_pe,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Error return from 'parse_close'.")
@@ -4701,7 +4588,9 @@ CONTAINS
     logical :: bok
     real :: rlat1,rlat2,rlon1,rlon2,rlat,rlon,val
     if (isubset .le. nsubset) then
-       call observation_eval(css,bok,crc250,irc)
+       if (observation_eval(css,bok,crc250,irc)) then
+          ! valid obs-target in memory
+       end if
        IF(IRC.NE.0) THEN
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Error return from eval.");
@@ -5106,11 +4995,11 @@ CONTAINS
                & "' accepted='",css%currentFile%mok(7),"'/>"
        else
           do ii=1,10
-             call chop0(css%currentFile%hint25(ii),25)
-             css%currentFile%lenh(ii)=length(css%currentFile%hint25(ii),25,1)
+             call chop0(css%currentFile%hint80(ii),80)
+             css%currentFile%lenh(ii)=length(css%currentFile%hint80(ii),80,1)
           end do
           write(ounit,'(4X,A,4(I0,A))')"<messages found='",css%currentFile%mok(1),&
-               & "' accepted='",css%currentFile%mok(8),&
+               & "' accepted='",css%currentFile%mok(7),&
                & "' type='",css%category,"' subtype='",css%subcategory,"'>"
           if (css%currentFile%mrm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%mrm(2),&
@@ -5127,10 +5016,16 @@ CONTAINS
           if (css%currentFile%mrm(6).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%mrm(6),&
                & "' reason='DESCR out of range.'/>"
-          if (css%currentFile%mrm(7).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
-               & css%currentFile%mrm(7),&
-               & "' reason='DESCR mismatch.' hint='"//&
-               & css%currentFile%hint25(7)(1:css%currentFile%lenh(7))//"'/>"
+          if (css%currentFile%lenh(7).eq.0) then     
+             if (css%currentFile%mrm(7).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%mrm(7),&
+                  & "' reason='DESCR mismatch.'"
+          else
+             if (css%currentFile%mrm(7).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
+                  & css%currentFile%mrm(7),&
+                  & "' reason='DESCR mismatch.' hint='"//&
+                  & css%currentFile%hint80(7)(1:css%currentFile%lenh(7))//"'/>"
+          end if
           ! make list of the messages found
           currentCat=>css%currentFile%firstCategory%next
           do while (.not.associated(currentCat,target=css%currentFile%lastCategory)) 
@@ -5168,11 +5063,16 @@ CONTAINS
           write(ounit,'(4X,A,I0,A,I0,A)')"<obs found='",css%currentFile%ook(1),&
                & "' accepted='",css%currentFile%ook(5),"'/>"
        else
+          do ii=1,10
+             call chop0(css%currentFile%hint80(ii),80)
+             css%currentFile%lenh(ii)=length(css%currentFile%hint80(ii),80,1)
+          end do
           write(ounit,'(4X,A,I0,A,I0,A)')"<obs found='",css%currentFile%ook(1),&
                & "' accepted='",css%currentFile%ook(5),"'>"
           if (css%currentFile%orm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(2),&
-               & "' reason='evaluation error.'/>"
+               & "' reason='evaluation error.' hint='"//&
+               & css%currentFile%hint80(2)(1:css%currentFile%lenh(2))//"'/>"
           if (css%currentFile%orm(3).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(3),&
                & "' reason='outside index limits.'/>"

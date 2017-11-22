@@ -17,7 +17,7 @@
 #     CONFIGURE_REQUIRES => {  }
 #     DEFINE => q[]
 #     INC => q[-I. -Ilib]
-#     LIBS => [q[-Llib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff]]
+#     LIBS => [q[-Llib -lobs -lmodel -lcoloc -lplot -lparse -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff]]
 #     NAME => q[fark]
 #     PREREQ_PM => {  }
 #     TEST_REQUIRES => {  }
@@ -41,7 +41,7 @@ FULL_AR = /usr/bin/ar
 LD = x86_64-linux-gnu-gcc
 LDDLFLAGS = -shared -L/usr/local/lib -fstack-protector-strong
 LDFLAGS =  -fstack-protector-strong -L/usr/local/lib
-LIBC = libc-2.21.so
+LIBC = libc-2.23.so
 LIB_EXT = .a
 OBJ_EXT = .o
 OSNAME = linux
@@ -209,12 +209,13 @@ TO_INST_PM = check.pl \
 	lib/libobs.a \
 	lib/libparse.a \
 	lib/libplot.a \
+	lib/libsort.a \
 	lib/model.mod \
 	lib/observations.mod \
 	lib/parse.mod \
 	lib/plot.mod \
 	lib/read_xml_primitives.mod \
-	lib/xmlparse.a \
+	lib/sort.mod \
 	lib/xmlparse.mod \
 	t.pl
 
@@ -250,6 +251,8 @@ PM_TO_BLIB = check.pl \
 	blib/lib/libparse.a \
 	lib/libplot.a \
 	blib/lib/libplot.a \
+	lib/libsort.a \
+	blib/lib/libsort.a \
 	lib/model.mod \
 	blib/lib/model.mod \
 	lib/observations.mod \
@@ -260,8 +263,8 @@ PM_TO_BLIB = check.pl \
 	blib/lib/plot.mod \
 	lib/read_xml_primitives.mod \
 	blib/lib/read_xml_primitives.mod \
-	lib/xmlparse.a \
-	blib/lib/xmlparse.a \
+	lib/sort.mod \
+	blib/lib/sort.mod \
 	lib/xmlparse.mod \
 	blib/lib/xmlparse.mod \
 	t.pl \
@@ -365,8 +368,8 @@ MPOLLUTE =
 # fark might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
-EXTRALIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
-LDLOADLIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+EXTRALIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+LDLOADLIBS = -L/elysium/git/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
 BSLOADLIBS = 
 
 
@@ -1104,12 +1107,13 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  lib/libobs.a blib/lib/libobs.a \
 	  lib/libparse.a blib/lib/libparse.a \
 	  lib/libplot.a blib/lib/libplot.a \
+	  lib/libsort.a blib/lib/libsort.a \
 	  lib/model.mod blib/lib/model.mod \
 	  lib/observations.mod blib/lib/observations.mod \
 	  lib/parse.mod blib/lib/parse.mod \
 	  lib/plot.mod blib/lib/plot.mod \
 	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
-	  lib/xmlparse.a blib/lib/xmlparse.a \
+	  lib/sort.mod blib/lib/sort.mod \
 	  lib/xmlparse.mod blib/lib/xmlparse.mod \
 	  t.pl $(INST_LIB)/t.pl 
 	$(NOECHO) $(TOUCH) pm_to_blib

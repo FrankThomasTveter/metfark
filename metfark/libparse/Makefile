@@ -78,7 +78,8 @@ LIBS = ../libmodel/libmodel.a \
 # BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib -lfimex
 # BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib -lfimex
 #
- OPTIONS = -g -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -fdefault-real-8 -fPIC  -fmax-errors=10
+#  -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
 # BINOP = -L/usr/lib/ -lfimexf -lfimex -Wl,-rpath,/usr/lib/
  BINOP = -L/vol/fou/emep/People/heikok/fimexTrunk/lib/ -lfimexf -lfimex -Wl,-rpath,/vol/fou/emep/People/heikok/fimexTrunk/lib/
  ORDER = parse.F90

@@ -16,13 +16,13 @@ use File::Basename;
 use File::Compare;
 use File::Copy;
 #
-my $debug=1;       # debug this script...
 my $user=$ENV{USERNAME} // "www";
 my $pub="/metfark/pub";
 #
-#fark::debug(1);  # debug observations
-#fark::debug(2);  # debug models
-#fark::debug(3);  # debug colocation
+my $debug=1;       # debug this script (0=omit output)
+fark::debug(1);  # debug observations
+fark::debug(2);  # debug models
+fark::debug(3);  # debug colocation
 #fark::debug(4);  # debug plot
 #fark::debug(5);  # debug parse
 #
@@ -886,7 +886,7 @@ sub setColocConfig {
     # get config from model file
     $fark->clearModelTargetStack();
     $fark->clearObservationTargetStack();
-    if ($modelFile) {
+    if (length($modelFile//"")) {
 	my $modelCache=$modelCacheDir.$modelFile;
 	my $modelConfig = $modelDir.$modelFile;
 	my $parser = XML::LibXML->new();
@@ -898,7 +898,7 @@ sub setColocConfig {
 	}
     };
     # get config from obs file
-    if ($obsFile) { # initialise any observation processing
+    if (length($obsFile//"")) { # initialise any observation processing
 	my $obs=0;
 	#print "Calling clearObservationFileStack\n";
 	my $obsCache=$obsCacheDir.$obsFile;
@@ -915,7 +915,7 @@ sub setColocConfig {
     # get config from coloc file
     my $filter = $node->getAttribute("filter")//"";
     $fark->setColocFilter($filter);
-    if ($modelFile) {
+    if (length($modelFile//"")) {
 	my @oldNodes=$node->findnodes("modelTarget");
 	foreach my $oldnode (@oldNodes) {
 	    print "Setting model target ".$oldnode->getAttribute("name")."\n";
@@ -925,7 +925,7 @@ sub setColocConfig {
 				    ($oldnode->getAttribute("max")//""));
 	};
     };
-    if ($modelFile && ! $obsFile) {
+    if (length($modelFile//"") && ! length($obsFile//"")) {
 	my @oldDefault=$node->findnodes("modelDefault");
 	foreach my $default (@oldDefault) {
 	    my @oldDefs=$default->findnodes("def");
@@ -939,7 +939,7 @@ sub setColocConfig {
 	    }
 	};
     };
-    if ($obsFile) {
+    if (length($obsFile//"")) {
 	my @oldNodes=$node->findnodes("obsTarget");
 	foreach my $oldnode (@oldNodes) {
 	    print "Setting obs target ".$oldnode->getAttribute("name")."\n";
@@ -951,7 +951,7 @@ sub setColocConfig {
 					 ($oldnode->getAttribute("max")//""));
 	}
     };
-    if ($obsFile && $modelFile) {
+    if (length($obsFile//"") && length($modelFile//"")) {
 	my @oldNodes=$node->findnodes("matchRules");
 	foreach my $oldnode (@oldNodes) {
 	    print "Setting match rule '".
@@ -967,12 +967,22 @@ sub setColocConfig {
     my $modelStop = ($node->getAttribute("modelStop")//"");
     my $obsStart  = ($node->getAttribute("obsStart")//"");
     my $obsStop   = ($node->getAttribute("obsStop")//"");
-    if ($modelStart &&  $modelStop) {
+    my $obsFilter = ($node->getAttribute("obsFilter")//"");
+    my $colocFilter = ($node->getAttribute("colocFilter")//"");
+    if (length($modelStart//"") ||  length($modelStop//"")) {
 	if($debug){print "Setting model index limits '$modelStart' '$modelStop'\n";}
 	$fark->setModelIndexLimits($modelStart, $modelStop); # "target:value"
     };
-    if ($obsStart && $obsStop) {
+    if (length($obsStart//"") || length($obsStop//"")) {
 	if($debug){print "Setting obs index limits '$obsStart' '$obsStop'\n";}
 	$fark->setObservationIndexLimits($obsStart, $obsStop); # "target:value"
+    };
+    if (length($obsFilter//"")) {
+	if($debug){print "Setting obs filter '$obsFilter'\n";}
+	$fark->setObservationFilter($obsFilter); # "target:value"
+    };
+    if (length($colocFilter//"")) {
+	if($debug){print "Setting colocation filter '$colocFilter'\n";}
+	$fark->setColocationFilter($colocFilter); # "target:value"
     };
 }
