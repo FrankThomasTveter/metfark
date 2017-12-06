@@ -6,7 +6,7 @@ subroutine mod_cleartargetstack(sid, crc250, irc)
   integer :: irc
   character*25 :: myname = "clearTargetStack"
   type(mod_session), pointer :: css !  current session
-  if (model_bdeb) write(*,*), 'Entering.',irc,sid
+  !if (mod_bdeb) write(*,*), 'Entering.',irc,sid
   call model_getSession(css,sid,crc250,irc)
   if (irc.ne.0) then
      call model_errorappend(crc250,myname)

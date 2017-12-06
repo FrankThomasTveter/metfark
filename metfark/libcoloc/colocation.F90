@@ -24,7 +24,7 @@ module colocation
   type :: col_match
      character*80 :: n80     ! name
      character*250 :: e250   ! obs expression
-     integer :: ind=0        ! index to model target array position
+     integer :: itrg=0      ! index to model target array position
      character*80 :: l80     ! lower limit
      character*80 :: u80     ! upper limit
      type(col_match), pointer :: prev => null()   ! linked list
@@ -34,11 +34,10 @@ module colocation
   ! SESSION VARIABLES
   !
   type :: col_session
-     integer                         :: sid
-     character*250 :: obs250=""
-     character*250 :: mod250=""
-     character*250 :: filter250=""
-     character*250 :: xml250 ="" ! xml output file...
+     integer       :: sid            ! session id...
+     character*250 :: obs250=""      ! observation cache file
+     character*250 :: mod250=""      ! model cache file
+     character*250 :: xml250 =""     ! xml output file...
      integer :: lenx =0
      !
      ! imported model targets
@@ -59,16 +58,25 @@ module colocation
      type(col_match), pointer :: currentMatch => null() ! current match loop
      integer :: nmatch=0                                ! number of items in match-chain
      integer :: cMatch = 0                              ! number of allocated matches
-     character*80, pointer  ::  n80(:)                  ! name
-     integer, pointer  ::       lenn(:)                 ! length of name
-     character*250, pointer  :: e250(:)                 ! match expression
-     integer, pointer ::        lene(:)                 ! length of match expression
-     integer, pointer ::        ind(:)                  ! index to model target
-     character*80, pointer  ::  l80(:)                  ! lower limit
-     character*80, pointer  ::  u80(:)                  ! upper limit
-     type(parse_pointer), pointer  :: psp(:) => null()  ! parse-pointer
-     real, pointer  :: val(:)                           ! match value
+     character*80, pointer :: mat_n80(:)                ! name
+     integer, pointer      :: mat_lenn(:)               ! length of name
+     character*250, pointer:: mat_e250(:)               ! match expression
+     integer, pointer      :: mat_lene(:)               ! length of match expression
+     integer, pointer      :: mat_2trg(:)                ! index to model target
+     character*80, pointer :: mat_l80(:)                ! lower limit
+     character*80, pointer :: mat_u80(:)                ! upper limit
+     type(parse_pointer), pointer  :: mat_psp(:) => null()  ! match expression parser
+     real, pointer         :: mat_val(:)                ! match value
      integer :: cii                                     ! loop index
+     !
+     ! all variables used by filter...
+     integer ::               nall=0                    ! number of variables
+     integer ::               nmod=0                    ! number of model targets
+     integer ::               nobs=0                    ! number of obs targets
+     integer ::               nind=0                    ! number of index variables
+     character*80, pointer :: all_var(:)                ! all variables
+     character*80, pointer :: all_lenv(:)               ! length of variable
+     real, pointer         :: all_val(:)                ! all values
      !
      ! time information
      !  VALUES(1):	The year
@@ -298,6 +306,7 @@ CONTAINS
           call colocation_errorappend(crc250,"\n")
           return
        end if
+!       if(mod_bdeb)write(*,*) myname,'Model targets:',mss%trg80
        do ii=1,mss%ctrg
           css%trg80(ii)=mss%trg80(ii)
        end do
@@ -634,20 +643,20 @@ CONTAINS
     ! clean up
     if (css%cMatch .ne.  0) then
        do ii=1,css%cMatch
-          call parse_close(css%psp(ii)%ptr,crc250,irc)
+          call parse_close(css%mat_psp(ii)%ptr,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
              call colocation_errorappend(crc250,"Error return from 'parse_close'.")
              return
           end if
        end do
-       if(associated(css%n80)) deallocate(css%n80)
-       if(associated(css%lenn)) deallocate(css%lenn)
-       if(associated(css%e250)) deallocate(css%e250)
-       if(associated(css%lene)) deallocate(css%lene)
-       if(associated(css%ind)) deallocate(css%ind)
-       if(associated(css%l80)) deallocate(css%l80)
-       if(associated(css%u80)) deallocate(css%u80)
+       if(associated(css%mat_n80)) deallocate(css%mat_n80)
+       if(associated(css%mat_lenn)) deallocate(css%mat_lenn)
+       if(associated(css%mat_e250)) deallocate(css%mat_e250)
+       if(associated(css%mat_lene)) deallocate(css%mat_lene)
+       if(associated(css%mat_2trg)) deallocate(css%mat_2trg)
+       if(associated(css%mat_l80)) deallocate(css%mat_l80)
+       if(associated(css%mat_u80)) deallocate(css%mat_u80)
        css%cMatch = 0
     end if
     ! allocate match-list if we have target-list
@@ -667,22 +676,22 @@ CONTAINS
              ii=css%ctrg+1
           end if
           if (ii.le.css%ctrg) then
-             css%currentMatch%ind=ii
+             css%currentMatch%itrg=ii
              css%cMatch=css%cMatch+1
           else
-             css%currentMatch%ind=0
+             css%currentMatch%itrg=0
           end if
        end do
        if (col_bdeb) write(*,*)myname,'Allocating Match-lists: ',css%cMatch
-       allocate(css%n80(css%cMatch), &
-            & css%lenn(css%cMatch), &
-            & css%e250(css%cMatch), &
-            & css%lene(css%cMatch), &
-            & css%ind(css%cMatch), &
-            & css%l80(css%cMatch),  &
-            & css%u80(css%cMatch), &
-            & css%val(css%cMatch), &
-            & css%psp(css%cMatch), stat=irc)
+       allocate(css%mat_n80(css%cMatch), &
+            & css%mat_lenn(css%cMatch), &
+            & css%mat_e250(css%cMatch), &
+            & css%mat_lene(css%cMatch), &
+            & css%mat_2trg(css%cMatch), &
+            & css%mat_l80(css%cMatch),  &
+            & css%mat_u80(css%cMatch), &
+            & css%mat_val(css%cMatch), &
+            & css%mat_psp(css%cMatch), stat=irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
           call colocation_errorappend(crc250,"Unable to allocate 'session:Match'.")
@@ -690,31 +699,31 @@ CONTAINS
           return
        end if
        do ii=1,css%cMatch
-          css%lenn(ii)=0
-          css%lene(ii)=0
-          css%ind(ii)=0
-          css%val(ii)=0.0D0
+          css%mat_lenn(ii)=0
+          css%mat_lene(ii)=0
+          css%mat_2trg(ii)=0
+          css%mat_val(ii)=0.0D0
        end do
        ! loop over matches and find corresponding targets...
        css%cMatch=0
        do while (colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc))
-          ii=css%currentMatch%ind
+          ii=css%currentMatch%itrg
           if (ii.ne.0) then
              css%cMatch=css%cMatch+1
              lenn=length(n80,80,10)
              lene=length(e250,250,10)
-             css%n80(css%cMatch)=n80
-             css%lenn(css%cMatch)=lenn
-             css%e250(css%cMatch)=e250
-             css%lene(css%cMatch)=lene
-             css%ind(css%cMatch)=css%currentMatch%ind
+             css%mat_n80(css%cMatch)=n80
+             css%mat_lenn(css%cMatch)=lenn
+             css%mat_e250(css%cMatch)=e250
+             css%mat_lene(css%cMatch)=lene
+             css%mat_2trg(css%cMatch)=css%currentMatch%itrg
              if(col_bdeb)write(*,*)myname,"Match: '"//&
-                  & css%n80(css%cMatch)(1:css%lenn(css%cMatch))//"' -> '"//&
-                  & css%e250(css%cMatch)(1:css%lene(css%cMatch))//"'",ii
-             css%l80(css%cMatch)=l80
-             css%u80(css%cMatch)=u80
-             css%val(css%cMatch)=0.0D0
-             call parse_open(css%psp(css%cMatch)%ptr,crc250,irc)
+                  & css%mat_n80(css%cMatch)(1:css%mat_lenn(css%cMatch))//"' -> '"//&
+                  & css%mat_e250(css%cMatch)(1:css%mat_lene(css%cMatch))//"'",ii
+             css%mat_l80(css%cMatch)=l80
+             css%mat_u80(css%cMatch)=u80
+             css%mat_val(css%cMatch)=0.0D0
+             call parse_open(css%mat_psp(css%cMatch)%ptr,crc250,irc)
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,myname)
                 call colocation_errorappend(crc250,"Error return from 'parse_open'.")
@@ -738,7 +747,7 @@ CONTAINS
        return
     end if
     ! tell model which targetvalues are set by the match rules.... 
-    call  model_setTarget(mss,css%cmatch,css%ind,crc250,irc)
+    call  model_setTarget(mss,css%cmatch,css%mat_2trg,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_setTarget")
        return
@@ -837,10 +846,10 @@ CONTAINS
        css%cii = 0
        colocation_loopmatchlist=.false.
     else
-       n80=css%n80(css%cii)
-       e250=css%e250(css%cii)
-       l80=css%l80(css%cii)
-       u80=css%u80(css%cii)
+       n80=css%mat_n80(css%cii)
+       e250=css%mat_e250(css%cii)
+       l80=css%mat_l80(css%cii)
+       u80=css%mat_u80(css%cii)
        colocation_loopmatchlist=.true.
     end if
     if (col_bdeb) write(*,*)myname,'Exiting.',irc
@@ -899,12 +908,12 @@ CONTAINS
              do jj=1,size(var80)
                 write(*,'(X,A,A,I0,A)') myname,"      var(",jj,")='"//trim(var80(jj))//"'"
              end do
-             write(*,*)myname,"'Calling parsef: '"//css%e250(ii)(1:css%lene(ii))//"'"
+             write(*,*)myname,"'Calling parsef: '"//css%mat_e250(ii)(1:css%mat_lene(ii))//"'"
           end if
-          call parse_parsef(css%psp(ii)%ptr,css%e250(ii)(1:css%lene(ii)),var80,crc250,irc)
+          call parse_parsef(css%mat_psp(ii)%ptr,css%mat_e250(ii)(1:css%mat_lene(ii)),var80,crc250,irc)
           if (irc.ne.0) then
              if(col_bdeb)then
-                write(*,*)myname,"Unable to parse:'"//css%e250(ii)(1:css%lene(ii))//"'",ii
+                write(*,*)myname,"Unable to parse:'"//css%mat_e250(ii)(1:css%mat_lene(ii))//"'",ii
 !                write(*,*)myname,'nvar:',size(var80)
 !                do jj=1,size(var80)
 !                   write(*,*) myname,'var:',jj,trim(var80(jj))
@@ -943,7 +952,7 @@ CONTAINS
     type(col_match), pointer :: match
     if (css%cmatch.ne.0) then
        do ii=1,css%cmatch
-          css%val(ii)=parse_evalf(css%psp(ii)%ptr,val)
+          css%mat_val(ii)=parse_evalf(css%mat_psp(ii)%ptr,val)
        end do
     else
        irc=341
@@ -966,21 +975,21 @@ CONTAINS
     integer :: ii                     ! match number
     type(col_match), pointer :: match
     do ii=1,css%cmatch
-       call parse_close(css%psp(ii)%ptr,crc250,irc)
+       call parse_close(css%mat_psp(ii)%ptr,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"parse_close")
           return
        end if
     end do
     if (col_bdeb) write(*,*)myname,'De-allocating Match-list. ',css%cMatch
-    if (associated(css%psp)) deallocate(css%psp)
-    if(associated(css%n80)) deallocate(css%n80)
-    if(associated(css%lenn)) deallocate(css%lenn)
-    if(associated(css%e250)) deallocate(css%e250)
-    if(associated(css%lene)) deallocate(css%lene)
-    if(associated(css%ind)) deallocate(css%ind)
-    if(associated(css%l80)) deallocate(css%l80)
-    if(associated(css%u80)) deallocate(css%u80)
+    if (associated(css%mat_psp)) deallocate(css%mat_psp)
+    if(associated(css%mat_n80))  deallocate(css%mat_n80)
+    if(associated(css%mat_lenn)) deallocate(css%mat_lenn)
+    if(associated(css%mat_e250)) deallocate(css%mat_e250)
+    if(associated(css%mat_lene)) deallocate(css%mat_lene)
+    if(associated(css%mat_2trg))  deallocate(css%mat_2trg)
+    if(associated(css%mat_l80))  deallocate(css%mat_l80)
+    if(associated(css%mat_u80))  deallocate(css%mat_u80)
     css%cMatch = 0
     return
   end subroutine colocation_removeMatchList
@@ -1061,41 +1070,6 @@ CONTAINS
   ! FILTER/EXPRESSION ROUTINES
   !###############################################################################
   !
-  !
-  subroutine colocation_setfilter(css,filter250,crc250,irc)
-    implicit none
-    type(col_session), pointer :: css !  current session
-    character*250 :: filter250
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname ="setfilter"
-    INTEGER                         :: nvar = 0
-    !
-    if(col_bdeb)write(*,*)myname,'Entering.',irc
-    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
-       css%filter250=filter250
-    end if
-    if(col_bdeb)write(*,*)myname,'Exiting.',irc
-    !
-  end subroutine colocation_setfilter
-  !
-  subroutine colocation_getfilter(css,filter250,crc250,irc)
-    implicit none
-    type(col_session), pointer :: css !  current session
-    character*250 :: filter250
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname ="getfilter"
-    INTEGER                         :: nvar = 0
-    !
-    if(col_bdeb)write(*,*)myname,'Entering.',irc
-    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
-       filter250=css%filter250
-    end if
-    if(col_bdeb)write(*,*)myname,'Exiting.',irc
-    !
-  end subroutine colocation_getfilter
-  !
   subroutine colocation_expression(exp250,crc250,irc)
     use parse
     character*250 :: exp250
@@ -1141,7 +1115,8 @@ CONTAINS
   !###############################################################################
   ! colocate data and write to table file
   !
-  subroutine colocation_makeTable(css,mss,oss,ounit,nam250,x250,y250,leg250,test,crc250,irc)
+  subroutine colocation_makeTable(css,mss,oss,ounit,name80,&
+       & ncol,col80,exp250,leg250,test,crc250,irc)
     use model
     use observations
     use parse
@@ -1150,7 +1125,11 @@ CONTAINS
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
     integer :: ounit ! output unit
-    character*250 :: nam250,x250,y250,leg250
+    character*80 :: name80
+    integer :: ncol
+    character*80, allocatable :: col80(:)
+    character*250, allocatable :: exp250(:)
+    character*250 :: leg250
     integer :: test
     character*250 :: crc250
     integer :: irc
@@ -1336,7 +1315,7 @@ CONTAINS
     real :: mod_maxval = 0.0D0
     real :: obs_minval = 0.0D0
     real :: obs_maxval = 0.0D0
-    logical :: mod_lval(2),obs_lval(2),bok,first,lok
+    logical :: mod_lval(2),obs_lval(2),bok,bbok,first,lok
     !
     irc=0
     bok=.true.
@@ -1426,7 +1405,7 @@ CONTAINS
        end if
     end if
     ! set slice model variables
-    call model_sliceIndex(mss,css%cmatch,css%ind,crc250,irc)
+    call model_sliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_sliceIndex")
        return
@@ -1453,10 +1432,29 @@ CONTAINS
     mod_lval(1)=.false. ! are model limits available?
     mod_lval(2)=.false. ! are model limits available?
     ! set observation transformation...
-    call observation_setTransformation(oss,css%psp(1)%ptr,crc250,irc) ! css%cmatch
+    ! ...the first match expression is always the index-transformation...
+    call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
        call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
+       return
+    end if
+    ! set observation target names
+    call  model_setObsVar(mss,oss%ntrg,oss%trg80,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"model_setObsVal")
+       return
+    end if
+    ! compile model filter (called after model_setFilter and model_setObsVar)
+    call model_compileFilter(mss,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"model_compileFilter")
+       return
+    end if
+    ! compile obs filter
+    call observation_compileFilter(oss,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"obs_compileFilter")
        return
     end if
     ! convert obs-limits to mod-limits
@@ -1493,20 +1491,20 @@ CONTAINS
     ! open file
     ounit=ftunit(irc)
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," no free unit number for:"//xml250(1:lenx))
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," no free unit number for:"//xml250(1:lenx))
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
        return
     end if
     open ( unit=ounit, status="unknown", form="formatted", &
          &        access="sequential", &
          &        iostat=irc, file=xml250(1:lenx) )
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to open:"//xml250(1:lenx))
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," unable to open:"//xml250(1:lenx))
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
        return
     end if
     ! overwrite xml-file...
@@ -1565,6 +1563,14 @@ CONTAINS
           call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
           return
        end if
+       ! calculate observation target limits...
+       call observation_setTargetLimits(oss,mss%currentfile%dim_var,&
+            & mss%currentfile%dim_val,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+          return
+       end if
        !
        if(col_bdeb)write(*,*)myname,'Entering obs file loop.'
        ! loop over model data, using model/obs start/end limits
@@ -1613,16 +1619,7 @@ CONTAINS
              LOCATION : do
                 if(col_bdeb)write(*,*)myname,'Slice observation file.'
                 ! read next observation into static BUFR memory and set oss%trg_val
-
-                
-                !XXXXXXXXXXXXXXXXXXXX make sure obs-target order is never changed internally... (in client)
-                !XXXXXXXXXXXXXXXXXXXX pass "obsfilter" to sliceCurrentFile...
-                !XXXXXXXXXXXXXXXXXXXX ...functions: "member(trg,1,2,3...)" "closest(trg,value,min,max)" etc.
-
-                call observation_sliceCurrentFile(oss,bok,crc250,irc) !XXXXXXXXXXxx start loop over location-sets (delayedReplicator)
-
-
-
+                call observation_sliceCurrentFile(oss,bok,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"observation_sliceCurrentFile")
                    return
@@ -1641,30 +1638,31 @@ CONTAINS
                    return
                 end if
                 !
-                ! make target values
+                ! set observation variables...
                 !write(*,*)myname,'Set model targets.'
-                call  model_setTargetVal(mss,css%cMatch,css%ind,css%val,crc250,irc)
+                call  model_setObsVal(mss,oss%ntrg,oss%trg_val,crc250,irc)
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,"model_setObsVal")
+                   return
+                end if
+
+                ! set match variables...
+                !write(*,*)myname,'Set model targets.'
+                call  model_setTargetVal(mss,css%cMatch,css%mat_2trg,css%mat_val,&
+                     & crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setTargetVal")
                    return
                 end if
 
-                ! check target values
                 lok=.true.
-                call  model_checkTargetVal(mss,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_checkTargetVal")
-                   return
-                end if
-                !
                 ! make new location from observation
                 if(col_bdeb)write(*,*)myname,'Push location.',locid
-                call model_locpushtarget(mss,locid,lok,crc250,irc)
+                call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
                    return
                 end if
-                !XXXXXXXXXXXXXXXXX end loop over location-sets (delayedReplicator)
              end do LOCATION
           else if (tmod.ne.0) then ! use model default values
 
@@ -1704,7 +1702,7 @@ CONTAINS
                 end if
                 !
                 if(col_bdeb)write(*,*)myname,'Creating location:',locid
-                call model_locpushtarget(mss,locid,lok,crc250,irc) !XXXXXXXXXXx use match-variables
+                call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
                    return
@@ -1712,6 +1710,7 @@ CONTAINS
                 css%currentDef=>css%currentDef%next
              end do
           end if
+          !
           if (tmod.ne.0) then
              ! finally slice the model file and write model XML to stdout
              call model_slicecurrentfileXML(mss,ounit,bok,crc250,irc)
@@ -1727,8 +1726,8 @@ CONTAINS
              first=.true.
              locid=locstart
              OBSERVATION : do
-                ! read next observation into static BUFR memory
-                call observation_sliceCurrentFile(oss,bok,crc250,irc) !XXXXXXXXXXXXXXXXXX location-set loop
+                ! read next observation into static memory, return next obs
+                call observation_sliceCurrentFile(oss,bok,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"observation_sliceCurrentFile")
                    return
@@ -1739,42 +1738,25 @@ CONTAINS
                 end if
                 !
                 locid=locid+1
-                bok=.true.
+                bbok=.true.
                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_locSearchOk(mss,locid,bok)        
-                   if (bok) then
-                      oss%currentFile%ook(5)=oss%currentFile%ook(5)+1
-                   else
-                      oss%currentFile%orm(5)=oss%currentFile%orm(5)+1
-                   end if
-                else
-                   oss%currentFile%ook(5)=oss%currentFile%ook(5)+1
+                   call model_locSearchOk(mss,locid,bbok)        
                 end if
-                if (model_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
+                if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
-                if (bok) then
-                   if (first) then
-                      call observation_obsstartxml(oss,ounit,crc250,irc)
-                      if (irc.ne.0) then
-                         call colocation_errorappend(crc250,"observation_obsStartxml")
-                         return
-                      end if
-                      first=.false.
-                   end if
+                if (bbok) then
                    call observation_writeXML(oss,ounit,locid,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"observation_writeXML")
+                      return
+                   end if
+                   call model_writeXML(mss,ounit,locid,crc250,irc)
                    if (irc.ne.0) then
                       call colocation_errorappend(crc250,"observation_writeXML")
                       return
                    end if
                 end if
              end do OBSERVATION
-             if (.not.first) then
-                call observation_obsstopXml(oss,ounit,crc250,irc)
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"observation_obsstopxml")
-                   return
-                end if
-             end if
           end if
           ! end obs data loop
           if (tobs.ne.0) then
@@ -1790,11 +1772,6 @@ CONTAINS
 
        ! end model loop
        if (tmod.ne.0)  then
-          call model_writeModelDataXML(mss,ounit,crc250,irc)
-          if (irc.ne.0) then
-             call colocation_errorappend(crc250,"model_writeModelDataXML")
-             return
-          end if
           ! write file stop xml-tag
           call model_filestopxml(mss,ounit,crc250,irc)
           if (irc.ne.0) then
@@ -1820,6 +1797,11 @@ CONTAINS
     !
     ! close xml output file unit, ounit
     !
+    call model_writeModelDataXML(mss,ounit,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"model_writeModelDataXML")
+       return
+    end if
     write(ounit,'(A,I0,A,I0,A)',iostat=irc2) " <file_overlap mod='",mod_cnt,"' obs='",obs_cnt,"'/>"
     write(ounit,'("</colocation>")',iostat=irc2)
     close (unit=ounit,iostat=irc)

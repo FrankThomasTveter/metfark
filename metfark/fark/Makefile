@@ -647,8 +647,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(OBJECT) $(FIRST_MAKEFILE) \
-	  $(MAKEFILE_OLD) 
+	  $(MAKEFILE_OLD) $(OBJECT) \
+	  $(FIRST_MAKEFILE) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 

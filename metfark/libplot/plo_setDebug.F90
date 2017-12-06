@@ -9,7 +9,7 @@ subroutine plo_setdebug(ideb)
   logical :: bdeb
   if (ideb.eq.0) then
      obs_bdeb=.false.   ! observations
-     model_bdeb=.false. ! model
+     mod_bdeb=.false. ! model
      col_bdeb=.false.   ! colocation
      plot_bdeb=.false.  ! plot
      parse_bdeb=.false. ! parse
@@ -21,9 +21,9 @@ subroutine plo_setdebug(ideb)
      end if
   else if (abs(ideb).eq.2) then ! model
      if (ideb.gt.0) then
-        model_bdeb=.true.
+        mod_bdeb=.true.
      else
-        model_bdeb=.false.
+        mod_bdeb=.false.
      end if
   else if (abs(ideb).eq.3) then ! col
      if (ideb.gt.0) then

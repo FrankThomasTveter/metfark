@@ -71,7 +71,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2017-10-30" "perl v5.22.1" "User Contributed Perl Documentation"
+.TH fark 3pm "2017-12-05" "perl v5.22.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -575,19 +575,33 @@ makeMatchList \- make match list from match stack
 .Vb 1
 \& $fark\->makeMatchList();
 .Ve
-.SS "setColocFilter"
-.IX Subsection "setColocFilter"
-setColocFilter \- add a colocation filter.
+.SS "setModelFilter"
+.IX Subsection "setModelFilter"
+setModelFilter \- add a model filter.
 .PP
 Arguments:
-.IP "(string) colocation filter." 4
-.IX Item "(string) colocation filter."
+.IP "(string) model filter (can contain observation targets)." 4
+.IX Item "(string) model filter (can contain observation targets)."
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
 .Vb 1
-\& $fark\->setColocFilter("member(obs_id,1047,1049)");
+\& $fark\->setModelFilter("member(obs_id,1047,1049)");
+.Ve
+.SS "setObservationFilter"
+.IX Subsection "setObservationFilter"
+setObservationFilter \- sets the type of \s-1BUFR\s0 files that should be processed
+.PP
+Arguments:
+.IP "(string) observation filter" 4
+.IX Item "(string) observation filter"
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\& $fark\->setObservationFilter("member(obs_id,1,2,3)");
 .Ve
 .SS "makeColocXML"
 .IX Subsection "makeColocXML"
@@ -673,6 +687,34 @@ clearPlotSetStack \- clears the datasets in the plot set stack.
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->\fIclearPlotSetStack()\fR;
+.SS "clearPlotColumn"
+.IX Subsection "clearPlotColumn"
+clearPlotColumn \- clears all output columns from the set.
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\&   $fark\->clearPlotColumn();
+.Ve
+.SS "pushPlotColumn"
+.IX Subsection "pushPlotColumn"
+pushPlotColumn \- adds a column expression to the set.
+.PP
+Arguments:xs
+.IP "(string) column name" 4
+.IX Item "(string) column name"
+.PD 0
+.IP "(string) column value expression" 4
+.IX Item "(string) column value expression"
+.PD
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+.Vb 1
+\&   $fark\->pushPlotColumn("X\-value","temperature_2m");
+.Ve
 .SS "pushPlotSet"
 .IX Subsection "pushPlotSet"
 pushPlotSet \- adds a data set to the plot set stack.
@@ -689,10 +731,6 @@ Arguments:xs
 .IX Item "(string) observation session id"
 .IP "(string) name of set" 4
 .IX Item "(string) name of set"
-.IP "(string) x\-variable expression" 4
-.IX Item "(string) x-variable expression"
-.IP "(string) y\-variable expression" 4
-.IX Item "(string) y-variable expression"
 .IP "(string) legend" 4
 .IX Item "(string) legend"
 .PD
@@ -818,6 +856,6 @@ Frank Thomas Tveter, <f.t.tveter@met.no>
 .SH "POD ERRORS"
 .IX Header "POD ERRORS"
 Hey! \fBThe above document had some coding errors, which are explained below:\fR
-.IP "Around line 1205:" 4
-.IX Item "Around line 1205:"
+.IP "Around line 1228:" 4
+.IX Item "Around line 1228:"
 =back doesn't take any parameters, but you said =back  =head4 \s-1EXAMPLE\s0

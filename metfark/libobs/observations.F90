@@ -39,8 +39,7 @@ module observations
   integer,parameter :: KVALS  = 4096000
   !
   integer :: nsubset=0           ! number of subsets in file
-  integer :: isubset=1           ! current subset
-  logical :: nopos=.true.
+  integer :: isubset=0           ! current subset
   integer :: nitem = 0           ! number of items in a subset
   integer :: irep=0
   integer :: NBYTPW
@@ -67,6 +66,7 @@ module observations
   integer :: nvind=2147483647
   integer*8 :: unit
   logical :: fopen=.false. ! is file open
+  logical :: bread=.false.
   !
   ! category used for counting observations categories in file
   !
@@ -90,6 +90,19 @@ module observations
      type(obs_mainCategory), pointer :: prev
      type(obs_mainCategory), pointer :: next
   end type obs_mainCategory
+  !
+  !
+  type :: obs_message
+     integer :: nobs=0 ! number of observations
+     integer :: vobs=0 ! number of valid observations
+     integer :: iobs=0  ! current observation
+     logical :: check=.false. ! has message check been performed yet...
+     !
+     integer :: ctrg = 0 ! number of allocated targets
+     integer :: cobs = 0 ! number of allocated observations
+     real, allocatable :: trg_val(:,:)   ! target values
+     logical, allocatable :: trg_set(:)  ! did observation pass message check?
+  end type obs_message
   !
   ! BUFR FILE STACK
   !
@@ -135,6 +148,10 @@ module observations
      type(obs_target), pointer :: prev => null()   ! linked list
      type(obs_target), pointer :: next => null()   ! linked list
   end type obs_target
+  !
+  type :: obs_targetPointer
+     type(obs_target), pointer :: ptr => null()
+  end type obs_targetPointer
   !
   ! Location item
   !   
@@ -213,7 +230,7 @@ module observations
      logical                         :: ind_eset = .false.    ! is index value set
      type(parse_session), pointer    :: ind_pe => null()      ! index expression
      logical                         :: ind_tset = .false.
-     type(parse_session), pointer    :: ind_pt => null()     ! index transformation
+     type(parse_session), pointer    :: ind_pt => null()      ! index transformation
      !
      ! TARGET
      !
@@ -242,16 +259,35 @@ module observations
      integer, allocatable            :: trg_orm(:)
      CHARACTER (LEN=80), allocatable :: trg_var(:)      ! target variable names
      integer, allocatable            :: trg_lenv(:)      ! target variable name length
-     REAL(rn),           allocatable :: trg_val(:)      ! target variable values
+!     REAL(rn),           allocatable :: trg_val(:)      ! target variable values
+     REAL,allocatable                :: trg_val(:)      ! target variable values
+     type(obs_targetPointer), pointer:: trg_ptr(:)=> null()
      logical                         :: trg_set=.false. ! is target list set?
      !
-     ! internal position/sequence variables
+     ! index to duplication targets (targets that cause observation duplication)
+     !
+     integer :: ndup=0                    ! number of duplication targets
+     integer, allocatable :: dup_ind(:)   ! duplication index
+     integer, allocatable :: dup_inc(:)   ! duplication index
+     !
+     ! dynamic position/sequence variables
+     integer                         :: ndyn = 0        ! number of dynamic variables
+     CHARACTER (LEN=80), allocatable :: dyn_var(:)      ! dynamic variable name
+     integer,            allocatable :: dyn_lenv(:)     ! dynamic variable name length
+     !     REAL(rn),           allocatable :: dyn_val(:)      ! dynamic variable values
+     REAL,               allocatable :: dyn_val(:)      ! dynamic variable values
+     integer                         :: dyn_pos=0       ! dynamic search position
+     integer                         :: dyn_max=0       ! dynamic max count
+     integer                         :: dyn_cnt=0       ! dynamic count position
+     logical                         :: dyn_set=.false. ! is dynamic list set?
+     logical                         :: dyn_bok=.false. ! is duplicate observation valid
+     !
+     ! internal variables...
      integer                         :: nint = 0        ! number of internal variables
      CHARACTER (LEN=80), allocatable :: int_var(:)      ! internal variable name
      integer,            allocatable :: int_lenv(:)     ! internal variable name length
-     REAL(rn),           allocatable :: int_val(:)      ! internal variable values
-     integer :: int_pos=0                               ! internal search position
-     logical                         :: int_set=.false. ! is internal list set?
+     !     REAL(rn),           allocatable :: int_val(:)      ! internal variable values
+     REAL,               allocatable :: int_val(:)      ! internal variable values
      !
      ! locations
      type(obs_location), pointer :: firstLoc => null()   ! linked list start
@@ -260,6 +296,10 @@ module observations
      integer :: locoffset = 0                            ! offset between locid and position in locdata
      type(obs_locPointer), allocatable :: locData(:)     !  data locations
      logical :: locReady = .false.
+     !
+     character*80, allocatable :: var(:)
+     real, allocatable :: val(:)
+     integer,dimension(8) :: values
      !
      ! report label flags
      !
@@ -271,6 +311,12 @@ module observations
      logical :: ignsec=.false.
      logical :: ignarr=.false.
      !
+     type(parse_session), pointer :: psf => null()
+     logical ::  flt_set=.false.
+     character*250 :: flt250
+     integer :: lenf=0
+     type(obs_message), pointer :: msg => null()
+     !
      ! REPORTS
      !
      type(obs_report), pointer :: firstReport => null()    ! linked list start
@@ -279,6 +325,12 @@ module observations
      type(obs_report), pointer :: nextReport => null()  ! current pointer
      integer :: nsubset=0               ! number of reports
      logical :: reportsReady=.false.    ! are reported data ready for use
+     !
+     ! output identification...
+     integer :: fid = 0 ! file id (index number)
+     integer :: mid = 0 ! message id in file
+     integer :: oid = 0 ! observation id in file
+     integer :: lid = 0 ! location id in file
      !
      type(obs_session), pointer :: prev => null()         ! linked list
      type(obs_session), pointer :: next => null()         ! linked list
@@ -342,6 +394,22 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    !
+    call date_and_time(VALUES=css%values) ! get current date
+    if (allocated(css%var)) deallocate (css%var)
+    if (allocated(css%val)) deallocate (css%val)
+    allocate(css%var(2),css%val(2),stat=irc)
+    css%var(1)="now"
+    css%var(2)="midnight"
+    css%val(1)=parse_f1970(&
+         & real(css%values(1)),real(css%values(2)),&
+         & real(css%values(3)),real(css%values(5)),&
+         & real(css%values(6)),real(css%values(7)))
+    css%val(2)=parse_f1970(&
+         & real(css%values(1)),real(css%values(2)),&
+         & real(css%values(3)),0.0D0,&
+         & 0.0D0,0.0D0) ! midnight
+    !
     maxid=maxid+1
     css%sid=maxid
     css%prev => lastSession%prev
@@ -360,6 +428,29 @@ CONTAINS
     end if
     css%firstFile%next => css%lastFile
     css%lastFile%prev => css%firstFile
+    ! internal variables
+    css%nint=4
+    if (allocated(css%int_var)) deallocate(css%int_var)
+    if (allocated(css%int_lenv)) deallocate(css%int_lenv)
+    if (allocated(css%int_val)) deallocate(css%int_val)
+    allocate(css%int_var(css%nint),css%int_lenv(css%nint),&
+         & css%int_val(css%nint),stat=irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Unable to allocate internal variables.")
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    css%int_var(1)="fid" ! observation file id
+    css%int_var(2)="mid" ! message id 
+    css%int_var(3)="oid" ! obs id
+    css%int_var(4)="lid" ! location id
+    !
+    css%int_val(1)=0 ! observation file id
+    css%int_val(2)=0 ! message id
+    css%int_val(3)=0 ! obs id
+    css%int_val(4)=1 ! location id
     ! reports
     allocate(css%firstReport,css%lastReport,stat=irc)
     if (irc.ne.0) then
@@ -380,6 +471,8 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    !
+    allocate(css%msg)
     !
     !write(*,*)myname,' Done.'
     return
@@ -426,6 +519,11 @@ CONTAINS
     character*22 :: myname = "observation_closeSession"
     if(obs_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       !
+       if (allocated(css%var)) deallocate (css%var)
+       if (allocated(css%val)) deallocate (css%val)
+       if (allocated(css%dup_ind)) deallocate(css%dup_ind)
+       if (allocated(css%dup_inc)) deallocate(css%dup_inc)
        ! remove reportdata
        call observation_clearReports(css,crc250,irc)
        if (irc.ne.0) then
@@ -471,6 +569,25 @@ CONTAINS
           call observation_errorappendi(crc250,irc)
           call observation_errorappend(crc250,"\n")
           return
+       end if
+       ! internal variables
+       css%nint=0
+       if (allocated(css%int_var)) deallocate(css%int_var)
+       if (allocated(css%int_lenv)) deallocate(css%int_lenv)
+       if (allocated(css%int_val)) deallocate(css%int_val)
+       ! remove any message data...
+       if (associated(css%msg)) then
+          if(allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
+          deallocate(css%msg)
+       end if
+       ! deallocate observation filter...
+       if (css%lenf.ne.0) then
+          call parse_close(css%psf,crc250,irc)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250,"Error return from 'parse_open'.")
+             return
+          end if
        end if
        ! 
        css%prev%next => css%next
@@ -540,7 +657,7 @@ CONTAINS
     ! loop over file stack
     currentFile=>css%firstFile%next
     do while (.not.associated(currentFile,target=css%lastFile))
-          write(unitr,'(L1,2(X,F27.10),4(X,I0),X,A)',iostat=irc) &
+          write(unitr,'(L1,2(X,F0.10),4(X,I0),X,A)',iostat=irc) &
                & currentFile%ind_lim,&
                & currentFile%ind_start,currentFile%ind_stop,&
                & currentFile%nmessage,currentFile%ncat,currentFile%nsub,&
@@ -1242,9 +1359,9 @@ CONTAINS
        css%firsttarget%next => css%lasttarget
        css%lasttarget%prev => css%firsttarget
        css%ntarget=0
-       css%nint=0
+       css%ndyn=0
        css%trg_set=.false.
-       css%int_set=.false.
+       css%dyn_set=.false.
     end if
   end subroutine observation_targetinit
   !
@@ -1307,7 +1424,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if (len(pos).eq.0) then
+    if (len(pos).eq.0.and.len(descr).eq.0.and.(len(min).eq.0.or.len(max).eq.0)) then
        irc=984
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," Invalid target position:")
@@ -1330,7 +1447,7 @@ CONTAINS
     newTarget%info250=info
     newTarget%min80=min
     newTarget%max80=max
-    newTarget%type=parse_type(pos,crc250,irc) ! get position type...
+    newTarget%type=parse_type(pos,css%int_var,crc250,irc) ! get position type...
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," Error return from parse_type.")
@@ -1345,10 +1462,10 @@ CONTAINS
     newTarget%prev%next => newTarget
     newTarget%next%prev => newTarget
     css%trg_set=.false.
-    css%int_set=.false.
+    css%dyn_set=.false.
     if (newTarget%type.eq.parse_variable) then
-       css%nint=css%nint+1
-       newTarget%ind=css%nint
+       css%ndyn=css%ndyn+1
+       newTarget%ind=css%ndyn
     else
        newTarget%ind=0
     end if
@@ -1510,7 +1627,7 @@ CONTAINS
     integer :: irc
     character*22 :: myname = "observation_makeTargetList "
     type(obs_target), pointer :: currenttarget => null()
-    integer :: lent,lenp,lend,lens,lene,ii
+    integer :: lent,lenp,lend,ii
     integer, external :: length
     if(obs_bdeb)write(*,*)myname,' Entering.',irc,css%ntarget,css%trg_set,css%ind_eset
     if ( .not. css%trg_set ) then
@@ -1540,15 +1657,16 @@ CONTAINS
        if (allocated(css%trg_var)) deallocate(css%trg_var)
        if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
        if (allocated(css%trg_val)) deallocate(css%trg_val)
+       if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
        allocate(css%trg80(css%ntrg),css%trg_lent(css%ntrg),&
             & css%trg_pos250(css%ntrg),css%trg_lenp(css%ntrg),&
             & css%trg_type(css%ntrg),css%trg_seq(css%ntrg), &
             & css%trg_ind(css%ntrg),css%trg_psp(css%ntrg), &
-            & css%trg_descr(css%ntrg),css%trg_lval(3,css%ntrg),&
+            & css%trg_descr(css%ntrg),css%trg_lval(2,css%ntrg),&
             & css%trg_minval(css%ntrg),css%trg_maxval(css%ntrg),&
             & css%trg_ook(css%ntrg),css%trg_orm(css%ntrg),&
             & css%trg_var(css%ntrg),css%trg_lenv(css%ntrg),&
-            & css%trg_val(css%ntrg),stat=irc)
+            & css%trg_val(css%ntrg),css%trg_ptr(css%ntrg),stat=irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Unable to allocate 'targetList'.")
@@ -1556,51 +1674,54 @@ CONTAINS
           return
        end if
        !
-       ! set internal variable arrays...
+       ! set dynamic variable arrays...
        !
-       if (allocated(css%int_var)) deallocate(css%int_var)
-       if (allocated(css%int_lenv)) deallocate(css%int_lenv)
-       if (allocated(css%int_val)) deallocate(css%int_val)
-       allocate(css%int_var(css%nint),css%int_lenv(css%nint),css%int_val(css%nint),stat=irc)
+       if (allocated(css%dyn_var)) deallocate(css%dyn_var)
+       if (allocated(css%dyn_lenv)) deallocate(css%dyn_lenv)
+       if (allocated(css%dyn_val)) deallocate(css%dyn_val)
+       allocate(css%dyn_var(css%ndyn),css%dyn_lenv(css%ndyn),css%dyn_val(css%ndyn),stat=irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Unable to allocate 'intlist'.")
           call observation_errorappend(crc250,"\n")
           return
        end if
-       css%int_pos=0 ! floating position
+       css%dyn_pos=0 ! floating position
+       css%dyn_cnt=0 ! floating position
        !
        ii=0 ! target
        currenttarget => css%firsttarget%next
        do while (.not.associated(currenttarget,target=css%lasttarget))
           ii=ii+1
+          css%trg_ptr(ii)%ptr=>currenttarget
           call chop0(currenttarget%trg80,80)
           call chop0(currenttarget%pos250,250)
           call chop0(currenttarget%descr80,80)
           call chop0(currenttarget%info250,250)
-          call chop0(currenttarget%min80,80)
-          call chop0(currenttarget%max80,80)
           lent=length(currenttarget%trg80,80,10)
           lenp=length(currenttarget%pos250,250,10)
           lend=length(currenttarget%descr80,80,10)
-          lens=length(currenttarget%min80,80,10)
-          lene=length(currenttarget%max80,80,10)
           css%trg80(ii)=currenttarget%trg80(1:lent)
           css%trg_lent(ii)=lent
-          if (lend.eq.0) then
-             irc=999
-             write(*,*) myname,' Empty descriptor "'//currenttarget%trg80(1:lent)//'"',&
-                  & lenp,associated(currenttarget)
-             call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250," Undefined descriptor found, no:")
-             call observation_errorappendi(crc250,ii)
-             call observation_errorappend(crc250,"\n")
-             return
+          css%trg_type(ii)=currenttarget%type
+          if (lend.eq.0.and.lenp.eq.0) then ! this is a delayed variable
+             css%trg_type(ii)=parse_delay ! delay processing
+             css%trg_descr(ii)=0
+             write(*,*)myname,' Duplicator candidate at:',ii
+          else if (css%trg_type(ii).ne.parse_internal) then ! no descriptor
+             read(currenttarget%descr80(1:lend),*,iostat=irc) css%trg_descr(ii)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Unable to read descr from '"//currenttarget%descr80(1:lend)//"'")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
           end if
           css%trg_pos250(ii)=currenttarget%pos250
           css%trg_lenp(ii)=lenp
-          css%trg_type(ii)=currenttarget%type
-          select case (currenttarget%type) ! process position (empty,const,var,expr=
+          select case (css%trg_type(ii)) ! process position (empty,const,var,expr=
+          case (parse_delay) ! delayed processing
           case (parse_empty)
              css%trg_seq(ii)=0
              css%trg_ind(ii)=0
@@ -1615,12 +1736,30 @@ CONTAINS
                 call observation_errorappend(crc250,"\n")
                 return
              end if
+          case (parse_internal); ! no descriptor allowed
+             if (lend.ne.0) then
+                irc=244
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Interal variable with descriptor: '"&
+                     & //currenttarget%pos250(1:lenp)//"'")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+             css%trg_seq(ii)=0
+             css%trg_ind(ii)=0
+             call parse_open(css%trg_psp(ii)%ptr,crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250,"Error return from 'parse_open'.")
+                return
+             end if
           case (parse_variable);
              css%trg_seq(ii)=0
              css%trg_ind(ii)=currenttarget%ind
-             css%int_var(currenttarget%ind)=currenttarget%pos250(1:min(80,lenp))
-             css%int_lenv(currenttarget%ind)=lenp
-             css%int_val(currenttarget%ind)=0
+             css%dyn_var(currenttarget%ind)=currenttarget%pos250(1:min(80,lenp))
+             css%dyn_lenv(currenttarget%ind)=lenp
+             css%dyn_val(currenttarget%ind)=0
           case (parse_expression);
              css%trg_seq(ii)=0
              css%trg_ind(ii)=0
@@ -1631,50 +1770,136 @@ CONTAINS
                 return
              end if
           end select
-          read(currenttarget%descr80(1:lend),*,iostat=irc) css%trg_descr(ii)
-          if (irc.ne.0) then
-             call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250," Unable to read descr from '"//currenttarget%descr80(1:lend)//"'")
-             call observation_errorappendi(crc250,irc)
-             call observation_errorappend(crc250,"\n")
-             return
-          end if
-          if (lens.ne.0) then
-             read(currenttarget%min80(1:lens),*,iostat=irc) css%trg_minval(ii)
-             css%trg_lval(1,ii)=(irc.eq.0); irc=0
-          else
-             css%trg_lval(1,ii)=.false.
-          end if
-          if (lene.ne.0) then
-             read(currenttarget%max80(1:lene),*,iostat=irc) css%trg_maxval(ii)
-             css%trg_lval(2,ii)=(irc.eq.0); irc=0
-          else
-             css%trg_lval(2,ii)=.false.
-          end if
-          css%trg_lval(3,ii)=(css%trg_lval(1,ii).and.&
-               & css%trg_lval(2,ii).and.&
-               & css%trg_minval(ii).gt.css%trg_maxval(ii))
           currenttarget => currenttarget%next
        end do
        if (css%ind_eset) then
           ii=ii+1
+          nullify(css%trg_ptr(ii)%ptr)
           css%trg80(ii)=css%ind_trg80(1:css%ind_lent)
           css%trg_lent(ii)=css%ind_lent
           css%trg_lval(1,ii)=css%ind_lval(1)
           css%trg_lval(2,ii)=css%ind_lval(2)
-          css%trg_lval(3,ii)=.false. ! inverted tests are not implemented...
-!          css%trg_lval(3,ii)=(css%trg_lval(1,ii).and.&
-!               & css%trg_lval(2,ii).and.&
-!               & css%trg_minval(ii).gt.css%trg_maxval(ii))
           css%trg_minval(ii)=css%ind_minval
           css%trg_maxval(ii)=css%ind_maxval
        end if
        css%trg_set=.true.
-       css%int_set=.true.
+       css%dyn_set=.true.
     end if
     if(obs_bdeb)write(*,*)myname,' Done.',irc,css%ntarget,css%ntrg,css%ind_eset
     return
   end subroutine observation_makeTargetList
+  !
+  ! set target limits
+  !
+  subroutine observation_setTargetLimits(css,var,val,crc250,irc)
+    implicit none
+    type(obs_session), pointer :: css !  observation session
+    character*80, allocatable :: var(:)
+    real, allocatable :: val(:)
+    character*250 :: crc250
+    integer :: irc  ! error return code (0=ok)
+    integer :: lens,lene
+    integer, external :: length
+    integer :: ii,jj
+    type(obs_target), pointer :: currenttarget
+    type(parse_session),pointer :: plim => null()  ! parse_session pointer must be se
+    character*22 :: myname = "observation_setTargetLimits "
+    integer :: ind(css%ntrg),inc(0:css%ntrg)
+    call parse_open(plim,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       return
+    end if
+    css%dyn_max=1
+    jj=0
+    inc(0)=1
+    do ii=1,css%ntrg
+       currenttarget => css%trg_ptr(ii)%ptr
+       if (associated(currenttarget)) then
+          call chop0(currenttarget%min80,80)
+          call chop0(currenttarget%max80,80)
+          lens=length(currenttarget%min80,80,10)
+          lene=length(currenttarget%max80,80,10)
+          if (lens.ne.0) then
+             call parse_parsef(plim,currenttarget%min80(1:lens),var,crc250,irc)
+             if (irc.ne.0) then
+                if(obs_bdeb)then
+                   write(*,*)myname," Compiling target limit: '"//&
+                        & currenttarget%max80(1:lene)//"'",ii
+                   do jj=1,size(var)
+                      write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                           & trim(var(jj))//"'"
+                   end do
+                end if
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from parsef.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+             css%trg_minval(ii)=parse_evalf(plim,val)
+             css%trg_lval(1,ii)=.true.
+          else
+             css%trg_lval(1,ii)=.false.
+          end if
+          if (lene.ne.0) then
+             call parse_parsef(plim,currenttarget%max80(1:lene),var,crc250,irc)
+             if (irc.ne.0) then
+                if(obs_bdeb)then
+                   write(*,*)myname," Compiling target limit: '"//&
+                        & currenttarget%max80(1:lene)//"'",ii
+                   do jj=1,size(var)
+                      write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                           & trim(var(jj))//"'"
+                   end do
+                end if
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from parsef.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+             css%trg_maxval(ii)=parse_evalf(plim,val)
+             css%trg_lval(2,ii)=.true.
+          else
+             css%trg_lval(2,ii)=.false.
+          end if
+          if (css%trg_lval(1,ii).and.css%trg_lval(2,ii)) then ! max min available
+             if (css%trg_type(ii).eq.parse_delay) then ! no descriptor or position...
+                write(*,*)myname,' Found duplicator at:',ii
+                jj=jj+1
+                ind(jj)=ii
+                inc(jj)=abs(nint(css%trg_maxval(ii))-nint(css%trg_minval(ii))+1)*inc(jj-1)
+                css%dyn_max=css%dyn_max*inc(jj)
+             end if
+          end if
+       end if
+    end do
+    call parse_close(plim,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       return
+    end if
+    if (allocated(css%dup_ind)) deallocate(css%dup_ind)
+    if (allocated(css%dup_inc)) deallocate(css%dup_inc)
+    css%ndup=jj
+    allocate(css%dup_ind(css%ndup),css%dup_inc(0:css%ndup),stat=irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Unable to allocate 'duplicates'.")
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    css%dup_inc(0)=1
+    do jj=1,css%ndup
+       css%dup_ind(jj)=ind(jj)
+       css%dup_inc(jj)=inc(jj)
+    end do
+    return
+  end subroutine observation_setTargetLimits
+
   !
   ! clear target stack
   !
@@ -1692,7 +1917,7 @@ CONTAINS
        if (associated(currenttarget)) then
           css%ntarget=css%ntarget - 1
           if (currenttarget%type.eq.parse_variable)then
-             css%nint=css%nint - 1
+             css%ndyn=css%ndyn - 1
           end if
           currenttarget%next%prev => currenttarget%prev
           currenttarget%prev%next => currenttarget%next
@@ -1702,6 +1927,7 @@ CONTAINS
        end if
        currenttarget => nexntarget
     end do
+    if(obs_bdeb)write(*,*)myname,' Deallocating.'
     if (allocated(css%trg80)) deallocate(css%trg80)
     if (allocated(css%trg_lent)) deallocate(css%trg_lent)
     if (allocated(css%trg_pos250)) deallocate(css%trg_pos250)
@@ -1709,6 +1935,7 @@ CONTAINS
     if (allocated(css%trg_type)) deallocate(css%trg_type)
     if (allocated(css%trg_seq)) deallocate(css%trg_seq)
     if (allocated(css%trg_ind)) deallocate(css%trg_ind)
+    if(obs_bdeb)write(*,*)myname,' Deallocating trg_psp.'
     if (associated(css%trg_psp)) deallocate(css%trg_psp)
     if (allocated(css%trg_descr)) deallocate(css%trg_descr)
     if (allocated(css%trg_lval)) deallocate(css%trg_lval)
@@ -1719,9 +1946,11 @@ CONTAINS
     if (allocated(css%trg_var)) deallocate(css%trg_var)
     if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
     if (allocated(css%trg_val)) deallocate(css%trg_val)
-    if (allocated(css%int_var)) deallocate(css%int_var)
-    if (allocated(css%int_lenv)) deallocate(css%int_lenv)
-    if (allocated(css%int_val)) deallocate(css%int_val)
+    if(obs_bdeb)write(*,*)myname,' Deallocating trg_ptr.'
+    if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
+    if (allocated(css%dyn_var)) deallocate(css%dyn_var)
+    if (allocated(css%dyn_lenv)) deallocate(css%dyn_lenv)
+    if (allocated(css%dyn_val)) deallocate(css%dyn_val)
     css%ntrg = 0
     css%trg_set=.false.
     if(obs_bdeb)write(*,*)myname,' Done.'
@@ -1748,12 +1977,8 @@ CONTAINS
        if(obs_bdeb)write(*,*)myname,' Found BUFR:',ksec1(6),ksec1(7)
        TRG: do ii=1,css%ntrg
           if (bok.and.css%trg_lval(1,ii).or.css%trg_lval(2,ii)) then
-             if (css%trg_lval(3,ii)) then ! invert check
-                if (bok) bok=(css%trg_val(ii).ge.css%trg_minval(ii).or.css%trg_val(ii).le.css%trg_maxval(ii))
-             else
-                if (bok.and.css%trg_lval(1,ii)) bok=(css%trg_val(ii).ge.css%trg_minval(ii))
-                if (bok.and.css%trg_lval(2,ii)) bok=(css%trg_val(ii).le.css%trg_maxval(ii))
-             end if
+             if (bok.and.css%trg_lval(1,ii)) bok=(css%trg_val(ii).ge.css%trg_minval(ii))
+             if (bok.and.css%trg_lval(2,ii)) bok=(css%trg_val(ii).le.css%trg_maxval(ii))
           end if
           if (bok) then
              css%trg_ook(ii)=css%trg_ook(ii)+1
@@ -1836,14 +2061,18 @@ CONTAINS
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
        css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
+       css%int_val(1)=css%currentFileIndex ! observation file id
+       css%int_val(2)=1
+       css%int_val(3)=1
+       css%int_val(4)=1
        css%currentFile => css%fileStack(css%currentFileIndex)%ptr
        if ((css%currentFileIndex.eq.css%fileStackInd(css%rightFileSortIndex,1))) then ! last iteration
           css%lastIteration=.true.
           bdone=.true.
        end if
        ! check if inside limits
-       if (.not.(css%ind_minval.gt.css%currentFile%ind_stop .or.&
-            & css%ind_maxval.lt.css%currentFile%ind_start)) then ! overlap
+       if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
+            & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then 
           found=.true.
           bdone=.true.
           if (obs_bdeb) write(*,*)myname,' Found:',css%sortLimitsOk,&
@@ -1854,6 +2083,10 @@ CONTAINS
        observation_loopFileStack=.true.
     else
        css%currentFileIndex=0
+       css%int_val(1)=css%currentFileIndex ! observation file id
+       css%int_val(2)=1
+       css%int_val(3)=1
+       css%int_val(4)=1
        nullify(css%currentFile)
        observation_loopFileStack=.false.
     end if
@@ -1903,7 +2136,7 @@ CONTAINS
              if (obs_bdeb) then
                 write(*,*)myname,'Eval:',css%ntrg,css%trg_val(css%ntrg),"'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
                 do jj=1,css%ntrg
-                   write(*,'(X,A,A,I0,A,F27.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
+                   write(*,'(X,A,A,I0,A,F0.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
                 end do
              end if
              if (css%ind_tset) then
@@ -1962,6 +2195,10 @@ CONTAINS
     character*22 :: myname = "observation_stackfirst"
     css%currentFileSortIndex=0
     css%currentFileIndex=0
+    css%int_val(1)=css%currentFileIndex ! observation file id
+    css%int_val(2)=1
+    css%int_val(3)=1
+    css%int_val(4)=1
   end subroutine observation_stackfirst
   !
   subroutine observation_findStackLimits(css,crc250,irc)
@@ -2005,6 +2242,10 @@ CONTAINS
        css%rightFileSortIndex=0
     end if
     css%currentFileIndex=0
+    css%int_val(1)=css%currentFileIndex ! observation file id
+    css%int_val(2)=1
+    css%int_val(3)=1
+    css%int_val(4)=1
     if (obs_bdeb)write(*,*)myname,'Done.', css%sortLimitsOk,&
          & css%leftFileSortIndex, css%rightFileSortIndex,css%nFileIndexes
     return
@@ -2251,6 +2492,7 @@ CONTAINS
        css%locReady=.false.
     end if
   end subroutine observation_locinit
+  !
   ! clear the location stack
   !
   subroutine observation_locclear(css,crc250,irc)
@@ -2322,7 +2564,7 @@ CONTAINS
     logical :: bok
     character*250 :: crc250
     integer :: irc
-    type(obs_location),pointer :: newLocation
+    type(obs_location),pointer :: newLoc
     character*80 :: var80
     real(KIND=8), allocatable :: values(:)
     integer :: ii,yy,mm,dd,hh,mi
@@ -2345,33 +2587,33 @@ CONTAINS
        return
     end if
     ! create new location-item
-    allocate(newLocation,stat=irc)
+    allocate(newLoc,stat=irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," Unable to allocate new location.")
        call observation_errorappend(crc250,"\n")
        return
     end if
-    newLocation%ntrg=css%ntrg
-    allocate(newLocation%trg_val(newLocation%ntrg),stat=irc)
+    newLoc%ntrg=css%ntrg
+    allocate(newLoc%trg_val(newLoc%ntrg),stat=irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Unable to allocate newLocation%var.")
-       call observation_errorappendi(crc250,newLocation%ntrg)
+       call observation_errorappend(crc250," Unable to allocate newLoc%var.")
+       call observation_errorappendi(crc250,newLoc%ntrg)
        call observation_errorappend(crc250,"\n")
        return
     end if
-    newLocation%locid=locid
-    do ii=1,newLocation%ntrg
-       newLocation%trg_val(ii)=css%trg_val(ii)
+    newLoc%locid=locid
+    do ii=1,newLoc%ntrg
+       newLoc%trg_val(ii)=css%trg_val(ii)
     end do
-    newLocation%bok=bok
+    newLoc%bok=bok
     ! push onto stack
     css%nloc=css%nloc + 1
-    newLocation%prev => css%lastLoc%prev
-    newLocation%next => css%lastLoc
-    newLocation%prev%next => newLocation
-    newLocation%next%prev => newLocation
+    newLoc%prev => css%lastLoc%prev
+    newLoc%next => css%lastLoc
+    newLoc%prev%next => newLoc
+    newLoc%next%prev => newLoc
     css%locReady=.false.
     if (css%nloc+css%locoffset .ne. locid) then
        irc=346
@@ -2430,9 +2672,7 @@ CONTAINS
     logical :: bok           ! was get successful?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    integer :: lenr, lenb, lenc,cnt
-    logical :: bdone
-    integer, external :: length
+    integer :: cnt
     character*22 :: myname = "observation_sliceCurrentFile"
     if(obs_bdeb)write(*,*)myname,' Entering.',bok
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
@@ -2458,13 +2698,71 @@ CONTAINS
        css%stackReady = .true.
     end if
     cnt=0
-    obs: do
-
-! do not increment isubset unless pos-loop is done (nopos is true)
-       if (nopos)isubset=isubset+1
+    ! loop until we have valid message or EOF
+    LOOP : do
+       do while (css%msg%vobs .eq. 0 .and. bok) ! bok=.false. -> end of file
+          ! read next message (can contain several observations)
+          call observation_getMsgObs(css,bok,crc250,irc)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," Error return from getMsgObs.")
+             return
+          end if
+          css%msg%check=.false. ! redo message check
+       end do
+       if (.not.css%msg%check .and. css%msg%nobs .ne. 0 .and. bok) then
+          ! apply the observation filter on the whole message (possibly several observations)
+          call observation_checkMsgObs(css,crc250,irc)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," Error return from checkMsgObs.")
+             return
+          end if
+          css%msg%check=.true. ! message check completed
+       end if
+       if (css%msg%vobs .ne. 0 .and. bok) then
+          ! return next valid observation from the message...
+          if (observation_popMsgObs(css,crc250,irc)) then
+             exit LOOP ! got a valid observation
+          end if
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," Error return from popObs.")
+             return
+          end if
+       else if (.not. bok) then ! end of file
+          exit LOOP
+       end if
+    end do LOOP
+    if (bok)then
+       if(obs_bdeb)write(*,*)myname,"INCREMENTING lid:",css%int_val
+       css%int_val(4)=css%int_val(4)+1 ! obs id
+    end if
+    if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
+    if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
+    return
+  end subroutine observation_sliceCurrentFile
+  !
+  ! put valid observations from message into the location chain
+  !
+  subroutine observation_getMsgObs(css,bok,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    logical :: bok           ! successful get (not EOF)
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    character*22 :: myname = "observation_getMsgObs"
+    type(obs_message), pointer :: newmsg => null()
+    integer :: cnt, ii, jj
+    logical :: bbok
+    cnt=0
+    MSG: do
+       ! increment isubset
+       if(obs_bdeb)write(*,'(X,A,X,A,3(I0,A))')myname,' Incrementing isubset ',&
+            &isubset,' -> ',isubset+1,' (',nsubset,')'
+       isubset=isubset+1
        if (isubset > nsubset) then ! read next message into memory
           if(obs_bdeb)write(*,*)myname,' Reading message.',bok
-          call observation_autoMessage(css,bok,crc250,irc)
+          call observation_autoMessage(css,bok,crc250,irc) ! always returns isubset=1, nsubset=ksec3(3)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
              call observation_errorappend(crc250," Error return from observation_autoMessage.")
@@ -2472,35 +2770,238 @@ CONTAINS
              call observation_errorappend(crc250,"\n")
              return
           end if
-          if (.not.bok) exit obs
+          css%msg%nobs=0 ! number of obs
+          css%msg%vobs=0 ! remaining valid obs
+          css%msg%iobs=0 ! current obs
+          if(obs_bdeb)write(*,*)myname,' Read message, EOF:',bok,isubset,nsubset
+          if (.not.bok) exit MSG
        else
           bok=.true.
        end if
        if(obs_bdeb)write(*,*)myname,' Checking obs.',bok
        if (bok) then
-          if (observation_checkObs(css,bok,crc250,irc)) then
-             nopos=.false.
-             cnt=cnt+1
-             if(obs_bdeb)write(*,*)myname,' checkObs Done.',bok,cnt,nopos
-          else
-             nopos=.true.
-             if(obs_bdeb)write(*,*)myname,' CheckObs Read message.',bok
-          end if
-          if (irc.ne.0) then
-             call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250," Error return from observation_checkObs.")
-             call observation_errorappendi(crc250,irc)
-             call observation_errorappend(crc250,"\n")
-             return
-          end if
+          OBS : DO ! loop over message observations
+             if (observation_checkObs(css,bbok,crc250,irc)) then
+                cnt=cnt+1
+                css%msg%nobs=css%msg%nobs+1
+                if(obs_bdeb)write(*,*)myname,' Found obs.',bbok,cnt,css%msg%nobs,css%msg%cobs
+                ! store location in message-location chain and loop...
+                ! check if we must allocate more memory
+                if (css%msg%nobs.gt.css%msg%cobs) then ! allocate more memory
+                   allocate(newmsg,stat=irc)
+                   newmsg%nobs=css%msg%nobs
+                   newmsg%vobs=css%msg%vobs
+                   newmsg%cobs=2*(css%msg%nobs)
+                   newmsg%ctrg=max(css%msg%ctrg,css%ntrg)
+                   allocate(newmsg%trg_val(newmsg%ctrg,newmsg%cobs),&
+                        & newmsg%trg_set(newmsg%cobs),stat=irc)
+                   if (allocated(css%msg%trg_val).and.allocated(css%msg%trg_set)) then
+                      do jj=1,css%msg%nobs-1
+                         do ii=1,css%msg%ctrg
+                            newmsg%trg_val(ii,jj)=css%msg%trg_val(ii,jj)
+                         end do
+                         newmsg%trg_set(jj)=css%msg%trg_set(jj)
+                      end do
+                      if (allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
+                      if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
+                      if (associated(css%msg)) deallocate(css%msg,stat=irc)
+                   end if
+                   css%msg => newmsg
+                end if
+                if(obs_bdeb)write(*,*)myname,' Setting msg obs.',css%msg%nobs,&
+                     & allocated(css%msg%trg_val),newmsg%ctrg,newmsg%cobs
+                do ii=1,css%msg%ctrg
+                   css%msg%trg_val(ii,css%msg%nobs)=css%trg_val(ii)
+                   if (obs_bdeb) then
+                      if (css%trg_val(ii).gt.1.0D10) then
+                         write(*,*)myname,' xxxxxxxxxxxxxx INVALID obs:',&
+                              & css%msg%nobs,ii,css%trg_val(ii),bbok
+                      end if
+                   end if
+                end do
+                css%msg%trg_set(css%msg%nobs)=bbok ! is obs valid?
+                if (bbok) then
+                   css%msg%vobs=css%msg%vobs+1
+                end if
+                if(obs_bdeb)write(*,*)myname,' CheckObs Read message.',bbok
+             else ! no more locations in message
+                exit OBS
+             end if
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from observation_checkObs.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+          end do OBS
        end if
-       if (bok) exit obs
-    end do obs
+       if (css%msg%nobs.ne.0.or..not.bok) exit MSG ! valid obs in matrix
+    end do MSG
+    if (bok) css%int_val(3)=css%int_val(3)+1 ! obs id
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
-    if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset,nopos
+    if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
     return
-  end subroutine observation_sliceCurrentFile
-
+  end subroutine observation_getMsgObs
+  !
+  ! check observations in message simulaneosul using observation filter
+  !
+  subroutine observation_checkMsgObs(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    character*22 :: myname = "observation_checkMsgObs"
+    integer :: ii
+    real :: val
+    logical :: bok
+    ! loop over observations
+    if (css%flt_set) then ! check if we have an observation filter...
+       ! should probably reset the parser here if msg-functions are implemented...
+       do ii=1,css%msg%nobs
+          if (css%msg%trg_set(ii)) then
+             ! evaluate filter
+             if (obs_bdeb)write(*,*)myname,'Evaluating filter:',ii,associated(css%psf),&
+                  & allocated(css%msg%trg_val)
+             val=parse_evala(css%psf,css%msg%ctrg,css%msg%cobs,css%msg%trg_val,ii)
+             bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
+             if (obs_bdeb)write(*,*)myname,'Returned:',val,bok
+             if (bok) then
+                css%currentFile%ook(5)=css%currentFile%ook(5)+1
+             else
+                css%currentFile%orm(5)=css%currentFile%orm(5)+1 ! search failed
+                css%msg%vobs=css%msg%vobs-1
+                css%msg%trg_set(ii)=.false. ! reject observation
+             end if
+          end if
+       end do
+    end if
+    return
+  end subroutine observation_checkMsgObs
+  !
+  ! pop next valid message obs to the session trg_val
+  !
+  logical function observation_popMsgObs(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    character*22 :: myname = "observation_popMsgObs"
+    logical :: bok
+    integer :: ii
+    bok=(css%msg%vobs.gt.0)
+    if (bok) then
+       css%msg%iobs=css%msg%iobs+1
+       do while (css%msg%iobs.le.css%msg%nobs)
+          if (css%msg%trg_set(css%msg%iobs)) then
+             css%msg%vobs=css%msg%vobs-1
+             do ii=1,css%msg%ctrg
+                css%trg_val(ii)=css%msg%trg_val(ii,css%msg%iobs)
+                if (obs_bdeb) then                
+                   if (css%trg_val(ii).gt.1.0D10) then
+                      write(*,*)myname,' yyyyyyyyyyyyyyyy Invalid obs:',&
+                           & css%msg%iobs,ii,css%trg_val(ii),css%msg%trg_set(css%msg%iobs)
+                   end if
+                end if
+             end do
+             ! recalculate internal variables
+             do ii=1,css%ntarget
+                select case (css%trg_type(ii))
+                case (parse_internal)
+                   css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,&
+                        & css%int_val)
+                   if (obs_bdeb)write(*,*)myname,' Internal:',&
+                        & ii,css%trg_val(ii)
+                end select
+             end do
+             observation_popMsgObs=.true.
+             return
+          else
+             css%msg%iobs=css%msg%iobs+1
+          end if
+       end do
+       if (css%msg%vobs.ne.0) then
+          if (obs_bdeb) then
+             write(*,*) myname,'Obs count=',css%msg%nobs,css%msg%vobs,css%msg%iobs
+             do ii=1,css%msg%nobs
+                write(*,*)myname,'Obs:',ii,css%msg%trg_set(ii)
+             end do
+          end if
+          irc=844
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," System error.")
+          call observation_errorappendi(crc250,css%msg%vobs)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    observation_popMsgObs=.false.
+    return
+  end function observation_popMsgObs
+  !
+  subroutine observation_setfilter(css,flt,crc250,irc)
+    implicit none
+    type(obs_session), pointer :: css !  current session
+    character*(*) :: flt
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    character*22 :: myname ="setfilter"
+    if(obs_bdeb)write(*,*)myname,'Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       css%flt250=trim(flt)
+       call chop0(css%flt250,250)
+       css%lenf=length(css%flt250,250,10)
+    end if
+    if(obs_bdeb)write(*,*)myname,'Exiting.',irc
+    return
+  end subroutine observation_setfilter
+  !
+  subroutine observation_compileFilter(css,crc250,irc)
+    implicit none
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="compileFilter"
+    if (css%lenf.ne.0) then
+       call parse_open(css%psf,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250,"Error return from 'parse_open'.")
+          return
+       end if
+       if(obs_bdeb)write(*,*)myname,"Parsing: '"//css%flt250(1:css%lenf)//"'"
+       call parse_parsef(css%psf,css%flt250(1:css%lenf),css%trg_var,crc250,irc)
+       if (irc.ne.0) then
+          if(obs_bdeb)then
+             write(*,*)myname,"Unable to parse:'"//css%flt250(1:css%lenf)//"'"
+             !                write(*,*)myname,'nvar:',css%ntrg
+             !                do jj=1,css%ntrg
+             !                   write(*,*) myname,'var:',jj,css%trg_var(jj)(1:css%trg_lenv(jj))
+             !                end do
+          end if
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parsef.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       css%flt_set=.true.
+    end if
+    return
+  end subroutine observation_compileFilter
+  !
+  subroutine observation_getfilter(css,flt,crc250,irc)
+    implicit none
+    type(obs_session), pointer :: css !  current session
+    character*(*) :: flt
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="getfilter"
+    if(obs_bdeb)write(*,*)myname,'Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       flt=css%flt250(1:css%lenf)
+    end if
+    if(obs_bdeb)write(*,*)myname,'Exiting.',irc
+  end subroutine observation_getfilter
   !
   !###############################################################################
   ! REPORT PROCESSING
@@ -2669,7 +3170,6 @@ CONTAINS
     integer :: lenb,len0,len1,len2,len3
     character*50 :: s0,s1,s2,s3
     integer :: ii,ipos
-    real :: val
     narr=0
     if (isubset > nsubset) then
        bok=.false.
@@ -2679,13 +3179,12 @@ CONTAINS
        bok=.true.
        DO II=1,KTDEXL
           IPOS=II+(isubset-1)*KEL
-          val=values(ipos)
-          if (val.eq.RVIND) then
+          if (values(ipos).eq.RVIND) then
              narr=narr+1
-             arr(narr)=val
+             arr(narr)=values(ipos)
           else if (.not.css%ignval) then
              narr=narr+1
-             arr(narr)=val
+             arr(narr)=values(ipos)
           end if
        end do
     end if
@@ -3104,8 +3603,7 @@ CONTAINS
        if (.not.css%ignuni.or..not.css%ignden.or..not.css%ignval) then
           DO II=1,KTDEXL
              IPOS=II+(isubset-1)*KEL
-             val=values(ipos)
-             if ((val.eq.rvind.and..not.css%ignmis).or.val.ne.rvind) then
+             if ((values(ipos).eq.rvind.and..not.css%ignmis).or.values(ipos).ne.rvind) then
                 write(s1,'(I0)') ii; call chop0(s1,50); len1=length(s1,50,10)   ! element identification
                 if (css%ignder) then
                    write(buff250,'(A)')s0(1:len0)//sep//'sequence'//sep//s1(1:len1)
@@ -3125,7 +3623,7 @@ CONTAINS
                         & 'unit'//sep,CUNITS(ii)," "
                 end if
                 if (.not.css%ignval) then
-                   if (val.eq.RVIND) then
+                   if (values(ipos).eq.RVIND) then
                       s2="MISSING";call chop0(s2,50); len2=length(s2,50,10) 
                       nrep=min(nrep+1,maxrep)
                       write(rep250(nrep),'(A,A,A)')buff250(1:lenb)//sep//&
@@ -3172,12 +3670,8 @@ CONTAINS
                 bbok=(seq.le.ktdexl)
                 if (bbok) bbok=(ktdexp(seq).eq.css%trg_descr(ii))
                 if (css%trg_lval(1,ii).or.css%trg_lval(2,ii)) then
-                   if (css%trg_lval(3,ii)) then
-                      if (bbok) bbok=(values(seq).ge.css%trg_minval(ii).or.values(seq).le.css%trg_maxval(ii))
-                   else
-                      if (bbok.and.css%trg_lval(1,ii)) bbok=(values(seq).ge.css%trg_minval(ii))
-                      if (bbok.and.css%trg_lval(1,ii)) bbok=(values(seq).le.css%trg_maxval(ii))
-                   end if
+                   if (bbok.and.css%trg_lval(1,ii)) bbok=(values(seq).ge.css%trg_minval(ii))
+                   if (bbok.and.css%trg_lval(1,ii)) bbok=(values(seq).le.css%trg_maxval(ii))
                 end if
                 if (bbok) then
                    s1=css%trg80(ii)(1:50) ; call chop0(s1,50); len1=length(s1,50,10)   ! element identification
@@ -3247,6 +3741,8 @@ CONTAINS
                 return
              end if
           end if
+          if(obs_bdeb)write(*,'(X,A,X,A,3(I0,A))')myname,' Setting isubset ',&
+               &isubset,' -> ',nsubset+1,' (',nsubset,')'
           isubset=nsubset+1 ! mark data "read"
        end do
        !write(*,*)myname,'Closing file.'
@@ -3272,7 +3768,8 @@ CONTAINS
   end subroutine observation_scanFile
   !
   ! check if obs is ok, store statistics. 
-  ! Returns .false. with bok=.false. if no more obs in message.
+  ! Returns .false. if no more obs in message.
+  ! bok is .true. if observation is ok
   !
   logical function observation_checkObs(css,bok,crc250,irc)
     type(obs_session), pointer :: css
@@ -3349,7 +3846,8 @@ CONTAINS
           if (bok) then
              css%currentfile%ook(3)=css%currentfile%ook(3)+1 ! inside index limits
           else
-             if (obs_bdeb)write(*,*)myname,' Outside index limits:',css%ind_lval,css%ind_val,css%ind_minval,css%ind_maxval
+             if (obs_bdeb)write(*,*)myname,' Outside index limits:',&
+                  & css%ind_lval,css%ind_val,css%ind_minval,css%ind_maxval
              css%currentfile%orm(3)=css%currentfile%orm(3)+1 ! out of index limits
           end if
        end if
@@ -3408,7 +3906,6 @@ CONTAINS
     !     MISSING VALUE INDICATOR
     ! 
     NBYTPW=JBPW/8
-    RVIND=1.7D38
     NVIND=2147483647
     css%currentfile%NSUBSET=0
     css%currentFile%NMESSAGE=0
@@ -3444,6 +3941,9 @@ CONTAINS
        css%trg_ook(ii)=0
        css%trg_orm(ii)=0
     end do
+    css%int_val(2)=0 ! message id
+    css%int_val(3)=0 ! obs id
+    css%int_val(4)=1 ! location id
     call observation_clearCat(css%currentFile)
     fopen=.true.
     return
@@ -3459,7 +3959,8 @@ CONTAINS
     integer :: ii, jj
     character*22 :: myname = "observation_readMessage"
     if(obs_bdeb)write(*,*)myname,' Entering.'
-    css%int_pos=0               ! reset internal position search index
+    css%dyn_pos=0               ! reset dynamic position search index
+    css%dyn_cnt=0               ! reset dynamic position search index
     irc=0
     msg: do
        bok=.true.
@@ -3481,7 +3982,9 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
+       bread=.true. ! new message in memory
        css%currentfile%nmessage=css%currentfile%nmessage+1
+       css%int_val(2)=css%int_val(2)+1 ! message id
        !     PRINT*,'----------------------------------',N,' ',KBUFL
        KBUFL=KBUFL/NBYTPW+1
        !
@@ -3514,6 +4017,8 @@ CONTAINS
           css%currentfile%mok(2)=css%currentfile%mok(2)+1
        END IF
        !
+       if(obs_bdeb)write(*,'(X,A,X,A,3(I0,A))')myname,' Setting nsubset ',&
+            &nsubset,' -> ',ksec3(3),' (',isubset,')'
        nsubset=KSEC3(3)
        KEL=KVALS/nsubset
        IF(KEL.GT.KELEM) KEL=KELEM
@@ -3535,6 +4040,8 @@ CONTAINS
           css%currentfile%mok(3)=css%currentfile%mok(3)+1 ! able to decode body
        END IF
        css%currentfile%NSUBSET=css%currentfile%NSUBSET+nsubset
+       if(obs_bdeb)write(*,'(X,A,X,A,3(I0,A))')myname,' Setting isubset ',&
+            &isubset,' -> ',1,' (',nsubset,')'
        ISUBSET=1 ! start with first subset
        !write(*,*)myname,'G:'
        CALL BUSEL2(ISUBSET,KEL,KTDLEN,&
@@ -4309,18 +4816,11 @@ CONTAINS
           return
        end if
     end if
-    if (css%int_set) then
+    if (css%dyn_set) then
        ! parse position expressions
        do ii=1,css%ntarget
-          if (css%trg_type(ii).eq.parse_expression) then
-             if(obs_bdeb)then
-                write(*,*)myname," Compiling pos: '"//&
-                  & css%trg_pos250(ii)(1:css%trg_lenp(ii))//"'",ii
-                do jj=1,size(css%int_var)
-                   write(*,'(A,A,I0,A)')myname,"     int_var(",jj,") = '"//&
-                        & css%int_var(jj)(1:css%int_lenv(jj))//"'"
-                end do
-             end if
+          select case (css%trg_type(ii)) ! process position
+          case (parse_internal)
              call parse_parsef(css%trg_psp(ii)%ptr,&
                   & css%trg_pos250(ii)(1:css%trg_lenp(ii)),&
                   & css%int_var,crc250,irc)
@@ -4331,7 +4831,26 @@ CONTAINS
                 call observation_errorappend(crc250,"\n")
                 return
              end if
-          end if
+          case (parse_expression)
+             if(obs_bdeb)then
+                write(*,*)myname," Compiling pos: '"//&
+                     & css%trg_pos250(ii)(1:css%trg_lenp(ii))//"'",ii
+                do jj=1,size(css%dyn_var)
+                   write(*,'(A,A,I0,A)')myname,"     dyn_var(",jj,") = '"//&
+                        & css%dyn_var(jj)(1:css%dyn_lenv(jj))//"'"
+                end do
+             end if
+             call parse_parsef(css%trg_psp(ii)%ptr,&
+                  & css%trg_pos250(ii)(1:css%trg_lenp(ii)),&
+                  & css%dyn_var,crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from parsef.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
+          end select
        end do
     end if
     if(obs_bdeb)write(*,*)myname,' Done.'
@@ -4347,104 +4866,158 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname = "observation_eval"
-    integer :: ii,int_pos
+    integer :: ii,dyn_pos,ipos
     logical :: bbok
-    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget,css%int_pos
+    if(obs_bdeb) write(*,*)myname,'Entering.',css%int_val
+    !if(obs_bdeb) write(*,*)myname,'Position.',ntarget,css%dyn_pos,css%dyn_cnt,css%dyn_max
     !
     ! get next position
     !
-    bbok=(css%int_pos.le.ktdexl)
+    bbok=(css%dyn_pos.le.ktdexl)
     observation_eval=bbok
     if (.not.bbok) return
     bok=.true.
     if (css%ntarget== 0) then ! no targets to evaluate
        return
     else
-       if (obs_bdeb)write(*,*)myname,' Assigning:',css%ntarget,ktdexl
-       do ii=1,css%ntarget
-          select case (css%trg_type(ii))
-          case (parse_empty)
-             if (observation_getPos(css,css%trg_descr(ii))) then
-                css%trg_seq(ii)=css%int_pos
-                css%trg_val(ii)=values(&
-                     & css%trg_seq(ii)+(isubset-1)*KEL)
-                if (css%trg_val(ii).eq.rvind) then
-                   write(css%currentfile%hint80(2),'(A," (",I0,"), value=undefined")')&
-                     & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,int_pos
-                   bok=.false. ! missing target value
+       if (css%dyn_cnt.eq.0.or.css%dyn_cnt.ge.css%dyn_max) then ! read next observation
+          if (obs_bdeb)write(*,*)myname,' Assigning:',css%ntarget,ktdexl
+          css%dyn_cnt=1
+          if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
+          do ii=1,css%ntarget
+             select case (css%trg_type(ii))
+             case (parse_delay) ! delayed processing
+             case (parse_empty)
+                if (observation_getPos(css,css%trg_descr(ii))) then ! find next descr
+                   css%trg_seq(ii)=css%dyn_pos
+                   ipos=css%trg_seq(ii)+(isubset-1)*KEL
+                   css%trg_val(ii)=values(ipos)
+                   if (values(ipos).eq.rvind) then
+                      write(css%currentfile%hint80(2),'(A," (",I0,"), value=undefined")')&
+                           & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos
+                      bok=.false. ! missing target value
+                   end if
+                   if (obs_bdeb)write(*,*)myname,' Found:',ii,css%trg_seq(ii),css%trg_descr(ii)
+                else
+                   bbok=.false.
                 end if
-                if (obs_bdeb)write(*,*)myname,' Found:',css%trg_seq(ii),css%trg_descr(ii)
-             else
-                bbok=.false.
-             end if
-          case (parse_constant)
-             css%trg_val(ii)=values(&
-                  & css%trg_seq(ii)+(isubset-1)*KEL)
-             if (css%trg_val(ii).eq.rvind) then
-                write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
-                     & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
-                bok=.false. ! missing target value
-             end if
-          case (parse_variable)
-             if (observation_getPos(css,css%trg_descr(ii))) then
-                css%trg_seq(ii)=css%int_pos
-                css%trg_val(ii)=values(&
-                     & css%trg_seq(ii)+(isubset-1)*KEL)
-                css%int_val(css%trg_ind(ii))=css%int_pos
-                if (css%trg_val(ii).eq.rvind) then
+             case (parse_constant)
+                ipos=css%trg_seq(ii)+(isubset-1)*KEL
+                css%trg_val(ii)=values(ipos)
+                if (values(ipos).eq.rvind) then
                    write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
                         & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
                    bok=.false. ! missing target value
                 end if
-                if (obs_bdeb)write(*,*)myname,' Found:',css%trg_seq(ii),css%trg_descr(ii)
-             else
-                bbok=.false.
-             end if
-          case (parse_expression)
-             int_pos=nint(parse_evalf(css%trg_psp(ii)%ptr,css%int_val))
-             if (int_pos.ge.1.and.int_pos.le.ktdexl) then ! out of bounds...
-                css%trg_seq(ii)=int_pos
-                if (css%trg_descr(ii).ne.ktdexp(int_pos)) then
-                   write(css%currentfile%hint80(2),&
-                        & '(A," (",I0,"), DESCR(",I0,")=",I0," expected ",I0)')&
-                        & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,int_pos,&
-                        & ktdexp(int_pos),css%trg_descr(ii)
-                   bok=.false.
-                else
-                   css%trg_val(ii)=values(css%trg_seq(ii)+(isubset-1)*KEL)
-                   if (css%trg_val(ii).eq.rvind) then
+             case (parse_internal)
+                css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
+                if (obs_bdeb)write(*,*)myname,' Internal:',ii,css%trg_val(ii)
+             case (parse_variable)
+                if (observation_getPos(css,css%trg_descr(ii))) then ! find next descr
+                   css%trg_seq(ii)=css%dyn_pos
+                   ipos=css%trg_seq(ii)+(isubset-1)*KEL
+                   css%trg_val(ii)=values(ipos)
+                   css%dyn_val(css%trg_ind(ii))=css%dyn_pos
+                   if (values(ipos).eq.rvind) then
                       write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
                            & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
-                      
                       bok=.false. ! missing target value
                    end if
+                   if (obs_bdeb)write(*,*)myname,' Found:',css%trg_seq(ii),css%trg_descr(ii)
+                else
+                   bbok=.false.
                 end if
-             else
-                write(css%currentfile%hint80(2),'(A," (",I0,"), out of bounds at:",I0)')&
-                     & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,int_pos
-                bok=.false. ! reject observation...
+             case (parse_expression)
+                dyn_pos=nint(parse_evalf(css%trg_psp(ii)%ptr,css%dyn_val))
+                if (dyn_pos.ge.1.and.dyn_pos.le.ktdexl) then ! out of bounds...
+                   css%trg_seq(ii)=dyn_pos
+                   if (css%trg_descr(ii).ne.ktdexp(dyn_pos)) then
+                      write(css%currentfile%hint80(2),&
+                           & '(A," (",I0,"), DESCR(",I0,")=",I0," expected ",I0)')&
+                           & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos,&
+                           & ktdexp(dyn_pos),css%trg_descr(ii)
+                      bok=.false.
+                   else
+                      ipos=css%trg_seq(ii)+(isubset-1)*KEL
+                      css%trg_val(ii)=values(ipos)
+                      if (values(ipos).eq.rvind) then
+                         write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
+                              & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+
+                         bok=.false. ! missing target value
+                      end if
+                   end if
+                else
+                   write(css%currentfile%hint80(2),'(A," (",I0,"), out of bounds at:",I0)')&
+                        & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos
+                   bok=.false. ! reject observation...
+                end if
+             end select
+             if (obs_bdeb) then
+                if (css%trg_val(ii).gt.1.0D10) then
+                   write(*,*)myname,' zzzzzzzzzzzzzz Invalid value:',&
+                        & ii,css%trg_val(ii),(css%trg_val(ii).eq.rvind),bok
+                end if
              end if
-          end select
-       end do
-       if (bok.and.css%ind_eset) then
-          if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",&
-               & associated(css%ind_pe),allocated(css%trg_val),css%int_pos
-          css%trg_val(css%ntrg)=parse_evalf(css%ind_pe,css%trg_val)
+          end do
+          if (bok.and.css%ind_eset) then
+             if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",&
+                  & associated(css%ind_pe),allocated(css%trg_val),css%dyn_pos
+             css%trg_val(css%ntrg)=parse_evalf(css%ind_pe,css%trg_val)
+          end if
+          if (bok.and.css%ind_tset) then
+             css%trg_val(css%ntrg)=parse_evalf(css%ind_pt,css%trg_val)
+          end if
+          if (bok) then
+             css%ind_val=css%trg_val(css%ntrg)
+          end if
+          ! extract duplicate indexes...
+          call observation_pullTargets(css,crc250,irc)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250,"Error return from 'pullTargets'.")
+             call observation_errorappend(crc250,"\n")
+             return
+          end if
+          if (css%dyn_pos.eq.0) then ! no search, i.e. 1 iteration only
+             css%dyn_pos=ktdexl+1 ! force stop next time...
+          end if
+          css%dyn_bok=bok
+       else ! make duplicate of existing obs
+          css%dyn_cnt=css%dyn_cnt+1
+          ! extract duplicate indexes...
+          call observation_pullTargets(css,crc250,irc)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250,"Error return from 'pullTargets'.")
+             call observation_errorappend(crc250,"\n")
+             return
+          end if
+          bok=css%dyn_bok
        end if
-       if (bok.and.css%ind_tset) then
-          css%trg_val(css%ntrg)=parse_evalf(css%ind_pt,css%trg_val)
-       end if
-       if (bok) then
-          css%ind_val=css%trg_val(css%ntrg)
-          !if(obs_bdeb)write(*,*)myname,"Result:",css%ind_eset,css%ind_val
-       end if
-    end if
-    if (css%int_pos.eq.0) then ! no search, which means 1 iteration only
-       css%int_pos=ktdexl+1 ! force stop next time...
     end if
     observation_eval=bbok
     return
   end function observation_eval
+  !
+  ! calculate the duplicate target locations from count
+  !
+  subroutine observation_pullTargets(css,crc250,irc)
+    type(obs_session), pointer :: css
+    character*250 :: crc250  ! error message string
+    integer :: irc           ! error return code (0=ok)
+    character*22 :: myname = "observation_pulltargets"
+    integer :: ii,jj,kk
+    jj=css%dyn_cnt
+    do ii=css%ndup,1,-1
+       css%trg_val(css%dup_ind(ii))=int(jj/css%dup_inc(ii-1)) + &
+            & nint(css%trg_minval(css%dup_ind(ii)))-1
+       if (obs_bdeb) write(*,'(X,A,X,A,I0,A,I0,3X,I0)')myname,' Target(',css%dup_ind(ii),') = ',&
+            & nint(css%trg_val(css%dup_ind(ii))),ii
+       jj=mod(jj,css%dup_inc(ii-1))
+    end do
+    return
+  end subroutine observation_pullTargets
   !
   ! search for next descriptor
   !
@@ -4452,11 +5025,11 @@ CONTAINS
     type(obs_session), pointer :: css
     integer :: descr
     SEARCH : do
-       css%int_pos=css%int_pos+1
-       if (css%int_pos.gt.ktdexl) then
+       css%dyn_pos=css%dyn_pos+1
+       if (css%dyn_pos.gt.ktdexl) then
           observation_getPos=.false.
           exit SEARCH
-       else if (descr.eq.KTDEXP(css%int_pos)) then
+       else if (descr.eq.KTDEXP(css%dyn_pos)) then
           observation_getPos=.true.
           exit SEARCH
        end if
@@ -4503,6 +5076,7 @@ CONTAINS
                       bok=.false.
                    end if
                 end if
+             case (parse_internal)
              case (parse_variable)
              case (parse_expression)
              end select
@@ -4559,16 +5133,6 @@ CONTAINS
     return
   end subroutine observation_filestartxml
   !
-  subroutine observation_obsstartxml(css,ounit,crc250,irc)
-    type(obs_session), pointer :: css !  current session
-    integer :: ounit
-    character*250 :: crc250
-    integer :: irc
-    character*25 :: myname = "observation_obsStartXml"
-    write(ounit,'(3X,A)')"<observations>"
-    return
-  end subroutine observation_obsstartxml
-  !
   subroutine observation_writexml(css,ounit,locid,crc250,irc)
     type(obs_session), pointer :: css !  current session
     integer :: ounit
@@ -4586,21 +5150,22 @@ CONTAINS
     character*9 :: cident
     integer :: cnt
     logical :: bok
-    real :: rlat1,rlat2,rlon1,rlon2,rlat,rlon,val
-    if (isubset .le. nsubset) then
-       if (observation_eval(css,bok,crc250,irc)) then
-          ! valid obs-target in memory
-       end if
-       IF(IRC.NE.0) THEN
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from eval.");
-          call observation_errorappend(crc250,"\n")
-          RETURN
-       END IF
+    real :: rlat1,rlat2,rlon1,rlon2,rlat,rlon
+    if (isubset .le. nsubset.and.bread) then ! isubset .le. nsubset (always true)
+       bread=.false. ! wait for next message...
+       ! IF (observation_eval(css,bok,crc250,irc)) THEN
+       !   ! valid obs-target in memory
+       ! END IF
+       ! IF(IRC.NE.0) THEN
+       !    call observation_errorappend(crc250,myname)
+       !    call observation_errorappend(crc250,"Error return from eval.");
+       !    call observation_errorappend(crc250,"\n")
+       !    RETURN
+       ! END IF
        write(s1,'(I0)') locid
        call chop0(s1,50)
        len1=length(s1,50,10)
-       write(ounit,'(3X,A,I0,A)')"<obs id='"//s1(1:len1)//"' subset='",isubset,"'>"
+       write(ounit,'(3X,A,I0,A)')"<message id='"//s1(1:len1)//"' subset='",isubset,"'>"
        !
        ! add target values
        !
@@ -4890,8 +5455,7 @@ CONTAINS
           cnt=0
           EXPANDED: DO II=1,KTDEXL
              IPOS=II+(isubset-1)*KEL
-             val=values(ipos)
-             if ((val.eq.rvind.and..not.css%ignmis).or.val.ne.rvind) then
+             if ((values(ipos).eq.rvind.and..not.css%ignmis).or.values(ipos).ne.rvind) then
                 write(buff250,'(A,I0,A)') "<expanded pos='",ii,"'"
                 call chop0(buff250,250)
                 lenb=length(buff250,250,20)
@@ -4904,7 +5468,7 @@ CONTAINS
                    if (ii.gt.1.and.ktdexp(ii).eq.ktdexp(max(1,ii-1)).and.&
                         & values(ipos).eq.values(max(1,ipos-1))) then
                       ! do nothing
-                   else if (val.eq.RVIND) then ! missing
+                   else if (values(ipos).eq.RVIND) then ! missing
                       s1="MISSING";call chop0(s1,50); len2=length(s1,50,10) 
                       buff250=buff250(1:lenb)//" value='"//s1(1:len2)//"'"
                       call chop0(buff250,250)
@@ -4915,7 +5479,7 @@ CONTAINS
                          lenb=length(buff250,250,20)
                       end if
                    else
-                      call observation_wash(val,s1,len1)
+                      call observation_wash(values(ipos),s1,len1)
                       buff250=buff250(1:lenb)//" value='"//s1(1:len1)//"'"
                       call chop0(buff250,250)
                       lenb=length(buff250,250,20)
@@ -4936,7 +5500,7 @@ CONTAINS
                          lenb=length(buff250,250,20)
                       end if
                       buff250=buff250(1:lenb)//"/>"
-                      call wo(ounit,5,buff250);
+                      call wo(ounit,4,buff250);
                       cnt=cnt+1
                       !if (cnt.gt.5000) exit EXPANDED
                    end if
@@ -4946,7 +5510,15 @@ CONTAINS
           write(buff250,'(A)')"</sec3>"
           call wo(ounit,4,buff250);
        end if
-       write(ounit,'(3X,A)')"</obs>"
+       write(ounit,'(3X,A)')"</message>"
+    else if (isubset .gt. nsubset) then
+       if(obs_bdeb)write(*,'(X,A,X,A,2(I0,A))')myname,' Invalid isubset ',&
+            &isubset,' (',nsubset,')'
+       irc=845
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"This should never happen...")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
     end if
     return
   end subroutine observation_writexml
@@ -4963,17 +5535,6 @@ CONTAINS
     write(ounit,'(A)')blank20(1:max(0,min(20,ind)))//buff250(1:lenb)
     return
   end subroutine wo
-  !
-  subroutine observation_obsstopxml(css,ounit,crc250,irc)
-    type(obs_session), pointer :: css !  current session
-    integer :: ounit
-    character*250 :: crc250
-    integer :: irc
-    character*25 :: myname = "observation_obsstopxml"
-    write(ounit,'(3X,A)')"</observations>"
-    return
-  end subroutine observation_obsstopxml
-  !
   !
   subroutine observation_filestopxml(css,ounit,crc250,irc)
     type(obs_session), pointer :: css !  current session
@@ -5060,14 +5621,14 @@ CONTAINS
           write(ounit,'(4X,A)')"</messages>"
        end if
        if (css%currentFile%ook(1).eq.css%currentFile%ook(5)) then
-          write(ounit,'(4X,A,I0,A,I0,A)')"<obs found='",css%currentFile%ook(1),&
+          write(ounit,'(4X,A,I0,A,I0,A)')"<locations found='",css%currentFile%ook(1),&
                & "' accepted='",css%currentFile%ook(5),"'/>"
        else
           do ii=1,10
              call chop0(css%currentFile%hint80(ii),80)
              css%currentFile%lenh(ii)=length(css%currentFile%hint80(ii),80,1)
           end do
-          write(ounit,'(4X,A,I0,A,I0,A)')"<obs found='",css%currentFile%ook(1),&
+          write(ounit,'(4X,A,I0,A,I0,A)')"<locations found='",css%currentFile%ook(1),&
                & "' accepted='",css%currentFile%ook(5),"'>"
           if (css%currentFile%orm(2).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(2),&
@@ -5113,12 +5674,12 @@ CONTAINS
           end if
           if (css%currentFile%orm(5).ne.0) write(ounit,'(5X,A,I0,A)')"<check removed='",&
                & css%currentFile%orm(5),&
-               & "' reason='No model data available.'/>"
-          write(ounit,'(4X,A)')"</obs>"
+               & "' reason='rejected by obs filter.'/>"
+          write(ounit,'(4X,A)')"</locations>"
        end if
        write(ounit,'(3X,A)')"</summary>"
     end if
-    write(ounit,'(2X,A)')" </observationFile>"
+    write(ounit,'(2X,A)')"</observationFile>"
     return
   end subroutine observation_filestopxml
   !

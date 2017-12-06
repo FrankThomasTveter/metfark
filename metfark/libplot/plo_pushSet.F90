@@ -1,4 +1,4 @@
-subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
+subroutine plo_pushset(sid,cid,mid,oid,nam80,leg250,crc250, irc)
   use plot
   use model
   use observations
@@ -8,9 +8,7 @@ subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
   integer :: cid ! coloc session id
   integer :: mid ! model session id
   integer :: oid ! observation session id
-  character*250 :: nam250
-  character*250 :: x250
-  character*250 :: y250
+  character*80 :: nam80
   character*250 :: leg250
   character*250 :: crc250
   integer :: irc
@@ -19,7 +17,7 @@ subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
   type(col_session), pointer ::  css !  current session
   type(mod_session), pointer ::  mss !  current session
   type(obs_session), pointer ::  oss !  current session
-  !write(*,*)myname,'Entering:',irc,sid,cid,mid,oid,nam250
+  !write(*,*)myname,'Entering:',irc,sid,cid,mid,oid,nam80
   ! get session objects
   call model_getSession(mss,mid,crc250,irc)
   if (irc.ne.0) then
@@ -55,7 +53,7 @@ subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
      return
   end if
   !
-  call  plot_pushset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250, irc)
+  call  plot_pushset(pss,css,mss,oss,nam80,leg250,crc250, irc)
   if (irc.ne.0) then
      call plot_errorappend(crc250,"|")
      call plot_errorappend(crc250,trim(myname))
@@ -63,6 +61,6 @@ subroutine plo_pushset(sid,cid,mid,oid,nam250,x250,y250,leg250,crc250, irc)
      call plot_errorappendi(crc250,irc)
      return
   end if
-  !write(*,*)myname,'Exiting:',irc,sid,cid,mid,oid,nam250
+  !write(*,*)myname,'Exiting:',irc,sid,cid,mid,oid,nam80
   return
 end subroutine plo_pushset

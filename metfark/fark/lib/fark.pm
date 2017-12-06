@@ -1163,31 +1163,54 @@ sub makeMatchList {
 }
 
 
-=head2 setColocFilter
+=head2 setModelFilter
 
-setColocFilter - add a colocation filter.
+setModelFilter - add a model filter.
 
 Arguments:
 
 =over 4
 
-=item (string) colocation filter.
+=item (string) model filter (can contain observation targets).
 
 =back
 
 =head4 EXAMPLE
 
- $fark->setColocFilter("member(obs_id,1047,1049)");
+ $fark->setModelFilter("member(obs_id,1047,1049)");
 
 =cut
 
-sub setColocFilter {
+sub setModelFilter {
     my ($self,$filter)=@_;
-    my ($ret,$msg) = xs_setColocFilter($self->{CID},$filter);
+    my ($ret,$msg) = xs_setModelFilter($self->{MID},$filter);
     if ($ret != 0) {die $msg;}
 }
 
 
+=head2 setObservationFilter
+
+setObservationFilter - sets the type of BUFR files that should be processed
+
+Arguments:
+
+=over 4
+
+=item (string) observation filter
+
+=back
+
+=head4 EXAMPLE
+
+ $fark->setObservationFilter("member(obs_id,1,2,3)");
+
+=cut
+
+sub setObservationFilter {
+    my ($self,$filter)=@_;
+    my ($ret,$msg) = xs_setObsFilter($self->{OID},$filter);
+    if ($ret != 0) {die $msg;}
+}
 
 
 =head2 makeColocXML
@@ -1394,6 +1417,51 @@ sub clearPlotSetStack {
     return;
 }
 
+=head2 clearPlotColumn
+
+clearPlotColumn - clears all output columns from the set.
+
+
+=head4 EXAMPLE
+
+   $fark->clearPlotColumn();
+
+=cut
+
+sub clearPlotColumn {
+    my ($self)=@_;
+    my ($ret,$msg) = xs_clearPlotColumn($self->{PID});
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+=head2 pushPlotColumn
+
+pushPlotColumn - adds a column expression to the set.
+
+Arguments:xs
+
+=over 4
+
+=item (string) column name
+
+=item (string) column value expression
+
+=back
+
+=head4 EXAMPLE
+
+   $fark->pushPlotColumn("X-value","temperature_2m");
+
+=cut
+
+sub pushPlotColumn {
+    my ($self,$name,$expr)=@_;
+    my ($ret,$msg) = xs_pushPlotColumn($self->{PID},$name,$expr);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
 =head2 pushPlotSet
 
 pushPlotSet - adds a data set to the plot set stack.
@@ -1412,10 +1480,6 @@ Arguments:xs
 
 =item (string) name of set
 
-=item (string) x-variable expression
-
-=item (string) y-variable expression
-
 =item (string) legend
 
 =back
@@ -1427,9 +1491,9 @@ Arguments:xs
 =cut
 
 sub pushPlotSet {
-    my ($self,$name,$x,$y,$legend)=@_;
+    my ($self,$name,$legend)=@_;
     my ($ret,$msg) = xs_pushPlotSet($self->{PID},$self->{CID},$self->{MID},
-				   $self->{OID},$name,$x,$y,$legend);
+				   $self->{OID},$name,$legend);
     if ($ret != 0) {die $msg;}
     return;
 }

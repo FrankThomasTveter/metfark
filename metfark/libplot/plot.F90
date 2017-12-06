@@ -8,7 +8,7 @@ module plot
   ! SESSION VARIABLES
   !
   type :: plot_attribute
-     character*250 :: name250=""
+     character*80 :: name80=""
      character*250 :: value250=""
      type(plot_attribute), pointer :: prev => null()         ! linked list
      type(plot_attribute), pointer :: next => null()         ! linked list
@@ -58,11 +58,19 @@ module plot
      type(plot_match), pointer :: next => null()   ! linked list
   end type plot_match
   !
+  type plot_column
+     character*80  :: name80
+     integer :: lenn=0
+     character*250  :: exp250
+     integer :: lene=0
+     type(plot_column), pointer  :: prev => null() ! linked list start
+     type(plot_column), pointer  :: next => null()  ! linked list end
+  end type plot_column
+  !
   type :: plot_set
-     character*250 :: name250=""
+     character*80 :: name80=""
      integer :: id=0
-     character*250 :: x250=""
-     character*250 :: y250=""
+     character*250, allocatable :: colv(:)
      character*250 :: leg250=""
      ! model data
      ! obs data
@@ -94,7 +102,16 @@ module plot
      type(plot_match), pointer :: firstMatch => null()          ! linked list
      type(plot_match), pointer :: lastMatch => null()           ! linked list
      type(plot_match), pointer :: cMatch => null()              ! linked list
-     character*250 :: filter250=""
+     character*250 :: fltmod250=""
+     character*250 :: fltobs250=""
+     !
+     ! output columns 
+     integer :: ccol=0    ! number of allocated columns
+     character*80,allocatable    :: col80(:)
+     integer, allocatable        :: col_lenn(:)
+     character*250,allocatable   :: col_exp250(:)
+     integer, allocatable        :: col_lene(:)
+     !
      ! target lists
      integer :: nTrgMod=0
      character*80, pointer :: trgMod80(:) => null()       ! list of target names
@@ -127,6 +144,10 @@ module plot
      !	VALUES(7):	The seconds of the minute
      !	VALUES(8):	The milliseconds of the second
      integer :: values(8)
+     !
+     integer :: ncol=0    ! number of columns in linked list
+     type(plot_column), pointer :: firstColumn => null()   ! linked list start
+     type(plot_column), pointer :: lastColumn => null()    ! linked list end
      !
      type(plot_attribute), pointer :: firstAttribute => null()         ! linked list
      type(plot_attribute), pointer :: lastAttribute => null()         ! linked list
@@ -196,6 +217,18 @@ CONTAINS
     end if
     pss%firstSet%next => pss%lastSet
     pss%lastSet%prev => pss%firstSet
+    !
+    allocate(pss%firstColumn,pss%lastColumn, stat=irc) ! 
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to allocate &
+            & 'pss%firstColumn/pss%lastColumn'.")
+       call plot_errorappend(crc250,"\n")
+       return
+    end if
+    pss%firstColumn%next => pss%lastColumn
+    pss%lastColumn%prev => pss%firstColumn
+    !
     sid = pss%sid
     return
   end subroutine plot_opensession
@@ -328,10 +361,10 @@ CONTAINS
     return
   end subroutine plot_deallocateAttribute
   !
-  subroutine plot_pushattr(pss,nam250,val250,crc250,irc)
+  subroutine plot_pushattr(pss,name80,val250,crc250,irc)
     implicit none
     type(plot_session), pointer :: pss !  current session
-    character*250 :: nam250
+    character*80 :: name80
     character*250 :: val250
     character*250 :: crc250
     integer :: irc
@@ -342,7 +375,7 @@ CONTAINS
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Unable to allocate 'attribute'.")
     end if
-    cat%name250=nam250
+    cat%name80=name80
     cat%value250=val250
     cat%next => pss%lastAttribute
     cat%prev => pss%lastAttribute%prev
@@ -661,7 +694,93 @@ CONTAINS
     return
   end subroutine plot_deallocateSet
   !
-  subroutine plot_pushset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+  subroutine plot_clearcolumn(pss,crc250,irc)
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: crc250
+    integer :: irc
+    type(plot_column), pointer :: col, ncol
+    character*22 :: myname ="clearcolumn"
+    if(plot_bdeb) write(*,*)myname, 'Entering.',irc,&
+         & associated(pss%firstColumn),associated(pss%lastColumn)
+    col=>pss%firstColumn%next
+    do while (.not.associated(col,target=pss%lastColumn))
+       ncol=>col%next
+       col%prev%next => col%next
+       col%next%prev => col%prev
+       deallocate(col)
+       nullify(col)
+       col=>ncol
+    end do
+    pss%ncol=0
+    !pss%firstColumn%next=>pss%lastColumn
+    !pss%lastColumn%prev=>pss%firstColumn
+    if(plot_bdeb) write(*,*)myname, 'Done.',irc
+    return
+  end subroutine plot_clearcolumn
+  !
+  subroutine plot_pushcolumn(pss,name80,exp250,crc250,irc)
+    type(plot_session), pointer :: pss !  current session
+    character*80 :: name80
+    character*250 :: exp250
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="pushcolumn"
+    type(plot_column), pointer :: col
+    integer, external :: length
+    allocate(col,stat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to allocate 'col'.")
+       return
+    end if
+    col%name80=name80
+    call chop0(col%name80,80)
+    col%lenn=length(col%name80,80,10)
+    col%exp250=exp250
+    call chop0(col%exp250,250)
+    col%lene=length(col%exp250,250,10)
+    col%prev => pss%lastColumn%prev
+    col%next => pss%lastColumn
+    col%prev%next => col
+    col%next%prev => col
+    pss%ncol=pss%ncol+1
+    return
+  end subroutine plot_pushcolumn
+  !
+  subroutine plot_makeColumn(pss,set,crc250,irc) ! make set-column arrays
+    type(plot_session), pointer :: pss !  current session
+    type(plot_set), pointer     :: set !  current set
+    character*250 :: crc250
+    integer :: irc
+    type(plot_column), pointer :: col
+    integer :: ii
+    character*22 :: myname ="makeColumn"
+    if (allocated(set%col80)) deallocate(set%col80)
+    if (allocated(set%col_lenn)) deallocate(set%col_lenn)
+    if (allocated(set%col_exp250)) deallocate(set%col_exp250)
+    if (allocated(set%col_lene)) deallocate(set%col_lene)
+    if (pss%ncol > 0) then
+       set%ccol=pss%ncol
+       allocate(set%col80(set%ccol), &
+            & set%col_lenn(set%ccol), &
+            & set%col_exp250(set%ccol), &
+            & set%col_lene(set%ccol), &
+            & stat=irc)
+       ii=0
+       col=>pss%firstColumn%next
+       do while (.not.associated(col,target=pss%lastColumn))
+          ii=ii+1
+          set%col80(ii)=col%name80
+          set%col_lenn(ii)=col%lenn
+          set%col_exp250(ii)=col%exp250
+          set%col_lene(ii)=col%lene
+          col=>col%next
+       end do
+    end if
+    return
+  end subroutine plot_makeColumn
+  !
+  subroutine plot_pushset(pss,css,mss,oss,name80,leg250,crc250,irc)
     use model
     use observations
     use colocation
@@ -670,17 +789,15 @@ CONTAINS
     type(col_session), pointer ::  css !  current session
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
-    character*250 :: nam250
-    character*250 x250,y250,leg250
+    character*80 :: name80
+    character*250 leg250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="pushset"
     type(plot_set), pointer :: set !  current set
     if(plot_bdeb) write(*,*)myname,'Entering.',irc
     call plot_allocateSet(set,crc250,irc)
-    set%name250=nam250
-    set%x250=x250
-    set%y250=y250
+    set%name80=name80
     set%leg250=leg250
     if(plot_bdeb) write(*,*)myname,'Importing obs.',irc
     call plot_obsImport(set,oss,crc250,irc) ! get obs data 
@@ -703,6 +820,12 @@ CONTAINS
        call plot_errorappend(crc250," Error return from colImport.")
        return
     end if
+    call plot_makeColumn(pss,set,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from makeColumn.")
+       return
+    end if
     set%next => pss%lastSet
     set%prev => pss%lastSet%prev
     set%prev%next => set
@@ -713,7 +836,7 @@ CONTAINS
   end subroutine plot_pushset
   !
   ! loop over sets from top and delete them
-  logical function plot_pullset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+  logical function plot_pullset(pss,css,mss,oss,name80,leg250,crc250,irc)
     use model
     use observations
     use colocation
@@ -722,8 +845,8 @@ CONTAINS
     type(col_session), pointer ::  css !  current session
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
-    character*250 :: nam250
-    character*250 :: x250,y250,leg250
+    character*80 :: name80
+    character*250 :: leg250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="pullset"
@@ -731,9 +854,7 @@ CONTAINS
     plot_pullset=.false. ! only true if all is ok
     set => pss%firstSet%next
     if (.not.associated(set,pss%lastSet)) then
-       nam250=set%name250
-       x250=set%x250
-       y250=set%y250
+       name80=set%name80
        leg250=set%leg250
        call plot_obsExport(set,oss,crc250,irc) ! set obs data
        if (irc.ne.0) then
@@ -761,7 +882,7 @@ CONTAINS
   end function plot_pullset
   !
   ! loop over sets from bottom and delete them
-  logical function plot_popset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+  logical function plot_popset(pss,css,mss,oss,name80,leg250,crc250,irc)
     use model
     use observations
     use colocation
@@ -770,8 +891,8 @@ CONTAINS
     type(col_session), pointer ::  css !  current session
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
-    character*250 :: nam250
-    character*250 :: x250,y250,leg250
+    character*80 :: name80
+    character*250 :: leg250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="popset"
@@ -779,9 +900,7 @@ CONTAINS
     plot_popset=.false. ! only true if all is ok and irc==0
     set => pss%lastSet%prev
     if (.not.associated(set,pss%firstSet)) then
-       nam250=set%name250
-       x250=set%x250
-       y250=set%y250
+       name80=set%name80
        leg250=set%leg250
        call plot_obsExport(set,oss,crc250,irc) ! set obs data
        if (irc.ne.0) then
@@ -809,7 +928,7 @@ CONTAINS
   end function plot_popset
   !
   ! loop over sets from the top without deleting them...
-  logical function plot_loopSet(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc)
+  logical function plot_loopSet(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc)
     use model
     use observations
     use colocation
@@ -818,10 +937,13 @@ CONTAINS
     type(col_session), pointer ::  css !  current session
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
-    character*250 :: nam250
-    character*250 :: x250,y250,leg250
+    character*80 :: name80
+    integer :: ncol
+    character*80, allocatable :: col80(:)
+    character*250, allocatable :: exp250(:)
+    character*250 :: leg250
     character*250 :: crc250
-    integer :: irc
+    integer :: irc,ii
     character*22 :: myname ="loopSet"
     plot_loopset=.false. ! only true if all is ok
     if (.not.associated(pss%currentSet)) then
@@ -833,9 +955,7 @@ CONTAINS
        nullify(pss%currentSet)
        plot_loopset=.false.
     else
-       nam250=pss%currentSet%name250
-       x250=pss%currentSet%x250
-       y250=pss%currentSet%y250
+       name80=pss%currentSet%name80
        leg250=pss%currentSet%leg250
        call plot_obsExport(pss%currentSet,oss,crc250,irc) ! set obs data
        if (irc.ne.0) then
@@ -855,6 +975,23 @@ CONTAINS
           call plot_errorappend(crc250," Error return from colExport.")
           return
        end if
+       !
+       ncol=pss%currentSet%ccol
+       if (pss%currentSet%ccol > size(col80).or.pss%currentSet%ccol > size(exp250)) then
+          if (allocated(col80)) deallocate(col80)
+          if (allocated(exp250)) deallocate(exp250)
+          allocate(col80(ncol),exp250(ncol),stat=irc)
+          if (irc.ne.0) then
+             call plot_errorappend(crc250,myname)
+             call plot_errorappend(crc250," Unable to allocate columns.")
+             return
+          end if
+       end if
+       do ii=1,ncol
+          col80(ii)=pss%currentSet%col80(ii)
+          exp250(ii)=pss%currentSet%col_exp250(ii)
+       end do
+       !
        plot_loopset=.true.
     end if
     return
@@ -1506,6 +1643,12 @@ CONTAINS
        call plot_errorappend(crc250," Error return from loopTarget.")
        return
     end if
+    call observation_getfilter(oss,set%fltobs250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from getobsfilter.")
+       return
+    end if
     return
   end subroutine plot_obsImport
   !
@@ -1583,6 +1726,12 @@ CONTAINS
        call plot_errorappend(crc250," Error return from hasValidIndex.")
        return
     end if
+    call observation_setfilter(oss,set%fltobs250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from setfilter.")
+       return
+    end if
     return
   end subroutine plot_obsExport
   !
@@ -1623,6 +1772,12 @@ CONTAINS
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from loopTarget.")
+       return
+    end if
+    call model_getfilter(mss,set%fltmod250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from getfilter.")
        return
     end if
     if (plot_bdeb) write(*,*)myname,'Done.',irc
@@ -1670,6 +1825,12 @@ CONTAINS
        call plot_errorappend(crc250," Error return from loopModTrg.")
        return
     end if
+    call model_setfilter(mss,set%fltmod250,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from setfilter.")
+       return
+    end if
     !
     return
   end subroutine plot_modExport
@@ -1685,12 +1846,6 @@ CONTAINS
     character*80 :: n80,v80,l80,u80
     character*250 :: e250
     character*22 :: myname ="colImport"
-    call colocation_getfilter(css,set%filter250,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," Error return from getfilter.")
-       return
-    end if
     call colocation_getmodcache(css,set%mod250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1773,13 +1928,6 @@ CONTAINS
     character*80 :: n80,v80,l80,u80
     character*250 :: e250
     character*22 :: myname ="colExport"
-    call colocation_setfilter(css,set%filter250,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," Error return from setfilter.")
-       return
-    end if
-    !
     call colocation_clearDefaultStack(css,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1860,7 +2008,8 @@ CONTAINS
     character*22 :: myname ="maketable"
     type(parse_session), pointer :: psx,psy
     integer :: nvar,ounit,lent
-    character*250 :: leg250,x250,y250,nam250
+    character*250 :: leg250
+    character*80 :: name80
     character*80, allocatable :: var80(:)
     real, allocatable :: val(:)
     integer :: mloc,mtrg,oloc,otrg
@@ -1871,6 +2020,9 @@ CONTAINS
     logical :: bobsind
     type(parse_session), pointer :: pse
     type(parse_pointer), pointer :: ppt(:) ! parse sessions
+    integer :: ncol
+    character*80, allocatable :: col80(:)
+    character*250, allocatable :: exp250(:)
     integer :: locid,locstart
     !
     real :: mod_start = 0.0D0
@@ -1884,20 +2036,20 @@ CONTAINS
     lent=length(tab250,250,10)
     ounit=ftunit(irc)
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," no free unit number for:"//tab250(1:lent))
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," no free unit number for:"//tab250(1:lent))
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
        return
     end if
     open ( unit=ounit, status="unknown", form="formatted", &
          &        access="sequential", &
          &        iostat=irc, file=tab250(1:lent) )
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to open:"//tab250(1:lent))
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," unable to open:"//tab250(1:lent))
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
        return
     end if
     !
@@ -1914,12 +2066,12 @@ CONTAINS
        return
     end if
     write(pss%tunit,'("# Legend table")',iostat=irc)
-    do while (plot_loopset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc))
-       call chop0(nam250,250)
-       lenn=length(nam250,250,1)
+    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
+       call chop0(name80,80)
+       lenn=length(name80,80,1)
        call chop0(leg250,250)
        lenl=length(leg250,250,1)
-       write(pss%tunit,'("#",X,A,X,A)',iostat=irc)nam250(1:lenn),leg250(1:lenl)
+       write(pss%tunit,'("#",X,A,X,A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
     end do
     !
     if(plot_bdeb)write(*,*)myname,'Writing data.',pss%tunit
@@ -1931,16 +2083,16 @@ CONTAINS
        call plot_errorappend(crc250,pss%tab250(1:pss%lent))
        return
     end if
-    do while (plot_loopset(pss,css,mss,oss,nam250,x250,y250,leg250,crc250,irc))
+    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
        ! make output data for this set
        irc=0
-       call colocation_makeTable(css,mss,oss,ounit,nam250,x250,y250,leg250,test,crc250,irc)
+       call colocation_makeTable(css,mss,oss,ounit,name80,ncol,col80,exp250,leg250,test,crc250,irc)
        if (irc.ne.0) then
-          call chop0(nam250,250)
-          lenn=length(nam250,250,10)
+          call chop0(name80,80)
+          lenn=length(name80,80,10)
           call plot_errorappend(crc250,myname)
           call plot_errorappend(crc250,"Error return from 'makeOutput'.")
-          call plot_errorappend(crc250,nam250(1:lenn))
+          call plot_errorappend(crc250,name80(1:lenn))
           return
        end if
     end do

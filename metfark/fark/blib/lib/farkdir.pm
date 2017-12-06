@@ -46,26 +46,29 @@ our @EXPORT = qw(%farkdirs);
 
 our $VERSION = '0.13';
 
-# Preloaded methods go here.
-
+#
+# This is where we define the root directories to the different classes of functions.
+#
+#
 # NB: Must end with "/"  ...
-our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",
+our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input data
 			   "/lustre/storeB/"   => "ro",
 			   "/opdata/"          => "ro",
 			   "/elysium/data/"    => "rw" }, 
-		  tables => {"/lustre/storeA/users/"     => "ro",
+		  tables => {"/lustre/storeA/users/"     => "ro",        # BUFR tables
 			     "/lustre/storeA/project/"   => "ro",
 			     "/opdata/"                  => "ro",
 			     "/elysium/"                 => "ro" }, 
-		  output => {"/lustre/storeA/"    => "rw",
+		  output => {"/lustre/storeA/"    => "rw",               # output data
 			     "/lustre/storeB/"    => "rw",
 			     "/elysium/"          => "rw" }, 
-		  model       => {"/elysium/metfark/mod/"     => "rw" },
-		  model_use   => {"/elysium/metfark/use/mod/" => "rw" },
-		  model_cache => {"/elysium/metfark/index/mod/" => "rw" },
-		  model_reg   => {"/elysium/metfark/reg/mod/" => "rw" },
-		  model_old   => {"/elysium/metfark/old/mod/" => "rw" },
-		  model_log   => {"/elysium/metfark/log/mod/" => "rw" },
+		  script       => {"/elysium/metfark/splus/"     => "rw" }, # splus scripts
+		  model       => {"/elysium/metfark/mod/"     => "rw" }, # model config files
+		  model_old   => {"/elysium/metfark/old/mod/" => "rw" }, # model old config files
+		  model_use   => {"/elysium/metfark/use/mod/" => "rw" }, # model use files
+		  model_cache => {"/elysium/metfark/index/mod/" => "rw" }, # model cache/index files
+		  model_reg   => {"/elysium/metfark/reg/mod/" => "rw" }, # model register files
+		  model_log   => {"/elysium/metfark/log/mod/" => "rw" }, # model log files
 		  obs       => {"/elysium/metfark/obs/"       => "rw" },
 		  obs_use   => {"/elysium/metfark/use/obs/"   => "rw" },
 		  obs_cache => {"/elysium/metfark/index/obs/"   => "rw" },
@@ -81,9 +84,9 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",
 		  plot_old =>  {"/elysium/metfark/old/plot/"    => "rw" },
 		  plot_use =>  {"/elysium/metfark/use/plot/"    => "rw" },
 		  plot_log =>  {"/elysium/metfark/log/plot/"    => "rw" },
-		  auto  => {"/elysium/metfark/auto/"    => "rw" },
-		  url  =>  {"/elysium/metfark/url/"     => "rw" },
-		  lock =>  {"/elysium/metfark/lock/"    => "rw" }
+		  auto  => {"/elysium/metfark/auto/"    => "rw" },       # auto config files
+		  url  =>  {"/elysium/metfark/url/"     => "rw" },       # url config files (not used?)
+		  lock =>  {"/elysium/metfark/lock/"    => "rw" }        # lock files (must be local disk)
     );
 
 sub makeRoot {

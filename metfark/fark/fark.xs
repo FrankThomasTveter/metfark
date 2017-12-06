@@ -18,6 +18,7 @@ void mod_peekfilelen_(int* mid,int* maxrep,char* crc250,int* irc, int len1);
 void mod_popfile_(int* mid,char* path250,char* crc250,int* irc, int len1,int len2);
 void mod_pushfile_(int* mid,char* path,char* crc250,int* irc, int len1,int len2);
 void mod_pushtarget_(int* mid,char* trg,char* var,char* min,char* max, char* crc250,int* irc, int len1,int len2,int len3,int len4,int len5);
+void mod_setfilter_ (int* cid, char* flt,  char* crc250, int* irc, int len1, int len2);
 
 void obs_opensession_(int* oid,char* crc250,int* irc, int len1);
 void obs_clearfilestack_(int* oid,char* crc250,int* irc, int len1);
@@ -34,6 +35,7 @@ void obs_settablepath_(int* oid,char* path250,char* crc250,int* irc, int len1,in
 void obs_setindex_(int* oid,char* trg80,char* exp250, char* crc250,int* irc, int len1,int len2,int len3);
 void obs_setindexlimits_(int* oid,char* s25,char* e25,char* crc250,int* irc, int len1,int len2,int len3);
 void obs_setbufrtype_(int* oid,int* bufrType, int* subType, char* crc250,int* irc, int len1);
+void obs_setfilter_ (int* cid, char* flt,  char* crc250, int* irc, int len1, int len2);
 
 void col_opensession_(int* cid, char* crc250, int* irc, int len1);
 void col_closesession_(int* cid, char* crc250, int* irc, int len1);
@@ -52,15 +54,15 @@ void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, in
 
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
 void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
-void col_setfilter_ (int* cid, char* filter250,  char* crc250, int* irc, int len1, int len2);
 void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,int* test,char*  crc250, int* irc, int len1, int len2, int len3);
 void plo_makegraphics_(int* pid, char* tab250, char* gra250, int* test,char* crc250, int* irc, int len1, int len2, int len3);
 void plo_settype_(int* pid, char* type250, char* crc250, int* irc, int len1, int len2);
 void plo_clearattrstack_(int* pid, char* crc250, int* irc, int len1, int len2);
 void plo_pushattr_(int* pid, char* name250, char* value250, char* crc250, int* irc, int len1, int len2);
 void plo_clearsetstack_(int* pid, char* crc250, int* irc, int len1, int len2);
-void plo_pushset_(int* pid, int* cid, int* mid, int* oid, char* name250, char* x250, char* y250, 
-		  char* legend250, char* crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
+void plo_clearcolumn_(int* pid, char* crc250, int* irc, int len1);
+void plo_pushcolumn_(int* pid, char* name80, char* exp250, char* crc250, int* irc, int len1, int len2, int len3);
+void plo_pushset_(int* pid, int* cid, int* mid, int* oid, char* name250, char* legend250, char* crc250, int* irc, int len1, int len2, int len3);
 void plo_settablefile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 void plo_gettablefile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 void plo_setgraphicsfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
@@ -1308,7 +1310,7 @@ xs_expression(char *exp);
 
 
 #
-#  "setColocFilter" defines filter
+#  "setModelFilter" defines filter
 #      (string) filter.
 #   Return array:
 #      (string)  result
@@ -1316,25 +1318,46 @@ xs_expression(char *exp);
 #      (string)  error return message
 
 void
-xs_setColocFilter(int cid, char *filter);
+xs_setModelFilter(int cid, char *filter);
     PREINIT:
-      char *filter250;
       int  irc;
       char *crc250;
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      filter250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      strcpy(filter250,filter);
-      col_setfilter_(&cid,filter250, crc250, &irc, 250, 250);
+      mod_setfilter_(&cid,filter, crc250, &irc, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
       EXTEND(SP, 2);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-      free(filter250);
+      free(crc250);
+#
+#  "setObsFilter" defines observation filter
+#      (string) filtler.
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setObsFilter(int cid, char *filter);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      obs_setfilter_(&cid,filter, crc250, &irc, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
 
 #
@@ -1760,6 +1783,68 @@ xs_clearPlotSetStack(int pid);
       free(crc250);
 
 #
+#  "clearPlotColumn" push plot column expression to the stack
+#      (int)  plot session id
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_clearPlotColumn(int pid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      plo_clearcolumn_(&pid, crc250, &irc, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "pushPlotColumn" push plot column expression to the stack
+#      (int)  plot session id
+#      (string)  name
+#      (string)  expr
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_pushPlotColumn(int pid, char *name, char *expr);
+    PREINIT:
+      char *name80;
+      char *exp250;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      name80 = calloc(sizeof(char), 80);
+      exp250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      strcpy(name80,name);
+      strcpy(exp250,expr);
+      plo_pushcolumn_(&pid, name80, exp250, crc250, &irc, 80, 250, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(name80);
+      free(exp250);
+      free(crc250);
+
+#
 #  "pushPlotSet" push plot set to the stack
 #      (int)  plot session id
 #      (int)  coloc session id
@@ -1775,36 +1860,28 @@ xs_clearPlotSetStack(int pid);
 #      (string)  error return message
 
 void
-xs_pushPlotSet(int pid, int cid, int mid, int oid, char *name, char *x, char *y, char *legend);
+xs_pushPlotSet(int pid, int cid, int mid, int oid, char *name, char *legend);
     PREINIT:
-      char *name250;
-      char *x250;
-      char *y250;
+      char *name80;
       char *legend250;
       int  irc;
       char *crc250;
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      name250 = calloc(sizeof(char), 250);
-      x250 = calloc(sizeof(char), 250);
-      y250 = calloc(sizeof(char), 250);
+      name80 = calloc(sizeof(char), 80);
       legend250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      strcpy(name250,name);
-      strcpy(x250,x);
-      strcpy(y250,y);
+      strcpy(name80,name);
       strcpy(legend250,legend);
-      plo_pushset_(&pid, &cid, &mid, &oid, name250, x250, y250, legend250, crc250, &irc, 250, 250, 250, 250, 250);
+      plo_pushset_(&pid, &cid, &mid, &oid, name80, legend250, crc250, &irc, 80, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
       EXTEND(SP, 2);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-      free(name250);
-      free(x250);
-      free(y250);
+      free(name80);
       free(legend250);
       free(crc250);
 #

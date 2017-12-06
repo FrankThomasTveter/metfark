@@ -40,10 +40,12 @@ module parse
   integer,                                  PARAMETER :: parse_uaa=ichar('A')
   integer,                                  PARAMETER :: parse_uzz=ichar('Z')
   integer,                                  PARAMETER :: parse_und=ichar('_')
-  INTEGER(is),                              PARAMETER :: parse_empty       = 0,&
-                                                         parse_constant    = 1,&
-                                                         parse_variable    = 2,&
-                                                         parse_expression  = 3
+  INTEGER(is),                              PARAMETER :: parse_delay       = 0,&
+                                                         parse_empty       = 1,&
+                                                         parse_constant    = 2,&
+                                                         parse_internal    = 3,&
+                                                         parse_variable    = 4,&
+                                                         parse_expression  = 5
   INTEGER(is),                              PARAMETER :: cImmed   = 1,          &
                                                          cNeg     = 2,          &
                                                          cAdd     = 3,          & 
@@ -186,16 +188,18 @@ CONTAINS
        IF (ASSOCIATED(css%Args)) DEALLOCATE ( css%Args, stat=irc)
        IF (ASSOCIATED(css%ArgsIndex)) DEALLOCATE ( css%ArgsIndex, stat=irc)
        deallocate(css,stat=irc)
+       nullify(css)
     end if
     return
   END SUBROUTINE parse_close
   !
-  integer function parse_type(funcstr,crc250,irc)
+  integer function parse_type(funcstr,var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Identify type of function (empty, constant, variable or expression)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
     CHARACTER (LEN=*),               INTENT(in) :: FuncStr   ! Function string
+    CHARACTER (LEN=*), allocatable, INTENT(in) :: Var(:)     ! internal variables
     character*250 :: crc250
     integer :: irc
     CHARACTER (LEN=LEN(FuncStr))                :: Func      ! Function string, local use
@@ -219,6 +223,12 @@ CONTAINS
        parse_type=parse_constant
        return
     end if
+    DO ii=1,SIZE(Var)
+       IF (trim(func) .eq. trim(Var(ii))) THEN                     
+          parse_type=parse_internal
+          return
+       end if
+    end Do
     DO ii=1,lFunc
        c=ichar(func(ii:ii))
        if (.not.((c.ge.parse_laa.and. c.le.parse_lzz).or.&
@@ -424,9 +434,178 @@ CONTAINS
     END DO
     EvalErrType = 0
     res = css%Stack(1)
-    if(parse_bdeb)write(*,'(X,A,X,A,A,F27.10)') myname,str," result=",res
+    if(parse_bdeb)write(*,'(X,A,X,A,A,F0.10)') myname,str," result=",res
     if(parse_bdeb)write(*,*)myname,"Done."
   END FUNCTION parse_evalf
+  !
+  FUNCTION parse_evala (css, ctrg,cpos,Val, ipos) RESULT (res)
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    ! Evaluate bytecode of ith function for the values passed in array Val(:)
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    IMPLICIT NONE
+    type(parse_session), pointer :: css
+    integer,dimension(8) :: values    
+    integer(is),INTENT(in) :: ctrg,cpos
+    REAL(rn), INTENT(in) :: Val(ctrg,cpos)                ! Variable values
+    integer(is),INTENT(in) :: ipos
+    REAL(rn)                           :: res                ! Result
+    INTEGER                            :: IP,              & ! Instruction pointer
+                                          DP,              & ! Data pointer
+                                          SP,              & ! Stack pointer
+                                          AP,              & ! arguments pointer
+                                          AI                 ! arguments index
+    REAL(rn),                PARAMETER :: zero = 0._rn
+    integer :: ii, nargs
+    character*50 :: str
+    character*22 :: myname ="parse_evala"
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+
+    if(parse_bdeb)write(*,*)myname,"Entering",css%ByteCodeSize
+    DP = 1
+    SP = 0
+    AP = 0
+    AI = 0
+    str=''
+    DO IP=1,css%ByteCodeSize
+
+       if (AI.eq.0) then
+          nargs=ap+1;
+       else
+          NARGS=AP-css%ArgsIndex(AI)+1;
+       end if
+
+       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') &
+            & "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,min(SP,100))
+       if(parse_bdeb)write(*,'(X,A,X,A,2(X,I1),100(X,F8.2))') myname,&
+            & str,AP,nargs,(css%Args(II),II=1,min(AP,100))
+
+       if(parse_bdeb)write(*,*)myname,"Looping",IP,css%ByteCode(IP)
+       SELECT CASE (css%ByteCode(IP))
+
+       CASE (cImmed); SP=SP+1; css%Stack(SP)=css%Immed(DP); DP=DP+1
+       CASE   (cNeg); css%Stack(SP)=-css%Stack(SP)
+       CASE   (cAdd); css%Stack(SP-1)=css%Stack(SP-1)+css%Stack(SP); SP=SP-1
+       CASE   (cSub); css%Stack(SP-1)=css%Stack(SP-1)-css%Stack(SP); SP=SP-1
+       CASE   (cMul); css%Stack(SP-1)=css%Stack(SP-1)*css%Stack(SP); SP=SP-1
+       CASE   (cDiv); IF (css%Stack(SP)==0._rn) THEN; EvalErrType=1; res=zero; RETURN; ENDIF
+                      css%Stack(SP-1)=css%Stack(SP-1)/css%Stack(SP); SP=SP-1
+       CASE   (cPow); css%Stack(SP-1)=css%Stack(SP-1)**css%Stack(SP); SP=SP-1
+       CASE   (cAbs); css%Stack(SP)=ABS(css%Stack(SP))
+       CASE   (cExp); css%Stack(SP)=EXP(css%Stack(SP))
+       CASE (cLog10); IF (css%Stack(SP)<=0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
+                      css%Stack(SP)=LOG10(css%Stack(SP))
+       CASE   (cLog); IF (css%Stack(SP)<=0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
+                      css%Stack(SP)=LOG(css%Stack(SP))
+       CASE  (cSqrt); IF (css%Stack(SP)<0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
+                      css%Stack(SP)=SQRT(css%Stack(SP))
+       CASE  (cSinh); css%Stack(SP)=SINH(css%Stack(SP))
+       CASE  (cCosh); css%Stack(SP)=COSH(css%Stack(SP))
+       CASE  (cTanh); css%Stack(SP)=TANH(css%Stack(SP))
+       CASE   (cSin); css%Stack(SP)=SIN(css%Stack(SP))
+       CASE   (cCos); css%Stack(SP)=COS(css%Stack(SP))
+       CASE   (cTan); css%Stack(SP)=TAN(css%Stack(SP))
+       CASE  (cAsin); IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+                      EvalErrType=4; res=zero; RETURN; ENDIF
+                      css%Stack(SP)=ASIN(css%Stack(SP))
+       CASE  (cAcos); IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+                      EvalErrType=4; res=zero; RETURN; ENDIF
+                      css%Stack(SP)=ACOS(css%Stack(SP))
+       CASE  (cAtan2); AI=AI+1;
+          IF (NARGS.EQ.2) THEN
+             css%Stack(SP)=ATAN2(css%Stack(SP),css%Args(css%ArgsIndex(AI)+1));
+          ELSE 
+             write(*,*)"*** Unexpected number of arguments to atan2:",nargs
+             EvalErrType=5; res=zero; RETURN; 
+          END IF;
+          AP=css%ArgsIndex(AI)
+       CASE  (c1970);AI=AI+1;
+          IF (NARGS.EQ.1) THEN ! dtg()
+             call date_and_time(VALUES=values)
+             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
+                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
+             css%Stack(SP)=parse_f1970(css%Stack(SP), &
+                  css%Args(css%ArgsIndex(AI)+1), &
+                  css%Args(css%ArgsIndex(AI)+2), &
+                  css%Args(css%ArgsIndex(AI)+3), &
+                  css%Args(css%ArgsIndex(AI)+4), &
+                  css%Args(css%ArgsIndex(AI)+5));
+          ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
+             css%Stack(SP)=parse_f1970(css%Stack(SP), &
+                  css%Args(css%ArgsIndex(AI)+1), &
+                  css%Args(css%ArgsIndex(AI)+2), &
+                  css%Args(css%ArgsIndex(AI)+3), &
+                  css%Args(css%ArgsIndex(AI)+4), &
+                  0.0D0);
+          ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
+             css%Stack(SP)=parse_f1970(css%Stack(SP), &
+                  css%Args(css%ArgsIndex(AI)+1), &
+                  css%Args(css%ArgsIndex(AI)+2), &
+                  css%Args(css%ArgsIndex(AI)+3), &
+                  0.0D0, &
+                  0.0D0);
+          ELSE 
+             write(*,*)"*** Unexpected number of arguments to s1970:",nargs
+             EvalErrType=5; res=zero; RETURN; 
+          END IF;
+          AP=css%ArgsIndex(AI)
+       CASE  (c1970yy); css%Stack(SP)=parse_f1970_yy(css%Stack(SP))
+       CASE  (c1970mm); css%Stack(SP)=parse_f1970_mm(css%Stack(SP))
+       CASE  (c1970dd); css%Stack(SP)=parse_f1970_dd(css%Stack(SP))
+       CASE  (c1970hh); css%Stack(SP)=parse_f1970_hh(css%Stack(SP))
+       CASE  (c1970mi); css%Stack(SP)=parse_f1970_mi(css%Stack(SP))
+       CASE  (cjulian);AI=AI+1;
+          IF (NARGS.EQ.1) THEN ! dtg()
+             call date_and_time(VALUES=values)
+             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
+                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
+             css%Stack(SP)=parse_fjulian(css%Stack(SP), &
+                  css%Args(css%ArgsIndex(AI)+1), &
+                  css%Args(css%ArgsIndex(AI)+2), &
+                  css%Args(css%ArgsIndex(AI)+3), &
+                  css%Args(css%ArgsIndex(AI)+4), &
+                  css%Args(css%ArgsIndex(AI)+5));
+          ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
+             css%Stack(SP)=parse_fjulian(css%Stack(SP), &
+                  css%Args(css%ArgsIndex(AI)+1), &
+                  css%Args(css%ArgsIndex(AI)+2), &
+                  css%Args(css%ArgsIndex(AI)+3), &
+                  css%Args(css%ArgsIndex(AI)+4), &
+                  0.0D0);
+          ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
+             css%Stack(SP)=parse_fjulian(css%Stack(SP), &
+                  css%Args(css%ArgsIndex(AI)+1), &
+                  css%Args(css%ArgsIndex(AI)+2), &
+                  css%Args(css%ArgsIndex(AI)+3), &
+                  0.0D0, &
+                  0.0D0);
+          ELSE 
+             write(*,*)"*** Unexpected number of arguments to d2000:",nargs
+             EvalErrType=5; res=zero; RETURN; 
+          END IF;
+          AP=css%ArgsIndex(AI)
+       CASE  (cjulianyy); css%Stack(SP)=parse_fjulian_yy(css%Stack(SP))
+       CASE  (cjulianmm); css%Stack(SP)=parse_fjulian_mm(css%Stack(SP))
+       CASE  (cjuliandd); css%Stack(SP)=parse_fjulian_dd(css%Stack(SP))
+       CASE  (cjulianhh); css%Stack(SP)=parse_fjulian_hh(css%Stack(SP))
+       CASE  (cjulianmi); css%Stack(SP)=parse_fjulian_mi(css%Stack(SP))
+       CASE  (cAtan); css%Stack(SP)=ATAN(css%Stack(SP))
+       CASE  (cArgs); AP=AP+1;css%Args(AP)=css%Stack(SP);SP=SP-1;
+       CASE  DEFAULT; SP=SP+1; 
+          if (css%ByteCode(IP) .le. VarEnd) then
+             if(parse_bdeb)write(*,*)myname,'Using val-index:',css%ByteCode(IP)-VarBegin+1,ipos
+             !css%Stack(SP)=Val(css%ByteCode(IP)-VarBegin+1,ipos)
+          else
+             css%Stack(SP)=ConstVal(css%ByteCode(IP)-VarEnd)
+          end if
+       END SELECT
+    END DO
+    EvalErrType = 0
+    res = css%Stack(1)
+    if(parse_bdeb)write(*,'(X,A,X,A,A,F0.10)') myname,str," result=",res
+    if(parse_bdeb)write(*,*)myname,"Done."
+  END FUNCTION parse_evala
   !
   SUBROUTINE parse_CheckSyntax (Func,FuncStr,Var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -663,7 +842,7 @@ CONTAINS
     character*25 :: myname = "parse_VariableIndex"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     n = 0
-    !if(parse_bdeb)write(*,*)myname,"Entering."
+    if(parse_bdeb)write(*,*)myname,"Entering: '"//trim(str)//"'",ibegin,size(var)
     lstr = LEN_TRIM(str)
     IF (lstr > 0) THEN
        DO ib=1,lstr                                          ! Search for first character in str
@@ -673,21 +852,22 @@ CONTAINS
           IF (SCAN(str(in:in),'+-*/^) ,') > 0) EXIT
        END DO
        DO j=1,SIZE(Var)
-          IF (str(ib:in-1) == trim(Var(j))) THEN                     
+          IF (str(ib:in-1) .eq. trim(Var(j))) THEN                     
              n = j                                           ! Variable name found
              IF (PARSE_BDEB) THEN
-                write(*,*) myname,"** Match:"//str(ib:in-1)//" == "//trim(Var(j))//":"
+                write(*,*) myname,"** Match: '"//str(ib:in-1)//"' == '"//trim(Var(j))//"'"
              end if
              EXIT
           ELSE IF (PARSE_BDEB) THEN
-             !write(*,*) myname,"Mismatch:"//str(ib:in-1)//" != "//trim(Var(j))//":"
+             write(*,*) myname,"Mismatch: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
+                  & in-ib,len_trim(var(j))
           END IF
        END DO
     END IF
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
     if (n.eq.0.and.parse_bdeb)write(*,*) myname,"No match for:"//str(ib:in-1)
-    !if(parse_bdeb)write(*,*)myname,"Done.",ib,in
+    if(parse_bdeb)write(*,*)myname,"Done.",ib,in
   END FUNCTION parse_VariableIndex
   !
   SUBROUTINE RemoveSpaces (str)
