@@ -71,7 +71,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2017-12-05" "perl v5.22.1" "User Contributed Perl Documentation"
+.TH fark 3pm "2017-12-06" "perl v5.22.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -785,24 +785,6 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 my ($tablefile,$plotfile) = \f(CW$fark\fR\->makePlotTable($tablepattern,$plotpattern,0);
-.SS "makePlotGraphics"
-.IX Subsection "makePlotGraphics"
-makePlotGraphics \- generate plot graphics.
-.PP
-Arguments:
-.IP "(string) name of table input file." 4
-.IX Item "(string) name of table input file."
-.PD 0
-.IP "(string) name of graphics output plot file." 4
-.IX Item "(string) name of graphics output plot file."
-.IP "(int) test flag (1 or 0), 1= only check input" 4
-.IX Item "(int) test flag (1 or 0), 1= only check input"
-.PD
-.PP
-\s-1EXAMPLE\s0
-.IX Subsection "EXAMPLE"
-.PP
-my \f(CW$file\fR = \f(CW$fark\fR\->makePlotGraphics($tablefile,$graphicfile);
 .SS "expression"
 .IX Subsection "expression"
 expression \- evaluate expression

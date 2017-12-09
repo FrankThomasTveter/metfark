@@ -273,13 +273,16 @@ module model
      integer, pointer      :: obs_lenv(:) => null() ! list of obs target name length
      real, pointer         :: obs_val(:)  => null() ! list of observation values
      !
+     integer :: cpsp=0
+     type(parse_pointer), pointer :: psp(:)=>null() ! parse pointer
+     !
      CHARACTER*250 :: FLT250
      integer :: lenf=0
-     logical ::  flt_set=.false.
-     integer :: cflt=0
-     character*80, allocatable :: flt_var(:)   ! list of variable names
-     integer, allocatable    :: flt_lenv(:)    ! list of target name length
-     real, allocatable       :: flt_val(:)     ! list of values
+     logical ::  mpo_set=.false.
+     integer :: cmpo=0
+     character*80, allocatable :: mpo_var(:)   ! list of variable names
+     integer, allocatable    :: mpo_lenv(:)    ! list of target name length
+     real, allocatable       :: mpo_val(:)     ! list of values
      type(parse_session), pointer :: psf => null()
      !
      ! output
@@ -310,7 +313,7 @@ CONTAINS
     type(mod_session),pointer :: css  !  new session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_openSession"
+    character*25 :: myname="model_openSession"
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
        if (irc.ne.0) then
@@ -400,7 +403,7 @@ CONTAINS
     integer :: sid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getSession"
+    character*25 :: myname="model_getSession"
     if (.not.associated(firstSession)) then
        irc=911
        call model_errorappend(crc250,myname)
@@ -429,7 +432,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_closeSession"
+    character*25 :: myname="model_closeSession"
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        call model_removeSession(css,crc250,irc)
@@ -459,7 +462,7 @@ CONTAINS
     type(mod_location), pointer :: cloc, clocn
     type(mod_target), pointer :: ctrg, ctrgn
     integer :: ii
-    character*25 :: myname = "model_removeSession"
+    character*25 :: myname="model_removeSession"
     ! remove location stack
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     if(mod_bdeb)write(*,*)myname,'Un-slice.'
@@ -501,8 +504,16 @@ CONTAINS
        deallocate(css%firstFile,css%lastFile)
     end if
     !
+    ! remove location arrays
+    call model_clearLoc(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from clearLoc.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     ! remove location stack
-    if (allocated(css%locData)) deallocate(css%locData)
     css%locReady=.false.
     if (associated(css%firstLoc)) then
        cloc => css%firstLoc%next
@@ -571,14 +582,20 @@ CONTAINS
        call parse_close(css%psf,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'parse_open'.")
+          call model_errorappend(crc250,"Error return from 'parse_close'.")
           return
        end if
     end if
     !
-    if (allocated(css%flt_var)) deallocate(css%flt_var)
-    if (allocated(css%flt_lenv)) deallocate(css%flt_lenv)
-    if (allocated(css%flt_val)) deallocate(css%flt_val)
+    if (allocated(css%mpo_var)) deallocate(css%mpo_var)
+    if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
+    if (allocated(css%mpo_val)) deallocate(css%mpo_val)
+    !
+    call model_clearPSP(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,"clearPSP.")
+       return
+    end if
     !
     if(mod_bdeb)write(*,*)myname,'Un-link.'
     ! unlink from session-chain
@@ -599,7 +616,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_initfilestack"
+    character*25 :: myname="model_initfilestack"
     ! initialise chain
     allocate(css%firstFile,css%lastFile, stat=irc)
     if (irc.ne.0) then
@@ -627,7 +644,7 @@ CONTAINS
     type(mod_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    character*25 :: myname = "model_clearfilestack"
+    character*25 :: myname="model_clearfilestack"
     if(mod_bdeb)write(*,*)myname,' Entering.'
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
@@ -674,10 +691,10 @@ CONTAINS
     type(mod_file), pointer :: df
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    character*25 :: myname = "model_deleteFile"
+    character*25 :: myname="model_deleteFile"
     integer :: irc2
     integer :: ii
-    if(mod_bdeb)write(*,*)myname,'Entering.'
+    !if(mod_bdeb)write(*,*)myname,'Entering.'
     if (associated(df)) then
        css%nFileIndexes = css%nFileIndexes - 1
        css%tsort = css%tsort - df%nsort
@@ -712,7 +729,7 @@ CONTAINS
        if (associated(df%var)) deallocate(df%var,stat=irc2)
        deallocate(df)
     end if
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    !if(mod_bdeb)write(*,*)myname,'Done.'
     return
   end subroutine model_deleteFile
   !
@@ -735,7 +752,7 @@ CONTAINS
     logical :: bbok
     integer :: nslice
     character*80, allocatable :: sdim80(:)
-    character*25 :: myname = "model_pushFile"
+    character*25 :: myname="model_pushFile"
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -835,7 +852,7 @@ CONTAINS
     integer :: irc
     type(mod_file), pointer :: currentFile => null()
     type(mod_file), pointer :: prevFile => null()
-    character*25 :: myname = "model_popfile"
+    character*25 :: myname="model_popfile"
     logical :: bdone
     integer, external :: length
     integer :: lenp
@@ -884,7 +901,7 @@ CONTAINS
     integer :: irc
     type(mod_file), pointer :: currentFile => null()
     integer :: ii,jj
-    character*25 :: myname = "model_peeklen"
+    character*25 :: myname="model_peeklen"
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -925,7 +942,7 @@ CONTAINS
     type(mod_file), pointer :: currentFile => null()
     integer :: ii,jj
     character*80 :: var80
-    character*25 :: myname = "model_peek"
+    character*25 :: myname="model_peek"
     if(mod_bdeb)write(*,*)myname,' Entering.'
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
@@ -1021,7 +1038,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "model_loopFileStack"
+    character*22 :: myname="model_loopFileStack"
     logical :: bdone,found
     found=.false.
     bdone=(css%lastIteration.or..not. css%sortLimitsOk)
@@ -1061,7 +1078,7 @@ CONTAINS
     integer :: irc
     type(mod_file), pointer :: currentFile => null()
     integer :: ii,jj
-    character*25 :: myname = "model_sortStack"
+    character*25 :: myname="model_sortStack"
     !
     ! make array of files
     if(mod_bdeb)write(*,*)myname,' Entering.'
@@ -1069,8 +1086,8 @@ CONTAINS
     if (allocated(css%fileStackSort)) deallocate(css%fileStackSort)
     if (allocated(css%fileStackInd)) deallocate(css%fileStackInd)
     if (mod_bdeb) write(*,*)myname,'Allocating sort stack:',css%nFileIndexes
-    allocate(css%fileStack(css%nFileIndexes),css%fileStackSort(css%nFileIndexes,2),&
-         &css%fileStackInd(css%nFileIndexes,2),stat=irc)
+    allocate(css%fileStack(max(1,css%nFileIndexes)),css%fileStackSort(max(1,css%nFileIndexes),2),&
+         &css%fileStackInd(max(1,css%nFileIndexes),2),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Error return from allocate (")
@@ -1134,8 +1151,9 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "model_findStackLimits"
+    character*22 :: myname="model_findStackLimits"
     integer :: leftmin,rightmin,leftmax,rightmax
+    if (mod_bdeb)write(*,*)myname,'Entering, Number of files:',css%nFileIndexes
     if (css%ind_lval(1)) then
        call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,2),1.0D-5, &
             & css%nFileSortIndexes,css%fileStackInd(1,2),css%ind_minval,leftmin,rightmin)
@@ -1158,6 +1176,7 @@ CONTAINS
        leftmax=css%nFileSortIndexes
        rightmax=css%nFileSortIndexes
     end if
+    if (mod_bdeb)write(*,*)myname,'Limits.', leftmin,rightmin,leftmax,rightmax
     css%sortLimitsOk= (leftmin.le.css%nFileSortIndexes.and.rightmax.ge.1) ! check for overlap...
     if (css%sortLimitsOk) then
        css%leftFileSortIndex=min(leftmin,rightmin)
@@ -1185,7 +1204,7 @@ CONTAINS
     type(mod_file), pointer :: currentFile !  current file
     integer, external :: length,ftunit
     integer :: lenp,lenf,lenv,lend,unitr,ii,jj
-    character*22 :: myname = "model_makeCache"
+    character*22 :: myname="model_makeCache"
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1279,7 +1298,7 @@ CONTAINS
     integer, external :: length
     integer :: lenp,lenb,lend,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
-    character*22 :: myname = "model_loadCache"
+    character*22 :: myname="model_loadCache"
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1490,7 +1509,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,' Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done, files in stack:',css%nFileIndexes,irc
   end subroutine model_loadcache
   !
   !
@@ -1505,7 +1524,7 @@ CONTAINS
     integer :: irc
     type(mod_target), pointer :: currentTarget => null() !  current session
     type(mod_target), pointer :: nextTarget => null() !  current session
-    character*25 :: myname = "model_cleartargetstack"
+    character*25 :: myname="model_cleartargetstack"
     currentTarget => css%firstTrg%next
     do while (.not.associated(currentTarget,target=css%lastTrg))
        nextTarget => currentTarget%next
@@ -1532,7 +1551,7 @@ CONTAINS
     integer, external :: length
     integer :: lenn
     type(mod_target), pointer :: newTarget !  the new target
-    character*25 :: myname = "model_pushtarget"
+    character*25 :: myname="model_pushtarget"
     call chop0(n80,80)
     lenn=length(n80,80,10)
     allocate(newtarget,stat=irc)
@@ -1566,7 +1585,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopTarget"
+    character*22 :: myname="loopTarget"
     model_looptarget=.false. ! only true if all is ok...
     if (.not.associated(css%currentTrg)) then
        css%currentTrg =>  css%firstTrg%next 
@@ -1594,7 +1613,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(mod_target), pointer :: ctrg !  the new target
-    character*25 :: myname = "model_settargetslice"
+    character*25 :: myname="model_settargetslice"
     integer, external :: length
     integer :: lenn
     lenn=length(n80,80,10)
@@ -1616,7 +1635,7 @@ CONTAINS
     type(mod_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "model_targetCount "
+    character*22 :: myname="model_targetCount "
     model_targetCount=css%ntrg
     return
   end function model_targetCount
@@ -1625,7 +1644,7 @@ CONTAINS
     type(mod_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "model_trgCount "
+    character*22 :: myname="model_trgCount "
     model_trgCount=css%otrg
     return
   end function model_trgCount
@@ -1636,7 +1655,7 @@ CONTAINS
     type(mod_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "model_locationCount "
+    character*22 :: myname="model_locationCount "
     model_locationCount=css%oloc
     return
   end function model_locationCount
@@ -1649,7 +1668,7 @@ CONTAINS
     integer :: offset !
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getTrg80"
+    character*25 :: myname="model_getTrg80"
     integer ii
     do ii=1,css%ctrg
        var80(ii+offset)=css%trg80(ii)
@@ -1666,7 +1685,7 @@ CONTAINS
     integer :: offset
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getVal"
+    character*25 :: myname="model_getVal"
     integer ii
     do ii=1,css%otrg
        if (css%oset(ii,iloc)) then
@@ -1684,7 +1703,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_maketargetlist"
+    character*25 :: myname="model_maketargetlist"
     type(mod_target), pointer :: currentTarget
     integer ii,lens,irc2
     integer, external :: length
@@ -1812,7 +1831,7 @@ CONTAINS
        call parse_close(plim,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'parse_open'.")
+          call model_errorappend(crc250,"Error return from 'parse_close'.")
           return
        end if
        css%trg_set=.true.
@@ -1829,7 +1848,7 @@ CONTAINS
     character*80 :: var(nn)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setObsVar"
+    character*25 :: myname="model_setObsVar"
     integer, external :: length
     integer :: ii
     if (css%cobs.ne.nn) then
@@ -1861,7 +1880,7 @@ CONTAINS
     real :: val(nn)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setObsVal"
+    character*25 :: myname="model_setObsVal"
     integer :: ii
     if (css%cobs.ne.nn) then
        if (associated(css%obs_val)) deallocate(css%obs_val)
@@ -1894,7 +1913,7 @@ CONTAINS
     character*250 :: crc250            ! error message string
     integer :: irc                     ! error return code(0=ok)
     integer :: ii,jj
-    character*25 :: myname = "model_setLocTrgVal"
+    character*25 :: myname="model_setLocTrgVal"
     if (itrg.le.0.or.itrg.gt.css%otrg) then
        irc=944
        call model_errorappend(crc250,myname)
@@ -1936,7 +1955,7 @@ CONTAINS
     real :: val(nn)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setTargetVal"
+    character*25 :: myname="model_setTargetVal"
     integer :: ii
     do ii=1,nn
        if (ind(ii).gt.css%ctrg) then
@@ -1967,7 +1986,7 @@ CONTAINS
     real :: val(nn)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setTargetDVal"
+    character*25 :: myname="model_setTargetDVal"
     integer :: ii
     if (nn.ne.css%ctrg) then
        irc=457
@@ -1994,7 +2013,7 @@ CONTAINS
     integer :: ind(nn)                ! target index
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setTarget"
+    character*25 :: myname="model_setTarget"
     integer :: ii
     do ii=1,nn
        css%trg_valset(ind(ii))=.true.
@@ -2007,7 +2026,7 @@ CONTAINS
     logical :: bok
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_checkTarget"
+    character*25 :: myname="model_checkTarget"
     integer :: ii
     bok=.true.
     do ii=1,css%ctrg
@@ -2046,7 +2065,7 @@ CONTAINS
     type(mod_target), pointer :: trg
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    character*25 :: myname = "model_deleteTarget"
+    character*25 :: myname="model_deleteTarget"
     if (associated(trg)) then
        css%ntrg = css%ntrg - 1
        trg%next%prev => trg%prev
@@ -2065,7 +2084,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
     type(mod_variable), pointer :: var
-    character*25 :: myname = "model_setTargetIndex"
+    character*25 :: myname="model_setTargetIndex"
     integer, external :: length
     integer :: lend, leng, lenv
     integer ii,jj
@@ -2127,7 +2146,7 @@ CONTAINS
     implicit none
     type(mod_session), pointer :: css !  current session
     type(mod_variable), pointer :: var
-    character*25 :: myname = "model_variableTargetIndex"
+    character*25 :: myname="variableTargetIndex"
     integer :: ii
     if(mod_bdeb)write(*,*)myname,' Entering.',var%var80(1:var%lenv)
     LOOP: do ii = 1, css%ctrg
@@ -2157,7 +2176,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_locinit"
+    character*25 :: myname="model_locinit"
     ! initialise chain
     if (.not.associated(css%firstLoc)) then
        allocate(css%firstLoc,css%lastLoc, stat=irc)
@@ -2171,6 +2190,7 @@ CONTAINS
        css%lastLoc%prev => css%firstLoc
        css%nloc=0
        css%locReady=.false.
+       if(mod_bdeb)write(*,*)myname,' WARNING: locready=F'
     end if
   end subroutine model_locinit
   !
@@ -2182,7 +2202,7 @@ CONTAINS
     character*80 :: slice80(nslice)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_sliceVariables"
+    character*25 :: myname="model_sliceVariables"
     integer :: ii, lens
     integer, external :: length
     if(mod_bdeb)write(*,*)myname,' Entering.'
@@ -2228,7 +2248,7 @@ CONTAINS
     integer :: ind(nslice)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_sliceIndex"
+    character*25 :: myname="model_sliceIndex"
     integer :: ii
     if(mod_bdeb)write(*,*)myname,' Entering.'
     ! store slice variables/dimensions
@@ -2259,7 +2279,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_sliceTrgVal"
+    character*25 :: myname="model_sliceTrgVal"
     integer :: ii, jj, lens
     integer, external :: length
     if(mod_bdeb)write(*,*)myname,' Entering.'
@@ -2312,7 +2332,7 @@ CONTAINS
     integer :: irc
     type(mod_location), pointer :: currentLoc => null()
     type(mod_location), pointer :: locNext => null()
-    character*25 :: myname = "model_locclear"
+    character*25 :: myname="model_locclear"
     integer :: ii, lens
     integer, external :: length
     if(mod_bdeb)write(*,*)myname,' Entering.'
@@ -2365,8 +2385,8 @@ CONTAINS
     real:: sec
     integer :: lenc
     integer, external :: length
-    character*25 :: myname = "model_locpushvariables"
-    if(mod_bdeb)write(*,*)myname,' Entering.'
+    character*25 :: myname="model_locpushvariables"
+    if(mod_bdeb)write(*,*)myname,' Entering. Loc%bok=',bok
     if(mod_bdeb)write(*,*)myname,' data.',csli,css%csli
     ! check number of slice-variables
     if(mod_bdeb)write(*,*)myname,'Slices:',csli,css%csli
@@ -2456,8 +2476,8 @@ CONTAINS
     real:: sec
     integer :: lenc
     integer, external :: length
-    character*25 :: myname = "model_locpushTarget"
-    if(mod_bdeb)write(*,*)myname,' Entering, csli:',css%csli
+    character*25 :: myname="model_locpushTarget"
+    if(mod_bdeb)write(*,*)myname,' Entering, csli:',css%csli," Loc%bok=",bok
     ! initialise location stack
     if (css%nloc.eq.0) then
        css%locoffset=locid-1
@@ -2562,58 +2582,76 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer :: pos, ii
-    character*25 :: myname = "model_locsearchOk"
+    character*25 :: myname="model_locsearchOk"
+    type(mod_location), pointer :: loc
     real :: val
     if (bok.and.css%locReady) then
        css%currentFile%ook(1)=css%currentFile%ook(1)+1
        pos=locid-css%locoffset
        if (pos.gt.css%nloc) then
-          write(*,*)myname,'Location pos out of range. resetting.',pos,'->',css%nloc
+          if(mod_bdeb)write(*,*)myname,'Location pos out of range. resetting.',pos,'->',css%nloc
+          bok=.false.
           pos=css%nloc
        end if
        if (bok) then
-          bok=(css%locData(pos)%ptr%bok)
+          loc => css%locData(pos)%ptr
+          if (.not.associated(loc)) then
+             if(mod_bdeb)write(*,*)myname,'Location invalid location at ',pos,'->',css%nloc
+             bok=.false.
+          end if
+       end if
+       if (bok) then
+          bok=(loc%bok)
           if (bok) then
              css%currentFile%ook(2)=css%currentFile%ook(2)+1
           else
+             if (mod_bdeb)write(*,*)myname,'Loc fail:',loc%bok
              css%currentFile%orm(2)=css%currentFile%orm(2)+1 ! location error
           end if
        end if
        if (bok) then
-          bok=(css%locData(pos)%ptr%search.eq.0)
+          bok=(loc%search.eq.0)
           if (bok) then
              css%currentFile%ook(3)=css%currentFile%ook(3)+1
           else
+             if (mod_bdeb)write(*,*)myname,'Search fail:',loc%search
              css%currentFile%orm(3)=css%currentFile%orm(3)+1 ! search failed
           end if
        end if
        if (bok) then
           ! evaluate filter
-          if (css%flt_set) then
-             if (mod_bdeb)write(*,*)myname,'Evaluating filter:',ii,associated(css%psf),css%cflt
+          if (css%mpo_set) then
+             if (mod_bdeb)write(*,*)myname,'Evaluating filter:',ii,associated(css%psf),css%cmpo
              ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-             do ii=1,css%ctrg
-                css%flt_val(ii)=css%trg_val(ii)
+             do ii=1,loc%ctrg
+                css%mpo_val(ii)=loc%trg_val(ii)
              end do
-             do ii=1,css%cobs
-                css%flt_val(ii+css%ctrg)=css%obs_val(ii)
+             do ii=1,loc%cobs
+                css%mpo_val(ii+css%ctrg)=loc%obs_val(ii)
              end do
-             val=parse_evalf(css%psf,css%flt_val)
+             val=parse_evalf(css%psf,css%mpo_val)
              bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
              if (mod_bdeb)write(*,*)myname,'Returned:',val,bok
+          else
+             if (mod_bdeb)write(*,*)myname,'MPO fail:',css%mpo_set
+             bok=.false.
           end if
           if (bok) then
              css%currentFile%ook(4)=css%currentFile%ook(4)+1
           else
+             if (mod_bdeb)write(*,*)myname,'Filter fail:',loc%bok
              css%currentFile%orm(4)=css%currentFile%orm(4)+1 ! filter failed
           end if
        end if
     else
+       if (mod_bdeb)write(*,*)myname,'Early fail, locready=',css%locReady
        css%currentFile%orm(1)=css%currentFile%orm(1)+1 ! failed earlier or no locations
        bok=.false.
     end if
     if (bok) then
+       if (mod_bdeb)write(*,*)myname,'Obs OK:',locid,bok
     else
+       if (mod_bdeb)write(*,*)myname,'Obs FAIL:',locid,bok,css%mpo_set
     end if
     return
   end subroutine model_locSearchOk
@@ -2625,7 +2663,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: length
-    character*22 :: myname ="setfilter"
+    character*22 :: myname="setfilter"
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%flt250=trim(flt)
@@ -2641,7 +2679,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="compileFilter"
+    character*22 :: myname="mod_compileFilter"
     integer :: ii
     if (css%lenf.ne.0) then
        call parse_open(css%psf,crc250,irc)
@@ -2650,35 +2688,20 @@ CONTAINS
           call model_errorappend(crc250,"Error return from 'parse_open'.")
           return
        end if
-       css%cflt=css%ctrg+css%cobs
-       if(mod_bdeb)write(*,*)myname,"Parsing: '"//css%flt250(1:css%lenf)//"'",&
-            & css%cflt,css%ctrg,css%cobs
-       if (allocated(css%flt_var)) deallocate(css%flt_var)
-       if (allocated(css%flt_lenv)) deallocate(css%flt_lenv)
-       if (allocated(css%flt_val)) deallocate(css%flt_val)
-       allocate(css%flt_var(css%cflt),css%flt_lenv(css%cflt),css%flt_val(css%cflt),stat=irc)
+       call model_setMPO(css,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate 'filter'.")
-          call model_errorappend(crc250,"\n")
+          call model_errorappend(crc250,"Error return from 'setMPO'.")
           return
        end if
-       do ii=1,css%ctrg
-          css%flt_var(ii)=css%trg80(ii)
-          css%flt_lenv(ii)=css%trg_lent(ii)
-       end do
-       do ii=1,css%cobs
-          css%flt_var(ii+css%ctrg)=css%obs_var(ii)
-          css%flt_lenv(ii+css%ctrg)=css%obs_lenv(ii)
-       end do
-       call parse_parsef(css%psf,css%flt250(1:css%lenf),css%flt_var,crc250,irc)
+       call parse_parsef(css%psf,css%flt250(1:css%lenf),css%mpo_var,crc250,irc)
        if (irc.ne.0) then
           if(mod_bdeb)then
              write(*,*)myname,"Unable to parse:'"//css%flt250(1:css%lenf)//"'"
-             !                write(*,*)myname,'nvar:',css%ntrg
-             !                do jj=1,css%ntrg
-             !                   write(*,*) myname,'var:',jj,css%flt_var(jj)(1:css%flt_lenv(jj))
-             !                end do
+             ! write(*,*)myname,'nvar:',css%ntrg
+             ! do jj=1,css%ntrg
+             ! write(*,*) myname,'var:',jj,css%mpo_var(jj)(1:css%mpo_lenv(jj))
+             ! end do
           end if
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Error return from parsef.")
@@ -2686,10 +2709,171 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       css%flt_set=.true.
     end if
     return
   end subroutine model_compileFilter
+  !
+  ! compile expressions
+  !
+  subroutine model_compileExpr(css,nexp,exp250,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    integer :: nexp
+    character*250,allocatable :: exp250(:)
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="compileExpr"
+    integer :: ii,lene
+    integer, external :: length
+    if(mod_bdeb)write(*,*)myname,'Entering.',irc,nexp,size(exp250)
+    call model_setMPO(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Error return from 'setMPO'.")
+       return
+    end if
+    if(mod_bdeb)write(*,*)myname,'InitPSP.'
+    call model_initPSP(css,nexp,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Error return from 'initPSP'.")
+       return
+    end if
+    if(mod_bdeb)write(*,*)myname,'Checking.',associated(css),allocated(exp250)
+    if(mod_bdeb)write(*,*)myname,'Checking.',css%cpsp,size(exp250)
+    if (css%cpsp > size(exp250)) then
+       irc=944
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"System error.")
+       call model_errorappendi(crc250,nexp)
+       call model_errorappendi(crc250,css%cpsp)
+       call model_errorappendi(crc250,size(exp250))
+       return
+    end if
+    if(mod_bdeb)write(*,*)myname,'Parse.',css%cpsp,size(css%mpo_var)
+    do ii=1,css%cpsp
+       lene=length(exp250(ii),250,10)
+       if(mod_bdeb)write(*,*)myname,'Parse:',ii,exp250(ii)(1:lene)
+       call parse_parsef(css%psp(ii)%ptr,exp250(ii)(1:lene),css%mpo_var,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,"parse_parsef")
+          return
+       end if
+    end do
+    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    return
+  end subroutine model_compileExpr
+  !
+  ! evaluate expressions
+  !
+  subroutine model_evalExpr(css,nexp,val,crc250,irc)
+    use parse
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    integer :: nexp
+    real :: val(nexp)
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="evalExpr"
+    integer :: ii
+    do ii=1,css%cpsp
+       val(ii)=parse_evalf(css%psp(ii)%ptr,css%mpo_val)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,"parse_evalf")
+          return
+       end if
+    end do
+    return
+  end subroutine model_evalExpr
+  !
+  ! initialise expression-parsing array (PSP)
+  !
+  subroutine model_initPSP(css,nexp,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    integer :: nexp
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="initPSP"
+    integer :: ii
+    call model_clearPSP(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,"clearPSP.")
+       return
+    end if
+    css%cpsp=nexp
+    allocate(css%psp(css%cpsp),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,"allocate PSP error.")
+       return
+    end if
+    do ii=1,css%cpsp
+       call parse_open (css%psp(ii)%ptr,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,"parse_open")
+          return
+       end if
+    end do
+  end subroutine model_initPSP
+  !
+  ! clear PSP array
+  !
+  subroutine model_clearPSP(css,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="clearPSP"
+    integer :: ii
+    if (associated(css%psp)) then
+       do ii=1,css%cpsp
+          if (associated(css%psp(ii)%ptr)) then
+             call parse_close (css%psp(ii)%ptr,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,"parse_close")
+                return
+             end if
+          end if
+       end do
+       deallocate(css%psp)
+    end if
+  end subroutine model_clearPSP
+  !
+  ! set Model- + Observation- variables (used for parsing)
+  !
+  subroutine model_setMPO(css,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="setMPO"
+    integer :: ii
+    if (css%mpo_set) return ! filter-variables is already set
+    css%cmpo=css%ctrg+css%cobs
+    if(mod_bdeb)write(*,*)myname,"Parsing: '"//css%flt250(1:css%lenf)//"'",&
+         & css%cmpo,css%ctrg,css%cobs
+    if (allocated(css%mpo_var)) deallocate(css%mpo_var)
+    if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
+    if (allocated(css%mpo_val)) deallocate(css%mpo_val)
+    allocate(css%mpo_var(css%cmpo),css%mpo_lenv(css%cmpo),css%mpo_val(css%cmpo),stat=irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Unable to allocate 'filter'.")
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    do ii=1,css%ctrg
+       css%mpo_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
+       css%mpo_lenv(ii)=css%trg_lent(ii)
+    end do
+    do ii=1,css%cobs
+       css%mpo_var(ii+css%ctrg)=css%obs_var(ii)(1:css%obs_lenv(ii))
+       css%mpo_lenv(ii+css%ctrg)=css%obs_lenv(ii)
+    end do
+    css%mpo_set=.true.
+    if(mod_bdeb)write(*,*)myname,"Done.",css%ctrg,css%cobs,css%cmpo
+    return
+  end subroutine model_setMPO
   !
   subroutine model_getfilter(css,flt,crc250,irc)
     implicit none
@@ -2697,7 +2881,7 @@ CONTAINS
     character*(*) :: flt
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="getfilter"
+    character*22 :: myname="getfilter"
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        flt=css%flt250(1:css%lenf)
@@ -2717,7 +2901,7 @@ CONTAINS
     integer :: cnt=0
     character*250 :: buff250
     character*50 :: num50
-    character*25 :: myname = "model_locprint"
+    character*25 :: myname="model_locprint"
     if(mod_bdeb)write(*,*)myname,' Entering.'
     if (associated(css%firstLoc).and.css%nloc.gt.0) then
        currentLoc => css%firstLoc%next
@@ -2752,7 +2936,7 @@ CONTAINS
     type(mod_location), pointer :: loc
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    character*25 :: myname = "model_deleteLoc"
+    character*25 :: myname="model_deleteLoc"
     if (associated(loc)) then
        css%nloc = css%nloc - 1
        loc%next%prev => loc%prev
@@ -2776,8 +2960,9 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(mod_location), pointer :: currentLoc => null()
-    character*25 :: myname = "model_makeLocList"
+    character*25 :: myname="model_makeLocList"
     integer :: ii
+    if(mod_bdeb)write(*,*)myname,' Entering:',irc
     if (associated(css%firstLoc).and..not.css%locready.and.css%nloc.gt.0) then
        if (allocated(css%locdata)) deallocate(css%locdata)
        allocate(css%locdata(css%nloc),stat=irc)
@@ -2800,9 +2985,9 @@ CONTAINS
        end do
        css%locReady=.true.
     end if
+    if(mod_bdeb)write(*,*)myname,' Done:',css%locReady,irc
     return
   end subroutine model_makeLocList
-  !
   !
   !###############################################################################
   ! OUTPUT ROUTINES
@@ -2815,7 +3000,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc        ! error return code(0=ok)
     integer :: ii,jj
-    character*25 :: myname = "model_allocateOutput"
+    character*25 :: myname="model_allocateOutput"
     ! remove output variables
     if (associated(css%oval)) deallocate(css%oval)
     if (associated(css%oset)) deallocate(css%oset)
@@ -2836,7 +3021,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc        ! error return code(0=ok)
     integer :: ii,jj
-    character*25 :: myname = "model_allocateOutput"
+    character*25 :: myname="model_allocateOutput"
     ! remove output variables
     if (associated(css%oval)) deallocate(css%oval)
     if (associated(css%oset)) deallocate(css%oset)
@@ -2854,7 +3039,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc        ! error return code(0=ok)
     integer :: ii,jj
-    character*25 :: myname = "model_setOutput"
+    character*25 :: myname="model_setOutput"
     if (.not.associated(css%oval).or..not.associated(css%oset)) then
        irc=946
        call model_errorappend(crc250,myname)
@@ -2895,7 +3080,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc        ! error return code(0=ok)
     integer :: ii,jj
-    character*25 :: myname = "model_getOutput"
+    character*25 :: myname="model_getOutput"
     model_getOutput=.false.
     if (.not.associated(css%oval).or..not.associated(css%oset)) then
        irc=943
@@ -2952,7 +3137,7 @@ CONTAINS
     character*10 :: ccdim10
     logical :: bok
     integer, allocatable :: cdim(:)
-    character*25 :: myname = "model_getdesc250"
+    character*25 :: myname="model_getdesc250"
     allocate(cdim(max(1,ndims)),stat=irc)
     cpos= (fpos-1)
     buff250=""
@@ -2989,7 +3174,7 @@ CONTAINS
     real :: wgt                     ! weight
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getGrid250"
+    character*25 :: myname="model_getGrid250"
     integer ::lenp,lenv,lenw,ii
     character*250 :: pos250
     character*50 :: val50
@@ -3042,7 +3227,7 @@ CONTAINS
     real :: val                         ! interpolated value
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getInt250"
+    character*25 :: myname="model_getInt250"
     integer ::lenv,ii
     character*50 :: val50
     character*10 :: pos10
@@ -3100,7 +3285,7 @@ CONTAINS
     integer :: lenb,leni
     integer, external :: length
     integer :: ii,jj,xx
-    character*25 :: myname = "model_writePos"
+    character*25 :: myname="model_writePos"
     buff50=""
     lenb=0
     do ii=1,n
@@ -3130,7 +3315,7 @@ CONTAINS
     integer :: lenb,lenp
     integer, external :: length
     integer :: ii,jj,xx
-    character*25 :: myname = "model_getPosWgt50"
+    character*25 :: myname="model_getPosWgt50"
     buff50=""
     lenb=0
     do ii=1,v%ndim
@@ -3169,7 +3354,7 @@ CONTAINS
     integer, external :: length
     integer :: ii, itrg
     type(mod_variable),pointer :: v     ! variable
-    character*25 :: myname = "model_getPosWgt50"
+    character*25 :: myname="model_getPosWgt50"
     v => file%var(varid)%ptr
     do ii=1,v%ndim
        itrg=file%dim_trg(v%ind(ii))
@@ -3201,7 +3386,7 @@ CONTAINS
     character*4 :: csec
     integer, external :: length
     integer :: lenp,lenc
-    character*25 :: myname = "model_gettime"
+    character*25 :: myname="model_gettime"
     call dj2000(j2000,yy,mm,dd,hh,mi,sec)
     write(csec,'(F4.1)') sec
     call chop0(csec,4)
@@ -3220,7 +3405,7 @@ CONTAINS
     real :: j2000
     integer, external :: length
     integer :: lenp,lent
-    character*25 :: myname = "model_getj2000"
+    character*25 :: myname="model_getj2000"
     integer :: yy,mm,dd,hh,mi
     real :: sec
     ! first try to read as formatted time
@@ -3277,14 +3462,12 @@ CONTAINS
     type(mod_plan),pointer :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_initLocPos"
+    character*25 :: myname="model_initLocPos"
     integer :: ii
     logical :: changed
     !
     ! loc
     !
-    if(mod_bdeb)write(*,*)myname,'Associated?: ',associated(loc),&
-         & newFile%ndim,allocated(newFile%istop)
     if (allocated(loc%pos)) deallocate(loc%pos)
     if (allocated(loc%rpos)) deallocate(loc%rpos)
     if (allocated(loc%istart)) deallocate(loc%istart)
@@ -3312,27 +3495,29 @@ CONTAINS
     return
   end subroutine model_initLocPos
   !
-  subroutine model_clearLocPos(css,newFile,p,b,loc,crc250,irc)
+  subroutine model_clearLoc(css,crc250,irc)
     type(mod_session), pointer :: css   ! current session
-    type(mod_file),pointer :: newFile   ! current file
-    type(mod_batch), pointer :: b       ! current batch
     type(mod_location),pointer :: loc   ! location
-    type(mod_plan),pointer :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_clearLocPos"
+    character*25 :: myname="model_clearLoc"
     integer :: ii
     logical :: changed
-    !
-    ! loc
-    if (allocated(loc%pos)) deallocate(loc%pos)
-    if (allocated(loc%rpos)) deallocate(loc%rpos)
-    if (allocated(loc%istart)) deallocate(loc%istart)
-    if (allocated(loc%istop)) deallocate(loc%istop)
-    if (allocated(loc%intpf)) deallocate(loc%intpf)
+    if (allocated(css%locData)) then
+       do ii=1,css%nloc
+          loc => css%locData(ii)%ptr
+          if (allocated(loc%pos)) deallocate(loc%pos)
+          if (allocated(loc%rpos)) deallocate(loc%rpos)
+          if (allocated(loc%istart)) deallocate(loc%istart)
+          if (allocated(loc%istop)) deallocate(loc%istop)
+          if (allocated(loc%intpf)) deallocate(loc%intpf)
+       end do
+       deallocate(css%locData)
+    end if
     css%locReady=.false.
+    css%nloc=0
     return
-  end subroutine model_clearLocPos
+  end subroutine model_clearLoc
   !
   subroutine model_search(css,newFile,p,b,loc,crc250,irc)
     type(mod_session), pointer :: css   ! current session
@@ -3342,7 +3527,7 @@ CONTAINS
     type(mod_plan),pointer :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_search"
+    character*25 :: myname="model_search"
     integer :: ii
     logical :: changed
     !
@@ -3408,7 +3593,7 @@ CONTAINS
     type(mod_plan),pointer :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getTarget"
+    character*25 :: myname="model_getTarget"
     integer :: ii
     ! if target is a dimension, set pos, else set target
     do ii=1,b%nvar
@@ -3447,7 +3632,7 @@ CONTAINS
     logical :: changed              ! did the grid cell change?
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getIncrements"
+    character*25 :: myname="model_getIncrements"
     integer :: ii,jj,buff
     real :: nv(max(1,b%ndim),0:b%ndim)     ! normalised vector, 0=unperturbed
     call model_getIncrement(newFile,b,loc,nv(1,0),crc250,irc)
@@ -3500,7 +3685,7 @@ CONTAINS
     real :: nv(b%ndim)                  ! normalised vector
     character*250 :: crc250             ! error message
     integer :: irc                      ! error return code (0=ok)
-    character*25 :: myname = "model_getIncrement"
+    character*25 :: myname="model_getIncrement"
     integer :: ii,jj,kk,buff
     real :: t(b%nvar)        ! target departure (using pos as origo)
     real :: v(b%nvar,b%ndim) ! value departure in grid dimension directions (gdd)
@@ -3620,7 +3805,7 @@ CONTAINS
     logical :: changed
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_useIncrements"
+    character*25 :: myname="model_useIncrements"
     integer :: jj
     real :: sum
     changed=.false.
@@ -3672,7 +3857,7 @@ CONTAINS
     type(mod_location),pointer :: loc   ! location
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setSearchFlag"
+    character*25 :: myname="model_setSearchFlag"
     integer :: jj
     real :: sum
     if (loc%bok) then
@@ -3697,7 +3882,7 @@ CONTAINS
     type(mod_location), pointer :: loc       ! current batch
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setBatchValue"
+    character*25 :: myname="model_setBatchValue"
     integer :: ii,kk,ll
     type(mod_variable), pointer :: v
     do ii=1,b%nvar
@@ -3715,7 +3900,7 @@ CONTAINS
     type(mod_location), pointer :: loc       ! current batch
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_getValue"
+    character*25 :: myname="model_getValue"
     integer :: ii
     character*50 :: pos50,loc50,val50
     integer :: lenp,lenl,lenv
@@ -3822,7 +4007,7 @@ CONTAINS
     logical :: bdone
     integer :: ii,di
     real :: ww
-    character*25 :: myname = "model_getWeight"
+    character*25 :: myname="model_getWeight"
     bdone=.false.
     model_getWeight=1.0
     do ii=1,n
@@ -3855,7 +4040,7 @@ CONTAINS
     type(mod_plan),pointer  :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_planBatch"
+    character*25 :: myname="model_planBatch"
     integer :: ii,jj,kk,leng,lenv,lend
     integer, external :: length
     integer :: nslc2var
@@ -4093,7 +4278,7 @@ CONTAINS
     type(mod_batch), pointer :: b
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_deleteBatch"
+    character*25 :: myname="model_deleteBatch"
     if (.not.associated(b)) return
     if (allocated(b%ind)) deallocate(b%ind)
     if (allocated(b%inc)) deallocate(b%inc)
@@ -4118,7 +4303,7 @@ CONTAINS
     type(mod_plan),pointer  :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_clearPlan"
+    character*25 :: myname="model_clearPlan"
     type(mod_batch), pointer :: b,nb
     if(mod_bdeb)write(*,*)myname,'Entering.',associated(p)
     if (associated(p)) then
@@ -4152,7 +4337,7 @@ CONTAINS
     type(mod_plan),pointer  :: p
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_printPlan"
+    character*25 :: myname="model_printPlan"
     type(mod_batch), pointer :: b,nb
     if(mod_bdeb)write(*,*)myname,'Entering.',associated(p)
     if (associated(p)) then
@@ -4178,7 +4363,7 @@ CONTAINS
     type(mod_batch), pointer :: b
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_printBatch"
+    character*25 :: myname="model_printBatch"
     integer :: ndim,ii
     character*250 :: buff250, nuff250
     integer :: lenb,lenn,lend,lenv
@@ -4230,7 +4415,7 @@ CONTAINS
     integer, external :: length
     logical :: lmd
     integer :: irc
-    character*25 :: myname = "model_initPlan"
+    character*25 :: myname="model_initPlan"
     !
     if(mod_bdeb)write(*,*)myname,'Entering.',associated(p),&
                & allocated(p%slc2dim),associated(p%last),irc
@@ -4327,9 +4512,10 @@ CONTAINS
     logical :: bok           ! was get successful?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*25 :: myname = "model_slicecurrentfile"
+    character*25 :: myname="model_slicecurrentfile"
     logical :: bdone
-    if(mod_bdeb)write(*,*)myname,' Entering.',associated(css%currentFile)
+    if(mod_bdeb)write(*,*)myname,' Entering.',&
+         & associated(css%currentFile),css%locready
     bok=.false.
     if (.not.associated(css%currentFile)) return
     ! make location array
@@ -4349,6 +4535,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    if(mod_bdeb)write(*,*)myname,' Locating.',css%locready
     call model_locatefile(css,css%nloc,css%locData,css%currentFile,bok,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -4369,7 +4556,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     logical :: bok
-    character*25 :: myname = "model_locatefile"
+    character*25 :: myname="model_locatefile"
     type(mod_plan),pointer :: p => null()
     !
     if(mod_bdeb)write(*,*)myname,' Entering.',irc
@@ -4490,7 +4677,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(mod_batch), pointer :: b
-    character*25 :: myname = "model_makeoutput"
+    character*25 :: myname="model_makeoutput"
     integer :: ii,ll,varid
     character*250 :: var250
     character*50 :: sval50
@@ -4686,22 +4873,22 @@ CONTAINS
        ! end loop over remaining variables
        !
     end do VAR
-    !
-    ! clear location positions
-    !
-    do ll=1,nloc
-       !
-       ! clear location position
-       !
-       call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250," Error return from initLocPos.")
-          call model_errorappendi(crc250,irc)
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-    end do
+    ! !
+    ! ! clear location positions
+    ! !
+    ! do ll=1,nloc
+    !    !
+    !    ! clear location position
+    !    !
+    !    call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+    !    if (irc.ne.0) then
+    !       call model_errorappend(crc250,myname)
+    !       call model_errorappend(crc250," Error return from initLocPos.")
+    !       call model_errorappendi(crc250,irc)
+    !       call model_errorappend(crc250,"\n")
+    !       return
+    !    end if
+    ! end do
     if(mod_bdeb)write(*,*)myname,'Done.'
     return
   end subroutine model_makeoutput
@@ -4722,7 +4909,7 @@ CONTAINS
     logical :: bok                      ! was any data printed?
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setLoc"
+    character*25 :: myname="model_setLoc"
     real :: val
     logical :: bout, binn
     integer ::lenb,lenp,len1
@@ -4819,23 +5006,25 @@ CONTAINS
           if(mod_bdeb)write(*,'(X,A,3(A,I0),A,L1,2(A,F15.3))')myname," Loc:",loc%iloc,&
                & ' Count inner A newLoc=',cinn,' cnt=',cnt,' done=',binn,' wgt=',wgt,' vsum=',tsum
        end do
-       if (twgt.gt.1.0D-10.and.ctot.eq.cval.and.ctot.ge.1.and.v%itrg.ne.0) then
+       if (twgt.gt.1.0D-10.and.ctot.eq.cval.and.ctot.ge.1) then
           tval=tsum/twgt
-          call model_setLocTrgVal(css,ninn,inn,ind,tval,loc,v%itrg,crc250,irc)
-          if (irc.ne.0) then
-             call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from setLocTrgVal.")
-             call model_errorappendi(crc250,irc)
-             call model_errorappend(crc250,"\n")
-             return
-          end if
-          call model_setOutput(css,tval,v%itrg,loc%iloc,crc250,irc)
-          if (irc.ne.0) then
-             call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from setOutput.")
-             call model_errorappendi(crc250,irc)
-             call model_errorappend(crc250,"\n")
-             return
+          if (v%itrg.ne.0) then
+             call model_setLocTrgVal(css,ninn,inn,ind,tval,loc,v%itrg,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from setLocTrgVal.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+             call model_setOutput(css,tval,v%itrg,loc%iloc,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from setOutput.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end if
        end if
        cout=model_incrementPos(nout,out,loc%ndim,loc%pos,loc%istart,loc%istop)
@@ -4857,11 +5046,15 @@ CONTAINS
     logical :: bok           ! was get successful?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*25 :: myname = "model_slicecurrentfileXML"
+    character*25 :: myname="slicecurrentfileXML"
     logical :: bdone
-    if(mod_bdeb)write(*,*)myname,' Entering.',associated(css%currentFile)
+    if(mod_bdeb)write(*,*)myname,' Entering.',&
+         & associated(css%currentFile),' locready=',css%locready
     bok=.false.
-    if (.not.associated(css%currentFile)) return
+    if (.not.associated(css%currentFile)) then
+       if(mod_bdeb)write(*,*)myname,' No file specified, returning.'
+       return
+    end if
     ! make location array
     call model_makeLocList(css,crc250,irc)
     if (irc.ne.0) then
@@ -4878,7 +5071,8 @@ CONTAINS
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
-    end if
+    end if 
+    if(mod_bdeb)write(*,*)myname,' locready=',css%locready
     call model_locatefileXML(css,ounit,css%nloc,css%locData,css%currentFile,bok,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -4887,7 +5081,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,' Done.',bok
+    if(mod_bdeb)write(*,*)myname,' Done.',bok,' locready=',css%locready
     return
   end subroutine model_slicecurrentfileXML
   !
@@ -4900,10 +5094,10 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     logical :: bok
-    character*25 :: myname = "model_locatefileXML"
+    character*25 :: myname="model_locatefileXML"
     type(mod_plan),pointer :: p => null()
     !
-    if(mod_bdeb)write(*,*)myname,' Entering.',irc
+    if(mod_bdeb)write(*,*)myname,' Entering.',irc,' locready=',css%locready
     bok=.true.
     if (bok) then
        call model_openFile(css,f,crc250,irc)
@@ -4916,6 +5110,7 @@ CONTAINS
           return
        end if
     end if
+    if(mod_bdeb)write(*,*)myname,' C locready=',css%locready
     if (bok) then
        call model_readInventory(css,f,crc250,irc)
        if (irc.ne.0) then
@@ -4930,6 +5125,7 @@ CONTAINS
     !
     ! Connect file-variables => target-variables
     !
+    if(mod_bdeb)write(*,*)myname,' D locready=',css%locready
     if (bok) then
        call model_setTargetIndex(css,f,crc250,irc)
        if (irc.ne.0) then
@@ -4944,6 +5140,7 @@ CONTAINS
     !
     ! analyse slice
     !
+    if(mod_bdeb)write(*,*)myname,' E locready=',css%locready
     if (bok) then
        call model_clearPlan(p,crc250,irc)
        if (irc.ne.0) then
@@ -4976,6 +5173,7 @@ CONTAINS
     !
     ! dump results
     !
+    if(mod_bdeb)write(*,*)myname,' Making XML. locready=',css%locready
     if (bok) then
        !nloc=min(1,nloc) ! debug
        call model_makeXML(css,ounit,nloc,loc,f,p,bok,crc250,irc)
@@ -4988,6 +5186,7 @@ CONTAINS
           return
        end if
     end if
+    if(mod_bdeb)write(*,*)myname,' F locready=',css%locready
     if (bok) then
        call model_clearPlan(p,crc250,irc)
        if (irc.ne.0) then
@@ -4999,7 +5198,7 @@ CONTAINS
           return
        end if
     end if
-    if(mod_bdeb)write(*,*)myname,' Done.',bok
+    if(mod_bdeb)write(*,*)myname,' Done. locready=',css%locready
     return
   end subroutine model_locatefileXML
   !
@@ -5016,14 +5215,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(mod_batch), pointer :: b
-    character*25 :: myname = "model_makeXML"
+    character*25 :: myname="model_makeXML"
     integer :: ii,ll,varid
     character*250 :: var250
     character*50 :: sval50
     character*80 :: trg80
     integer :: lenv, lend, lens, lent, itrg
     integer, external :: length
-    if(mod_bdeb)write(*,*)myname,'Entering.',nloc
+    if(mod_bdeb)write(*,*)myname,'Entering. locready=',css%locready,nloc
     !
     ! initialise location positions
     !
@@ -5041,6 +5240,7 @@ CONTAINS
        end if
     end do
     !
+    if(mod_bdeb)write(*,*)myname,'G locready=',css%locready
     ! start xml output
     !
     if (nloc.eq.0) then
@@ -5066,6 +5266,7 @@ CONTAINS
           !
           ! read batch-variables into memory
           !
+          if(mod_bdeb)write(*,*)myname,'H locready=',css%locready
           do ii = 1, b%nvar
              varid=b%var(ii)
              call model_readVariable(css,newFile,varid,crc250,irc)
@@ -5080,7 +5281,7 @@ CONTAINS
           !
           ! loop over locations and determine slice indexes
           !
-          if(mod_bdeb)write(*,*)myname,'Location loop.',nloc,b%nvar
+          if(mod_bdeb)write(*,*)myname,'I locready=',css%locready,nloc,b%nvar
           do ll=1,nloc
              if (loc(ll)%ptr%bok) then
                 if (loc(ll)%ptr%search .eq. 0) then
@@ -5111,11 +5312,12 @@ CONTAINS
           b=>b%next
        end do
        b=>p%first%next
+       if(mod_bdeb)write(*,*)myname,'J locready=',css%locready
        do while ( .not.associated(b,target=p%last))
           !
           ! clear batch-variables from memory
           !
-          if(mod_bdeb)write(*,*)myname,'Variable loop.',b%nvar
+          if(mod_bdeb)write(*,*)myname,'K locready=',css%locready,b%nvar
           do ii = 1, b%nvar 
              varid=b%var(ii)
              p%proc(varid)=.true.
@@ -5169,7 +5371,7 @@ CONTAINS
           b=>b%next
        end do
        !
-       if(mod_bdeb)write(*,*)myname,'Looping over remaining variables.',newFile%nvar, p%nvar
+       if(mod_bdeb)write(*,*)myname,'K locready=',css%locready,newFile%nvar, p%nvar
        !
        ! loop over remaining variables
        !
@@ -5241,29 +5443,22 @@ CONTAINS
        !
        write(ounit,'(3X,"</model>")')
     end if
-    !
-    ! clear location positions
-    !
-    do ll=1,nloc
-       ! check target values
-       call  model_checkTargetVal(css,loc(ll)%ptr%bok,crc250,irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,"model_checkTargetVal")
-          return
-       end if
-       !
-       ! clear location position
-       !
-       call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250," Error return from initLocPos.")
-          call model_errorappendi(crc250,irc)
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-    end do
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    ! !
+    ! ! clear location positions
+    ! !
+    ! if(mod_bdeb)write(*,*)myname,'L locready=',css%locready
+    ! do ll=1,nloc
+    !    ! clear location position
+    !    call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+    !    if (irc.ne.0) then
+    !       call model_errorappend(crc250,myname)
+    !       call model_errorappend(crc250," Error return from clearLocPos.")
+    !       call model_errorappendi(crc250,irc)
+    !       call model_errorappend(crc250,"\n")
+    !       return
+    !    end if
+    ! end do
+    if(mod_bdeb)write(*,*)myname,'Done locready=',css%locready
     return
   end subroutine model_makeXML
   !
@@ -5277,7 +5472,7 @@ CONTAINS
     type(mod_plan),pointer :: p         ! pointer to the current plan
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_writeIgnoredLocXML"
+    character*25 :: myname="writeIgnoredLocXML"
     character*250 :: buff250
     character*50 :: s1
     integer :: lenb,len1
@@ -5316,7 +5511,7 @@ CONTAINS
     logical :: bok                      ! was any data printed?
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setLocXML"
+    character*25 :: myname="model_setLocXML"
     real :: val
     logical :: bout, binn
     integer ::lenb,lenp,lenl,len1
@@ -5507,7 +5702,7 @@ CONTAINS
     integer :: locid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_writexml"
+    character*25 :: myname="model_writexml"
     character*250 :: buff250
     type(mod_location), pointer :: loc
     integer, external :: length
@@ -5560,7 +5755,7 @@ CONTAINS
     integer :: ounit                  ! output unit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_writeModelDataXML"
+    character*25 :: myname="writeModelDataXML"
     integer :: len1,len2,len3,len4
     integer, external :: length
     character*50 :: s1,s2,s3,s4
@@ -5640,7 +5835,7 @@ CONTAINS
     integer :: irc
     !
     integer :: jj,cnt
-    character*25 :: myname = "model_planLoop"
+    character*25 :: myname="model_planLoop"
     !
     cnt=1
     nout=0
@@ -5695,7 +5890,7 @@ CONTAINS
     character(len=*) :: varname
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setIndex"
+    character*25 :: myname="model_setIndex"
     integer,external :: length
     integer :: lent
     character*80 :: t80
@@ -5719,7 +5914,7 @@ CONTAINS
     character*80 :: var80
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setIndex"
+    character*25 :: myname="model_setIndex"
     integer,external :: length
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     trg80=css%ind_trg
@@ -5736,7 +5931,7 @@ CONTAINS
     character(LEN=*) :: smax
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_setIndexLimits"
+    character*25 :: myname="model_setIndexLimits"
     integer :: lens, lene
     integer, external :: length
     integer :: irc2
@@ -5760,16 +5955,19 @@ CONTAINS
   ! set stack file limits
   !
   subroutine model_setFileStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
+    implicit none
     type(mod_session), pointer :: css !  current session
     logical :: ind_lval(2)
     real :: ind_minval,ind_maxval
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="model_setFileStackLimits"
+    character*22 :: myname="setFileStackLimits"
     integer :: irc2
     ! set limits
+    if (mod_bdeb)write(*,*)myname,'Entering:',ind_lval,ind_minval,ind_maxval
     call model_setIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
     ! make sure file stack is sorted
+    if (mod_bdeb)write(*,*)myname,'Sorting stack.'
     if (.not.css%stackReady) then
        call model_sortStack(css,crc250,irc)
        if (irc.ne.0) then
@@ -5781,6 +5979,7 @@ CONTAINS
        end if
        css%stackReady = .true.
     end if
+    if (mod_bdeb)write(*,*)myname,'Find stack start/stop.'
     ! find index start/stop...
     call model_findStackLimits(css,crc250,irc)
     if (irc.ne.0) then
@@ -5790,6 +5989,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    if (mod_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine model_setFileStackLimits
   !
@@ -5800,7 +6000,7 @@ CONTAINS
     logical :: ind_lval(2)
     real :: ind_minval,ind_maxval
     integer :: irc2
-    character*22 :: myname="model_setIndexLimitsRaw"
+    character*22 :: myname="setIndexLimitsRaw"
     css%ind_lval(1)=ind_lval(1)
     css%ind_lval(2)=ind_lval(2)
     css%ind_minval=ind_minval
@@ -5816,7 +6016,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(mod_target), pointer :: currentTarget
-    character*25 :: myname = "model_getVariables"
+    character*25 :: myname="model_getVariables"
     if (allocated(var80)) deallocate(var80)
     allocate(var80(css%ntrg),stat=irc)
     if (irc.ne.0) then
@@ -5840,7 +6040,7 @@ CONTAINS
     integer :: ounit                  ! output unit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_filestartxml"
+    character*25 :: myname="model_filestartxml"
     if (associated(css%currentFile)) then
        write(ounit,'(1X,A)')"<modelFile file='"//&
             & css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
@@ -5855,7 +6055,7 @@ CONTAINS
     integer :: ounit                  ! output unit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_filestopxml"
+    character*25 :: myname="model_filestopxml"
     integer :: ii
     write(ounit,'(2X,A)')"<summary>"
     if (css%currentFile%ook(1).eq.css%currentFile%ook(4)) then
@@ -5918,7 +6118,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer :: ret
-    character*25 :: myname = "model_openFile"
+    character*25 :: myname="model_openFile"
     INTEGER :: CHUNKSIZEHINT
     integer :: ii
     chunksizehint= 1024*1024*1024
@@ -5956,7 +6156,7 @@ CONTAINS
     integer :: irc
     integer :: ret,ii,dd,varid,len,lena
     integer, external :: length
-    character*25 :: myname = "model_readInventory"
+    character*25 :: myname="model_readInventory"
     character*1, pointer ::  ac(:)
     integer*1,  pointer::  a1(:)
     integer*2,  pointer::  a2(:)
@@ -6219,7 +6419,7 @@ CONTAINS
     integer :: varid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_readVariable"
+    character*25 :: myname="model_readVariable"
     integer*1::  fill1
     integer*2::  fill2
     integer*4::  fill4
@@ -6443,8 +6643,8 @@ CONTAINS
     type(mod_variable),pointer :: v
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_clearVariable"
-    if(mod_bdeb)write(*,*)myname,'Entering.',associated(v)
+    character*25 :: myname="model_clearVariable"
+    !if(mod_bdeb)write(*,*)myname,'Entering.',associated(v)
     call model_deleteAttributes(v,crc250,irc)
     if (associated(v%att)) deallocate(v%att)
     if (allocated(v%ind)) deallocate(v%ind)
@@ -6459,7 +6659,7 @@ CONTAINS
     if (allocated(v%fd)) deallocate(v%fd)
     v%ndim=0
     v%natt=0
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    !if(mod_bdeb)write(*,*)myname,'Done.'
     return
   end subroutine model_clearVariable
   !
@@ -6469,10 +6669,10 @@ CONTAINS
     type(mod_variable),pointer :: v
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_deleteAttributes"
+    character*25 :: myname="model_deleteAttributes"
     integer :: attid
-    if(mod_bdeb)write(*,*)myname,'Entering.',associated(v)
-    if(mod_bdeb)write(*,*)myname,'Have.',v%natt,associated(v%att)
+    !if(mod_bdeb)write(*,*)myname,'Entering.',associated(v)
+    !if(mod_bdeb)write(*,*)myname,'Have.',v%natt,associated(v%att)
     do attid=1,v%natt
        if(mod_bdeb)write(*,*)myname,'Loop.',attid,v%natt,associated(v%att)
        if (associated(v%att(attid)%ptr)) then
@@ -6487,7 +6687,7 @@ CONTAINS
           deallocate(v%att(attid)%ptr)
        end if
     end do
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    !if(mod_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine model_deleteAttributes
   !
@@ -6495,7 +6695,7 @@ CONTAINS
     type(mod_attribute),pointer :: att
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_clearAttribute"
+    character*25 :: myname="model_clearAttribute"
     if(mod_bdeb)write(*,*)myname,'Entering.',associated(att)
     if (allocated(att%ac)) deallocate(att%ac)
     if (allocated(att%a1)) deallocate(att%a1)
@@ -6515,7 +6715,7 @@ CONTAINS
     type(mod_file),pointer :: newFile
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "model_readSortVariable"
+    character*25 :: myname="model_readSortVariable"
     integer :: iisort,jj,ii
     integer, external :: length
     !
@@ -6623,7 +6823,7 @@ CONTAINS
     type(mod_file),pointer :: newFile
     character*250 :: crc250
     integer :: irc,ret
-    character*25 :: myname = "model_closeFile"
+    character*25 :: myname="model_closeFile"
     ret=NF_CLOSE(newFile%ncid)        ! end definitions: leave define mode
     if (ret .ne. NF_NOERR) then
        irc=170

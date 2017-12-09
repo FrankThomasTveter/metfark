@@ -1607,45 +1607,6 @@ sub makePlotTable {
     return ($tablefile,$graphicfile);
 }
 
-=head2 makePlotGraphics
-
-makePlotGraphics - generate plot graphics.
-
-Arguments:
-
-=over 4
-
-=item (string) name of table input file.
-
-=item (string) name of graphics output plot file.
-
-=item (int) test flag (1 or 0), 1= only check input
-
-=back
-
-=head4 EXAMPLE
-
-my $file = $fark->makePlotGraphics($tablefile,$graphicfile);
-
-=cut
-
-sub makePlotGraphics {
-    my $self = shift;
-    my $tablefile = shift;
-    my $graphicfile = shift;
-    my $test = shift//0;
-    my ($dir,$name)=farkdir::splitName($graphicfile);
-    farkdir::makePath($dir);
-    my ($ret,$msg) = xs_makePlotGraphics($self->{PID},$tablefile,$graphicfile,$test);
-    if ($ret != 0) {
-	if (-e $graphicfile) {unlink $graphicfile;};
-	die $msg;
-    } else {
-	if (-e $graphicfile) {chmod 0666, $graphicfile;};
-    }
-	
-    return;
-}
 
 ################################# GENERAL ##########################
 

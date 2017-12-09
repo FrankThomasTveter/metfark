@@ -1,0 +1,47 @@
+
+
+
+		  <tr style="background-color:#00b9f2" id="labelsPlotDataset"> 
+		    <th style="min-width:30px"></th>
+		    <th style="min-width:30px;width:30px">Id</th>
+		    <th style="min-width:30px"></th>
+		    <th style="min-width:10%">Line</th>
+		    <th style="width:20%">Colocation definition file</th>
+		    <td style="min-width:30px;width:30px"></td>
+		    <th width="min-width:20%">X-expression</th>
+		    <th style="min-width:30px;width:30px"></th>
+		    <th style="min-width:40%">Y-expression</th>
+		    <th style="min-width:30px;width:30px"></th>
+		    <th style="min-width:10%">Legend</th>
+		  </tr>
+		  <tr id="newlinePlotDataset">
+		    <td align="center"><button onclick="plot_newPlotDataset(this)">&#43</button></td>
+		    <td class="fill">
+		      <input id="plotLine" type="text" value="" style="width:100%" onblur="" disabled/> 
+		      <div id="plotLineDropdown" class="dropdown-content"/>
+		    </td>
+		    <td align="center"><button onclick="showDropdown('plotLine',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
+
+		    <td class="fill">
+		      <input id="plotType" type="text" value="" style="width:100%" disabled/> 
+		    </td>
+
+		    <td class="fill">
+		      <input id="plotColoc" type="text" value="" style="width:100%" onblur="" disabled/> 
+		      <div id="plotColocDropdown" class="dropdown-content"/>
+		    </td>
+		    <td align="center"><button onclick="showDropdown('plotColoc',this.parentNode.parentNode.children[4].children[0].value)" class="dropbtn">&#9776</button></td>
+		    <td class="fill">
+		      <input id="plotXexpression" type="text" value="" style="width:100%" onblur=""/> 
+		      <div id="plotXexpressionDropdown" class="dropdown-content"/>
+		    </td>
+		    <td align="center"><button onclick="showDropdown('plotXexpression',this.parentNode.parentNode.children[6].children[0].value)" class="dropbtn">&#9776</button></td>
+		    <td class="fill">
+		      <input id="plotYexpression" type="text" value="" style="width:100%" onblur=""/> 
+		      <div id="plotYexpressionDropdown" class="dropdown-content"/>
+		    </td>
+		    <td align="center"><button onclick="showDropdown('plotYexpression',this.parentNode.parentNode.children[8].children[0].value)" class="dropbtn">&#9776</button></td>
+		    <td class="fill">
+		      <input id="plotLegend" type="text" value="" style="width:100%" onblur=""/> 
+		    </td>
+		  </tr>

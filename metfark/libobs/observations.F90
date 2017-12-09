@@ -2960,7 +2960,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="compileFilter"
+    character*22 :: myname ="obs_compileFilter"
     if (css%lenf.ne.0) then
        call parse_open(css%psf,crc250,irc)
        if (irc.ne.0) then
@@ -2986,6 +2986,7 @@ CONTAINS
        end if
        css%flt_set=.true.
     end if
+    if(obs_bdeb)write(*,*)myname,"Done."
     return
   end subroutine observation_compileFilter
   !

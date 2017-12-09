@@ -57,9 +57,9 @@ function load_setConfigFile(type,file) {
     } else if (type === "coloc") {
 	coloc_setConfigFile(file);
     } else if (type === "plot") {
-	//auto_setConfigFile(file);
+	plot_setConfigFile(file);
     } else if (type === "auto") {
-	//auto_setConfigFile(file);
+	auto_setConfigFile(file);
     };
 };
 function load_updateData(type){
@@ -725,7 +725,7 @@ function showDropdown(target, arg = "") {
 		    if (cnt !== "") {
 			ccnt=" ("+cnt+")";
 		    }
-		    addChildButton(item,bufrType+" "+info+ccnt,"obs_setArray('bufrType','"+bufrType+"');setValue('obsBufrType','"+bufrType+"');");
+		    addChildButton(item,bufrType+" "+info+ccnt,"obs_setArray('bufrType','"+bufrType+"');showValue('obsBufrType','"+bufrType+"');");
 		}
 	    }
 	}
@@ -744,7 +744,7 @@ function showDropdown(target, arg = "") {
 			if (cnt !== "") {
 			    ccnt=" ("+cnt+")";
 			}
-			addChildButton(item,subType+" : "+info+ccnt,"obs_setArray('subType','"+subType+"');obs_setArray('typeInfo','"+info+"');setValue('obsSubType','"+subType+"');setValue('obsTypeInfo','"+info+"');");
+			addChildButton(item,subType+" : "+info+ccnt,"obs_setArray('subType','"+subType+"');obs_setArray('typeInfo','"+info+"');showValue('obsSubType','"+subType+"');showValue('obsTypeInfo','"+info+"');");
 		    }
 		}
 	    }
@@ -765,7 +765,7 @@ function showDropdown(target, arg = "") {
 		if (pos !== "info" && pos !== "cnt")  {
 		    var descr=bufr[pos]["descr"];
 		    var info=bufr[pos]["info"];
-		    addChildButton(item,pos+" : "+descr+" "+info,"setValue('obsIndexPOS','"+pos+"');setValue('obsIndexDESCR','"+descr+"');setValue('obsIndexInfo','"+info+"');");
+		    addChildButton(item,pos+" : "+descr+" "+info,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');");
 		}
 	    }
 	}
@@ -901,13 +901,13 @@ function showDropdown(target, arg = "") {
 		var dimname=dim;
 		var dimv=model_config[file]["dimensions"][dim];
 		if (dimv!= null) {dimname="("+dimname+") 1:"+dimv;};
-		addChildButton(item,dimname,"setValue('colocModelTargetVariable','("+dim+")');",'shaded');
+		addChildButton(item,dimname,"showValue('colocModelTargetVariable','("+dim+")');",'shaded');
 	    }
 	    for (var variable in model_config[file]["variables"]) {
 		var fullname=variable;
 		var dims=model_config[file]["variables"][variable];
 		if (dims!= null) {fullname=fullname+"("+dims+")";};
-		addChildButton(item,fullname,"setValue('colocModelTargetVariable','"+variable+"');");
+		addChildButton(item,fullname,"showValue('colocModelTargetVariable','"+variable+"');");
 	    }
 	}
     } else if (target === 'colocObsConfigFile') { //***********************************
@@ -1025,9 +1025,17 @@ function showDropdown(target, arg = "") {
 		    if (pos !== "info" && pos !== "cnt")  {
 			var descr=bufr[pos]["descr"];
 			var info=bufr[pos]["info"];
-			addChildButton(item,pos+" : "+descr+" "+info,"setValue('colocObsPOS','"+pos+"');setValue('colocObsDESCR','"+descr+"');setValue('colocObsInfo','"+info+"');");
+			if (descr == "31001") {
+			    addChildButton(item,pos+" : "+descr+" "+info,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');","shaded");
+			} else {
+			    addChildButton(item,pos+" : "+descr+" "+info,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');");
+			}
 		    }
 		}
+		addChildButton(item," fid :: File id","showValue('colocObsPOS','fid');showValue('colocObsDESCR','');showValue('colocObsInfo','File id');");
+		addChildButton(item," mid :: Message id","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Message id');");
+		addChildButton(item," oid :: Observation id","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Observation id');");
+		addChildButton(item," lid :: Location id","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Location id');");
 	    }
 	}
     } else if (target === 'matchModelTargetName') { //***********************************
@@ -1037,7 +1045,7 @@ function showDropdown(target, arg = "") {
 	     coloc_config[file]["modelConfigFile"]["targets"] !== undefined 
 	   ) {
 	    for (var t in coloc_config[file]["modelConfigFile"]["targets"]) {
-		addChildButton(item,t,"setValue('matchModelTargetName','"+t+"');");
+		addChildButton(item,t,"showValue('matchModelTargetName','"+t+"');");
 	    }
 	}
     } else if (target.substr(0,15) === 'matchExpression') {
@@ -1073,7 +1081,7 @@ function showDropdown(target, arg = "") {
 	addChildButton(item,"between(var,min,max)","addValue('"+target+"','between(,,)');");
 	addChildButton(item,"above(var,min)","addValue('"+target+"','above(,)');");
 	addChildButton(item,"below(var,max)","addValue('"+target+"','below(,)');");
-    } else if (target === 'colocFilter') {
+    } else if (target === 'colocModelFilter') {
 	removeChildren(item);
 	addChildButton(item,"and(l1,l2)","addValue('"+target+"','and(,)');");
 	addChildButton(item,"or(l1,l2)","addValue('"+target+"','or(,)');");
@@ -1100,6 +1108,7 @@ function showDropdown(target, arg = "") {
 	    var parent=dirs[0];
 	    if (parent != null) {
 		var dd=parent;
+		console.log("Adding up button: ",dd);
 		addChildButton(item,"<up>","plot_setConfigFile('"+dd+"');");
 	    }
 	    if (args.length == 1) {
@@ -1134,24 +1143,24 @@ function showDropdown(target, arg = "") {
 		  //  dd=dd + file;
 		//}
 		console.log("Adding dir button: ",dd);
-		addChildButton(item,dd,"plot_setConfigFile('"+dd+"');");
+		addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();");
 	    }
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'plotCat') { //***********************************
 	var args=getArgs(arg);
-	documentLog.innerHTML="Sent cat-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	//documentLog.innerHTML="Sent cat-load request.";
+	//$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
+	    //var ret=dataToArray(data,status,documentLog);
+	    //var root=ret[0];
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    for (var cat in plot_cats) {
 		console.log("Adding config button: ",cat);
-		addChildButton(item,cat,"plot_setCat('"+cat+"');setValue('plotCat','"+cat+"');plot_show()");
+		addChildButton(item,cat,"plot_setCat('"+cat+"');showValue('plotCat','"+cat+"');plot_show()");
 	    }
-	    documentLog.innerHTML="";
-	});
+	    //documentLog.innerHTML="";
+	//});
     } else if (target === 'plotTable') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent dir-load request.";
@@ -1268,10 +1277,10 @@ function showDropdown(target, arg = "") {
 	      });
     } else if (target === 'plotLine') { //***********************************
 	var args=getArgs(arg);
-	documentLog.innerHTML="Sent line-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	//documentLog.innerHTML="Sent line-load request.";
+	//$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
+	    //var ret=dataToArray(data,status,documentLog);
+	    //var root=ret[0];
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    var file=plot_getConfigFile();
@@ -1279,10 +1288,10 @@ function showDropdown(target, arg = "") {
 	    var cat=plot_config[file]["cat"];
 	    for (var line in plot_cats[cat]["lines"]) {
 		console.log("Adding config button: ",line);
-		addChildButton(item,line+" ("+plot_cats[cat]["lines"][line]+")","setValue('plotLine','"+line+"');setValue('plotType',plot_cats['"+cat+"'][\"lines\"]['"+line+"']);");
+		addChildButton(item,line+" ("+plot_cats[cat]["lines"][line]+")","showValue('plotLine','"+line+"');showValue('plotType',plot_cats['"+cat+"'][\"lines\"]['"+line+"']);");
 	    }
-	    documentLog.innerHTML="";
-	});
+	//documentLog.innerHTML="";
+	//});
 
     } else if (target === 'plotColoc') { //***********************************
 	var args=getArgs(arg);
@@ -1304,10 +1313,10 @@ function showDropdown(target, arg = "") {
 	    if (parent != null) {
 		var dd=parent;
 		console.log("Adding up: ",dd);
-		addChildButton(item,"<up>","setValue('plotColoc','"+dd+"');");
+		addChildButton(item,"<up>","showValue('plotColoc','"+dd+"');");
 	    } else {
 		console.log("Adding clear: ",dd);
-		addChildButton(item,"<up>","setValue('plotColoc','');");
+		addChildButton(item,"<up>","showValue('plotColoc','');");
 	    }
 	    if (dirs.length > 0) {
 		for (var ii=1;ii<dirs.length;ii++) {
@@ -1323,15 +1332,15 @@ function showDropdown(target, arg = "") {
 			//}
 			console.log("Adding dir button: ",dd,ii);
 // colocation file 'dd' must be 'loaded' if it is selected....!!!
-			addChildButton(item,dd,"setValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');");
+			addChildButton(item,dd,"showValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');");
 		    }
 		}
 	    }
 	    console.log("There: ",dirs);
 	    documentLog.innerHTML="";
 	});
-    } else if (target === 'plotXexpression' || 
-	       target === 'plotYexpression' ) { //***********************************
+    } else if (target.substr(0,14) === 'plotExpression') { //***********************************
+	var cnt = target.substring(14);
 	removeChildren(item);
 	var cfile=plot_getColocConfigFile();
 	var mfile=plot_getModelConfigFile();
@@ -1360,12 +1369,25 @@ function showDropdown(target, arg = "") {
 	    };
 	};
 	addFunctionButtons(item,target);
+    } else if (target.substr(0,13) === 'plotAttribute') { //***********************************
+	var attr = target.substring(13);
+	var file=plot_getConfigFile();
+	var cat=plot_config[file]["cat"];
+	var val=plot_cats[cat]["attributes"][attr];
+	var radio=val instanceof Array; // should we have radio button?
+	removeChildren(item);
+	if (radio) {
+	    for (var vv=0; vv < val.length;vv++) {
+		console.log("Attribute '",attr,"' value  ",vv,val[vv]);
+		addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');plot_showAttributesTable();");
+	    };
+	}
     } else if (target === 'autoType') { //***********************************
 	removeChildren(item);
-	addChildButton(item,"observation","setValue('"+target+"','obs');");
-	addChildButton(item,"model","setValue('"+target+"','model');");
-	addChildButton(item,"colocation","setValue('"+target+"','coloc');");
-	addChildButton(item,"plot","setValue('"+target+"','plot');");
+	addChildButton(item,"observation","showValue('"+target+"','obs');");
+	addChildButton(item,"model","showValue('"+target+"','model');");
+	addChildButton(item,"colocation","showValue('"+target+"','coloc');");
+	addChildButton(item,"plot","showValue('"+target+"','plot');");
     } else if (target === 'autoConfigFile') { //***********************************
 	var type=document.getElementById("autoType").value // "obs";
 	var args=getArgs(arg);
@@ -1392,10 +1414,10 @@ function showDropdown(target, arg = "") {
 		if (parent != null) {
 		    var dd=parent;
 		    console.log("Adding up: ",dd);
-		    addChildButton(item,"<up>","setValue('autoConfigFile','"+dd+"');");
+		    addChildButton(item,"<up>","showValue('autoConfigFile','"+dd+"');");
 		} else {
 		    console.log("Adding clear: ",dd);
-		    addChildButton(item,"<up>","setValue('autoConfigFile','');");
+		    addChildButton(item,"<up>","showValue('autoConfigFile','');");
 		}
 		if (dirs.length > 0) {
 		    for (var ii=1;ii<dirs.length;ii++) {
@@ -1410,7 +1432,7 @@ function showDropdown(target, arg = "") {
 				//dd=dd + file;
 			    //}
 			    console.log("Adding dir button: ",dd,ii);
-			    addChildButton(item,dd,"setValue('autoConfigFile','"+dd+"');");
+			    addChildButton(item,dd,"showValue('autoConfigFile','"+dd+"');");
 			}
 		    }
 		}
@@ -1424,7 +1446,7 @@ function showDropdown(target, arg = "") {
     }
     //document.getElementById(dropdown).classList.toggle("show");
 }
-function setValue(target,value) {
+function showValue(target,value) {
     if (document.getElementById(target) == null) {
 	console.log("Undefined target:",target," Value:",value);
     } else {
@@ -1443,12 +1465,12 @@ function setInnerHTML(target,value) {
 function dataToArray(data,status,documentLog) {
     var ret=[];
     if (status == "success") {
+	dataToCat(data);
 	dataToModel(data);
 	dataToObs(data);
 	dataToColoc(data);
 	dataToPlot(data);
 	dataToAuto(data);
-	dataToCat(data);
 	ret.extend(dataToMetfark(data));
     }
     documentLog.innerHTML="";
@@ -1673,8 +1695,10 @@ function dataToColoc(data) {
 	    for (var kk = 0; kk < defTargets.length; kk++) {
 		var target=defTargets[kk].getAttribute("name");
 		var value=defTargets[kk].getAttribute("value");
+		console.log("metfark: *** loaded default: ",target,value);
 		targets["targets"][target]=value;
 	    };
+	    coloc_config[path]["modelConfigFile"]["def"].push(targets);
 	};
 	coloc_config[path]["obsConfigFile"]["file"]=
 	    set(coloc_config[path]["obsConfigFile"]["file"],colocs[ii].getAttribute("obsFile"));
@@ -1722,38 +1746,79 @@ function dataToPlot(data) {
     var plots=data.getElementsByTagName("plot_config");
     for (var ii = 0; ii < plots.length; ii++) {
 	var file=plots[ii].getAttribute("file");
+	var loc=plots[ii].getAttribute("location");
+	if (loc === "") {
+	    var path = file;
+	} else {
+	    var path = loc + file;
+	}
 	var table=plots[ii].getAttribute("table");
 	var graphics=plots[ii].getAttribute("graphics");
 	var cat=plots[ii].getAttribute("cat");
-	plot_config[file]={dataset:{}, attributes:{},table:table,graphics:graphics,cat:cat};
+	plot_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,cat:cat};
 	var sets=plots[ii].getElementsByTagName("set");
+	console.log("metfark: loading plot file=",path," cat=",cat," sets=",sets.length);
 	for (var jj = 0; jj < sets.length; jj++) {
 	    var name=sets[jj].getAttribute("name");
 	    var coloc=sets[jj].getAttribute("coloc");
-	    var x=sets[jj].getAttribute("x");
-	    var y=sets[jj].getAttribute("y");
 	    var legend=sets[jj].getAttribute("legend");
-	    plot_config[file]["dataset"][name]={coloc:coloc,
-						x:x,y:y,legend:legend};
+	    var columns=[];
+	    var clmns=sets[jj].getElementsByTagName("column");
+	    for (var kk = 0; kk < clmns.length; kk++) {
+		var expr=clmns[kk].getAttribute("value");
+		columns.push(expr);
+	    };
+	    plot_config[path]["dataset"][name]={coloc:coloc,
+						columns:columns,
+						legend:legend};
+	}
+	// set default attributes
+	if (plot_cats[cat] != undefined) {
+	    for (var attr in plot_cats[cat]["attributes"]) {
+		if (plot_config[path]["attributes"][attr] === undefined) {
+		    var val=plot_cats[cat]["attributes"][attr];
+		    if (val instanceof Array) {
+			plot_config[path]["attributes"][attr]=val[0]; // first element
+		    } else {
+			plot_config[path]["attributes"][attr]=val;
+		    }
+		}
+	    }
 	}
 	var attrs=plots[ii].getElementsByTagName("attribute");
 	for (var jj = 0; jj < attrs.length; jj++) {
 	    var name=attrs[jj].getAttribute("name");
 	    var value=attrs[jj].getAttribute("value");
-	    plot_config[file]["attributes"][name]=value;
+	    plot_config[path]["attributes"][name]=value;
 	}
     }
 }
 function dataToCat(data) {
     var cats=data.getElementsByTagName("cat_config");
+    if (cats.length>0) {
+	plot_cats={};
+	plot_order=[];
+    }
     for (var jj = 0; jj < cats.length; jj++) {
 	var name=cats[jj].getAttribute("name");
 	var attrs=cats[jj].getElementsByTagName("attr");
-	plot_cats[name]={"attributes":{},"lines":{}};
+	plot_cats[name]={"attributes":{},"lines":{},"order":[]};
+	plot_order.push(name);
 	for (var kk = 0; kk < attrs.length; kk++) {
 	    var attr=attrs[kk].getAttribute("name");
 	    var value=attrs[kk].getAttribute("value");
-	    plot_cats[name]["attributes"][attr]=value;
+	    var choices=value.split(":");
+	    if (choices.length>1) {
+		for (var i = choices.length - 1; i >= 0; --i) {
+		    if (choices[i] == "" || choices[i] == null || choices[i]==undefined) {
+			choices.splice(i,1);
+		    }
+		};
+		plot_cats[name]["attributes"][attr]=choices;
+	    } else {
+		plot_cats[name]["attributes"][attr]=value;
+	    }
+	    plot_cats[name]["order"].push(attr);
 	};
 	var types=cats[jj].getElementsByTagName("line");
 	if (types.length>0) {plot_cats[name]["lines"]={};}
@@ -1761,7 +1826,14 @@ function dataToCat(data) {
 	     var id=types[kk].getAttribute("id");
 	     var info=types[kk].getAttribute("name");
 	     plot_cats[name]["lines"][id]=info;
-	    console.log("metfark: loaded cat: ",name,id,info);
+	     //console.log("metfark: loaded line: ",name,id,info);
+	 };
+	var clmns=cats[jj].getElementsByTagName("column");
+	if (clmns.length>0) {plot_cats[name]["columns"]=[];}
+	 for (var kk = 0; kk < clmns.length; kk++) {
+	     var clmn=clmns[kk].getAttribute("name");
+	     plot_cats[name]["columns"].push(clmn);
+	     console.log("metfark: loaded column: ",name,clmn);
 	 };
     };
 };

@@ -757,9 +757,9 @@ function url_show() {
 	}
 	url_check('matchExpression','urlDebugExpression');
     }
-    setValue('urlConfigFile',file);
-    setValue('urlModelConfigFile',url_config[file]["modelConfigFile"]["file"]);
-    setValue('urlObsConfigFile',url_config[file]["obsConfigFile"]["file"]);
+    showValue('urlConfigFile',file);
+    showValue('urlModelConfigFile',url_config[file]["modelConfigFile"]["file"]);
+    showValue('urlObsConfigFile',url_config[file]["obsConfigFile"]["file"]);
     url_showURL();
 }
 
@@ -1049,8 +1049,8 @@ function url_showConfig() {
 	};
 	url_configEd++;
     } else { // load local values to screen
-	setValue('urlModelConfigFile',url_config[file]["modelConfigFile"]["file"]);
-	setValue('urlObsConfigFile',url_config[file]["obsConfigFile"]["file"]);
+	showValue('urlModelConfigFile',url_config[file]["modelConfigFile"]["file"]);
+	showValue('urlObsConfigFile',url_config[file]["obsConfigFile"]["file"]);
 	url_show();
     }
 };

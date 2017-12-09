@@ -1,3 +1,23 @@
+  subroutine colocation_makeTable(css,mss,oss,ounit,name80,&
+       & ncol,col80,exp250,leg250,test,crc250,irc)
+    use model
+    use observations
+    use parse
+    implicit none
+    type(col_session), pointer ::  css !  current session
+    type(mod_session), pointer ::  mss !  current session
+    type(obs_session), pointer ::  oss !  current session
+    integer :: ounit ! output unit
+    character*80 :: name80
+    integer :: ncol
+    character*80, allocatable :: col80(:)
+    character*250, allocatable :: exp250(:)
+    character*250 :: leg250
+    integer :: test
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="maketable"
+    !
     bok=.true.
     !
     ! Get chain-counts
@@ -454,3 +474,6 @@
     end if
     if (allocated(var80)) deallocate(var80)
     if (allocated(val)) deallocate(val)
+    write(*,*) myname,'Done.'
+    return
+  end subroutine colocation_makeTable

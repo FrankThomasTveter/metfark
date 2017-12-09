@@ -9,7 +9,9 @@ module plot
   !
   type :: plot_attribute
      character*80 :: name80=""
+     integer :: lenn=0
      character*250 :: value250=""
+     integer :: lenv=0
      type(plot_attribute), pointer :: prev => null()         ! linked list
      type(plot_attribute), pointer :: next => null()         ! linked list
   end type plot_attribute
@@ -125,14 +127,13 @@ module plot
   type :: plot_session
      integer :: sid=0            ! session id
      character*250 :: type250="" ! type
+     integer :: lenp =0
      !
      ! output
      character*250 :: tab250=""  ! table file name
      integer :: lent             ! length of tab250
-     integer :: tunit = 0        ! table file unit
      character*250 :: gra250=""  ! graphics file name
      integer :: leng             ! length of gra250
-     integer :: gunit = 0        ! graphics file unit
      !
      ! time information
      !  VALUES(1):	The year
@@ -149,8 +150,10 @@ module plot
      type(plot_column), pointer :: firstColumn => null()   ! linked list start
      type(plot_column), pointer :: lastColumn => null()    ! linked list end
      !
+     integer :: natt =0
      type(plot_attribute), pointer :: firstAttribute => null()         ! linked list
      type(plot_attribute), pointer :: lastAttribute => null()         ! linked list
+     integer :: nset =0
      type(plot_set), pointer :: firstSet => null()         ! linked list
      type(plot_set), pointer :: lastSet => null()          ! linked list
      type(plot_set), pointer :: currentSet => null()       ! linked list
@@ -208,6 +211,7 @@ CONTAINS
     end if
     pss%firstAttribute%next => pss%lastAttribute
     pss%lastAttribute%prev => pss%firstAttribute
+    pss%natt=0
     allocate(pss%firstSet,pss%lastSet,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -217,6 +221,7 @@ CONTAINS
     end if
     pss%firstSet%next => pss%lastSet
     pss%lastSet%prev => pss%firstSet
+    pss%nset=0
     !
     allocate(pss%firstColumn,pss%lastColumn, stat=irc) ! 
     if (irc.ne.0) then
@@ -322,8 +327,10 @@ CONTAINS
     character*250 :: type250
     character*250 :: crc250
     integer :: irc
+    integer,external :: length
     character*22 :: myname = "settype"
     pss%type250=type250
+    pss%lenp=length(type250,250,10)
     return
   end subroutine plot_settype
   !
@@ -340,6 +347,7 @@ CONTAINS
        nat => cat%next
        call plot_unlinkAttribute(cat)
        call plot_deallocateAttribute(cat)
+       pss%natt=pss%natt-1
        cat  => nat
     end do
     return
@@ -369,19 +377,33 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname = "pushattr"
+    integer :: lenn,lenv
+    integer, external :: length
     type(plot_attribute), pointer :: cat !  current attribute
-    allocate(cat,stat=irc)
-    if (irc.ne.0) then
+    lenn=length(name80,80,10)
+    lenv=length(val250,250,10)
+    if (lenn.ne.0.and.lenv.ne.0) then
+       allocate(cat,stat=irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Unable to allocate 'attribute'.")
+       end if
+       cat%name80=name80
+       cat%lenn=lenn
+       cat%value250=val250
+       cat%lenv=lenv
+       cat%next => pss%lastAttribute
+       cat%prev => pss%lastAttribute%prev
+       cat%prev%next => cat
+       cat%next%prev => cat
+       pss%natt=pss%natt+1
+       nullify(cat)
+    else
+       irc=344
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Unable to allocate 'attribute'.")
+       call plot_errorappend(crc250,"Attempt to push empty attribute/value.")
+       return
     end if
-    cat%name80=name80
-    cat%value250=val250
-    cat%next => pss%lastAttribute
-    cat%prev => pss%lastAttribute%prev
-    cat%prev%next => cat
-    cat%next%prev => cat
-    nullify(cat)
     return
   end subroutine plot_pushattr
   !
@@ -413,112 +435,55 @@ CONTAINS
     return
   end subroutine plot_getTablefile
   !
-  subroutine plot_openTablefile(pss,crc250,irc)
+  subroutine plot_openfile(pss,ounit,tab250,lent,crc250,irc)
     implicit none
     type(plot_session), pointer :: pss !  current session
+    integer :: ounit
+    character*250 :: tab250
+    integer :: lent
     character*250 :: crc250
     integer :: irc
-    integer, external :: ftunit
-    character*22 :: myname = "openTablefile"
-    pss%tunit=ftunit(irc)
+    integer, external :: ftunit,length
+    character*22 :: myname = "openFile"
+    call chop0(tab250,250)
+    lent=length(tab250,250,10)
+    ounit=ftunit(irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Error return from FTUNIT.")
        call plot_errorappendi(crc250,irc)
        return
     end if
-    open(unit=pss%tunit,file=pss%tab250(1:pss%lent), &
-         & access="append",form="formatted",status="unknown",iostat=irc)
-    if(plot_bdeb)write(*,*)myname,'Opened:',pss%tab250(1:pss%lent),pss%tunit,irc
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Unable to open table file '"//pss%tab250(1:pss%lent)//"'")
-       call plot_errorappendi(crc250,irc)
-       return
-    end if
-    return
-  end subroutine plot_openTablefile
-  !
-  subroutine plot_closeTablefile(pss,crc250,irc)
-    implicit none
-    type(plot_session), pointer :: pss !  current session
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname = "closeTablefile"
-    close(unit=pss%tunit,iostat=irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Unable to close table file '"//pss%tab250(1:pss%lent)//"'")
-       call plot_errorappendi(crc250,irc)
-       return
-    end if
-    return
-  end subroutine plot_closeTablefile
-  !
-  subroutine plot_setGraphicsfile(pss,gra250,crc250,irc)
-    implicit none
-    type(plot_session), pointer :: pss !  current session
-    character*250 :: gra250 ! name of graphics file
-    character*250 :: crc250
-    integer :: irc
-    integer, external :: length
-    pss%gra250=gra250
-    CALL CHOP0(pss%gra250,250)
-    PSS%LENG=LENGTH(pss%gra250,250,10)
-    return
-  end subroutine plot_setGraphicsfile
-  !
-  subroutine plot_getGraphicsfile(pss,gra250,crc250,irc)
-    implicit none
-    type(plot_session), pointer :: pss !  current session
-    character*250 :: gra250 ! name of graphics file
-    character*250 :: crc250
-    integer :: irc
-    integer, external :: length
-    gra250=pss%gra250
-    return
-  end subroutine plot_getGraphicsfile
-  !
-  subroutine plot_openGraphicsfile(pss,crc250,irc)
-    implicit none
-    type(plot_session), pointer :: pss !  current session
-    character*250 :: crc250
-    integer :: irc
-    integer, external :: ftunit
-    character*22 :: myname = "openGraphicsfile"
-    pss%gunit=ftunit(irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from FTUNIT.")
-       call plot_errorappendi(crc250,irc)
-       return
-    end if
-    open(unit=pss%gunit,file=pss%gra250(1:pss%leng),&
+    open(unit=ounit,file=tab250(1:lent), &
          & access="sequential",form="formatted",status="unknown",iostat=irc)
+    if(plot_bdeb)write(*,*)myname,'Opened:',tab250(1:lent),ounit,irc
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Unable to open graphics file '"//pss%gra250(1:pss%leng)//"'")
+       call plot_errorappend(crc250,"Unable to open table file '"//tab250(1:lent)//"'")
        call plot_errorappendi(crc250,irc)
        return
     end if
     return
-  end subroutine plot_openGraphicsfile
+  end subroutine plot_openfile
   !
-  subroutine plot_closeGraphicsfile(pss,crc250,irc)
+  subroutine plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
     implicit none
     type(plot_session), pointer :: pss !  current session
+    integer :: ounit
+    character*250 :: tab250
+    integer :: lent
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "closeGraphicsfile"
-    close(unit=pss%gunit,iostat=irc)
+    character*22 :: myname = "closeFile"
+    close(unit=ounit,iostat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Unable to close graphics file '"//pss%gra250(1:pss%leng)//"'")
+       call plot_errorappend(crc250,"Unable to close table file '"//tab250(1:lent)//"'")
        call plot_errorappendi(crc250,irc)
        return
     end if
     return
-  end subroutine plot_closeGraphicsfile
+  end subroutine plot_closeFile
   !
   subroutine plot_setTime(pss,crc250,irc)
     implicit none
@@ -608,6 +573,30 @@ CONTAINS
     return
   end subroutine plot_setFiles
   !
+  subroutine plot_setGraphicsfile(pss,gra250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: gra250 ! name of graphics file
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    pss%gra250=gra250
+    CALL CHOP0(pss%gra250,250)
+    PSS%LENG=LENGTH(pss%gra250,250,10)
+    return
+  end subroutine plot_setGraphicsfile
+  !
+  subroutine plot_getGraphicsfile(pss,gra250,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    character*250 :: gra250 ! name of graphics file
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    gra250=pss%gra250
+    return
+  end subroutine plot_getGraphicsfile
+  !
   !###############################################################################
   ! SET ROUTINES
   !###############################################################################
@@ -624,6 +613,7 @@ CONTAINS
        nset => cset%next
        call plot_unlinkSet(cset)
        call plot_deallocateSet(cset)
+       pss%nset=pss%nset-1
        cset  => nset
     end do
     return
@@ -830,6 +820,7 @@ CONTAINS
     set%prev => pss%lastSet%prev
     set%prev%next => set
     set%next%prev => set
+    pss%nset=pss%nset+1
     nullify(set)
     if(plot_bdeb) write(*,*)myname,'Exiting.',irc
     return
@@ -991,6 +982,7 @@ CONTAINS
           col80(ii)=pss%currentSet%col80(ii)
           exp250(ii)=pss%currentSet%col_exp250(ii)
        end do
+       if (plot_bdeb)write(*,*)myname,'Columns:',ncol,size(col80),size(exp250)
        !
        plot_loopset=.true.
     end if
@@ -2013,8 +2005,8 @@ CONTAINS
     character*80, allocatable :: var80(:)
     real, allocatable :: val(:)
     integer :: mloc,mtrg,oloc,otrg
+    integer, external :: length
     integer :: lenc,lene,lenn,lenl
-    integer, external :: length,ftunit
     real :: valx, valy
     integer :: tmod,emod,dmod,tobs,ii,jj,ind_ii,nfunc
     logical :: bobsind
@@ -2030,21 +2022,10 @@ CONTAINS
     real :: obs_start = 0.0D0
     real :: obs_stop = 0.0D0
     logical :: mod_lim,obs_lim,bok,first,lok
+    type(plot_attribute), pointer :: attr => null()
     !
-    ! open file
-    call chop0(tab250,250)
-    lent=length(tab250,250,10)
-    ounit=ftunit(irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," no free unit number for:"//tab250(1:lent))
-       call plot_errorappendi(crc250,irc)
-       call plot_errorappend(crc250,"\n")
-       return
-    end if
-    open ( unit=ounit, status="unknown", form="formatted", &
-         &        access="sequential", &
-         &        iostat=irc, file=tab250(1:lent) )
+    ! open table file
+    call plot_openFile(pss,ounit,tab250,lent,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," unable to open:"//tab250(1:lent))
@@ -2057,26 +2038,54 @@ CONTAINS
     !
     ! loop over set and write attributes and legend as comments
     !
-    if(plot_bdeb)write(*,*)myname,'Writing attributes and legends.',pss%tunit
-    write(pss%tunit,'("#")',iostat=irc)
+    if(plot_bdeb)write(*,*)myname,'Writing attributes and legends.',ounit
+    write(ounit,'("#")',iostat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Error writing to table file'.")
        call plot_errorappend(crc250,pss%tab250(1:pss%lent))
        return
     end if
-    write(pss%tunit,'("# Legend table")',iostat=irc)
+    write(ounit,'("# Type:",A)',iostat=irc)pss%type250(1:pss%lenp)
+    write(ounit,'("#")',iostat=irc)
+    ! print attributes
+    write(ounit,'("# ATTRIBUTES:",I0)',iostat=irc)pss%natt
+    attr => pss%firstAttribute%next
+    do while (.not.associated(attr,target=pss%lastAttribute))
+       write(ounit,'("# ",A,":",A)',iostat=irc)&
+            & attr%name80(1:attr%lenn),attr%value250(1:attr%lenv)
+       attr => attr%next
+    end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error writing to Table file'.")
+       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       return
+    end if
+    ! print legend table
+    write(ounit,'("#")',iostat=irc)
+    write(ounit,'("# LEGENDS:",I0)',iostat=irc) pss%nset
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
        call chop0(name80,80)
        lenn=length(name80,80,1)
        call chop0(leg250,250)
        lenl=length(leg250,250,1)
-       write(pss%tunit,'("#",X,A,X,A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
+       write(ounit,'("#",X,A,":",A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
     end do
-    !
-    if(plot_bdeb)write(*,*)myname,'Writing data.',pss%tunit
-    write(pss%tunit,'("#")',iostat=irc)
-    write(pss%tunit,'("# Data table")',iostat=irc)
+    ! print legend table
+    write(ounit,'("#")',iostat=irc)
+    write(ounit,'("# COLUMNS:",I0)',iostat=irc) ncol+1
+    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
+    do ii=1,ncol
+       call chop0(col80(ii),80)
+       lenc=length(col80(ii),80,1)
+       call chop0(exp250(ii),80)
+       lene=length(exp250(ii),80,1)
+       write(ounit,'("#",X,A,":",A)',iostat=irc)col80(ii)(1:lenc),exp250(ii)(1:lene)
+    end do
+    if(plot_bdeb)write(*,*)myname,'Writing data.',ounit,ncol,size(col80),size(exp250)
+    write(ounit,'("#")',iostat=irc)
+    write(ounit,'("# Data table")',iostat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Error writing to Table file'.")
@@ -2086,6 +2095,7 @@ CONTAINS
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
        ! make output data for this set
        irc=0
+       if(plot_bdeb)write(*,*)myname,'Making table.',ounit,ncol,size(col80),size(exp250)
        call colocation_makeTable(css,mss,oss,ounit,name80,ncol,col80,exp250,leg250,test,crc250,irc)
        if (irc.ne.0) then
           call chop0(name80,80)
@@ -2098,59 +2108,19 @@ CONTAINS
     end do
     !
     ! close table output file unit, ounit
+    call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," unable to close:"//tab250(1:lent))
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
+       return
+    end if
     !
-    close (unit=ounit,iostat=irc)
     if (irc.ne.0) irc=0 ! oh well...
     if(plot_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine plot_maketable
-
-  !
-  subroutine plot_makegraphics(pss,tab250,gra250,test,crc250,irc)
-    implicit none
-    type(plot_session), pointer :: pss !  current session
-    character*250 :: tab250,gra250
-    integer :: test
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname ="makegraphics"
-    call plot_setFiles(pss,tab250,gra250,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'setFiles'.")
-       return
-    end if
-    call plot_openGraphicsfile(pss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'openGraphicsFile'.")
-       return
-    end if
-    !
-    ! plot
-    write(pss%gunit,'("Graphics-file generation not implemented...")',iostat=irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Unable to write to")
-       call plot_errorappend(crc250,pss%gra250(1:pss%leng))
-       return
-    end if
-    !
-    call plot_closeGraphicsfile(pss,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'closeGraphicsFile'.")
-       return
-    end if
-    !
-    !irc=999
-    !call plot_errorappend(crc250,myname)
-    !call plot_errorappend(crc250," Not implemented.")
-    !call plot_errorappendi(crc250,irc)
-    !call plot_errorappend(crc250,"\n")
-    !
-    return
-  end subroutine plot_makegraphics
   !
   !###############################################################################
   ! ERROR ROUTINES

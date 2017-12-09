@@ -30,8 +30,8 @@ function obs_allocate(file) {
     }
 }
 function obs_setConfigFile(file) {
-    setValue('obsConfigFile',file);
-    setValue('obsConfigFileSave',file);
+    showValue('obsConfigFile',file);
+    showValue('obsConfigFileSave',file);
     if (file != "") {
 	obs_allocate(file);
 	obs_file=file;
@@ -45,6 +45,25 @@ function obs_setArray(parameter,value) {
     //console.log("File:",file,parameter,obs_config[file]);
     obs_config[file][parameter]=decodeURI(value);
 };
+function obs_setFilterDir(value) {
+    var file=obs_getConfigFile();
+    //console.log("File:",file,"filterDir",obs_config[file]);
+    var val=decodeURI(value);
+    obs_config[file]["filterDir"]=val;
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:"data",path:val},
+	  function(data, status){
+	      var errors=data.getElementsByTagName("error");
+	      if (errors.length == 0 ) {
+		  document.getElementById('obsFilterDir').style.color='black'
+		  console.log("Dir ok:",val);
+	      } else {
+		  obs_config[file]["filterDirStat"]=val;
+		  document.getElementById('obsFilterDir').style.color='red'
+		  console.log("Dir NOT ok:",val);
+	      }
+	      obs_show();
+	  });
+};
 function obs_setIndexTarget(target,parameter,value) {
     var file=obs_getConfigFile();
     obs_config[file]["targets"][target][parameter]=value;
@@ -53,17 +72,17 @@ function obs_show() {
     var file=obs_getConfigFile();
     if (file != "") {
 	obs_allocate(file);
-	setValue('obsConfigFile',file);
-	setValue('obsConfigFileSave',file);
-	setValue('obsFilterDir',obs_config[file]["filterDir"]);
-	setValue('obsFilterFile',obs_config[file]["filterFile"]);
-	setValue('obsTablePath',obs_config[file]["tablePath"]);
-	setValue('obsBufrType',obs_config[file]["bufrType"]);
-	setValue('obsSubType',obs_config[file]["subType"]);
-	setValue('obsTypeInfo',obs_config[file]["typeInfo"]);
+	showValue('obsConfigFile',file);
+	showValue('obsConfigFileSave',file);
+	showValue('obsFilterDir',obs_config[file]["filterDir"]);
+	showValue('obsFilterFile',obs_config[file]["filterFile"]);
+	showValue('obsTablePath',obs_config[file]["tablePath"]);
+	showValue('obsBufrType',obs_config[file]["bufrType"]);
+	showValue('obsSubType',obs_config[file]["subType"]);
+	showValue('obsTypeInfo',obs_config[file]["typeInfo"]);
 	obs_setIndexTargetTable(file);
-	setValue('obsIndexTarget',obs_config[file]["indexTarget"]);
-	setValue('obsIndexExp',obs_config[file]["indexExp"]);
+	showValue('obsIndexTarget',obs_config[file]["indexTarget"]);
+	showValue('obsIndexExp',obs_config[file]["indexExp"]);
 	setInnerHTML('obsPatternHits',obs_config[file]["hits"]);
 	// this may seem strange, Stat stores name of dir only if it does not exist...
 	if (obs_config[file]["filterDirStat"]==obs_config[file]["filterDir"]) {

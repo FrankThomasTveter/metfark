@@ -23,7 +23,7 @@ my $debug=1;       # debug this script (0=omit output)
 fark::debug(1);  # debug observations
 fark::debug(2);  # debug models
 fark::debug(3);  # debug colocation
-#fark::debug(4);  # debug plot
+fark::debug(4);  # debug plot
 #fark::debug(5);  # debug parse
 #
 my $modelDir=     farkdir::getRootDir("model");
@@ -51,6 +51,7 @@ my $plotUseDir=   farkdir::getRootDir("plot_use");
 my $plotLogDir=   farkdir::getRootDir("plot_log");
 #
 my $autoDir=      farkdir::getRootDir("auto");
+my $scriptDir=    farkdir::getRootDir("script");
 my $lockRoot=     farkdir::getRootDir("lock");
 #
 #
@@ -192,13 +193,14 @@ sub autoModel {
 	my @modelnodes=$node->findnodes("model");
 	my $found=0;
 	foreach my $model (@modelnodes) {
+	    my $auto=(($model->getAttribute("auto")||"") eq "true");
 	    my $nodefile=$model->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@models,[$nodefile,$model]);
 		    $found++;
 		} 
-	    } else {
+	    } elsif ($auto) {
 		push(@models,[$nodefile,$model]);
 	    }
 	}
@@ -310,6 +312,10 @@ sub processModel {
     $fark->makeModelCache($cachefile,$test);
     #
     $fark->close();
+    #
+    if (! -e $cachefile) {
+	farkdir::term("Unable to make cache file:'".$cachefile."'")
+    };
     return;
 }
 
@@ -327,13 +333,14 @@ sub autoObs {
 	my @obsnodes=$node->findnodes("obs");
 	my $found=0;
 	foreach my $obs (@obsnodes) {
+	    my $auto=($obs->getAttribute("auto")=="true");
 	    my $nodefile=$obs->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@obses,[$nodefile,$obs]);
 		    $found++;
 		}
-	    } else {
+	    } elsif ($auto) {
 		push(@obses,[$nodefile,$obs]);
 	    }
 	}
@@ -443,6 +450,10 @@ sub processObs {
     $fark->makeObservationCache($cachefile,$test);
     #
     $fark->close();
+    #
+    if (! -e $cachefile) {
+	farkdir::term("Unable to make cache file:'".$cachefile."'")
+    };
     return;
 }
 
@@ -463,13 +474,14 @@ sub autoColoc {
 	my @colocnodes=$node->findnodes("coloc");
 	my $found=0;
 	foreach my $coloc (@colocnodes) {
+	    my $auto=(($coloc->getAttribute("auto")||"") eq "true");
 	    my $nodefile=$coloc->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@coloces,[$nodefile,$coloc]);
 		    $found++;
 		}
-	    } else {
+	    } elsif ($auto) {
 		push(@coloces,[$nodefile,$coloc]);
 	    }
 	}
@@ -580,7 +592,7 @@ sub processColoc {
     &setColocConfig($fark,$node,$test);
     #
     # make the resulting XML
-    #print "Calling colocXML\n";
+    print "Calling colocXML\n";
     my $xml       = $node->getAttribute("xml");
     my ($irc, $msg) = $fark->makeColocXML($xml,$test);
     #
@@ -608,13 +620,14 @@ sub autoPlot {
 	my @plotnodes=$node->findnodes("plot");
 	my $found=0;
 	foreach my $plot (@plotnodes) {
+	    my $auto=($plot->getAttribute("auto") eq "true");
 	    my $nodefile=$plot->getAttribute("file");
 	    if ($file) {
 		if ($nodefile eq $file) {
 		    push(@plotes,[$nodefile,$plot]);
 		    $found++;
 		}
-	    } else {
+	    } elsif ($auto) {
 		push(@plotes,[$nodefile,$plot]);
 	    }
 	}
@@ -733,6 +746,7 @@ sub processPlot {
 	$fark->pushPlotAttribute($attr->getAttribute("name"),
 				 $attr->getAttribute("value"));
     }
+    my @cols=$node->findnodes("column");
     if($debug){print "Set coloc model obs\n";}
     $fark->clearPlotSetStack();
     my @sets=$node->findnodes("set");
@@ -751,11 +765,19 @@ sub processPlot {
 		my $obsFile   = $node->getAttribute("obsFile");
 		die("model:$modelFile obs:$obsFile $mret");
 	    };
+	    # push columns
+	    if($debug){print "Setting columns.\n";};
+	    $fark->clearPlotColumn();
+	    my @colv=$trg->findnodes("column");
+	    for ( my $i = 0; $i < @cols; $i++) {
+		my $nam=$cols[$i]->getAttribute("name");
+		my $val=$colv[$i]->getAttribute("value");
+		if($debug){print "Setting column: $nam -> $val\n";};
+		$fark->pushPlotColumn($nam,$val);
+	    }
 	    # push all the data onto the plot-stack...
 	    if($debug){print "Push data to plot-stack obs\n";}
 	    $fark->pushPlotSet($trg->getAttribute("name"),
-			       $trg->getAttribute("x"),
-			       $trg->getAttribute("y"),
 			       $trg->getAttribute("legend"));
 	}
     }
@@ -765,7 +787,23 @@ sub processPlot {
     my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics,$test); 
     #
     if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}
-    $fark->makePlotGraphics($tablefile,$plotfile,$test); # generate graphics file...
+
+    my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
+    my $fpath=$root . $loc . $cat;
+    my $cmd="Rscript --vanilla $fpath $tablefile $plotfile $test";
+    if ($debug) {print "Executing graphics command: '$cmd'\n";};
+    my $log="";
+    eval {
+	$log=capture {
+	    system $cmd;
+	};
+    };
+    my $ret=$@;if ($ret) {
+	open(my $fh, '>', $plotfile) or farkdir::term("$myname Unable to open: $plotfile ($ret)");
+	print($fh,$log);
+	close($fh);
+	farkdir::term("$myname Command error: $cmd: $ret");
+    }
     #
     $fark->close();
     if($debug){print "processPlot Exiting.\n";}
@@ -829,11 +867,13 @@ sub setModelConfig {
     my $test = shift;
     my $indexTarget=$node->getAttribute("indexTarget");
     my $indexVariable=$node->getAttribute("indexVariable");
+    print "Clear model file stack, '$indexVariable'\n";
     $fark->clearModelFileStack($indexVariable); # clear model file stack
+    print "Setting model cache '$cachefile'\n";
     $fark->setModelCache($cachefile);
     print "Setting model index '$indexTarget' '$indexVariable'\n";
     $fark->setModelIndex($indexTarget,$indexVariable);
-    if (-e $cachefile && ! $test) {
+    if (-e $cachefile) {
 	$fark->loadModelCache($cachefile);# load cached model file stack
     };
 }
@@ -870,7 +910,7 @@ sub setObsConfig {
     }
     $fark->clearObservationFileStack();
     $fark->setObservationCache($cachefile);
-    if (-e $cachefile && ! $test) {
+    if (-e $cachefile) {
 	$fark->loadObservationCache($cachefile,$test);
     };
 }
@@ -894,6 +934,9 @@ sub setColocConfig {
 	    my $doc = $parser->parse_file($modelConfig);
 	    if ((my $node)=$doc->findnodes("model/model_config")) {
 		&setModelConfig($fark,$node,$modelCache,$test);
+		if (! -e $modelCache) {
+		    farkdir::term("Mising model cache:'".$modelCache."'")
+		};
 	    };
 	}
     };
@@ -909,12 +952,15 @@ sub setColocConfig {
 	    my $doc = $parser->parse_file($obsConfig);
 	    if ((my $node)=$doc->findnodes("obs/obs_config")) {
 		&setObsConfig($fark,$node,$obsCache,$test);
+		if (! -e $obsCache) {
+		    farkdir::term("Mising model cache:'".$obsCache."'")
+		};
 	    };
 	};
     };
     # get config from coloc file
     my $filter = $node->getAttribute("filter")//"";
-    $fark->setColocFilter($filter);
+    $fark->setModelFilter($filter);
     if (length($modelFile//"")) {
 	my @oldNodes=$node->findnodes("modelTarget");
 	foreach my $oldnode (@oldNodes) {
@@ -968,7 +1014,7 @@ sub setColocConfig {
     my $obsStart  = ($node->getAttribute("obsStart")//"");
     my $obsStop   = ($node->getAttribute("obsStop")//"");
     my $obsFilter = ($node->getAttribute("obsFilter")//"");
-    my $colocFilter = ($node->getAttribute("colocFilter")//"");
+    my $modelFilter = ($node->getAttribute("modelFilter")//"");
     if (length($modelStart//"") ||  length($modelStop//"")) {
 	if($debug){print "Setting model index limits '$modelStart' '$modelStop'\n";}
 	$fark->setModelIndexLimits($modelStart, $modelStop); # "target:value"
@@ -981,8 +1027,9 @@ sub setColocConfig {
 	if($debug){print "Setting obs filter '$obsFilter'\n";}
 	$fark->setObservationFilter($obsFilter); # "target:value"
     };
-    if (length($colocFilter//"")) {
-	if($debug){print "Setting colocation filter '$colocFilter'\n";}
-	$fark->setColocationFilter($colocFilter); # "target:value"
+    if (length($modelFilter//"")) {
+	if($debug){print "Setting colocation filter '$modelFilter'\n";}
+	$fark->setModelFilter($modelFilter); # "target:value"
     };
+    if($debug){print "setColocConfig done.\n";}
 }

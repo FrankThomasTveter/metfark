@@ -1135,32 +1135,28 @@ CONTAINS
     integer :: irc
     character*22 :: myname ="maketable"
     !
+    integer :: nvar
+    character*80, allocatable :: var80(:)
+    real, allocatable :: val(:)
     integer :: mloc,mtrg,oloc,otrg
+    integer :: lenc,lene,lenn,lenl
+    integer, external :: length
     integer :: tmod,emod,dmod,tobs,ii,jj,nfunc
     logical :: bobsind
-    logical :: mod_lval(2),obs_lval(2),bok,lok
+    type(parse_session), pointer :: psx,psy ! parse sessions
     integer :: locid,locstart
-    integer :: lena,lenc,lene,lenn,lenl
-    integer, external :: length
-    integer :: irc2
-    real:: val(ncol)            ! internal column values
     !
-    integer :: mod_cnt=0
-    integer :: obs_cnt=0
     real :: mod_minval = 0.0D0
     real :: mod_maxval = 0.0D0
     real :: obs_minval = 0.0D0
     real :: obs_maxval = 0.0D0
-    logical :: bbok,first
-    character*50 :: s2
-    integer :: len2
+    logical :: mod_lval(2),obs_lval(2),bok,lok
     !
     irc=0
-    !
-    lena=length(name80,80,10)
     bok=.true.
-    if(col_bdeb)write(*,*)myname,'Entering.',ounit,ncol,size(col80),size(exp250)
+    !
     ! check what we should colocated
+    !
     tmod=model_targetCount(mss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_targetCount")
@@ -1209,8 +1205,6 @@ CONTAINS
           return
        end if
     end if
-    ! make expression lists
-    ! count expressions (match-expressions + obs-index-expression)
     ! make lists
     if(col_bdeb)write(*,*)myname,'Make model target list.'
     call model_makeTargetList(mss,crc250,irc)
@@ -1288,14 +1282,6 @@ CONTAINS
        call colocation_errorappend(crc250,"obs_compileFilter")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Compiling.',ncol,size(col80),size(exp250)
-    ! compile column expressions
-    call model_compileExpr(mss,ncol,exp250,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_compileExpr")
-       return
-    end if
-    if(col_bdeb)write(*,*)myname,'Analyse limits.',ncol,size(col80),size(exp250)
     ! convert obs-limits to mod-limits
     mod_lval(1)= mss%ind_lval(1)
     mod_minval = mss%ind_minval
@@ -1313,8 +1299,7 @@ CONTAINS
        mod_maxval=oss%ind_maxval
        mod_lval(2)=.true.
     end if
-    if(col_bdeb)write(*,*)myname,'Adjusting mod limits:',mod_lval,mod_minval,mod_maxval,&
-         & associated(mss),associated(oss),associated(css)
+    if(col_bdeb)write(*,*)myname,'Adjusting mod limits:',mod_lval,mod_minval,mod_maxval
     call model_setFileStackLimits(mss,mod_lval,mod_minval,mod_maxval,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
@@ -1509,7 +1494,7 @@ CONTAINS
           !
           if (tmod.ne.0) then
              ! finally slice the model file and write model XML to stdout
-             call model_slicecurrentfile(mss,bok,crc250,irc)
+             call model_slicecurrentfileXML(mss,ounit,bok,crc250,irc)
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"model_stackslicecurrentfile")
                 return
@@ -1521,7 +1506,6 @@ CONTAINS
           if (tobs.ne.0) then
              first=.true.
              locid=locstart
-             if (mod_bdeb)write(*,*)myname,'locready=',mss%locReady
              OBSERVATION : do
                 ! read next observation into static memory, return next obs
                 call observation_sliceCurrentFile(oss,bok,crc250,irc)
@@ -1542,35 +1526,40 @@ CONTAINS
                 if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
                 if (bbok) then
-                   call model_evalExpr(mss,ncol,val,crc250,irc)
+                   call observation_writeXML(oss,ounit,locid,crc250,irc)
                    if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"evalExpr")
+                      call colocation_errorappend(crc250,"observation_writeXML")
                       return
                    end if
-                   if (ncol.ne.0) then
-                      write(ounit,"(X,A)",advance="no") name80(1:lena)
-                   else
-                      write(ounit,"(X,A)") name80(1:lena)
+                   call model_writeXML(mss,ounit,locid,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"observation_writeXML")
+                      return
                    end if
-                   do ii=1,ncol
-                      call colocation_wash(val(ii),s2,len2)
-                      if (ii.ne.ncol) then
-                         write(ounit,"(X,A)",advance="no") s2(1:len2)
-                      else
-                         write(ounit,"(X,A)") s2(1:len2)
-                      end if
-                   end do
-                   if(col_bdeb)write(*,'(2(X,A),100(X,F0.1))')myname,'Val:',mss%mpo_val
                 end if
              end do OBSERVATION
           end if
           ! end obs data loop
-          if (tobs.eq.0) then
+          if (tobs.ne.0) then
+             call observation_filestopxml(oss,ounit,crc250,irc)
+             if (irc.ne.0) then
+                call colocation_errorappend(crc250,"observation_filestopxml")
+                return
+             end if
+          else 
              exit OBSFILE
           end if
        end do OBSFILE
+
        ! end model loop
-       if (tmod.eq.0)  then
+       if (tmod.ne.0)  then
+          ! write file stop xml-tag
+          call model_filestopxml(mss,ounit,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,"model_filestopxml")
+             return
+          end if
+       else 
           exit MODFILE
        end if
     end do MODFILE
@@ -1580,16 +1569,19 @@ CONTAINS
        call colocation_errorappend(crc250,"closeMatch")
        return
     end if
-    ! remove location arrays
-    call model_clearLoc(mss,crc250,irc)
+    !
+    ! close xml output file unit, ounit
+    !
+    call model_writeModelDataXML(mss,ounit,crc250,irc)
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from clearLoc.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call colocation_errorappend(crc250,"model_writeModelDataXML")
        return
     end if
-    !write(*,*) myname,'Done.'
+    write(ounit,'(A,I0,A,I0,A)',iostat=irc2) " <file_overlap mod='",mod_cnt,"' obs='",obs_cnt,"'/>"
+    write(ounit,'("</colocation>")',iostat=irc2)
+    close (unit=ounit,iostat=irc)
+    if (irc.ne.0) irc=0 ! oh well...
+    write(*,*) myname,'Done.'
     return
   end subroutine colocation_makeTable
   !
@@ -1737,9 +1729,10 @@ CONTAINS
     integer :: test
     character*250 :: crc250
     integer :: irc
+    character*26 :: myname = "colocation_makeXML"
+    !
     integer, external :: length,ftunit
     integer :: lenc,lene
-    character*26 :: myname = "colocation_makeXML"
     integer :: tmod,emod,dmod,tobs,ii,jj,nfunc
     logical :: bobsind
     integer :: locid,locstart,ounit,lenx
@@ -1804,10 +1797,8 @@ CONTAINS
           return
        end if
     end if
-    ! make expression lists
-    ! count expressions (match-expressions + obs-index-expression)
     ! make lists
-    if(col_bdeb)write(*,*)myname,'Make model target list.',test
+    if(col_bdeb)write(*,*)myname,'Make model target list.'
     call model_makeTargetList(mss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_makeTargetList")
@@ -1900,8 +1891,7 @@ CONTAINS
        mod_maxval=oss%ind_maxval
        mod_lval(2)=.true.
     end if
-    if(col_bdeb)write(*,*)myname,'Adjusting mod limits:',mod_lval,mod_minval,mod_maxval,&
-         & associated(mss),associated(oss)
+    if(col_bdeb)write(*,*)myname,'Adjusting mod limits:',mod_lval,mod_minval,mod_maxval
     call model_setFileStackLimits(mss,mod_lval,mod_minval,mod_maxval,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
@@ -1913,11 +1903,8 @@ CONTAINS
     !
     call chop0(xml250,250)
     lenx=length(xml250,250,20)
-    if(col_bdeb)write(*,*)myname,' Path: ',xml250(1:lenx),test
-    if (test.eq.1) then
-       if(col_bdeb)write(*,*)myname,' XXXX TEST RUN - ABORTING XXXX'
-       return
-    end if
+    if(col_bdeb)write(*,*)myname,' Path: ',xml250(1:lenx)
+    if (test.eq.1) return
     ! open file
     ounit=ftunit(irc)
     if (irc.ne.0) then
@@ -2142,7 +2129,6 @@ CONTAINS
           end if
           !
           if (tmod.ne.0) then
-             if (mod_bdeb)write(*,*)myname,'A locready=',mss%locReady
              ! finally slice the model file and write model XML to stdout
              call model_slicecurrentfileXML(mss,ounit,bok,crc250,irc)
              if (irc.ne.0) then
@@ -2156,7 +2142,6 @@ CONTAINS
           if (tobs.ne.0) then
              first=.true.
              locid=locstart
-             if (mod_bdeb)write(*,*)myname,'B locready=',mss%locReady
              OBSERVATION : do
                 ! read next observation into static memory, return next obs
                 call observation_sliceCurrentFile(oss,bok,crc250,irc)
@@ -2232,15 +2217,6 @@ CONTAINS
     write(ounit,'("</colocation>")',iostat=irc2)
     close (unit=ounit,iostat=irc)
     if (irc.ne.0) irc=0 ! oh well...
-    ! remove location arrays
-    call model_clearLoc(mss,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from clearLoc.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
-    end if
     !write(*,*) myname,'Done.'
     return
   end subroutine colocation_makeXML
@@ -2621,30 +2597,5 @@ CONTAINS
     end do
   end subroutine findDelimiter
   !
-  subroutine colocation_wash(val,s2,len2)
-    real :: val
-    character*50 :: s2
-    integer :: len2
-    integer, external :: length
-    integer :: jj
-    write(s2,'(F0.10)') val; call chop0(s2,50); len2=length(s2,50,10) ! ignore last digit...
-    if (len2.gt.1) then
-       OUTER: do JJ=1,len2
-          if (s2(JJ:JJ).eq.".") then
-             INNER: do while (len2.gt.JJ.and.&
-               & (s2(len2:len2).eq."0".or.s2(len2:len2).eq."."))
-                len2=len2-1
-             end do INNER
-             exit OUTER
-          end if
-       end do OUTER
-       if (len2.eq.1.and.s2(1:1).eq.".") then
-          s2="0"
-       else if (s2(len2:len2).eq.".") then
-          len2=len2-1
-       end if
-    end if
-    return
-  end subroutine colocation_wash
   !
 end module colocation

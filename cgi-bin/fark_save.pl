@@ -53,7 +53,9 @@ sub saveModel {
 	my $parser = XML::LibXML->new();
 	my $doc;
 	my $node;
-	if (-e $path) {
+	if (-d $path) {
+	    farkdir::term("Unable to save file: '$path'");
+	} elsif (-e $path) {
 	    $doc = $parser->parse_file($path);
 	    if ( ($node)=$doc->findnodes("model/model_config")) {
 		my $pass=($node->getAttribute("password")||"");
@@ -79,6 +81,11 @@ sub saveModel {
 	$node->setAttribute("hits",         $hits);
 	$node->setAttribute("indexTarget",  $indexTarget);
 	$node->setAttribute("indexVariable",$indexVariable);
+	if(defined $node->getAttribute("filterDir")){
+	    if (! -d $node->getAttribute("filterDir")) {
+		$node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+	    }
+	}
 	my @oldNodes=$node->findnodes("stack");
 	foreach my $oldNode (@oldNodes) {
 	    $node->removeChild($oldNode);
@@ -167,7 +174,9 @@ sub saveObs {
 	my $parser = XML::LibXML->new();
 	my $doc;
 	my $node;
-	if (-e $path) {
+	if (-d $path) {
+	    farkdir::term("Unable to save file: '$path'");
+	} elsif (-e $path) {
 	    $doc = $parser->parse_file($path);
 	    if ( ($node)=$doc->findnodes("obs/obs_config")) {
 		my $pass=($node->getAttribute("password")||"");
@@ -196,6 +205,11 @@ sub saveObs {
 	$node->setAttribute("typeInfo",    $typeInfo);
 	$node->setAttribute("indexTarget", $indexTarget);
 	$node->setAttribute("indexExp",    $indexExp);
+	if(defined $node->getAttribute("filterDir")){
+	    if (! -d $node->getAttribute("filterDir")) {
+		$node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+	    }
+	}
 	my @oldNodes=$node->findnodes("stack");
 	foreach my $oldNode (@oldNodes) {
 	    $node->removeChild($oldNode);
@@ -284,7 +298,9 @@ sub saveColoc {
 	my $parser = XML::LibXML->new();
 	my $doc;
 	my $node;
-	if (-e $path) {
+	if (-d $path) {
+	    farkdir::term("Unable to save file: '$path'");
+	} elsif (-e $path) {
 	    $doc = $parser->parse_file($path);
 	    if ( ($node)=$doc->findnodes("coloc/coloc_config")) {
 		my $pass=($node->getAttribute("password")||"");
@@ -430,6 +446,7 @@ sub savePlot {
     my $table=($param->{table}[0] // "");
     my $graphics=($param->{graphics}[0] // "");
     my $cat=($param->{cat}[0] // "");
+    my $plotCols=($param->{columns}[0] // "");
     my $plotSets=($param->{sets}[0] // "");
     my $plotAttrs=($param->{attributes}[0] // "");
     #
@@ -438,13 +455,17 @@ sub savePlot {
     my ($dir, $file) = farkdir::splitName($ifile);
     my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
     my $fpath=$root . $loc;
+    #print "Started with '$root' '$loc' '$priv'\n";
     if (-d  $fpath && $priv eq "rw") {
 	my $path=$fpath . $file;
 	# check password
 	my $parser = XML::LibXML->new();
 	my $doc;
 	my $node;
-	if (-e $path) {
+	#print "Parsing '$path'\n";
+	if (-d $path) {
+	    farkdir::term("Unable to save file: '$path'");
+	} elsif (-e $path) {
 	    $doc = $parser->parse_file($path);
 	    if ( ($node)=$doc->findnodes("plot/plot_config")) {
 		my $pass=($node->getAttribute("password")||"");
@@ -468,25 +489,48 @@ sub savePlot {
 	$node->setAttribute("table",       $table);
 	$node->setAttribute("graphics",    $graphics);
 	$node->setAttribute("cat",         $cat);
+	#print "Processing\n";
 	# remove target nodes...
-	my @oldNodes=$node->findnodes("set");
+	my @oldNodes=$node->findnodes("column");
+	foreach my $oldNode (@oldNodes) {
+	    $node->removeChild($oldNode);
+	}
+	if ($plotCols) {
+	    #print "Plottargets: $plotCols\n";
+	    my @cols=split (/\~/, $plotCols,-1);
+	    foreach my $col (@cols) {
+		#print "Col:$col   @cols\n";
+		my $child = XML::LibXML::Element->new( 'column' );
+		$child->setAttribute("name",$col);
+		$node->addChild( $child );
+	    }
+	}
+	# remove target nodes...
+	@oldNodes=$node->findnodes("set");
 	foreach my $oldNode (@oldNodes) {
 	    $node->removeChild($oldNode);
 	}
 	if ($plotSets) {
 	    my @lines = split (/\|/, $plotSets,-1);
 	    if (@lines) { 
+		#print "Looping '$plotSets'\n";
 		foreach my $line (@lines) {
 		    #print "Plottargets: $line\n";
 		    my @items=split (/\~/, $line,-1);
 		    my $len=$#items;
-		    if ($len == 4) {
+		    #print "   Loop: '$line' $len\n";
+		    if ($len >2) {
 			my $parent = XML::LibXML::Element->new( 'set' );
 			$parent->setAttribute("name",$items[0]);
 			$parent->setAttribute("coloc",$items[1]);
-			$parent->setAttribute("x",$items[2]);
-			$parent->setAttribute("y",$items[3]);
-			$parent->setAttribute("legend",$items[4]);
+			$parent->setAttribute("legend",$items[2]);
+			my $ii=3;
+			while ($ii < $len) {
+			    my $child = XML::LibXML::Element->new( 'column' );
+			    $child->setAttribute("value",$items[$ii]);
+			    $parent->addChild( $child );
+			    $ii++;
+			}
 			$node->addChild( $parent );
 		    }
 		}
@@ -499,6 +543,7 @@ sub savePlot {
 	if ($plotAttrs) {
 	    my @lines = split (/\|/, $plotAttrs,-1);
 	    if (@lines) { 
+		#print "Looping '$plotAttrs'\n";
 		foreach my $line (@lines) {
 		    #print "Plotattrs: $line\n";
 		    my @items=split (/\~/, $line,-1);
@@ -545,7 +590,9 @@ sub saveAuto {
 	my $parser = XML::LibXML->new();
 	my $doc;
 	my $node;
-	if (-e $path) {
+	if (-d $path) {
+	    farkdir::term("Unable to save file: '$path'");
+	} elsif (-e $path) {
 	    $doc = $parser->parse_file($path);
 	    if ( ($node)=$doc->findnodes("auto/auto_config")) {
 		my $pass=($node->getAttribute("password")||"");

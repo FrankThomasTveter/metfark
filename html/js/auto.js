@@ -31,8 +31,8 @@ function auto_newConfigFile(item) {
     var type=item.parentNode.parentNode.children[1].children[0].value;
     var file=item.parentNode.parentNode.children[3].children[0].value;
     var auto=item.parentNode.parentNode.children[7].children[0].checked;
-    setValue('autoType',"");
-    setValue('autoConfigFile',"");
+    showValue('autoType',"");
+    showValue('autoConfigFile',"");
     document.getElementById("autoModCheck").checked=false;
     if (file !== "" ) {
 	if (type === "model") {

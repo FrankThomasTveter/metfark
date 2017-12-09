@@ -5,13 +5,15 @@
 
 #./fark_dir.pl '?cmd=mk&cls=coloc&path=starc&password='
 
-./fark_dir.pl '?cmd=mk&cls=model&path=test%2Ftest&password='
+#./fark_dir.pl '?cmd=mk&cls=model&path=test%2Ftest&password='
 #ls -l /elysium/metfark/mod/test/
-./fark_dir.pl '?cmd=rm&cls=model&path=test%2Ftest&password='
+#./fark_dir.pl '?cmd=rm&cls=model&path=test%2Ftest&password='
 #ls -l /elysium/metfark/mod/test/
 
 
-#./fark_dir.pl '?cmd=ls&cls=data&path=%2Fopdata%2Falarm_met_no%2Fmask%2Fsimra&filter=ENSB_west_%5Cd%5Cd.nc'
+./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F04'
+
+# ?cmd=ls&cls=data&path=/lustre/storeB/immutable/archive/projects/metproduction/DNMI_AROME_METCOOP/2017/01/01'
 #./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Fshort-term-archive%2FDNMI_OBS_BUFR%2F2017%2F01%2F01&filter=.*.bufr'
 
 

@@ -1,8 +1,8 @@
-3b2eccca9408dc66d55dcae7d1ace995  usr/lib/perl5/auto/fark/fark.so
+7834ea8239c8452eb69a26938e2eaa8e  usr/lib/perl5/auto/fark/fark.so
 0e0ac10b8b2d21a0553a30eb3c94bf5f  usr/lib/perl5/check.pl
 c5d1f554a790c9fcc445207c0dfb4f37  usr/lib/perl5/colocation.mod
 1d4cc7b2d7ce6ee5611f3e58e0beb725  usr/lib/perl5/fark.pl
-ecfe8aacd2ce246ebdcb68e491147cc8  usr/lib/perl5/fark.pm
+fede5f4038ba5276d2bf4f3a1fd53b64  usr/lib/perl5/fark.pm
 78d29f95e031cac3a393a8cc8c02c56d  usr/lib/perl5/fark2.pl
 a7fbb0e65f9435703018d36ecd83459b  usr/lib/perl5/farkdata.pm
 4174666b3b8563961582b17847f4eed6  usr/lib/perl5/farkdir.pm
@@ -14,12 +14,12 @@ a7fbb0e65f9435703018d36ecd83459b  usr/lib/perl5/farkdata.pm
 5c56cdb9001e1d921f95b168a9195f54  usr/lib/perl5/libmodel.a
 dd327ff8c708730147f708cbe4a2b0e0  usr/lib/perl5/libobs.a
 8c27ebeed0065d3f6482be93f555cb15  usr/lib/perl5/libparse.a
-773e46699aaeaaa2d558a7a2a4216ebe  usr/lib/perl5/libplot.a
+c660a60a55be136968822427951953bf  usr/lib/perl5/libplot.a
 439b78e9247ee5d7de5915edcd54f130  usr/lib/perl5/libsort.a
 600c9ff3636849e8f6887bdfd2af6adc  usr/lib/perl5/model.mod
 8a4307b2ee35ac5291149ec4c45f2258  usr/lib/perl5/observations.mod
 bb9c5d462b25fe7fb1ff59e75b10dff2  usr/lib/perl5/parse.mod
-3012e4305bc647a676fe5de1de6ab7c4  usr/lib/perl5/plot.mod
+81ee6040531042d142fdfe7420963860  usr/lib/perl5/plot.mod
 f127e6fddc342ff575cc60e1c99e90e7  usr/lib/perl5/read_xml_primitives.mod
 2134a70704f2e6029a094a637deb4aa6  usr/lib/perl5/sort.mod
 715f5e80ddf4cd8f98a5f8ef71f2e299  usr/lib/perl5/t.pl
@@ -28,6 +28,6 @@ ce82975a678c994ab3fcb95bef61ef94  usr/share/doc/fark-perl/README
 4f53bc697d609507179dcbeccaa13898  usr/share/doc/fark-perl/changelog.Debian.gz
 91e0bf3d371790fd82d0ee6e827b9e51  usr/share/doc/fark-perl/changelog.gz
 ffdf067f2122358a73b50626e37a4d7d  usr/share/doc/fark-perl/copyright
-56ff9d9cb5d252f8e3ee34faf68c1dab  usr/share/man/man3/fark.3pm.gz
+e46fe3fac65acc1229fa9b22e7a0b686  usr/share/man/man3/fark.3pm.gz
 004c00c860894d30e6cdff01014bfc11  usr/share/man/man3/farkdata.3pm.gz
 d67bc890f69ab1e0bdff80f472812ae6  usr/share/man/man3/farkdir.3pm.gz

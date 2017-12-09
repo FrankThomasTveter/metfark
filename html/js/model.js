@@ -25,8 +25,8 @@ function model_allocate(file) {
 
 // make new obs-filter entry
 function model_setConfigFile(file) {
-    setValue('modelConfigFileSave',file);
-    setValue('modelConfigFile',file);
+    showValue('modelConfigFileSave',file);
+    showValue('modelConfigFile',file);
     if (file != "") {
 	model_allocate(file);
 	model_file=file;
@@ -40,16 +40,36 @@ function model_setArray(parameter,value) {
     console.log("File:",file,parameter,model_config[file],value);
     model_config[file][parameter]=decodeURI(value);
 };
+//check if directory exists...
+function model_setFilterDir(value) {
+    var file=model_getConfigFile();
+    console.log("File:",file,"filterDir",model_config[file],value);
+    var val=decodeURI(value);
+    model_config[file]["filterDir"]=val;
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:"data",path:val},
+	  function(data, status){
+	      var errors=data.getElementsByTagName("error");
+	      if (errors.length == 0 ) {
+		  document.getElementById('modelFilterDir').style.color='black'
+		  console.log("Dir ok:",val);
+	      } else {
+		  model_config[file]["filterDirStat"]=val;
+		  document.getElementById('modelFilterDir').style.color='red'
+		  console.log("Dir NOT ok:",val);
+	      }
+	      model_show();
+	  });
+};
 function model_show() {
     var file=model_getConfigFile();
     if (file != "") {
 	model_allocate(file);
-	setValue('modelConfigFile',file);
-	setValue('modelConfigFileSave',file);
-	setValue('modelFilterDir',model_config[file]["filterDir"]);
-	setValue('modelFilterFile',model_config[file]["filterFile"]);
-	setValue('modelIndexTarget',model_config[file]["indexTarget"]);
-	setValue('modelIndexVariable',model_config[file]["indexVariable"]);
+	showValue('modelConfigFile',file);
+	showValue('modelConfigFileSave',file);
+	showValue('modelFilterDir',model_config[file]["filterDir"]);
+	showValue('modelFilterFile',model_config[file]["filterFile"]);
+	showValue('modelIndexTarget',model_config[file]["indexTarget"]);
+	showValue('modelIndexVariable',model_config[file]["indexVariable"]);
 	model_checkVariable(document.getElementById("modelIndexVariable"));
 	setInnerHTML('modelPatternHits',model_config[file]["hits"]);
 	// this may seem strange, Stat stores name of dir only if it does not exist...

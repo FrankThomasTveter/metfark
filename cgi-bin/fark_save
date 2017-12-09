@@ -1,5 +1,18 @@
 #! /bin/csh
 
-./fark_save.pl '?type=auto&root=auto.cfg&password=&modelFiles=%7Cdefault.cfg~~~&obsFiles=%7Cdefault.cfg~~&plotFiles=%7Cdefault.cfg~~~'
+./fark_save.pl '?type=plot&file=test3/'
+
+
+
+#?type=plot&file=default.cfg&password=&cat=skill&table=%2Felysium%2Ffranktt%2Ffark%2FdefaultYYMMDDHH.table&graphics=%2Felysium%2Ffranktt%2Ffark%2FdefaultYYMMDDHH.ps&columns=x-expression~y-expression&sets=%7C1~starc%2FaromeSyno20170101.cfg~test2~x1~y1~%7C2~default.cfg~test~0~0~%7C3~test%2Fmeps_syno.cfg~ttt~0~0~&attributes=%7COrientation~landscape%7CFormat~PostScript%7Ctitle~Your+title%7Cx-label~x-label%7Cy-label~y-label'
+
+
+
+#?type=plot&file=default.cfg&password=&cat=Rms%2Bstdv&table=%2Felysium%2Ffranktt%2Ffark%2FdefaultYYMMDDHH.table&graphics=%2Felysium%2Ffranktt%2Ffark%2FdefaultYYMMDDHH.ps&sets=%7C1~starc%2FaromeSyno20170101.cfg~Temperature+2m+(K)~undefined~undefined~undefined~undefined~&attributes=%7Ctitle~All+stations+test%7Cxlab~X+parameter+(unit)%7Cylab~Y+parameter+(unit)%7CIsLayoutPortrait~yes%7Cdx~float%7Cdy~integer%7CIsLayoutHorisontal~yes%7CreferenceIsX~yes'
+
+
+
+#?type=model&file=default.cfg&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F01%2F04&filterFile=AROME_MetCoOp_%5Cd%5Cd_DEF.nc_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd&hits=2&indexTarget=time_trg&indexVariable=time&stack=&variables=%7Cair_pressure_at_sea_level~x%2Cy%2Cheight_above_msl%2Ctime%7Cair_temperature_2m~x%2Cy%2Cheight1%2Ctime%7Caltitude~x%2Cy%7Ccloud_area_fraction~x%2Cy%2Ctime%7Cfog_area_fraction~x%2Cy%2Cheight0%2Ctime%7Cforecast_reference_time~%7Cheight0~height0%7Cheight1~height1%7Cheight_above_msl~height_above_msl%7Chelicopter_triggered_index~x%2Cy%2Ctime%7Chigh_type_cloud_area_fraction~x%2Cy%2Ctime%7Cland_area_fraction~x%2Cy%7Clatitude~x%2Cy%7Clongitude~x%2Cy%7Clow_type_cloud_area_fraction~x%2Cy%2Ctime%7Cmedium_type_cloud_area_fraction~x%2Cy%2Ctime%7Cp0~p0%7Cprecipitation_amount~x%2Cy%2Ctime%7Cprecipitation_amount_acc~x%2Cy%2Cheight0%2Ctime%7Cprecipitation_amount_high_estimate~x%2Cy%2Ctime%7Cprecipitation_amount_low_estimate~x%2Cy%2Ctime%7Cprecipitation_amount_middle_estimate~x%2Cy%2Ctime%7Cprecipitation_amount_prob_low~x%2Cy%2Ctime%7Cprojection_lambert~%7Crelative_humidity_2m~x%2Cy%2Cheight1%2Ctime%7Csurface_air_pressure~x%2Cy%2Cheight0%2Ctime%7Cthunderstorm_index_combined~x%2Cy%2Ctime%7Ctime~time%7Cwind_speed_of_gust~x%2Cy%2Ctime%7Cx~x%7Cx_wind_10m~x%2Cy%2Ctime%7Cy~y%7Cy_wind_10m~x%2Cy%2Ctime&dimensions= HTTP/1.1" 200 285 "http://localhost/metfark/?type=model&file=default.cfg'
+# ?type=auto&root=auto.cfg&password=&modelFiles=%7Cdefault.cfg~~~&obsFiles=%7Cdefault.cfg~~&plotFiles=%7Cdefault.cfg~~~'
 
 #

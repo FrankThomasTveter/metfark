@@ -55,7 +55,6 @@ void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, in
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
 void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
 void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,int* test,char*  crc250, int* irc, int len1, int len2, int len3);
-void plo_makegraphics_(int* pid, char* tab250, char* gra250, int* test,char* crc250, int* irc, int len1, int len2, int len3);
 void plo_settype_(int* pid, char* type250, char* crc250, int* irc, int len1, int len2);
 void plo_clearattrstack_(int* pid, char* crc250, int* irc, int len1, int len2);
 void plo_pushattr_(int* pid, char* name250, char* value250, char* crc250, int* irc, int len1, int len2);
@@ -1420,9 +1419,8 @@ xs_getColocXMLFile(int pid);
       free(crc250);
 
 #
-#  "makeColocXML" defines graphics output file path
+#  "makeColocXML" make colocation XML file
 #      (string) table file pattern.
-#      (string) graphics file pattern.
 #      (integer) test flag (0=only check input)
 #   Return array:
 #      (string)  name of table file
@@ -1453,7 +1451,7 @@ xs_makeColocXML(int cid, int mid, int oid, char *xml, int test);
       free(crc250);
 
 #
-#  "makePlotTable" defines graphics output file path
+#  "makePlotTable" make table file (and find graphics file name)
 #      (string) table file pattern.
 #      (string) graphics file pattern.
 #      (integer) test flag (0=only check input)
@@ -1492,44 +1490,7 @@ xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph, i
       free(crc250);
 
 #
-#  "makePlotGraphics" make graphics file
-#      (string) table file pattern.
-#      (string) graphics file pattern.
-#      (integer) test flag (0=only check input)
-#   Return array:
-#      (string)  name of table file
-#      (string)  name of graphics file
-#      (integer) error return code (0=ok)
-#      (string)  error return message
-
-void
-xs_makePlotGraphics(int pid, char *table, char *graph,int test);
-    PREINIT:
-      char *tab250;
-      char *gra250;
-      int  irc;
-      char *crc250;
-    PPCODE:
-      irc=0;
-      crc250 = calloc(sizeof(char), 250);
-      tab250 = calloc(sizeof(char), 250);
-      gra250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
-      strcpy(tab250,table);
-      strcpy(gra250,graph);
-      plo_makegraphics_(&pid, tab250, gra250, &test, crc250, &irc, 250, 250, 250);
-      if(irc == 0) {
-         strcpy(crc250,"");
-      };
-      EXTEND(SP, 2);
-      PUSHs(sv_2mortal(newSViv(irc)));
-      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-      free(tab250);
-      free(gra250);
-      free(crc250);
-
-#
-#  "setPlotType" defines graphics output file type ("rms+stdv", "scatter" etc.)
+#  "setPlotType" defines output file type (r-script name)
 #      (string) type.
 #   Return array:
 #      (integer) error return code (0=ok)
@@ -1724,7 +1685,7 @@ xs_clearPlotAttributeStack(int pid);
       free(crc250);
 
 #
-#  "pushPlotAttribute" defines graphics output file path
+#  "pushPlotAttribute" defines plot attribute
 #      (string) name.
 #      (string) value.
 #   Return array:
