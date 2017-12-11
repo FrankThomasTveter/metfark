@@ -1,9 +1,0 @@
-#! /bin/csh
-#./fark_find.pl '?type=obsfile&file=default.cfg&password=&target=/home/www/bufr/conv00.bufr'
-#./fark_find.pl '?type=obs&file=hirlam12+conv+bufr&password=&filterDir=%2Fhome%2Fwww%2Fbufr&filter=.*bufr&table=%2Fhome%2Fwww%2Ffark-perl_0.15%2Fbufrtables%2F'
-#./fark_find.pl '?type=modelfile&file=default.cfg&password=&index=time&target=%2Fhome%2Fwww%2Fnetcdf%2Ffark-perl_0.14%2Flibmod%2Fncll%2Fsimsd00X.nc'
-#./fark_find.pl '?type=model&file=default.cfg&password=&filterDir=%2Fhome%2Fwww%2Fnetcdf&filter=.*nc'
-#
-#./fark_find.pl '?type=modelfile&file=default.cfg&password=&target=%2Fmir%2Fnetcdf%2FAROME_MetCoOp_00_sfx.nc'
-./fark_find.pl '?type=obs&file=default.cfg&password=&filterDir=%2Fopdata%2Fatovs%2Fbufr&filterFile=.*.bufr&table=%2Fhome%2Fwww%2Ffark-perl_0.15%2Fbufrtables%2F&obsTargets=%7Cyy~~~~~&indexTarget=time&indexExp=sec1970(yy%2Cmm%2Cdd%2Chh%2Cmi)&bufrType=99&subType=9&typeInfo=default+info.'
-#

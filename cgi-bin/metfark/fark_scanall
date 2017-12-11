@@ -1,4 +1,0 @@
-#!/bin/bash
-#
-/home/ubuntu/cgi-bin/fark_scan.pl '?root=scan.cfg'
-#

@@ -1,9 +1,0 @@
-#
-
-#rm -f /home/www/pub/reg/obs/default.cfg
-#rm -f /home/www/pub/cache/obs/default.cfg
-
-./fark_scan.pl '?root=scan.cfg'
-#./fark_scan.pl '?root=scan.cfg&type=obs&file=default.cfg'
-# ./fark_scan.pl '?root=&type=model&file=default.cfg'
-#

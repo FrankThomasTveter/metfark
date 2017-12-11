@@ -1,4 +1,0 @@
-#! /bin/csh
-#
-./fark_coloc.pl '?colocFile=AROME - Oslo'
-#
