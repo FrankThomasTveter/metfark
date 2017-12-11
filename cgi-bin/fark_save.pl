@@ -17,14 +17,19 @@ my $ref=CGI->new();
 my $param= $ref->{param};
 if (! defined $param->{type}) {farkdir::term("Undefined type.".Dumper($param))};
 if ($param->{type}->[0] eq "model") {
+    my $modelDir= farkdir::getRootDir("model");
     &saveModel($param);
 } elsif ($param->{type}->[0] eq "obs") {
+    my $obsDir=   farkdir::getRootDir("obs");
     &saveObs($param);
 } elsif ($param->{type}->[0] eq "coloc") {
+    my $colocDir= farkdir::getRootDir("coloc");
     &saveColoc($param);
 } elsif ($param->{type}->[0] eq "plot") {
+    my $plotDir=  farkdir::getRootDir("plot");
     &savePlot($param);
 } elsif ($param->{type}->[0] eq "auto") {
+    my $autoDir=  farkdir::getRootDir("auto");
     &saveAuto($param);
 }
 
