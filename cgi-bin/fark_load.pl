@@ -12,6 +12,16 @@ use File::Path qw( make_path );
 use Cwd; use Cwd 'abs_path';
 use farkdir;
 #
+# make sure config directories exist...
+#
+my $modelDir= farkdir::getRootDir("model");
+my $obsDir=   farkdir::getRootDir("obs");
+my $colocDir= farkdir::getRootDir("coloc");
+my $plotDir=  farkdir::getRootDir("plot");
+my $plotDir=  farkdir::getRootDir("auto");
+#
+# system directories...
+#
 my $modelUseDir= farkdir::getRootDir("model_use");
 my $obsUseDir=   farkdir::getRootDir("obs_use");
 my $colocUseDir= farkdir::getRootDir("coloc_use");
