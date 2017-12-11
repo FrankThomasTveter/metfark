@@ -1,0 +1,35 @@
+#!/usr/bin/env Rscript
+#
+# Column=abscissa
+#
+# Attribute=title|your title
+# Attribute=label|label
+# Attribute=Orientation|landscape:portrait
+# Attribute=Format|PostScript:png:Jpeg
+# Attribute=Version|1.0:
+#
+# Id=1|solid
+# Id=2|dotted
+# Id=3|dashed
+# Id=4|blue-solid
+# Id=5|red-solid
+# Id=6|gold-solid
+# Id=7|blue-dashed
+# Id=8|red-dashed
+# Id=9|gold-dashed
+#
+# Usage: Rscript --vanilla skill table.txt plot.ps
+args = commandArgs(trailingOnly=TRUE)
+#
+
+if (length(args)==0) {
+  stop("At least one argument must be supplied (input file).n", call.=FALSE)
+} else if (length(args)==1) {
+  # default output file
+  args[2] = "out.ps"
+}
+
+## program...
+df = read.table(args[1], header=TRUE)
+##
+## ... do stuff here...
