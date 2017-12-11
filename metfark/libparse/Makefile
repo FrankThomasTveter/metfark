@@ -73,15 +73,11 @@ LIBS = ../libmodel/libmodel.a \
 #
 # Compilation flags 
 #	(Put the compilation flags here (-g is recommented))
-# OPTIONS = -g -r8 -fconvert=big-endian -fbacktrace -fPIC
-# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
-# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib -lfimex
-# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib -lfimex
 #
- OPTIONS = -fdefault-real-8 -fPIC  -fmax-errors=10
-#  -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
-# BINOP = -L/usr/lib/ -lfimexf -lfimex -Wl,-rpath,/usr/lib/
- BINOP = -L/vol/fou/emep/People/heikok/fimexTrunk/lib/ -lfimexf -lfimex -Wl,-rpath,/vol/fou/emep/People/heikok/fimexTrunk/lib/
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+ OPTIONS = -g -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
  ORDER = parse.F90
 #------------------------------------------------------------------------
 #		the rest not is not likely to be changed

@@ -73,14 +73,11 @@ LIBS = ../libgenc/libgenc.a
 #
 # Compilation flags 
 #	(Put the compilation flags here (-g is recommented))
-# OPTIONS = -g -r8 -fconvert=big-endian -fbacktrace -fPIC
-# OPTIONS = -g -fbounds-check
-# BINOP = -L/home/franktt/bufr/src/libbufr -L/home/franktt/bufr/src/libgenc -lbufr -lfmgenc -lgfortran -L/usr/lib -lfimex
-# BINOP = -L/home/franktt/bufr/src/libbufr -L/home/franktt/bufr/src/libgenc -lbufr -lfmgenc -lgfortran -L/usr/lib -lfimex
 #
- OPTIONS =  -g -fdefault-real-8 -fPIC -fmax-errors=10 -fbounds-check -fcheck=all -DJBPW_64 
-# BINOP = -L/usr/lib/ -lfimexf -lfimex -Wl,-rpath,/usr/lib/
- BINOP = -L/vol/fou/emep/People/heikok/fimexTrunk/lib/ -lfimexf -lfimex -Wl,-rpath,/vol/fou/emep/People/heikok/fimexTrunk/lib/
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+ OPTIONS = -g -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
  ORDER = observations.F90
 #------------------------------------------------------------------------
 #		the rest not is not likely to be changed
