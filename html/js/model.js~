@@ -79,9 +79,6 @@ function model_show() {
 	if (model_config[file]["filterDirStat"].substr(0,model_config[file]["filterDir"].length)==
 	    model_config[file]["filterDir"]) {
 	    document.getElementById('modelFilterDir').style.color='red'
-	    console.log("Directory mismatch:",model_config[file]["filterDirStat"],
-			model_config[file]["filterDirStat"].substr(0,model_config[file]["filterDir"].length),
-			model_config[file]["filterDir"]);
 	} else {
 	    document.getElementById('modelFilterDir').style.color='black'
 	}

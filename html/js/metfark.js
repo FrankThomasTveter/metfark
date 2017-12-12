@@ -307,7 +307,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent model-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -477,7 +477,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent obs-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -786,7 +786,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -857,7 +857,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent model-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    //console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -915,7 +915,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent obs-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    //console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -1094,7 +1094,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent plot-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"plot",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -1298,7 +1298,7 @@ function showDropdown(target, arg = "") {
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
 	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0];
+	    var root=ret[0]||{};
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
 	    if (args.length >0 && looksLikeFile(args[0])) {
@@ -1399,7 +1399,7 @@ function showDropdown(target, arg = "") {
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
 	    } else if (ret[0] !== undefined) {
-		var root=ret[0];
+		var root=ret[0]||{};
 		console.log("Updating dropdown for ",target);
 		removeChildren(item);
 		if (args.length >0 && looksLikeFile(args[0])) {
