@@ -18,7 +18,7 @@ my $modelDir= farkdir::getRootDir("model");
 my $obsDir=   farkdir::getRootDir("obs");
 my $colocDir= farkdir::getRootDir("coloc");
 my $plotDir=  farkdir::getRootDir("plot");
-my $autoDir=  farkdir::getRootDir("auto");
+my $plotDir=  farkdir::getRootDir("auto");
 #
 # system directories...
 #

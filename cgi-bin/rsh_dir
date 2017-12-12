@@ -1,0 +1,7 @@
+#! /bin/csh
+#
+./rsh_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable'
+#  ?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F04'
+#./rsh_dir.pl '?cmd=ls'
+#   '?cmd=mk&cls=coloc&path=starc&password='
+#

@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+## Concatenate text files so that they may later be recovered by msplit.
+## Written by Ole Vignes.
+
+sub Usage {
+    print STDERR "
+Usage: mcat [options] files
+
+Concatenates all files listed, but adds information so that the individual
+files may later be retrieved by running the command msplit on the result.
+
+Valid options:
+
+  -R[<dir>]    Search recursively for files, starting from <dir> (default .)
+               In this case filename wildcards must be quoted, e.g. '*.f'.
+  -o<file>     Write output to <file>. The default is standard output.
+  -l           Do NOT skip symbolic links (when -R is also given).
+  -w           Remove trailing whitespace from each input line.
+  -c<str>      Use <str> to start comments. Default is '#'.
+\n";
+    exit 1;
+}
+
+## Initialize
+$topdir = '';
+$ofile  = '';
+$qlink  = 0;
+$qrmtws = 0;
+$cstart = '#';
+
+## Process argument list
+while ($_ = $ARGV[0],/^-./) {
+    shift;
+    if (/^-R$/) {$topdir = '.'; next;}
+    if (/^-R(.+)$/) {$topdir = $1; next;}
+    if (/^-o$/) {$ofile = shift @ARGV; next;}
+    if (/^-o(.+)$/) {$ofile = $1; next;}
+    if (/^-l$/) {$qlink = 1; next;}
+    if (/^-w$/) {$qrmtws = 1; next;}
+    if (/^-c$/) {$cstart = shift @ARGV; next;}
+    if (/^-c(.+)$/) {$cstart = $1; next;}
+    &Usage;
+}
+
+## Check if there are any files left
+if ( $#ARGV < 0 ) { &Usage; }
+
+## Find files if -R is given
+if ( $topdir ne '' ) {
+    $files = '';
+    while ($#ARGV >= 0) {
+	$_ = shift @ARGV;
+	if ( $qlink ) { 
+	    $files .=
+		qx(find $topdir \\( -type f -o -type l \\) -name "$_" -print);
+	} else {
+	    $files .= qx(find $topdir -type f -name "$_" -print);
+	}
+    }
+    @ARGV = split(' ',$files);
+}
+
+## Remove binary files
+$i = 0;
+while ( $i <= $#ARGV ) {
+    if ( -T $ARGV[$i] ) {
+	$i++;
+    } else {
+	if ( ! -e _ ) {
+	    printf STDERR "** The file $ARGV[$i] does not exist.\n";
+	}
+	splice(@ARGV,$i,1);
+    }
+}
+
+## Open output file if given
+if ( $ofile ne '' ) {
+    open(STDOUT,">$ofile") || die "** Could not open $ofile for output.\n";
+}
+
+## Process files
+while (<>) {
+    if ( $. == 1 ) {
+	$mode = sprintf("0%o",(stat $ARGV)[2]);
+	print "${cstart}__file: '$ARGV' $mode    **DO NOT DELETE**\n";
+    }
+    if ( $qrmtws && /\s+$/ ) {
+	print "$`" . "\n";      # Remove trailing whitespace
+    } else {
+	print;
+    }
+    if ( eof ) {		# end of file
+	if ( $_ !~ /\n$/ ) {
+	    print "\n";         # Add CR to last line if it is missing
+	}
+	close(ARGV);		# Reset $. to 1 for each new file
+    }
+}

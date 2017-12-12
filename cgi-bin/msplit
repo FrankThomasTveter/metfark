@@ -1,0 +1,184 @@
+#!/usr/bin/perl
+# Split a file produced by the program mcat
+# Written by Ole Vignes
+
+sub Usage {
+    print STDERR "
+Usage: msplit [options] file(s)
+
+Splits files produced by the command mcat.
+
+Valid options:
+
+  -b<ext>     Use extension <ext> when backing up existing files.
+              The default is .orig
+
+  -nb         Don't backup existing files at all.
+
+  -c<str>     <str> starts comments. Should match what was used by mcat.
+              The default is '#'.
+
+  -p<file>    Don't split, but produce a patch file against existing files.
+
+Any files you don't have write permission for are placed in /tmp.
+\n";
+    exit 1;
+}
+
+$ext = '.orig';
+$qbak = 1;
+$cstart = '#';
+$pfile = '';
+
+## Look for options in argument list
+while ($_ = $ARGV[0],/^-./) {
+    shift;
+    if (/^-b$/)     {$ext = shift @ARGV; next;}
+    if (/^-b(.+)$/) {$ext = $1; next;}
+    if (/^-nb$/)    {$qbak = 0; next;}
+    if (/^-c$/)     {$cstart = shift @ARGV; next;}
+    if (/^-c(.+)$/) {$cstart = $1; next;}
+    if (/^-p$/)     {$pfile = shift @ARGV; next;}
+    if (/^-p(.+)$/) {$pfile = $1; next;}
+    &Usage;
+}
+
+## Abort if no files are given
+if ( $#ARGV < 0 ) { &Usage; }
+
+## Catch signals
+%SIG = ('HUP' =>'QueryQuit','INT' =>'QueryQuit','QUIT'=>'QueryQuit',
+	'KILL'=>'QueryQuit','PIPE'=>'QueryQuit','ALRM'=>'QueryQuit',
+	'TERM'=>'QueryQuit');
+
+$oldfile = '';
+$qask = 1;
+$defans = 'y';
+
+while (<>) {
+    if ( /^${cstart}__file: \'(.+)\' (\d*) / ) {        # new file
+	$file = $1;                        # filename
+	$mode = $2;
+	if ( $oldfile ne '' ) {
+	    close(TMP);
+	    &CheckDiff($tmpfile,$oldfile,$oldmode);
+	}
+	$oldfile = $file;
+	$oldmode = $mode;
+	if ($oldfile =~ /^(.+)\/(.+)$/) {  # path also given
+	    $olddir = $1;
+	    $tail = $2;
+	} else {
+	    $olddir = '.';                 # no leading path
+	    $tail = $oldfile;
+	}
+	$tmpfile = "/tmp/ms$$-$tail";
+	open(TMP,">$tmpfile") ||
+	    die "** Could not write temporary file $tmpfile\n";
+    } elsif ($. == 1) {
+	die "** Cannot split $ARGV (not made by mcat ?).\n";
+    } else {
+	print TMP;
+    }
+}
+if ($oldfile ne '') {
+    close(TMP);
+    &CheckDiff($tmpfile,$oldfile,$oldmode);
+}
+
+## Check existing file and only write if there are differences
+sub CheckDiff {
+    my($tmp,$old,$mode) = @_;
+    my $qrcs = 0;
+    if (not -e $old) {            # new file
+	if ($pfile) {
+	    $old = '/dev/null';
+	} else {
+	    $ret = system("cp $tmp $old");
+	    if ($ret) {
+		print "** Warning: could not create $old\n";
+	    } else {
+		print "$old (new file)\n";
+		if ($mode) {
+		    chmod(oct($mode),$old);
+		}
+	    }
+	    unlink $tmp;
+	    return 0;
+	}
+    } elsif (not $pfile and not -w $old) {       # cannot modify file
+	if (-w $olddir and -e "$olddir/RCS/$tail,v") {
+	    $qrcs = 1;
+	} else {
+	    print "** Warning: no write permission to $old\n";
+	    unlink $tmp;
+	    return 0;
+	}
+    }
+    ## file exists and can be modified
+    if ($pfile) {
+	system("diff -c $tmp $old >>$pfile");
+	unlink $tmp;
+	return 0;
+    }
+    $diffout = qx(diff -q $tmp $old);
+    if ($diffout eq '') {   # no change
+	print "$old (no change)\n";
+    } else {                # file changed
+	if ($qrcs) {
+	    if ($qask) {
+		print "Unlock RCS file $oldfile (y/n/a) ? [$defans] ";
+		$_ = <STDIN>;
+		if ( /^$/ ) { $_ = $defans; }
+		if ( /^a/i ) { $qask = 0; $_ = 'y'; }
+		$defans = $_;
+	    } else {
+		$_ = $defans;
+	    }
+	    if ( /^y/i ) {
+		system "co -l $old";
+	    }
+	} 
+	if ($qbak) {
+	    if (-w $olddir) {   # may backup in same directory
+		$bakroot = "$oldfile" . "$ext";
+		$bakfile  = $bakroot;
+		$i = 1;
+		while ( -e $bakfile ) {
+		    $bakfile = "$bakroot" . "$i";
+		    $i++;
+		}
+		$savtxt = 'saved';
+	    } else {            # directory not writable (but file is)
+		$bakfile = "/tmp/$tail$ext";
+		$savtxt = 'backup in';
+	    }
+	    $ret  = system("cp -p $old $bakfile");
+	} else {
+	    $savtxt = 'no backup';
+	    $bakfile = '';
+	}
+	$ret2 = system("cp $tmp $old");
+	if ($ret2) {
+	    print "** Warning: could not update $old\n";
+	    unlink $bakfile if $qbak;
+	} elsif ($ret) {
+	    print "$old changed (no backup!!)\n";
+	} else {
+	    print "$old changed ($savtxt $bakfile)\n";
+	}
+    }
+    unlink $tmp;
+}
+
+
+sub QueryQuit {
+    my($message) = @_;
+    if ( exists $SIG{$message} ) {
+	print "\n** Got signal $message, terminate ? (y/n) [n] ";
+    } else {
+	print "\n** Abort program ? (y/n) [n] ";
+    }
+    $ans = <STDIN>;
+    if ($ans =~ /^y/i) { exit 1; }
+}

@@ -65,6 +65,65 @@ use constant DEFAULT_TABLE_PATH => '/usr/local/lib/bufrtables';
 
 # Preloaded methods go here.
 
+=head2 remote
+
+Run remote script.
+
+=head4 EXAMPLE
+
+fark::remote("dir.pl","?ls='/usr/var'","www-data");
+
+=cut
+
+sub remote { 
+    use strict;
+    use Capture::Tiny 'capture';
+    my $scr = shift; 
+    my $url = shift; 
+    my $usr = shift; 
+    my $log="";
+    my ($stdout, $stderr, $irc)=capture {
+	my $cmd="rsh -q -o NumberOfPasswordPrompts=0".
+	    " franktt\@pc4804.pc.met.no /var/www/cgi-bin/metfark/$scr '$url'";
+	$cmd =~ s/\=/\\\=/g;
+	$cmd =~ s/\'/\\\'/g;
+	$cmd =~ s/\;/\\\;/g;
+	$cmd =~ s/\&/\\\&/g;
+	$cmd =~ s/\@/\\\@/g;
+	system $cmd;
+    };
+    chomp($stdout);chomp($stderr);
+    if ($stdout) {
+	$log=$stdout . "\n";
+    } elsif ($irc) {
+	if ($stderr) {
+	    $log="Content-type: text/xml;\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n".
+		"<error url=\"".&washXML($url)."\"".
+		" message=\"$stderr\"".
+		" user=\".$usr.\"/>\n";
+	} else {
+	    $log="Content-type: text/xml;\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n".
+		"<error url=\"".&washXML($url)."\"".
+		" message=\"rsh: Unable to execute command.\"".
+		" user=\".$usr.\"/>\n";
+	};
+    } else {
+	$log="Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n".
+	    "<empty\>\n";
+    }
+    print $log;
+}
+
+sub washXML {
+    my $cmd=shift;
+    $cmd =~ s/</&lt;/g;
+    $cmd =~ s/&/&amp;/g;
+    $cmd =~ s/>/&gt/g;
+    $cmd =~ s/"/&quot;/g;
+    $cmd =~ s/'/&apos;/g;
+    return $cmd;
+}
+
 =head2 open
 
 open - creates a new fark session.
