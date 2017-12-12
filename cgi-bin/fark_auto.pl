@@ -26,33 +26,33 @@ fark::debug(3);  # debug colocation
 fark::debug(4);  # debug plot
 #fark::debug(5);  # debug parse
 #
-my $modelDir=     farkdir::getRootDir("model");
-my $modelOldDir=  farkdir::getRootDir("model_old");
-my $modelCacheDir=farkdir::getRootDir("model_cache");
-my $modelRegDir=  farkdir::getRootDir("model_reg");
-my $modelUseDir=  farkdir::getRootDir("model_use");
-my $modelLogDir=  farkdir::getRootDir("model_log");
+my $modelDir=     farkdir::getRootDir("model") || farkdir::term("Invalid root directory (model)");
+my $modelOldDir=  farkdir::getRootDir("model_old") || farkdir::term("Invalid root directory (model_old)");
+my $modelCacheDir=farkdir::getRootDir("model_cache") || farkdir::term("Invalid root directory (model_cache)");
+my $modelRegDir=  farkdir::getRootDir("model_reg") || farkdir::term("Invalid root directory (model_reg)");
+my $modelUseDir=  farkdir::getRootDir("model_use") || farkdir::term("Invalid root directory (model_use)");
+my $modelLogDir=  farkdir::getRootDir("model_log") || farkdir::term("Invalid root directory (model_log)");
 #
-my $obsDir=       farkdir::getRootDir("obs");
-my $obsOldDir=    farkdir::getRootDir("obs_old");
-my $obsCacheDir=  farkdir::getRootDir("obs_cache");
-my $obsRegDir=    farkdir::getRootDir("obs_reg");
-my $obsUseDir=    farkdir::getRootDir("obs_use");
-my $obsLogDir=    farkdir::getRootDir("obs_log");
+my $obsDir=       farkdir::getRootDir("obs") || farkdir::term("Invalid root directory (obs)");
+my $obsOldDir=    farkdir::getRootDir("obs_old") || farkdir::term("Invalid root directory (obs_old)");
+my $obsCacheDir=  farkdir::getRootDir("obs_cache") || farkdir::term("Invalid root directory (obs_cache)");
+my $obsRegDir=    farkdir::getRootDir("obs_reg") || farkdir::term("Invalid root directory (obs_reg)");
+my $obsUseDir=    farkdir::getRootDir("obs_use") || farkdir::term("Invalid root directory (obs_use)");
+my $obsLogDir=    farkdir::getRootDir("obs_log") || farkdir::term("Invalid root directory (obs_log)");
 #
-my $colocDir=     farkdir::getRootDir("coloc");
-my $colocOldDir=  farkdir::getRootDir("coloc_old");
-my $colocUseDir=  farkdir::getRootDir("coloc_use");
-my $colocLogDir=  farkdir::getRootDir("coloc_log");
+my $colocDir=     farkdir::getRootDir("coloc") || farkdir::term("Invalid root directory (coloc)");
+my $colocOldDir=  farkdir::getRootDir("coloc_old") || farkdir::term("Invalid root directory (coloc_old)");
+my $colocUseDir=  farkdir::getRootDir("coloc_use") || farkdir::term("Invalid root directory (coloc_use)");
+my $colocLogDir=  farkdir::getRootDir("coloc_log") || farkdir::term("Invalid root directory (coloc_log)");
 #
-my $plotDir=      farkdir::getRootDir("plot");
-my $plotOldDir=   farkdir::getRootDir("plot_old");
-my $plotUseDir=   farkdir::getRootDir("plot_use");
-my $plotLogDir=   farkdir::getRootDir("plot_log");
+my $plotDir=      farkdir::getRootDir("plot") || farkdir::term("Invalid root directory (plot)");
+my $plotOldDir=   farkdir::getRootDir("plot_old") || farkdir::term("Invalid root directory (plot_old)");
+my $plotUseDir=   farkdir::getRootDir("plot_use") || farkdir::term("Invalid root directory (plot_use)");
+my $plotLogDir=   farkdir::getRootDir("plot_log") || farkdir::term("Invalid root directory (plot_log)");
 #
-my $autoDir=      farkdir::getRootDir("auto");
-my $scriptDir=    farkdir::getRootDir("script");
-my $lockRoot=     farkdir::getRootDir("lock");
+my $autoDir=      farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
+my $scriptDir=    farkdir::getRootDir("script") || farkdir::term("Invalid root directory (script)");
+my $lockRoot=     farkdir::getRootDir("lock") || farkdir::term("Invalid root directory (lock)");
 #
 #
 my $myname = basename($0);
@@ -820,7 +820,7 @@ sub updateTimes {
 sub updateTime {
     my $node= shift;
     my $cls = shift;
-    my $clsUseDir=    farkdir::getRootDir($cls."_use");
+    my $clsUseDir=    farkdir::getRootDir($cls."_use") || farkdir::term("Invalid root directory (use)");
     my @clss=$node->findnodes("cls");
     foreach my $cls (@clss) {
 	my $file=$cls->getAttribute("file");

@@ -1,8 +1,8 @@
 #! /bin/csh
 
-./fark_load.pl '?type%5B%5D=plot&type%5B%5D=cat&arg%5B%5D=default.cfg'
+./fark_load.pl '?type=obs&arg%5B%5D=default.cfg'
 
-
+#'?type%5B%5D=plot&type%5B%5D=cat&arg%5B%5D=default.cfg'
 #./fark_load.pl '?type=auto&root=auto.cfg'
 #./fark_load.pl '?type=coloc&arg%5B%5D=default.cfg'
 #  type=coloc&arg%5B%5D=starc%2FaromeSyno20170101.cfg'

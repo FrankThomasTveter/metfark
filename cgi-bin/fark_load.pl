@@ -12,25 +12,25 @@ use File::Path qw( make_path );
 use Cwd; use Cwd 'abs_path';
 use farkdir;
 #
+print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
+#
 # make sure config directories exist...
 #
-my $modelDir= farkdir::getRootDir("model");
-my $obsDir=   farkdir::getRootDir("obs");
-my $colocDir= farkdir::getRootDir("coloc");
-my $plotDir=  farkdir::getRootDir("plot");
-my $plotDir=  farkdir::getRootDir("auto");
+my $modelDir= farkdir::getRootDir("model") || farkdir::term("invalid root directory (model)");
+my $obsDir=   farkdir::getRootDir("obs")   || farkdir::term("Invalid root directory (obs)");
+my $colocDir= farkdir::getRootDir("coloc") || farkdir::term("Invalid root directory (coloc)");
+my $plotDir=  farkdir::getRootDir("plot")  || farkdir::term("Invalid root directory (plot)");
+my $autoDir=  farkdir::getRootDir("auto")  || farkdir::term("Invalid root directory (auto)");
 #
 # system directories...
 #
-my $modelUseDir= farkdir::getRootDir("model_use");
-my $obsUseDir=   farkdir::getRootDir("obs_use");
-my $colocUseDir= farkdir::getRootDir("coloc_use");
-my $plotUseDir=  farkdir::getRootDir("plot_use");
-my $lockRoot=    farkdir::getRootDir("lock");
-my $scriptDir=   farkdir::getRootDir("script");
+my $modelUseDir= farkdir::getRootDir("model_use") || farkdir::term("Invalid root directory (model_use)");
+my $obsUseDir=   farkdir::getRootDir("obs_use")   || farkdir::term("Invalid root directory (obs_use)");
+my $colocUseDir= farkdir::getRootDir("coloc_use") || farkdir::term("Invalid root directory (coloc_use)");
+my $plotUseDir=  farkdir::getRootDir("plot_use")  || farkdir::term("Invalid root directory (plot_use)");
+my $lockRoot=    farkdir::getRootDir("lock")      || farkdir::term("Invalid root directory (lock)");
+my $scriptDir=   farkdir::getRootDir("script")    || farkdir::term("Invalid root directory (script)");
 #
-#
-print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 #
 my $ref=CGI->new();
 #

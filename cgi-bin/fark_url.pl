@@ -20,11 +20,11 @@ use Capture::Tiny 'capture';
 my $user=$ENV{USERNAME} // "www";
 my $ref=CGI->new();
 #
-$ref->{"modelDir"}     = farkdir::getRootDir("model");
-$ref->{"modelCache"}   = farkdir::getRootDir("model_cache");
-$ref->{"obsDir"}       = farkdir::getRootDir("obs");
-$ref->{"obsCache"}     = farkdir::getRootDir("obs_cache");
-$ref->{"urlDir"}       = farkdir::getRootDir("url");
+$ref->{"modelDir"}     = farkdir::getRootDir("model") || farkdir::term("invalid root directory (model)");
+$ref->{"modelCache"}   = farkdir::getRootDir("model_cache") || farkdir::term("invalid root directory (model_cache)");
+$ref->{"obsDir"}       = farkdir::getRootDir("obs") || farkdir::term("invalid root directory (obs)");
+$ref->{"obsCache"}     = farkdir::getRootDir("obs_cache") || farkdir::term("invalid root directory (obs_cache)");
+$ref->{"urlDir"}       = farkdir::getRootDir("url") || farkdir::term("invalid root directory (url)");
 #
 my $param=$ref->{param};
 #

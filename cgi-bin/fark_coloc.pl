@@ -22,14 +22,14 @@ use Capture::Tiny 'capture';
 my $user=$ENV{USERNAME} // "www";
 my $ref=CGI->new();
 my $pub="/metfark/pub";
-$ref->{"modelDir"}   =  farkdir::getRootDir("model");
-$ref->{"modelCache"} =  farkdir::getRootDir("model_cache");
-$ref->{"obsDir"}     =  farkdir::getRootDir("obs");
-$ref->{"obsCache"}   =  farkdir::getRootDir("obs_cache");
-$ref->{"autoDir"}    =  farkdir::getRootDir("auto");
-$ref->{"colocDir"}   =  farkdir::getRootDir("coloc");
-$ref->{"useModelDir"}=  farkdir::getRootDir("model_use");
-$ref->{"useObsDir"}  =  farkdir::getRootDir("obs_use");
+$ref->{"modelDir"}   =  farkdir::getRootDir("model") || farkdir::term("Invalid root directory (mode)");
+$ref->{"modelCache"} =  farkdir::getRootDir("model_cache") || farkdir::term("invalid root directory (model_cache)");
+$ref->{"obsDir"}     =  farkdir::getRootDir("obs") || farkdir::term("invalid root directory (obs)");
+$ref->{"obsCache"}   =  farkdir::getRootDir("obs_cache") || farkdir::term("invalid root directory (obs_cache)");
+$ref->{"autoDir"}    =  farkdir::getRootDir("auto") || farkdir::term("invalid root directory (auto)");
+$ref->{"colocDir"}   =  farkdir::getRootDir("coloc") || farkdir::term("invalid root directory (coloc)");
+$ref->{"useModelDir"}=  farkdir::getRootDir("model_use") || farkdir::term("invalid root directory (model_use)");
+$ref->{"useObsDir"}  =  farkdir::getRootDir("obs_use") || farkdir::term("invalid root directory (obs_use)");
 #
 my $param=$ref->{param};
 #
