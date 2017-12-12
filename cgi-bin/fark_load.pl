@@ -37,7 +37,7 @@ my $ref=CGI->new();
 $XML::LibXML::skipXMLDeclaration = 1;
 my $param= $ref->{param};
 my $types = $param->{"type"};
-if (! defined $types) { $types = $param->{"type[]"}};
+if (! defined $types) { $types = $param->{"type[]"}||[]};
 my $args = $param->{"arg[]"};
 #
 my $len=@{$types};
