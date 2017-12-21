@@ -1,5 +1,5 @@
 #! /bin/csh
-./fark_find.pl '?type=model&file=starc%2Farome20170101.cfg&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F01&filterFile=.*&indexTarget=time_trg&indexVariable=time'
+./fark_find.pl '?type=obs&file=default.cfg&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2017%2F01%2F01&filterDirMin=&filterDirMax=&filterFile=syno_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd.bufr&table=%2Felysium%2Fbufrtables&obsTargets=%7Cyy~5~4001~YEAR~2000~%7Cmm~6~4002~MONTH~~%7Cdd~7~4003~DAY~~%7Chh~8~4004~HOUR~~%7Cmi~9~4005~MINUTE~~&indexTarget=time&indexExp=sec1970(yy%2Cmm%2Cdd%2Chh%2Cmi)&bufrType=1&subType=0&typeInfo='
 
 
 #?type=obsfile&file=starc%2Fsyno20170101.cfg&target=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2017%2F01%2F01%2Fsyno_2017010100.bufr&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2017%2F01%2F01&filterFile=syno_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd.bufr&table=%2Felysium%2Fbufrtables&obsTargets=%7Cyy~5~4001~YEAR~2000~%7Cmm~6~4002~MONTH~~%7Cdd~7~4003~DAY~~%7Chh~8~4004~HOUR~~%7Cmi~9~4005~MINUTE~~&indexTarget=time&indexExp=sec1970(yy%2Cmm%2Cdd%2Chh%2Cmi)&bufrType=0&subType=1&typeInfo=synop+land'

@@ -6,7 +6,7 @@ auto_config = { model : {"default1.cfg" : {last:"",info:"",auto:"",status:""}},
 		password: "franktt"
 	      };
 auto_configEd=0;
-
+auto_cron=["","daily","weekly","monthly","quarterly"];
 
 // auto methods
 function auto_checkPassword() {
@@ -30,26 +30,26 @@ function auto_updateData() {
 function auto_newConfigFile(item) {
     var type=item.parentNode.parentNode.children[1].children[0].value;
     var file=item.parentNode.parentNode.children[3].children[0].value;
-    var auto=item.parentNode.parentNode.children[7].children[0].checked;
+    var auto=item.parentNode.parentNode.children[7].children[0].value;
     showValue('autoType',"");
     showValue('autoConfigFile',"");
-    document.getElementById("autoModCheck").checked=false;
+    document.getElementById("autoCron").value=auto_cron[0];
     if (file !== "" ) {
 	if (type === "model") {
 	    if (auto_config["model"][file] === undefined) {
-		auto_config["model"][file]={last:"",info:"",auto:""};
+		auto_config["model"][file]={last:"",info:"",auto:auto};
 	    };
 	} else if (type === "obs") {
 	    if (auto_config["obs"][file] === undefined) {
-		auto_config["obs"][file]={last:"",info:"",auto:""};
+		auto_config["obs"][file]={last:"",info:"",auto:auto};
 	    };
 	} else if (type === "coloc") {
 	    if (auto_config["coloc"][file] === undefined) {
-		auto_config["coloc"][file]={last:"",info:"",auto:""};
+		auto_config["coloc"][file]={last:"",info:"",auto:auto};
 	    };
 	} else if (type === "plot") {
 	    if (auto_config["plot"][file] === undefined) {
-		auto_config["plot"][file]={last:"",info:"",auto:""};
+		auto_config["plot"][file]={last:"",info:"",auto:auto};
 	    };
 	}
 	auto_setTable();
@@ -161,7 +161,7 @@ function auto_removeFile(item,type,file) {
     var newitem=document.getElementById("newlineAuto");
     newitem.children[1].children[0].value=type;
     newitem.children[3].children[0].value=file;
-    newitem.children[7].children[0].checked=false;
+    newitem.children[7].children[0].value=auto_cron[0];
     //if (! checkAutoPassword()) {return;}
     //item.parentNode.removeChild(item);
     delete auto_config[type][file];
@@ -236,20 +236,11 @@ function auto_insertRow(item,type,file,last,info,auto,status) {
     row.appendChild(td);
     // make AUTO checkbox column
     td=document.createElement("TD");
-    td.setAttribute("style","min-width:30px;width:30px");
-    td.setAttribute("align","center");
-    var chk=document.createElement("INPUT");
-    chk.setAttribute("type","checkbox");
-    console.log("Auto: "+auto);
-    if (auto) {
-	console.log("Auto checked: "+auto);
-	chk.checked=true;
-    } else {
-	console.log("Auto un-checked: "+auto);
-	chk.checked=false;
-    };
-    chk.setAttribute("onchange","auto_setCheckbox(this,this.parentNode.parentNode.children[1].innerHTML,this.parentNode.parentNode.children[3].innerHTML);");
-    td.appendChild(chk);
+    td.innerHTML=auto;
+    row.appendChild(td);
+    // make select-TYPE column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
     row.appendChild(td);
     // make TEST NOW column
     td=document.createElement("TD");

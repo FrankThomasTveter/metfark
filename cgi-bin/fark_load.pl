@@ -24,11 +24,9 @@ my $autoDir=  farkdir::getRootDir("auto")  || farkdir::term("Invalid root direct
 #
 # system directories...
 #
-my $modelUseDir= farkdir::getRootDir("model_use") || farkdir::term("Invalid root directory (model_use)");
-my $obsUseDir=   farkdir::getRootDir("obs_use")   || farkdir::term("Invalid root directory (obs_use)");
 my $colocUseDir= farkdir::getRootDir("coloc_use") || farkdir::term("Invalid root directory (coloc_use)");
 my $plotUseDir=  farkdir::getRootDir("plot_use")  || farkdir::term("Invalid root directory (plot_use)");
-my $lockRoot=    farkdir::getRootDir("lock")      || farkdir::term("Invalid root directory (lock)");
+my $lockDir=    farkdir::getRootDir("lock")      || farkdir::term("Invalid root directory (lock)");
 my $scriptDir=   farkdir::getRootDir("script")    || farkdir::term("Invalid root directory (script)");
 #
 #
@@ -197,151 +195,10 @@ sub loadAuto {
 	    my ($node)=$auto->findnodes("auto/auto_config");
 	    if ( $node ) {
 		$node->removeAttribute("password"); # remove passwords
-		my @models=$node->findnodes("model");
-		foreach my $model (@models) {
-		    my $file=$model->getAttribute("file");
-		    my $lastAuto="";
-		    my $lastAccess="";
-		    my $lastStart=0;
-		    my $lastStop=0;
-		    my $modelUseFile=$modelUseDir . $file; 
-		    #print "Checking $modelUseFile\n";
-		    if (-f $modelUseFile) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($modelUseFile);
-			$lastStop=$atime;
-		    };
-		    my $lockfilename=$lockRoot."model/$file.lock";
-		    if (-f $lockfilename) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
-			$lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-			$lastStart=$atime;
-			if ( not open(MLOCKFILE, ">$lockfilename") ) {
-			} elsif (flock (MLOCKFILE,2+4)) {
-			    my $duration = $lastStop-$lastStart;
-			    if ($duration < 0) {
-				$lastAccess="**abort**";
-			    } else {
-				$lastAccess="**done** (".$duration . "s)";
-			    }
-			} else {
-			    my $duration = time()-$lastStart;
-			    $lastAccess="**running** (".$duration . "s)";
-			};	
-			close(MLOCKFILE);
-		    };
-		    $model->setAttribute("last",        $lastAuto);
-		    $model->setAttribute("info",        $lastAccess);
-		}
-		my @obss=$node->findnodes("obs");
-		foreach my $obs (@obss) {
-		    my $file=$obs->getAttribute("file");
-		    my $lastAuto="";
-		    my $lastAccess="";
-		    my $lastStart=0;
-		    my $lastStop=0;
-		    my $obsUseFile=$obsUseDir . $file; 
-		    if (-f $obsUseFile) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($obsUseFile);
-			$lastStop=$atime;
-		    };
-		    my $lockfilename=$lockRoot."obs/$file.lock";
-		    if (-f $lockfilename) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
-			$lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-			$lastStart=$atime;
-			if ( not open(MLOCKFILE, ">$lockfilename") ) {
-			} elsif (flock (MLOCKFILE,2+4)) {
-			    my $duration = $lastStop-$lastStart;
-			    if ($duration < 0) {
-				$lastAccess="**abort**";
-			    } else {
-				$lastAccess="**done** (".$duration . "s)";
-			    };
-			} else {
-			    my $duration = time()-$lastStart;
-			    $lastAccess="**running** (".$duration . "s)";
-			};
-			close(MLOCKFILE);
-		    };	
-		    $obs->setAttribute("last",        $lastAuto);
-		    $obs->setAttribute("info",        $lastAccess);
-		}
-		my @colocs=$node->findnodes("coloc");
-		foreach my $coloc (@colocs) {
-		    my $file=$coloc->getAttribute("file");
-		    my $lastAuto="never";
-		    my $lastAccess="";
-		    my $lastStart=0;
-		    my $lastStop=0;
-		    my $colocUseFile=$colocUseDir . $file; 
-		    if (-f $colocUseFile) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($colocUseFile);
-			$lastStop=$atime;
-		    };
-		    my $lockfilename=$lockRoot."coloc/$file.lock";
-		    if (-f $lockfilename) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
-			$lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-			$lastStart=$atime;
-			if ( not open(MLOCKFILE, ">$lockfilename") ) {
-			} elsif (flock (MLOCKFILE,2+4)) {
-			    my $duration = $lastStop-$lastStart;
-			    if ($duration < 0) {
-				$lastAccess="**abort**";
-			    } else {
-				$lastAccess="**done** (".$duration . "s)";
-			    };
-			} else {
-			    my $duration = time()-$lastStart;
-			    $lastAccess="**running** (".$duration . "s)";
-			};	
-			close(MLOCKFILE);
-		    };
-		    $coloc->setAttribute("last",        $lastAuto);
-		    $coloc->setAttribute("info",        $lastAccess);
-		}
-		my @plots=$node->findnodes("plot");
-		foreach my $plot (@plots) {
-		    my $file=$plot->getAttribute("file");
-		    my $lastAuto="never";
-		    my $lastAccess="";
-		    my $lastStart=0;
-		    my $lastStop=0;
-		    my $plotUseFile=$plotUseDir . $file; 
-		    if (-f $plotUseFile) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($plotUseFile);
-			$lastStop=$atime;
-		    };
-		    my $lockfilename=$lockRoot."plot/$file.lock";
-		    if (-f $lockfilename) {
-			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
-			$lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
-			$lastStart=$atime;
-			if ( not open(MLOCKFILE, ">$lockfilename") ) {
-			} elsif (flock (MLOCKFILE,2+4)) {
-			    my $duration = $lastStop-$lastStart;
-			    if ($duration < 0) {
-				$lastAccess="**abort**";
-			    } else {
-				$lastAccess="**done** (".$duration . "s)";
-			    };
-			} else {
-			    my $duration = time()-$lastStart;
-			    $lastAccess="**running** (".$duration . "s)";
-			};	
-			close(MLOCKFILE);
-		    };
-		    $plot->setAttribute("last",        $lastAuto);
-		    $plot->setAttribute("info",        $lastAccess);
-		}
+		&updateTime($node,"model");
+		&updateTime($node,"obs");
+		&updateTime($node,"coloc");
+		&updateTime($node,"plot");
 	    }
 	    $parent->addChild( $node );
 	} else {
@@ -352,6 +209,49 @@ sub loadAuto {
     };
 };
 
+sub updateTime {
+    my $node= shift;
+    my $cls = shift;
+    my $clsUseDir=    farkdir::getRootDir($cls."_use") || farkdir::term("Invalid root directory (use)");
+    my @clss=$node->findnodes($cls);
+    foreach my $clsr (@clss) {
+	my $file=$clsr->getAttribute("file");
+	my $lastAuto="";
+	my $lastAccess="";
+	my $lastStart=0;
+	my $lastStop=0;
+	my $clsUseFile=$clsUseDir . $file; 
+	#print "Usefile: '$clsUseFile'\n";
+	if (-f $clsUseFile) {
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+		$mtime,$ctime,$blksize,$blocks) = stat($clsUseFile);
+	    $lastStop=$atime;
+	};
+	my $lockfilename=$lockDir."$cls/$file.lock";
+	#print "Lockfile: '$lockfilename'\n";
+	if (-f $lockfilename) {
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+		$mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
+	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
+	    $lastStart=$atime;
+	    if ( not open(MLOCKFILE, ">$lockfilename") ) {
+	    } elsif (flock (MLOCKFILE,2+4)) {
+		my $duration = $lastStop-$lastStart;
+		if ($duration < 0) {
+		    $lastAccess="**abort**";
+		} else {
+		    $lastAccess="**done** (".$duration . "s)";
+		}
+	    } else {
+		my $duration = time()-$lastStart;
+		$lastAccess="**running** (".$duration . "s)";
+	    };	
+	    close(MLOCKFILE);
+	};
+	$clsr->setAttribute("last",        $lastAuto);
+	$clsr->setAttribute("info",        $lastAccess);
+    }
+};
 
 sub loadCat {
     my $doc=shift;
@@ -416,3 +316,4 @@ sub loadCat {
 	}
     }
 };
+

@@ -1,0 +1,8 @@
+#!/usr/bin/perl -w
+ use File::Touch;
+ my @files = ('log1','log2','log3');
+ my $day = 24*60*60;
+ my $time = time() - 30 * $day;
+ my $ref = File::Touch->new( mtime => $time, no_create => 1 );
+ my $count = $ref->touch(@files);
+ print "$count files updated\n";

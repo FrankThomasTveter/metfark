@@ -53,13 +53,19 @@
 	    </tr>
 	    <tr>
 	      <td>Model file filter (regexp):</td>
-	      <td colspan="1" class="fill" width="100%">
-		<input id="modelFilterFile" type="text" value="" style="width:100%" onblur="model_setArray('filterFile',this.value)"/> 
-		<div id="modelFilterFileDropdown" class="dropdown-content"/>
-	      </td>
-	      <td align="center"><button onclick="showDropdown('modelFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
-	      <td> Files:</td>
-	      <td id="modelPatternHits">0</td>
+	      <td colspan="4" class="fill" width="100%"><table width="100%" border="0">
+		  <tr>
+		    <td colspan="1" class="fill" width="100%">
+		      <input id="modelFilterFile" type="text" value="" style="width:100%" onblur="model_setArray('filterFile',this.value)"/> 
+		      <div id="modelFilterFileDropdown" class="dropdown-content"/>
+		    </td>
+		    <td align="center"><button onclick="showDropdown('modelFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
+		    <td> Min Age:</td> <td><input id="modelFilterDirMin" type="text" value="" style="width:50px" title="Minimum age in days" onblur="model_setArray('filterDirMin',this.value)"/> </td>
+		    <td> Max:</td> <td><input id="modelFilterDirMax" type="text" value="" style="width:50px" title="Maximum age in days" onblur="model_setArray('filterDirMax',this.value)"/> </td>
+		    <td> Files:</td>
+		    <td id="modelPatternHits">0</td>
+		  </tr>
+		</table></td>
 	    </tr>
 	    <tr>
 	      <td>Model index target:</td>
@@ -123,13 +129,19 @@
 	    </tr>
 	    <tr>
 	      <td>Obs file filter (regexp):</td>
-	      <td colspan="2" class="fill" width="100%">
-		<input id="obsFilterFile" type="text" value="" style="width:100%" onblur="obs_setArray('filterFile',this.value)"/> 
-		<div id="obsFilterFileDropdown" class="dropdown-content"/>
-	      </td>
-	      <td align="center"><button onclick="showDropdown('obsFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
-	      <td>Files:</td>
-	      <td id="obsPatternHits">0</td>
+	      <td colspan="5" class="fill" width="100%"><table width="100%" border="0">
+		  <tr>
+		    <td colspan="1" class="fill" width="100%">
+		      <input id="obsFilterFile" type="text" value="" style="width:100%" onblur="obs_setArray('filterFile',this.value)"/> 
+		      <div id="obsFilterFileDropdown" class="dropdown-content"/>
+		    </td>
+		    <td align="center"><button onclick="showDropdown('obsFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
+		    <td> Min Age:</td> <td><input id="obsFilterDirMin" type="text" value="" style="width:50px" title="Minimum age in days" onblur="obs_setArray('filterDirMin',this.value)"/> </td>
+		    <td> Max:</td> <td><input id="obsFilterDirMax" type="text" value="" style="width:50px" title="Maximum age in days" onblur="obs_setArray('filterDirMax',this.value)"/> </td>
+		    <td>Files:</td>
+		    <td id="obsPatternHits">0</td>
+		  </tr>
+	      </table></td>
 	    </tr>
 	    <tr>
 	      <td>BUFR table path:</td>
@@ -174,8 +186,6 @@
 		    <th style="min-width:30px;width:30px"></th>
 		    <th style="min-width:100px;width:100px">Descriptor</th>
 		    <th style="min-width:40%;width:40%">Info</th>
-		    <th style="min-width:100px;width:100px">Minimum</th>
-		    <th style="min-width:100px;width:100px">Maximum</th>
 		  </tr>
 		  <tr id="newlineObsIndexTarget">
 		    <td style="min-width:30px;width:30px" align="center"><button onclick="obs_newObsIndexTarget(this)">&#43</button></td>
@@ -189,8 +199,6 @@
 		    <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('obsIndexPOS',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn">&#9776</button></td>
 		    <td class="fill"><input id="obsIndexDESCR" type="text" value="" style="width:100%"/></td>
 		    <td class="fill"><input id="obsIndexInfo" type="text" value="" style="width:100%"/></td>
-		    <td class="fill"><input id="obsIndexMin" type="text" value="" style="width:100%"/></td>
-		    <td class="fill"><input id="obsIndexMax" type="text" value="" style="width:100%"/></td>
 		  </tr>
 		</table>
 	      </td>
@@ -508,6 +516,7 @@
 	      <th width="200px">Last</th>
 	      <th width="200px">Info</th>
 	      <th style="min-width:50px;width:50px" align="center">Auto</th>
+	      <th style="min-width:30px;width:30px"></th>
 	      <th style="min-width:50px;width:50px" align="center">Test</th>
 	      <th style="min-width:50px;width:50px" align="center">Run</th>
 	    </tr>
@@ -525,7 +534,11 @@
 	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('autoConfigFile',this.parentNode.parentNode.children[3].children[0].value)" class="dropbtn">&#9776</button></td>
 	      <td id="autoLastTime"></td>
 	      <td id="autoLastInfo"></td>
-	      <td style="min-width:30px;width:30px" align="center"><input type="checkbox" id="autoModCheck" onchange="auto_setCheckbox(this,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value);"/></td>
+	      <td class="fill">
+		<input id="autoCron" type="text" value="" style="width:100%" disabled/> 
+		<div id="autoCronDropdown" class="dropdown-content"/>
+	      </td>
+	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('autoCron',document.getElementById('autoCron').value)" class="dropbtn">&#9776</button></td>
 	      <td style="min-width:30px;width:30px" align="center">
 		<button class="test" onclick="auto_testNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)">&#9762</button></td>
 	      <td style="min-width:30px;width:30px" align="center">

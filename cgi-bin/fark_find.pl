@@ -52,6 +52,8 @@ sub findModel {
     my $ipath=$param->{file}[0];
     my $password=($param->{password}[0] // "");
     my $filterDir = ($param->{filterDir}->[0] // "/");
+    my $filterDirMin = ($param->{filterDirMin}->[0] // "");
+    my $filterDirMax = ($param->{filterDirMax}->[0] // "");
     my $filterFile = ($param->{filterFile}->[0] // "");
     my $indexTarget = ($param->{indexTarget}->[0] // "");
     my $indexVariable = ($param->{indexVariable}->[0] // "");
@@ -96,10 +98,12 @@ sub findModel {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
-	my @files=farkdir::find($filterFile,$filterDir);
+	my @files=farkdir::find($filterFile,$filterDir,$filterDirMin,$filterDirMax);
 	if (@files) {
 	    $node->setAttribute("password",        $password//"");
 	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterDirMin",    $filterDirMin // "");
+	    $node->setAttribute("filterDirMax",    $filterDirMax // "");
 	    $node->setAttribute("filterFile",      $filterFile//"");
 	    $node->setAttribute("indexTarget",     $indexTarget//"");
 	    $node->setAttribute("indexVariable",   $indexVariable//"");
@@ -107,6 +111,7 @@ sub findModel {
 	    foreach my $sfile (@files) {
 		my $parent = XML::LibXML::Element->new( 'stack' );
 		$parent->setAttribute("name",$sfile//"");
+		if (-f $sfile) {$parent->setAttribute("age",(-M $sfile//""))};
 		$node->addChild( $parent );
 	    };
 	    # put xml-structure into file
@@ -272,6 +277,8 @@ sub findObs {
     my $ipath=$param->{file}[0];
     my $password=($param->{password}[0] // "");
     my $filterDir = ($param->{filterDir}->[0]//"/tmp");
+    my $filterDirMin = ($param->{filterDirMin}->[0] // "");
+    my $filterDirMax = ($param->{filterDirMax}->[0] // "");
     my $filterFile = ($param->{filterFile}->[0] // ".*");
     my $bufrType=($param->{bufrType}[0] // "");
     my $subType=($param->{subType}[0] // "");
@@ -319,10 +326,12 @@ sub findObs {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
-	my @files=farkdir::find($filterFile,$filterDir);
+	my @files=farkdir::find($filterFile,$filterDir,$filterDirMin,$filterDirMax);
 	if (@files) {
 	    $node->setAttribute("password",        $password//"");
 	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterDirMin",    $filterDirMin // "");
+	    $node->setAttribute("filterDirMax",    $filterDirMax // "");
 	    $node->setAttribute("filterFile",      $filterFile//"");
 	    $node->setAttribute("tablePath",       $table//"");
 	    $node->setAttribute("bufrType",        $bufrType//"");
@@ -334,6 +343,7 @@ sub findObs {
 	    foreach my $spath (@files) {
 		my $parent = XML::LibXML::Element->new( 'stack' );
 		$parent->setAttribute("name",$spath//"");
+		if (-f $spath) {$parent->setAttribute("age",(-M $spath//""))};
 		$node->addChild( $parent );
 	    };
 	    # put xml-structure into file

@@ -1,46 +1,4 @@
 #! /bin/csh
+./fark_dir.pl '?cmd=rf&cls=coloc&path=starc%2Fdefault.cfg&password='
 #
-####rmdir /elysium/metfark/coloc/starc
-
-
-#./fark_dir.pl '?cmd=mk&cls=coloc&path=starc&password='
-
-#./fark_dir.pl '?cmd=mk&cls=model&path=test%2Ftest&password='
-#ls -l /elysium/metfark/mod/test/
-#./fark_dir.pl '?cmd=rm&cls=model&path=test%2Ftest&password='
-#ls -l /elysium/metfark/mod/test/
-
-
-./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F04'
-
-# ?cmd=ls&cls=data&path=/lustre/storeB/immutable/archive/projects/metproduction/DNMI_AROME_METCOOP/2017/01/01'
-#./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Fshort-term-archive%2FDNMI_OBS_BUFR%2F2017%2F01%2F01&filter=.*.bufr'
-
-
-
-
-
-#./fark_dir.pl '?cmd=ls&cls=data&filter=bufr.*&path=/lustre/storeB/immutable/short-term-archive/DNMI_OBS_BUFR/2017/01/01'
-#./fark_dir.pl '?cmd=ls&cls=data&path=%2Fopdata%2Falarm_met_no%2Fmask%2Fefi'
-
-# ./fark_dir.pl '?cmd=rf&cls=model&path=ole%2Ftest3.cfg&password='
-# ./fark_dir.pl '?cmd=ls&cls=data&path=%2Fopdata%2Falarm_met_no%2Fwork'
-# ./fark_dir.pl '?cmd=ls&cls=data&path='
-# &cmd=ls;cls=data;path=/lustre/storeA/users/franktt'
-# ./fark_dir.pl '&cmd=ls;cls=data;path='
-# ./fark_dir.pl '&cmd=ls;path=/'
-# ./fark_dir.pl '&cmd=mk;cls=obs;path=a;password=;'
-# ./fark_dir.pl '&cmd=mk;cls=obs;path=/elysium/metfark/obs/test/yat;'
-# ./fark_dir.pl '&cmd=mk;cls=obs;path=/elysium/metfark/obs/yat2;'
-# ./fark_dir.pl '&cmd=ls;cls=obs;path=/elysium/metfark/obs'
-# ./fark_dir.pl '&cmd=cp;cls=obs;path=/elysium/metfark/obs/test;dest=/elysium/metfark/obs/dest;'
-# ./fark_dir.pl '&cmd=ls;cls=obs;path=/elysium/metfark/obs'
-# ./fark_dir.pl '&cmd=rm;cls=obs;path=/elysium/metfark/obs/test;password=pass'
-# ./fark_dir.pl '&cmd=ls;cls=obs;path=/elysium/metfark/obs'
-# ./fark_dir.pl '&cmd=mv;cls=obs;path=/elysium/metfark/obs/dest;dest=/elysium/metfark/obs/dest2;'
-# ./fark_dir.pl '&cmd=ls;cls=obs;path=/elysium/metfark/obs'
-# ./fark_dir.pl '&cmd=ls;path=/elysium/metfark/obs'
-#
-#echo "At last..."
-# ./fark_dir.pl '&cmd=mk;cls=mod;path=b/;'
-# ./fark_dir.pl '&cmd=mk;cls=mod;path=ab;'
+#./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F'

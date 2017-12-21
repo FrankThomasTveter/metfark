@@ -1565,12 +1565,12 @@ CONTAINS
              end do OBSERVATION
           end if
           ! end obs data loop
-          if (tobs.eq.0) then
+          if (tobs.eq.0.or.test.ne.0) then
              exit OBSFILE
           end if
        end do OBSFILE
        ! end model loop
-       if (tmod.eq.0)  then
+       if (tmod.eq.0.or.test.ne.0)  then
           exit MODFILE
        end if
     end do MODFILE
@@ -1914,10 +1914,6 @@ CONTAINS
     call chop0(xml250,250)
     lenx=length(xml250,250,20)
     if(col_bdeb)write(*,*)myname,' Path: ',xml250(1:lenx),test
-    if (test.eq.1) then
-       if(col_bdeb)write(*,*)myname,' XXXX TEST RUN - ABORTING XXXX'
-       return
-    end if
     ! open file
     ounit=ftunit(irc)
     if (irc.ne.0) then
@@ -2191,7 +2187,7 @@ CONTAINS
              end do OBSERVATION
           end if
           ! end obs data loop
-          if (tobs.ne.0) then
+          if (tobs.ne.0.or.test.ne.0) then
              call observation_filestopxml(oss,ounit,crc250,irc)
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"observation_filestopxml")
@@ -2203,7 +2199,7 @@ CONTAINS
        end do OBSFILE
 
        ! end model loop
-       if (tmod.ne.0)  then
+       if (tmod.ne.0.or.test.ne.0)  then
           ! write file stop xml-tag
           call model_filestopxml(mss,ounit,crc250,irc)
           if (irc.ne.0) then

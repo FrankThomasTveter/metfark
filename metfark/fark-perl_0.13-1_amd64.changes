@@ -1,0 +1,24 @@
+Format: 1.8
+Date: Wed, 7 Oct 2015 10:00:00 +0100
+Source: fark-perl
+Binary: fark-perl
+Architecture: amd64
+Version: 0.13-1
+Distribution: ubuntu
+Urgency: low
+Maintainer: root <frank.tveter@met.no>
+Changed-By: Frank Tveter <frank.tveter@met.no>
+Description: 
+ fark-perl  - point archive perl library for extracting data from netcdf files.
+Changes: 
+ fark-perl (0.13-1) ubuntu; urgency=low
+ .
+   * Initial Release.
+   * Added BUFR data.
+   * Added session cache.
+Checksums-Sha1: 
+ 2a89fbee9b5fef28ebe9abc02192f097089c6cf7 591366 fark-perl_0.13-1_amd64.deb
+Checksums-Sha256: 
+ b985ae4c58f6ae957a149f963da24ce51d4f552c5b3a72b7ce037b79581e362b 591366 fark-perl_0.13-1_amd64.deb
+Files: 
+ 7832a5d15f20450e3f59496159c118eb 591366 perl optional fark-perl_0.13-1_amd64.deb

@@ -1,6 +1,8 @@
 obs_file = "default.cfg";
 obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 filterDirStat : "",
+				 filterDirMin: "",
+				 filterDirMax: "",
 				 filterFile : ".*\.bufr",
 				 tablePath : "/home/www/fark-perl_0.15/bufrtables/",
 				 hits : "?",
@@ -12,7 +14,7 @@ obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 bufrType : "99",
 				 subType : "9",
 				 typeInfo : "default info.",
-				 targets : {"yy" : {pos:"", descr:"", info:"", min:"", max:""}},
+				 targets : {"yy" : {pos:"", descr:"", info:""}},
 				 targeto : ["yy"],
 				 indexTarget : "time",
 				 indexExp : "sec1970(yy,mm,dd,hh,mi)",
@@ -32,10 +34,10 @@ function obs_allocate(file) {
 function obs_setConfigFile(file) {
     showValue('obsConfigFile',file);
     showValue('obsConfigFileSave',file);
-    if (file != "") {
+    //if (file != "") {
 	obs_allocate(file);
 	obs_file=file;
-    };
+    //};
 }
 function obs_getConfigFile() {
     return obs_file;
@@ -55,11 +57,9 @@ function obs_setFilterDir(value) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length == 0 ) {
 		  document.getElementById('obsFilterDir').style.color='black'
+		  obs_config[file]["filterDirStat"]="";
 		  console.log("Dir ok:",val);
 	      } else {
-		  if (val.substr(val.length-1) != "/") {
-		      val=val+"/";
-		  };
 		  obs_config[file]["filterDirStat"]=val;
 		  document.getElementById('obsFilterDir').style.color='red'
 		  console.log("Dir NOT ok:",val);
@@ -78,6 +78,8 @@ function obs_show() {
 	showValue('obsConfigFile',file);
 	showValue('obsConfigFileSave',file);
 	showValue('obsFilterDir',obs_config[file]["filterDir"]);
+	showValue('obsFilterDirMin',obs_config[file]["filterDirMin"]);
+	showValue('obsFilterDirMax',obs_config[file]["filterDirMax"]);
 	showValue('obsFilterFile',obs_config[file]["filterFile"]);
 	showValue('obsTablePath',obs_config[file]["tablePath"]);
 	showValue('obsBufrType',obs_config[file]["bufrType"]);
@@ -88,8 +90,7 @@ function obs_show() {
 	showValue('obsIndexExp',obs_config[file]["indexExp"]);
 	setInnerHTML('obsPatternHits',obs_config[file]["hits"]);
 	// this may seem strange, Stat stores name of dir only if it does not exist...
-	if (obs_config[file]["filterDirStat"].substr(0,obs_config[file]["filterDir"].length)==
-	    obs_config[file]["filterDir"]) {
+	if (obs_config[file]["filterDirStat"]==obs_config[file]["filterDir"]) {
 	    document.getElementById('obsFilterDir').style.color='red'
 	} else {
 	    document.getElementById('obsFilterDir').style.color='black'
@@ -117,8 +118,6 @@ function obs_removeTarget(target) {
     item.children[2].children[0].value=obs_config[file]["targets"][target]["pos"];
     item.children[4].children[0].value=obs_config[file]["targets"][target]["descr"];
     item.children[5].children[0].value=obs_config[file]["targets"][target]["info"];
-    item.children[6].children[0].value=obs_config[file]["targets"][target]["min"];
-    item.children[7].children[0].value=obs_config[file]["targets"][target]["max"];
     obs_config[file]["targeto"]=obs_removeByValue(obs_config[file]["targeto"],target)
     delete obs_config[file]["targets"][target];
     obs_setIndexTargetTable(file);
@@ -137,9 +136,7 @@ function obs_newObsIndexTarget(item) {
     var pos=item.parentNode.parentNode.children[2].children[0].value;
     var descr=item.parentNode.parentNode.children[4].children[0].value;
     var info=item.parentNode.parentNode.children[5].children[0].value;
-    var min=item.parentNode.parentNode.children[6].children[0].value;
-    var max=item.parentNode.parentNode.children[7].children[0].value;
-//    console.log("New: trg:",target," pos:",pos," des:",descr," info:",info," min:",min," max:",max);
+//    console.log("New: trg:",target," pos:",pos," des:",descr," info:",info);
     if (target !== "") {
 	var file= obs_getConfigFile();
 	if (obs_config[file] === undefined) {
@@ -154,8 +151,6 @@ function obs_newObsIndexTarget(item) {
 	obs_config[file]["targets"][target]["pos"]=pos;
 	obs_config[file]["targets"][target]["descr"]=descr;
 	obs_config[file]["targets"][target]["info"]=info;
-	obs_config[file]["targets"][target]["min"]=min;
-	obs_config[file]["targets"][target]["max"]=max;
 	obs_config[file]["targeto"].push(target);
 	obs_setIndexTargetTable(file);
 	item.parentNode.parentNode.children[1].children[0].value="";
@@ -190,15 +185,15 @@ function obs_saveConfigFile() {
 	var pos=targets[target]["pos"];
 	var descr=targets[target]["descr"];
 	var info=targets[target]["info"];
-	var min=targets[target]["min"];
-	var max=targets[target]["max"];
-	obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info + "~" + min + "~" + max;
+	obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info;
     };
     if (obsTargets == "") {obsTargets="none";}
     obs_configEd++;
     documentLog.innerHTML="Sent obs-save request.";
     $.get("cgi-bin/fark_save.pl",{type:"obs",file:file,password:password,
 			     filterDir:obs_config[file]["filterDir"],
+			     filterDirMin:obs_config[file]["filterDirMin"],
+			     filterDirMax:obs_config[file]["filterDirMax"],
 			     filterFile:obs_config[file]["filterFile"],
 		             stack:stack,
 			     table:obs_config[file]["tablePath"],
@@ -248,10 +243,10 @@ function obs_setIndexTargetTable(file) {
 	    };
 	};
 	obs_insertIndexTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],color,
-				 targets[target]["info"],targets[target]["min"],targets[target]["max"]);
+				 targets[target]["info"]);
     }
 }
-function obs_insertIndexTargetRow(item,target,pos,descr,color,info,min,max) {
+function obs_insertIndexTargetRow(item,target,pos,descr,color,info) {
     var row = document.createElement("TR");
     var td,inp;
     // make "-" column
@@ -307,26 +302,6 @@ function obs_insertIndexTargetRow(item,target,pos,descr,color,info,min,max) {
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','info',this.value);");
     td.appendChild(inp);
     row.appendChild(td);
-    // make minimum column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value",min);
-    //inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','min',this.value);");
-    td.appendChild(inp);
-    row.appendChild(td);
-    // make maximum column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value",max);
-    //inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','max',this.value);");
-    td.appendChild(inp);
-    row.appendChild(td);
     // make add row to table  ***************************
     item.parentNode.insertBefore(row,item);
     return row;
@@ -355,9 +330,7 @@ function obs_fileFind(sfile) {
 	obsTargets=obsTargets + "|" + target + "~" + 
 	    obsTrg[target]["pos"] + "~" + 
 	    obsTrg[target]["descr"] + "~" + 
-	    obsTrg[target]["info"] + "~" + 
-	    obsTrg[target]["min"] + "~" + 
-	    obsTrg[target]["max"];
+	    obsTrg[target]["info"];
     };
     var indexTarget = obs_config[file]["indexTarget"];
     var indexExp = obs_config[file]["indexExp"];

@@ -1,6 +1,8 @@
 model_file="default.cfg";
 model_config = { "default.cfg" : {filterDir: "/opdata",
 				  filterDirStat: "",
+				  filterDirMin: "",
+				  filterDirMax: "",
 				  filterFile: ".*\.nc",
 				  hits : "?",
 				  indexTarget : "",
@@ -27,10 +29,10 @@ function model_allocate(file) {
 function model_setConfigFile(file) {
     showValue('modelConfigFileSave',file);
     showValue('modelConfigFile',file);
-    if (file != "") {
+    //if (file != "") {
 	model_allocate(file);
 	model_file=file;
-    };
+    //};
 }
 function model_getConfigFile() {
     return model_file;
@@ -51,11 +53,9 @@ function model_setFilterDir(value) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length == 0 ) {
 		  document.getElementById('modelFilterDir').style.color='black'
+		  model_config[file]["filterDirStat"]="";
 		  console.log("Dir ok:",val);
 	      } else {
-		  if (val.substr(val.length-1) != "/") {
-		      val=val+"/";
-		  };
 		  model_config[file]["filterDirStat"]=val;
 		  document.getElementById('modelFilterDir').style.color='red'
 		  console.log("Dir NOT ok:",val);
@@ -70,14 +70,15 @@ function model_show() {
 	showValue('modelConfigFile',file);
 	showValue('modelConfigFileSave',file);
 	showValue('modelFilterDir',model_config[file]["filterDir"]);
+	showValue('modelFilterDirMin',model_config[file]["filterDirMin"]);
+	showValue('modelFilterDirMax',model_config[file]["filterDirMax"]);
 	showValue('modelFilterFile',model_config[file]["filterFile"]);
 	showValue('modelIndexTarget',model_config[file]["indexTarget"]);
 	showValue('modelIndexVariable',model_config[file]["indexVariable"]);
 	model_checkVariable(document.getElementById("modelIndexVariable"));
 	setInnerHTML('modelPatternHits',model_config[file]["hits"]);
 	// this may seem strange, Stat stores name of dir only if it does not exist...
-	if (model_config[file]["filterDirStat"].substr(0,model_config[file]["filterDir"].length)==
-	    model_config[file]["filterDir"]) {
+	if (model_config[file]["filterDirStat"]==model_config[file]["filterDir"]) {
 	    document.getElementById('modelFilterDir').style.color='red'
 	    console.log("Directory mismatch:",model_config[file]["filterDirStat"],
 			model_config[file]["filterDirStat"].substr(0,model_config[file]["filterDir"].length),
@@ -139,6 +140,8 @@ function model_saveConfigFile() {
 			     file:file,
 			     password:password,
 			     filterDir:model_config[file]["filterDir"],
+			     filterDirMin:model_config[file]["filterDirMin"],
+			     filterDirMax:model_config[file]["filterDirMax"],
 			     filterFile:model_config[file]["filterFile"],
 			     hits:model_config[file]["hits"],
 			     indexTarget:model_config[file]["indexTarget"],

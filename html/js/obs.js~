@@ -1,6 +1,8 @@
 obs_file = "default.cfg";
 obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 filterDirStat : "",
+				 filterDirMin: "",
+				 filterDirMax: "",
 				 filterFile : ".*\.bufr",
 				 tablePath : "/home/www/fark-perl_0.15/bufrtables/",
 				 hits : "?",
@@ -32,10 +34,10 @@ function obs_allocate(file) {
 function obs_setConfigFile(file) {
     showValue('obsConfigFile',file);
     showValue('obsConfigFileSave',file);
-    if (file != "") {
+    //if (file != "") {
 	obs_allocate(file);
 	obs_file=file;
-    };
+    //};
 }
 function obs_getConfigFile() {
     return obs_file;
@@ -55,6 +57,7 @@ function obs_setFilterDir(value) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length == 0 ) {
 		  document.getElementById('obsFilterDir').style.color='black'
+		  obs_config[file]["filterDirStat"]="";
 		  console.log("Dir ok:",val);
 	      } else {
 		  obs_config[file]["filterDirStat"]=val;
@@ -75,6 +78,8 @@ function obs_show() {
 	showValue('obsConfigFile',file);
 	showValue('obsConfigFileSave',file);
 	showValue('obsFilterDir',obs_config[file]["filterDir"]);
+	showValue('obsFilterDirMin',obs_config[file]["filterDirMin"]);
+	showValue('obsFilterDirMax',obs_config[file]["filterDirMax"]);
 	showValue('obsFilterFile',obs_config[file]["filterFile"]);
 	showValue('obsTablePath',obs_config[file]["tablePath"]);
 	showValue('obsBufrType',obs_config[file]["bufrType"]);
@@ -195,6 +200,8 @@ function obs_saveConfigFile() {
     documentLog.innerHTML="Sent obs-save request.";
     $.get("cgi-bin/fark_save.pl",{type:"obs",file:file,password:password,
 			     filterDir:obs_config[file]["filterDir"],
+			     filterDirMin:obs_config[file]["filterDirMin"],
+			     filterDirMax:obs_config[file]["filterDirMax"],
 			     filterFile:obs_config[file]["filterFile"],
 		             stack:stack,
 			     table:obs_config[file]["tablePath"],

@@ -34,6 +34,8 @@ sub saveModel {
     my $cls=$param->{type}->[0] || "";
     my $password=($param->{password}[0] // "");
     my $filterDir=($param->{filterDir}[0] // "");
+    my $filterDirMin=($param->{filterDirMin}[0] // "");
+    my $filterDirMax=($param->{filterDirMax}[0] // "");
     my $filterFile=($param->{filterFile}[0] // "");
     my $hits=($param->{hits}[0] // "");
     my $indexTarget=($param->{indexTarget}[0] // "");
@@ -77,6 +79,8 @@ sub saveModel {
 	$node->setAttribute("password",     $password);
 	$node->setAttribute("file",         $file);
 	$node->setAttribute("filterDir",    $filterDir);
+	$node->setAttribute("filterDirMin", $filterDirMin);
+	$node->setAttribute("filterDirMax", $filterDirMax);
 	$node->setAttribute("filterFile",   $filterFile);
 	$node->setAttribute("hits",         $hits);
 	$node->setAttribute("indexTarget",  $indexTarget);
@@ -153,6 +157,8 @@ sub saveObs {
     my $cls=$param->{type}->[0] || "";
     my $password=($param->{password}[0] // "");
     my $filterDir=($param->{filterDir}[0] // "*");
+    my $filterDirMin=($param->{filterDirMin}[0] // "*");
+    my $filterDirMax=($param->{filterDirMax}[0] // "*");
     my $filterFile=($param->{filterFile}[0] // "*");
     my $stack=($param->{stack}[0] // "*");
     my $table=($param->{table}[0] // "");
@@ -198,6 +204,8 @@ sub saveObs {
 	$node->setAttribute("password",    $password);
 	$node->setAttribute("file",        $file);
 	$node->setAttribute("filterDir",   $filterDir);
+	$node->setAttribute("filterDirMin",$filterDirMin);
+	$node->setAttribute("filterDirMax",$filterDirMax);
 	$node->setAttribute("filterFile",  $filterFile);
 	$node->setAttribute("tablePath",   $table);
 	$node->setAttribute("bufrType",    $bufrType);
@@ -236,15 +244,13 @@ sub saveObs {
 		    #print "Obstargets: $line\n";
 		    my @items=split (/\~/, $line,-1);
 		    my $len=$#items;
-		    if ($len == 5) {
+		    if ($len == 3) {
 			$wrote++;
 			my $parent = XML::LibXML::Element->new( 'target' );
 			$parent->setAttribute("name",$items[0]);
 			$parent->setAttribute("pos",$items[1]);
 			$parent->setAttribute("descr",$items[2]);
 			$parent->setAttribute("info",$items[3]);
-			$parent->setAttribute("min",$items[4]);
-			$parent->setAttribute("max",$items[5]);
 			$node->addChild( $parent );
 		    }
 		}

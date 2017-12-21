@@ -1,4 +1,4 @@
-subroutine plo_maketable(sid,cid,mid,oid,tab250,gra250,test,crc250, irc)
+subroutine plo_maketable(sid,cid,mid,oid,tab250,gra250,cat250,test,crc250, irc)
   use plot
   use model
   use observations
@@ -10,6 +10,7 @@ subroutine plo_maketable(sid,cid,mid,oid,tab250,gra250,test,crc250, irc)
   integer :: oid ! observation session id
   character*250 :: tab250
   character*250 :: gra250
+  character*250 :: cat250
   integer :: test
   character*250 :: crc250
   integer :: irc
@@ -53,7 +54,7 @@ subroutine plo_maketable(sid,cid,mid,oid,tab250,gra250,test,crc250, irc)
      return
   end if
   !
-  call  plot_maketable(pss,css,mss,oss,tab250,gra250,test,crc250,irc)
+  call  plot_maketable(pss,css,mss,oss,tab250,gra250,cat250,test,crc250,irc)
   if (irc.ne.0) then
      call plot_errorappend(crc250,"|")
      call plot_errorappend(crc250,trim(myname))

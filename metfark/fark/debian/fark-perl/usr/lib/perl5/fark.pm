@@ -65,6 +65,65 @@ use constant DEFAULT_TABLE_PATH => '/usr/local/lib/bufrtables';
 
 # Preloaded methods go here.
 
+=head2 remote
+
+Run remote script.
+
+=head4 EXAMPLE
+
+fark::remote("dir.pl","?ls='/usr/var'","www-data");
+
+=cut
+
+sub remote { 
+    use strict;
+    use Capture::Tiny 'capture';
+    my $scr = shift; 
+    my $url = shift; 
+    my $usr = shift; 
+    my $log="";
+    my ($stdout, $stderr, $irc)=capture {
+	my $cmd="rsh -q -o NumberOfPasswordPrompts=0".
+	    " franktt\@pc4804.pc.met.no /var/www/cgi-bin/metfark/$scr '$url'";
+	$cmd =~ s/\=/\\\=/g;
+	$cmd =~ s/\'/\\\'/g;
+	$cmd =~ s/\;/\\\;/g;
+	$cmd =~ s/\&/\\\&/g;
+	$cmd =~ s/\@/\\\@/g;
+	system $cmd;
+    };
+    chomp($stdout);chomp($stderr);
+    if ($stdout) {
+	$log=$stdout . "\n";
+    } elsif ($irc) {
+	if ($stderr) {
+	    $log="Content-type: text/xml;\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n".
+		"<error url=\"".&washXML($url)."\"".
+		" message=\"$stderr\"".
+		" user=\".$usr.\"/>\n";
+	} else {
+	    $log="Content-type: text/xml;\n\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n".
+		"<error url=\"".&washXML($url)."\"".
+		" message=\"rsh: Unable to execute command.\"".
+		" user=\".$usr.\"/>\n";
+	};
+    } else {
+	$log="Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n".
+	    "<empty\>\n";
+    }
+    print $log;
+}
+
+sub washXML {
+    my $cmd=shift;
+    $cmd =~ s/</&lt;/g;
+    $cmd =~ s/&/&amp;/g;
+    $cmd =~ s/>/&gt/g;
+    $cmd =~ s/"/&quot;/g;
+    $cmd =~ s/'/&apos;/g;
+    return $cmd;
+}
+
 =head2 open
 
 open - creates a new fark session.
@@ -274,13 +333,17 @@ Arguments:
 
 =item (string) file mask.
 
+=item (string) minimum file age (in days)
+
+=item (string) maximum file age (in days)
+
 =item (int) test flag (1 or 0), 1= only check input
 
 =back
 
 =head4 EXAMPLE
 
-$fark->updateModelRegister($xmlfile,$modregfile,"/opdata/arome/", ".*\.nc",0);
+$fark->updateModelRegister($xmlfile,$modregfile,"/opdata/arome/", ".*\.nc","","",0);
 
 =cut
 
@@ -289,14 +352,16 @@ sub updateModelRegister {
     my $register_file = shift;
     my $mask_dir = shift;
     my $mask=shift;
-    my $test=shift // 0;
+    my $min = shift // "";
+    my $max = shift // "";
+    my $test = shift // 0;
     my $new_file_cnt = 0;
     my @new_file_list;
     my @push_files;
     my @pop_files;
     if ($test) {return ();};
     my $write_register_file=0;
-    my @new_line_list = GetFiles($mask_dir,$mask) or return @push_files;
+    my @new_line_list = GetFiles($mask_dir,$mask,$min,$max) or return @push_files;
     my %new_file_hash;
     foreach (@new_line_list) {
 	s/\s+/ /g; # replace any train of blanks with single blank
@@ -778,11 +843,15 @@ Arguments:
 
 =item (string) file mask.
 
+=item (string) minimum file age (in days)
+
+=item (string) maximum file age (in days)
+
 =back
 
 =head4 EXAMPLE
 
-$fark->updateObservationRegister($obsregfile,"/opdata/obs_dec/rdb/temp/temp_*06*.bufr");
+$fark->updateObservationRegister($obsregfile,"/opdata/obs_dec/rdb/temp/temp_*06*.bufr","","",0);
 
 =cut
 
@@ -791,6 +860,8 @@ sub updateObservationRegister {
     my $register_file = shift;
     my $mask_dir = shift;
     my $mask = shift;
+    my $min = shift // "";
+    my $max = shift // "";
     my $test = shift // 0; 
     my $new_file_cnt = 0;
     my @new_file_list;
@@ -798,7 +869,7 @@ sub updateObservationRegister {
     my @pop_files;
     my $write_register_file=0;
     if ($test) {return ();};
-    my @new_line_list = GetFiles($mask_dir,$mask) or return @push_files;
+    my @new_line_list = GetFiles($mask_dir,$mask,$min,$max) or return @push_files;
     my %new_file_hash;
     foreach (@new_line_list) {
 	s/\s+/ /g; # replace any train of blanks with single blank
@@ -1657,14 +1728,26 @@ sub makeHashBranch{
 }
 
 sub GetFiles {
-    my($filterDir,$filter) = @_;
+    my($filterDir,$filter,$min,$max) = @_;
     my @files=();
     find({wanted => sub {
 	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
 	    my $file=$File::Find::name;
-	    my $sb=(stat($file))[9];
-	    my $s= $sb. " " . $file;
-	    push(@files, $s);
+	    my $ok=1;
+	    if ($min || $max) {
+		my $age=(-M $file);
+		if ($min && $age < $min) {
+		    $ok=0;
+		};
+		if ($max && $age > $max) {
+		    $ok=0;
+		};
+	    }
+	    if ($ok) {
+		my $sb=(stat($file))[9];
+		my $s= $sb. " " . $file;
+		push(@files, $s);
+	    }
 	}
 	  }}, $filterDir);
     return @files;

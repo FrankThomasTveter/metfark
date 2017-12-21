@@ -54,62 +54,39 @@ our $VERSION = '0.13';
 our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input data
 			   "/lustre/storeB/"   => "ro",
 			   "/opdata/"          => "ro",
-			   "/elysium/data/"    => "rw" }, 
-		  tables => {"/lustre/storeA/users/"     => "ro",        # BUFR tables
-			     "/lustre/storeA/project/"   => "ro",
+			   "/metfark/data/"    => "rw" }, 
+		  tables => {"/lustre/storeB/users/"     => "ro",        # BUFR tables
+			     "/lustre/storeB/project/"   => "ro",
 			     "/opdata/"                  => "ro",
-			     "/elysium/"                 => "ro" }, 
-		  output => {"/lustre/storeA/"    => "rw",               # output data
-			     "/lustre/storeB/"    => "rw",
-			     "/elysium/"          => "rw" }, 
-		  script       => {"/elysium/metfark/splus/"     => "rw" }, # splus scripts
-		  model       => {"/elysium/metfark/mod/"     => "rw" }, # model config files
-		  model_old   => {"/elysium/metfark/old/mod/" => "rw" }, # model old config files
-		  model_use   => {"/elysium/metfark/use/mod/" => "rw" }, # model use files
-		  model_cache => {"/elysium/metfark/index/mod/" => "rw" }, # model cache/index files
-		  model_reg   => {"/elysium/metfark/reg/mod/" => "rw" }, # model register files
-		  model_log   => {"/elysium/metfark/log/mod/" => "rw" }, # model log files
-		  obs       => {"/elysium/metfark/obs/"       => "rw" },
-		  obs_use   => {"/elysium/metfark/use/obs/"   => "rw" },
-		  obs_cache => {"/elysium/metfark/index/obs/"   => "rw" },
-		  obs_reg   => {"/elysium/metfark/reg/obs/"   => "rw" },
-		  obs_old   => {"/elysium/metfark/old/obs/"   => "rw" },
-		  obs_log   => {"/elysium/metfark/log/obs/"   => "rw" },
-		  coloc       => {"/elysium/metfark/coloc/"   => "rw" },
-		  coloc_use   => {"/elysium/metfark/use/coloc/"   => "rw" },
-		  coloc_reg   => {"/elysium/metfark/reg/coloc/"   => "rw" },
-		  coloc_old   => {"/elysium/metfark/old/coloc/"   => "rw" },
-		  coloc_log   => {"/elysium/metfark/log/coloc/"   => "rw" },
-		  plot =>      {"/elysium/metfark/plot/"    => "rw" },
-		  plot_old =>  {"/elysium/metfark/old/plot/"    => "rw" },
-		  plot_use =>  {"/elysium/metfark/use/plot/"    => "rw" },
-		  plot_log =>  {"/elysium/metfark/log/plot/"    => "rw" },
-		  auto  => {"/elysium/metfark/auto/"    => "rw" },       # auto config files
-		  url  =>  {"/elysium/metfark/url/"     => "rw" },       # url config files (not used?)
-		  lock =>  {"/elysium/metfark/lock/"    => "rw" }        # lock files (must be local disk)
+			     "/metfark/bufrtables/"      => "ro" }, 
+		  output => {"/lustre/storeA/project/nwp/fark/data/"     => "rw",
+			     "/metfark/data/"          => "rw" }, 
+		  script       => {"/metfark/config/splus/"     => "rw" }, # splus scripts
+		  model       => {"/metfark/config/mod/"     => "rw" }, # model config files
+		  model_old   => {"/metfark/config/old/mod/" => "rw" }, # model old config files
+		  model_use   => {"/metfark/config/use/mod/" => "rw" }, # model use files
+		  model_cache => {"/metfark/config/index/mod/" => "rw" }, # model cache/index files
+		  model_reg   => {"/metfark/config/reg/mod/" => "rw" }, # model register files
+		  model_log   => {"/lustre/storeA/project/nwp/fark/log/mod/" => "rw" }, # model log files
+		  obs       => {"/metfark/config/obs/"       => "rw" },
+		  obs_use   => {"/metfark/config/use/obs/"   => "rw" },
+		  obs_cache => {"/metfark/config/index/obs/"   => "rw" },
+		  obs_reg   => {"/metfark/config/reg/obs/"   => "rw" },
+		  obs_old   => {"/metfark/config/old/obs/"   => "rw" },
+		  obs_log   => {"/lustre/storeA/project/nwp/fark/log/obs/"   => "rw" },
+		  coloc       => {"/metfark/config/coloc/"   => "rw" },
+		  coloc_use   => {"/metfark/config/use/coloc/"   => "rw" },
+		  coloc_reg   => {"/metfark/config/reg/coloc/"   => "rw" },
+		  coloc_old   => {"/metfark/config/old/coloc/"   => "rw" },
+		  coloc_log   => {"/lustre/storeA/project/nwp/fark/log/coloc/"   => "rw" },
+		  plot =>      {"/metfark/config/plot/"    => "rw" },
+		  plot_old =>  {"/metfark/config/old/plot/"    => "rw" },
+		  plot_use =>  {"/metfark/config/use/plot/"    => "rw" },
+		  plot_log =>  {"/lustre/storeA/project/nwp/fark/log/plot/"    => "rw" },
+		  auto  => {"/metfark/config/auto/"    => "rw" },       # auto config files
+		  url  =>  {"/metfark/config/url/"     => "rw" },       # url config files (not used?)
+		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
     );
-
-sub makeRoot {
-    my $cls = shift;
-    my @dirs=keys %{$farkdirs{$cls}};
-    if (@dirs) {
-	if (! -d $dirs[0] && $farkdirs{$cls}{$dirs[0]} eq "rw") { 
-	    return makePath($dirs[0]);
-	};
-    }
-    return 0; # fail
-}
-
-sub getRootDir {
-    my $cls = shift;
-    my @dirs=keys %{$farkdirs{$cls}};
-    if (@dirs) {
-	if (! -d $dirs[0]) { makePath($dirs[0]) || die "Unable to makePath ".$dirs[0];};
-	return $dirs[0];
-    } else {
-	die "Undefined dir-class $cls";
-    };
-}
 
 # returns dir and name components of path
 # my ($dir,$name) = splitName($path);
@@ -190,6 +167,37 @@ sub splitDir {
     return ( $root, $loc, $priv );
 }
 
+sub makeRoot {
+    my $cls = shift;
+    my @dirs=keys %{$farkdirs{$cls}};
+    if (@dirs) {
+	if (! -d $dirs[0] && $farkdirs{$cls}{$dirs[0]} eq "rw") { 
+	    return makePath($dirs[0]);
+	};
+    }
+    return 0; # fail
+}
+
+sub getRootDir {
+    my $cls = shift;
+    my @dirs=keys %{$farkdirs{$cls}};
+    if (@dirs) {
+	if (! -d $dirs[0]) { 
+	    if (makePath($dirs[0])) {
+		chmod 0777, $dirs[0];
+		return $dirs[0]; # success
+	    } else {
+		return; # failure
+	    }
+	} else {
+	    return $dirs[0];
+	}
+    } else {
+	$_="Undefined dir-class $cls";
+	return; # failure
+    };
+}
+
 #
 # Check that directory exists, create if necessary...
 #   my $ret = check_dir($path);
@@ -197,14 +205,17 @@ sub splitDir {
 
 sub makePath{
     my $path=shift;
+#    print "Path:$path\n";
     eval {
 	my $log=capture {
 	    if(!-d $path) {
 		make_path $path; 
 		chmod 0777, $path;
 	    }
-	}
-    };my $ret=$@;
+	};
+#	print $log;
+    };
+    my $ret=$@;
     if ($ret) {
 	$_=$ret;
 	return(0);
@@ -217,11 +228,21 @@ sub touchFile {
     my $path=shift;
     my ($dir,$name)=splitName($path);
     if (! -d $dir) {makePath($dir);}
+    #print "Touching $path\n";
     if (touch($path)) {
-	chmod 0777, $path;
-	return 1;
+	if (chmod 0777, $path) {
+	    #print "Touched $path\n";
+	    return 1;
+	} else {
+	    return 0;
+	}
     } else {
-	return 0;
+	system "touch $path";
+	if ($? == -1 || $? & 127) {
+	    return 0;
+	} else {
+	    return 1;
+	}
     }
 }
 
@@ -337,6 +358,8 @@ sub find{
     use Cwd;
     my $pattern = shift;
     my ($wdir) = shift;
+    my $min = shift || "";
+    my $max = shift || "";
     my $root = shift || "";
     my $t = shift || time;
     my $hits = shift || 0;
@@ -367,8 +390,21 @@ sub find{
 	    push (@dirs, $name);
         } elsif (-f $path ) {
 	    if ($name  =~ m/$pattern/) {
-		push (@ret, $path);
-		$hits++;
+		my $ok=1;
+		if ($min || $max) {
+		    my $age=(-M $path);
+		    #print "Age $age '$path' '$min' '$max'\n";
+		    if ($min && $age < $min) {
+			$ok=0;
+		    };
+		    if ($max && $age > $max) {
+			$ok=0;
+		    };
+		};
+		if ($ok) {
+		    push (@ret, $path);
+		    $hits++;
+		}
 	    } else {
 		#print "No match: $pattern $name\n";
 	    };
@@ -381,7 +417,7 @@ sub find{
     chdir($wdir) or die "Unable to enter dir $wdir:$!\n";
     foreach my $name (@dirs) {
 	#print "Processing $name\n";
-	my @lret=&find($pattern,$name,$root,$t,$hits);
+	my @lret=&find($pattern,$name,$min,$max,$root,$t,$hits);
 	push (@ret,@lret);
 	$hits+=@lret;
     }

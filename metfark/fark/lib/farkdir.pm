@@ -55,35 +55,34 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 			   "/lustre/storeB/"   => "ro",
 			   "/opdata/"          => "ro",
 			   "/metfark/data/"    => "rw" }, 
-		  tables => {"/lustre/storeA/users/"     => "ro",        # BUFR tables
-			     "/lustre/storeA/project/"   => "ro",
+		  tables => {"/lustre/storeB/users/"     => "ro",        # BUFR tables
+			     "/lustre/storeB/project/"   => "ro",
 			     "/opdata/"                  => "ro",
-			     "/metfark/data/"                 => "ro" }, 
-		  output => {"/lustre/storeA/"    => "rw",               # output data
-			     "/lustre/storeB/"    => "rw",
+			     "/metfark/bufrtables/"      => "ro" }, 
+		  output => {"/lustre/storeA/project/nwp/fark/data/"     => "rw",
 			     "/metfark/data/"          => "rw" }, 
-		  script       => {"/metfark/config/splus/"     => "rw" }, # splus scripts
+		  script      => {"/lustre/storeA/project/nwp/fark/splus/" => "rw" }, # splus scripts
 		  model       => {"/metfark/config/mod/"     => "rw" }, # model config files
 		  model_old   => {"/metfark/config/old/mod/" => "rw" }, # model old config files
 		  model_use   => {"/metfark/config/use/mod/" => "rw" }, # model use files
 		  model_cache => {"/metfark/config/index/mod/" => "rw" }, # model cache/index files
 		  model_reg   => {"/metfark/config/reg/mod/" => "rw" }, # model register files
-		  model_log   => {"/metfark/config/log/mod/" => "rw" }, # model log files
+		  model_log   => {"/lustre/storeA/project/nwp/fark/log/mod/" => "rw" }, # model log files
 		  obs       => {"/metfark/config/obs/"       => "rw" },
 		  obs_use   => {"/metfark/config/use/obs/"   => "rw" },
 		  obs_cache => {"/metfark/config/index/obs/"   => "rw" },
 		  obs_reg   => {"/metfark/config/reg/obs/"   => "rw" },
 		  obs_old   => {"/metfark/config/old/obs/"   => "rw" },
-		  obs_log   => {"/metfark/config/log/obs/"   => "rw" },
+		  obs_log   => {"/lustre/storeA/project/nwp/fark/log/obs/"   => "rw" },
 		  coloc       => {"/metfark/config/coloc/"   => "rw" },
 		  coloc_use   => {"/metfark/config/use/coloc/"   => "rw" },
 		  coloc_reg   => {"/metfark/config/reg/coloc/"   => "rw" },
 		  coloc_old   => {"/metfark/config/old/coloc/"   => "rw" },
-		  coloc_log   => {"/metfark/config/log/coloc/"   => "rw" },
+		  coloc_log   => {"/lustre/storeA/project/nwp/fark/log/coloc/"   => "rw" },
 		  plot =>      {"/metfark/config/plot/"    => "rw" },
 		  plot_old =>  {"/metfark/config/old/plot/"    => "rw" },
 		  plot_use =>  {"/metfark/config/use/plot/"    => "rw" },
-		  plot_log =>  {"/metfark/config/log/plot/"    => "rw" },
+		  plot_log =>  {"/lustre/storeA/project/nwp/fark/log/plot/"    => "rw" },
 		  auto  => {"/metfark/config/auto/"    => "rw" },       # auto config files
 		  url  =>  {"/metfark/config/url/"     => "rw" },       # url config files (not used?)
 		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
@@ -229,11 +228,21 @@ sub touchFile {
     my $path=shift;
     my ($dir,$name)=splitName($path);
     if (! -d $dir) {makePath($dir);}
+    #print "Touching $path\n";
     if (touch($path)) {
-	chmod 0777, $path;
-	return 1;
+	if (chmod 0777, $path) {
+	    #print "Touched $path\n";
+	    return 1;
+	} else {
+	    return 0;
+	}
     } else {
-	return 0;
+	system "touch $path";
+	if ($? == -1 || $? & 127) {
+	    return 0;
+	} else {
+	    return 1;
+	}
     }
 }
 
@@ -349,6 +358,8 @@ sub find{
     use Cwd;
     my $pattern = shift;
     my ($wdir) = shift;
+    my $min = shift || "";
+    my $max = shift || "";
     my $root = shift || "";
     my $t = shift || time;
     my $hits = shift || 0;
@@ -379,8 +390,21 @@ sub find{
 	    push (@dirs, $name);
         } elsif (-f $path ) {
 	    if ($name  =~ m/$pattern/) {
-		push (@ret, $path);
-		$hits++;
+		my $ok=1;
+		if ($min || $max) {
+		    my $age=(-M $path);
+		    #print "Age $age '$path' '$min' '$max'\n";
+		    if ($min && $age < $min) {
+			$ok=0;
+		    };
+		    if ($max && $age > $max) {
+			$ok=0;
+		    };
+		};
+		if ($ok) {
+		    push (@ret, $path);
+		    $hits++;
+		}
 	    } else {
 		#print "No match: $pattern $name\n";
 	    };
@@ -393,7 +417,7 @@ sub find{
     chdir($wdir) or die "Unable to enter dir $wdir:$!\n";
     foreach my $name (@dirs) {
 	#print "Processing $name\n";
-	my @lret=&find($pattern,$name,$root,$t,$hits);
+	my @lret=&find($pattern,$name,$min,$max,$root,$t,$hits);
 	push (@ret,@lret);
 	$hits+=@lret;
     }

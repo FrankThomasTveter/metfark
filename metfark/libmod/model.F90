@@ -1209,7 +1209,6 @@ CONTAINS
     call chop0(path250,250)
     lenp=length(path250,250,20)
     if(mod_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
-    if (test.eq.1) return
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -1272,7 +1271,11 @@ CONTAINS
                & currentFile%var(ii)%ptr%var80(1:lenv),&
                & (currentFile%var(ii)%ptr%ind(jj),jj=1,currentFile%var(ii)%ptr%ndim)
        end do
-       currentFile=>currentFile%next
+       if (test.eq.0) then
+          currentFile=>currentFile%next
+       else
+          currentFile=>css%lastFile
+       end if
     end do
     ! close file
     close(unitr,iostat=irc)

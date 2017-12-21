@@ -54,7 +54,7 @@ void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, in
 
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
 void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
-void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,int* test,char*  crc250, int* irc, int len1, int len2, int len3);
+void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,char* cat250,int* test,char*  crc250, int* irc, int len1, int len2, int len3, int len4);
 void plo_settype_(int* pid, char* type250, char* crc250, int* irc, int len1, int len2);
 void plo_clearattrstack_(int* pid, char* crc250, int* irc, int len1, int len2);
 void plo_pushattr_(int* pid, char* name250, char* value250, char* crc250, int* irc, int len1, int len2);
@@ -1462,10 +1462,11 @@ xs_makeColocXML(int cid, int mid, int oid, char *xml, int test);
 #      (string)  error return message
 
 void
-xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph, int test);
+xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph, char* cat, int test);
     PREINIT:
       char *tab250;
       char *gra250;
+      char *cat250;
       int  irc;
       char *crc250;
     PPCODE:
@@ -1473,10 +1474,12 @@ xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph, i
       crc250 = calloc(sizeof(char), 250);
       tab250 = calloc(sizeof(char), 250);
       gra250 = calloc(sizeof(char), 250);
+      cat250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       strcpy(tab250,table);
       strcpy(gra250,graph);
-      plo_maketable_(&pid, &cid, &mid, &oid, tab250, gra250, &test, crc250, &irc, 250, 250, 250);
+      strcpy(cat250,cat);
+      plo_maketable_(&pid,&cid,&mid,&oid,tab250,gra250,cat250,&test,crc250,&irc,250,250,250,250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
@@ -1487,6 +1490,7 @@ xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph, i
       PUSHs(sv_2mortal(newSVpv(gra250,strlen(gra250))));
       free(tab250);
       free(gra250);
+      free(cat250);
       free(crc250);
 
 #

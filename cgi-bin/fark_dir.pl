@@ -257,14 +257,13 @@ sub cmdrf {
 	$doc->addChild( $parent );
 	my $path=$fpath . $iname;
 	if ($priv eq "rw") {
-	    my $ret=farkdir::removeFile($path,$password);
-	    if ($ret) {
+	    if (farkdir::removeFile($path,$password)) {
+		$parent->setAttribute("removed",$path);
+	    } else {
 		farkdir::term("Unable to remove file $path.".Dumper($param));
 		# my $e = XML::LibXML::Element->new( 'error' );
 		# $e->setAttribute("message","Unable to remove directory.");
 		# $parent->addChild( $e );
-	    } else {
-		$parent->setAttribute("removed",$path);
 	    };
 	} else {
 	    farkdir::term("Permission denied ($fpath,$priv).".Dumper($param));

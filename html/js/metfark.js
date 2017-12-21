@@ -59,7 +59,7 @@ function load_setConfigFile(type,file) {
     } else if (type === "plot") {
 	plot_setConfigFile(file);
     } else if (type === "auto") {
-	auto_setConfigFile(file);
+	auto_updateData();
     };
 };
 function load_updateData(type){
@@ -425,6 +425,8 @@ function showDropdown(target, arg = "") {
 	var file=model_getConfigFile();
 	var password=document.getElementById("modelConfigFilePsw").value;
 	var filterDir = model_config[file]["filterDir"];
+	var filterDirMin = model_config[file]["filterDirMin"];
+	var filterDirMax = model_config[file]["filterDirMax"];
 	var filterFile = model_config[file]["filterFile"];
 	var indexTarget = model_config[file]["indexTarget"];
 	var indexVariable = model_config[file]["indexVariable"];
@@ -433,6 +435,8 @@ function showDropdown(target, arg = "") {
 				      file:file,
 				      password:password,
 				      filterDir:filterDir,
+				      filterDirMin:filterDirMin,
+				      filterDirMax:filterDirMax,
 				      filterFile:filterFile,
 				      indexTarget:indexTarget,
 				      indexVariable:indexVariable
@@ -450,8 +454,9 @@ function showDropdown(target, arg = "") {
 			  removeChildren(item);
 			  var len=model_config[file]["files"].length;
 			  for (var ii=0; ii<len;ii++) {
-			      var sfile=model_config[file]["files"][ii];
-			      addChildButton(item,sfile,"model_fileFind('"+sfile+"');");
+			      var sfile=model_config[file]["files"][ii][0];
+			      var sage=parseFloat(model_config[file]["files"][ii][1]).toFixed(2);
+			      addChildButton(item,sfile+" ("+sage+")","model_fileFind('"+sfile+"');");
 			  }
 		      };
 		      documentLog.innerHTML="";
@@ -605,6 +610,8 @@ function showDropdown(target, arg = "") {
 	var file=obs_getConfigFile();
 	var password=document.getElementById("obsConfigFilePsw").value;
 	var filterDir = obs_config[file]["filterDir"];
+	var filterDirMin = obs_config[file]["filterDirMin"];
+	var filterDirMax = obs_config[file]["filterDirMax"];
 	var filterFile = obs_config[file]["filterFile"];
 	var table = obs_config[file]["tablePath"];
 	var obsTargets = "";
@@ -627,6 +634,8 @@ function showDropdown(target, arg = "") {
 				      file:file,
 				      password:password,
 				      filterDir:filterDir,
+				      filterDirMin:filterDirMin,
+				      filterDirMax:filterDirMax,
 				      filterFile:filterFile,
 				      table:obs_config[file]["tablePath"],
 				      obsTargets:obsTargets,
@@ -648,8 +657,9 @@ function showDropdown(target, arg = "") {
 			  removeChildren(item);
 			  var len=obs_config[file]["files"].length;
 			  for (var ii=0; ii<len;ii++) {
-			      var sfile=obs_config[file]["files"][ii];
-			      addChildButton(item,sfile,"obs_fileFind('"+sfile+"');");
+			      var sfile=obs_config[file]["files"][ii][0];
+			      var sage=parseFloat(obs_config[file]["files"][ii][1]).toFixed(2);
+			      addChildButton(item,sfile+" ("+sage+")","obs_fileFind('"+sfile+"');");
 			  }
 		      };
 		      documentLog.innerHTML="";
@@ -800,25 +810,33 @@ function showDropdown(target, arg = "") {
 	    var parent=dirs[0];
 	    if (parent != null) {
 		var dd=parent;
-		addChildButton(item,"<up>","coloc_setConfigFile('"+dd+"');coloc_show();");
+		console.log("Adding <up> button: '"+dd+"'");
+		//addChildButton(item,"<up>","coloc_setConfigFile('"+dd+"');coloc_show();");
+		addChildButton(item,"<up>","coloc_setConfigFile2('"+dd+"');");
 	    }
 	    if (args.length == 1) {
 		//console.log("Arg ret:",ret);
 		if (root["type"] == "dir" && root["loc"] != "") {
+		    console.log("Adding <rmdir> button: ",args[0]);
 		    addChildButton(item,"<rmdir>","coloc_rmdir('"+args[0]+"');");
 		} else if (root["type"] == "file") {
+		    console.log("Adding <rmfile> button: ",args[0]);
 		    addChildButton(item,"<rmfile>","coloc_rmfile('"+args[0]+"');");
 		} else if (root["type"] == "unknown") {
 		    if (looksLikeFile(args[0])) {
+			console.log("Adding <mkfile> button: ",args[0]);
 			addChildButton(item,"<mkfile>","coloc_mkfile('"+args[0]+"');coloc_show();");
 		    } else {
+			console.log("Adding <mkdir> button: ",args[0]);
 			addChildButton(item,"<mkdir>","coloc_mkdir('"+args[0]+"');");
 		    }
 		}
 	    } else if (args.length == 2) {
 		if (root["type"] == "dir") {
+		    console.log("Adding <cpdir> button: ",args[0],args[1]);
 		    addChildButton(item,"<cpdir>","coloc_cpdir('"+args[0]+"','"+args[1]+"');");
 		} else if (root["type"] == "file") {
+		    console.log("Adding <cpfile> button: ",args[0],args[1]);
 		    addChildButton(item,"<cpfile>","coloc_cpfile('"+args[0]+"','"+args[1]+"');coloc_setConfigFile('"+args[2]+"');coloc_show();");
 		} else if (root["type"] == "unknown") {
 		}
@@ -1010,6 +1028,7 @@ function showDropdown(target, arg = "") {
 	      });
     } else if (target === 'colocObsPOS') { //***********************************
 	var file=coloc_getObsConfigFile();
+	var mfile=coloc_getModelConfigFile();
 	if ( obs_config[file] !== undefined) {
 	    var bufrType = obs_config[file]["bufrType"];
 	    var subType = obs_config[file]["subType"];
@@ -1032,10 +1051,22 @@ function showDropdown(target, arg = "") {
 			}
 		    }
 		}
-		addChildButton(item," fid :: File id","showValue('colocObsPOS','fid');showValue('colocObsDESCR','');showValue('colocObsInfo','File id');");
-		addChildButton(item," mid :: Message id","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Message id');");
-		addChildButton(item," oid :: Observation id","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Observation id');");
-		addChildButton(item," lid :: Location id","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Location id');");
+		// add internal variables...
+		addChildButton(item," Internal :: fid = File id","showValue('colocObsPOS','fid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal file id');",'shaded');
+		addChildButton(item," Internal :: mid = Message id","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal message id');",'shaded');
+		addChildButton(item," Internal :: oid = Observation id","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal observation id');",'shaded');
+		addChildButton(item," Internal :: lid = Location id","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal location id');",'shaded');
+		// add dimensions...
+ 		if (model_config[mfile] !== undefined) {
+		    for (var dim in model_config[mfile]["dimensions"]) {
+			var dimname=dim;
+			var dimv=model_config[file]["dimensions"][dim];
+			if (dimv !=  null) {
+			    addChildButton(item,"Duplication :: "+dimname+"("+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
+					   "showValue('colocObsInfo','Duplication ("+dimname+") 1:"+dimv+"');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');");
+			}
+		    }
+		}
 	    }
 	}
     } else if (target === 'matchModelTargetName') { //***********************************
@@ -1155,7 +1186,7 @@ function showDropdown(target, arg = "") {
 	    //var root=ret[0];
 	    console.log("Updating dropdown for ",target);
 	    removeChildren(item);
-	    for (var cat in plot_cats) {
+	    for (var cat in plot_org_cats) {
 		console.log("Adding config button: ",cat);
 		addChildButton(item,cat,"plot_setCat('"+cat+"');showValue('plotCat','"+cat+"');plot_show()");
 	    }
@@ -1373,19 +1404,25 @@ function showDropdown(target, arg = "") {
 	var attr = target.substring(13);
 	var file=plot_getConfigFile();
 	var cat=plot_config[file]["cat"];
+	if (plot_cats[cat] === undefined) {plot_setCat(cat);}
 	var val=plot_cats[cat]["attributes"][attr];
 	var radio=val instanceof Array; // should we have radio button?
+	var dup=(attr.substr(0,1) === "_");
 	removeChildren(item);
 	if (radio) {
 	    for (var vv=0; vv < val.length;vv++) {
 		console.log("Attribute '",attr,"' value  ",vv,val[vv]);
-		addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');plot_showAttributesTable();");
+		if (dup) {
+		    addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');plot_setCat('"+cat+"');plot_show();");
+		} else {
+		    addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');");
+		};
 	    };
 	}
     } else if (target === 'autoType') { //***********************************
 	removeChildren(item);
-	addChildButton(item,"observation","showValue('"+target+"','obs');");
 	addChildButton(item,"model","showValue('"+target+"','model');");
+	addChildButton(item,"observation","showValue('"+target+"','obs');");
 	addChildButton(item,"colocation","showValue('"+target+"','coloc');");
 	addChildButton(item,"plot","showValue('"+target+"','plot');");
     } else if (target === 'autoConfigFile') { //***********************************
@@ -1441,6 +1478,18 @@ function showDropdown(target, arg = "") {
 	    }
 	    documentLog.innerHTML="";
 	});
+    } else if (target === 'autoCron') { //***********************************
+	var type=document.getElementById("autoType").value // "obs";
+	var args=getArgs(arg);
+	removeChildren(item);
+	for (var ii=0;ii<auto_cron.length;ii++) {
+	    var cron=auto_cron[ii];
+	    if (cron === "") {
+		addChildButton(item,"<never>","showValue('autoCron','"+cron+"');");
+	    } else {
+		addChildButton(item,cron,"showValue('autoCron','"+cron+"');");
+	    }
+	}
     } else {
 	console.log("Unknown dropdown target:", target);
     }
@@ -1493,6 +1542,13 @@ function dataToModel(data) {
 	}
 	model_config[path]["filterDir"]=
 	    set(model_config[path]["filterDir"],models[ii].getAttribute("filterDir"));
+	model_config[path]["filterDirMin"]=
+	    set(model_config[path]["filterDirMin"],models[ii].getAttribute("filterDirMin"));
+	model_config[path]["filterDirMax"]=
+	    set(model_config[path]["filterDirMax"],models[ii].getAttribute("filterDirMax"));
+	console.log("Filter dir:","'"+model_config[path]["filterDir"]+"'",
+		    "'"+model_config[path]["filterDirMin"]+"'",
+		    "'"+model_config[path]["filterDirMax"]+"'");
 	model_config[path]["filterDirStat"]=
 	    set(model_config[path]["filterDirStat"],models[ii].getAttribute("filterDirStat"));
 	model_config[path]["filterFile"]=
@@ -1534,8 +1590,9 @@ function dataToModel(data) {
 	    model_config[path]["files"]=[];
 	    for (var jj = 0; jj < files.length; jj++) {
 		var sname=files[jj].getAttribute("name");
+		var sage=files[jj].getAttribute("age");
 		console.log("Found stack file:",sname,' (',path,')');
-		model_config[path]["files"].push(sname);
+		model_config[path]["files"].push([sname,sage]);
 	    }
 	    model_config[path]["stack"]=files[0].getAttribute("name");
 	} else if (model_config[path]["files"] === undefined) {
@@ -1559,6 +1616,10 @@ function dataToObs(data) {
 	}
 	obs_config[path]["filterDir"]=
 	    set(obs_config[path]["filterDir"],obs[ii].getAttribute("filterDir"));
+	obs_config[path]["filterDirMin"]=
+	    set(obs_config[path]["filterDirMin"],obs[ii].getAttribute("filterDirMin"));
+	obs_config[path]["filterDirMax"]=
+	    set(obs_config[path]["filterDirMax"],obs[ii].getAttribute("filterDirMax"));
 	obs_config[path]["filterDirStat"]=
 	    set(obs_config[path]["filterDirStat"],obs[ii].getAttribute("filterDirStat"));
 	obs_config[path]["filterFile"]=
@@ -1624,9 +1685,7 @@ function dataToObs(data) {
 		    obs_config[path]["targets"][target]={
 			pos:targets[jj].getAttribute("pos"),
 			descr:targets[jj].getAttribute("descr"),
-			info:targets[jj].getAttribute("info"),
-			min:targets[jj].getAttribute("min"),
-			max:targets[jj].getAttribute("max")};
+			info:targets[jj].getAttribute("info")};
 		    obs_config[path]["targeto"].push(target);
 		}
 	    }
@@ -1635,7 +1694,9 @@ function dataToObs(data) {
 	if (files.length > 0) {
 	    obs_config[path]["files"]=[];
 	    for (var jj = 0; jj < files.length; jj++) {
-		obs_config[path]["files"].push(files[jj].getAttribute("name"));
+		var sname=files[jj].getAttribute("name");
+		var sage=files[jj].getAttribute("age");
+		obs_config[path]["files"].push([sname,sage]);
 	    };
 	    obs_config[path]["stack"]=files[0].getAttribute("name");
 	} else if (obs_config[path]["files"] === undefined) {
@@ -1796,13 +1857,13 @@ function dataToPlot(data) {
 function dataToCat(data) {
     var cats=data.getElementsByTagName("cat_config");
     if (cats.length>0) {
-	plot_cats={};
+	plot_org_cats={};
 	plot_order=[];
     }
     for (var jj = 0; jj < cats.length; jj++) {
 	var name=cats[jj].getAttribute("name");
 	var attrs=cats[jj].getElementsByTagName("attr");
-	plot_cats[name]={"attributes":{},"lines":{},"order":[]};
+	plot_org_cats[name]={"attributes":{},"lines":{},"order":[]};
 	plot_order.push(name);
 	for (var kk = 0; kk < attrs.length; kk++) {
 	    var attr=attrs[kk].getAttribute("name");
@@ -1814,25 +1875,25 @@ function dataToCat(data) {
 			choices.splice(i,1);
 		    }
 		};
-		plot_cats[name]["attributes"][attr]=choices;
+		plot_org_cats[name]["attributes"][attr]=choices;
 	    } else {
-		plot_cats[name]["attributes"][attr]=value;
+		plot_org_cats[name]["attributes"][attr]=value;
 	    }
-	    plot_cats[name]["order"].push(attr);
+	    plot_org_cats[name]["order"].push(attr);
 	};
 	var types=cats[jj].getElementsByTagName("line");
-	if (types.length>0) {plot_cats[name]["lines"]={};}
+	if (types.length>0) {plot_org_cats[name]["lines"]={};}
 	 for (var kk = 0; kk < types.length; kk++) {
 	     var id=types[kk].getAttribute("id");
 	     var info=types[kk].getAttribute("name");
-	     plot_cats[name]["lines"][id]=info;
+	     plot_org_cats[name]["lines"][id]=info;
 	     //console.log("metfark: loaded line: ",name,id,info);
 	 };
 	var clmns=cats[jj].getElementsByTagName("column");
-	if (clmns.length>0) {plot_cats[name]["columns"]=[];}
+	if (clmns.length>0) {plot_org_cats[name]["columns"]=[];}
 	 for (var kk = 0; kk < clmns.length; kk++) {
 	     var clmn=clmns[kk].getAttribute("name");
-	     plot_cats[name]["columns"].push(clmn);
+	     plot_org_cats[name]["columns"].push(clmn);
 	     console.log("metfark: loaded column: ",name,clmn);
 	 };
     };
@@ -1847,7 +1908,8 @@ function dataToAuto(data) {
 	    var model=models[jj].getAttribute("file");
 	    var last=models[jj].getAttribute("last") || "";
 	    var info=models[jj].getAttribute("info") || "";
-	    var auto=models[jj].getAttribute("auto") == "true";
+	    var auto=models[jj].getAttribute("auto") || auto_cron[0];
+	    if (! isInArray(auto,auto_cron)) {auto=auto_cron[0];};
 	    var status=models[jj].getAttribute("status") ||"";
 	    auto_config["model"][model]={last:last,info:info,auto:auto,status:status};
 	};
@@ -1857,7 +1919,8 @@ function dataToAuto(data) {
 	    var obs=obses[jj].getAttribute("file");
 	    var last=obses[jj].getAttribute("last") ||"";
 	    var info=obses[jj].getAttribute("info") ||"";
-	    var auto=obses[jj].getAttribute("auto") == "true";
+	    var auto=obses[jj].getAttribute("auto")  || auto_cron[0];
+	    if (! isInArray(auto,auto_cron)) {auto=auto_cron[0];};
 	    var status=obses[jj].getAttribute("status") ||"";
 	    auto_config["obs"][obs]={last:last,info:info,auto:auto,status:status};
 	};
@@ -1867,7 +1930,8 @@ function dataToAuto(data) {
 	    var coloc=coloces[jj].getAttribute("file");
 	    var last=coloces[jj].getAttribute("last") ||"";
 	    var info=coloces[jj].getAttribute("info") ||"";
-	    var auto=coloces[jj].getAttribute("auto") == "true";
+	    var auto=coloces[jj].getAttribute("auto")  || auto_cron[0];
+	    if (! isInArray(auto,auto_cron)) {auto=auto_cron[0];};
 	    var status=coloces[jj].getAttribute("status") ||"";
 	    auto_config["coloc"][coloc]={last:last,info:info,auto:auto,status:status};
 	};
@@ -1877,7 +1941,8 @@ function dataToAuto(data) {
 	    var plot=plotes[jj].getAttribute("file");
 	    var last=plotes[jj].getAttribute("last") ||"";
 	    var info=plotes[jj].getAttribute("info") ||"";
-	    var auto=plotes[jj].getAttribute("auto") == "true";
+	    var auto=plotes[jj].getAttribute("auto")  || auto_cron[0];
+	    if (! isInArray(auto,auto_cron)) {auto=auto_cron[0];};
 	    var status=plotes[jj].getAttribute("status") ||"";
 	    auto_config["plot"][plot]={last:last,info:info,auto:auto,status:status};
 	};
@@ -2103,6 +2168,10 @@ function getSubDirs(cls,root,loc,child) {
 	ret.push(entry);
     }
     return ret;
+}
+
+function isInArray(value, array) {
+  return array.indexOf(value) > -1;
 }
 
 Array.prototype.extend = function (other_array) {

@@ -1,4 +1,4 @@
-coloc_file="default.cfg";
+coloc_file="default.cfg"; // always valid file
 coloc_config = { "default.cfg" : { modelConfigFile : { file: "default.cfg",
 						       min : "def_min",
 						       max : "def_max",
@@ -44,18 +44,24 @@ function coloc_allocate(file) {
 	console.log("cloned:",file,coloc_file,coloc_config[file]);
     }
 }
-function coloc_setConfigFile(file) {
+function coloc_setConfigFile2(file) {
     showValue('colocConfigFile',file);
     showValue('colocConfigFileSave',file);
-    if (file != "") {
+    console.log("Setting file= '"+file+"'");
+}
+function coloc_setConfigFile(file) {
+    console.log("Setting file= '"+file+"'");
+    showValue('colocConfigFile',file);
+    showValue('colocConfigFileSave',file);
+    //if (file != "") {
 	coloc_allocate(file);
 	coloc_file=file;
 	var mfile=coloc_getModelConfigFile();
 	if (coloc_modelIsNotLoaded(mfile)) {coloc_updateModelData(mfile);}
 	var ofile=coloc_getObsConfigFile();
 	if (coloc_obsIsNotLoaded(ofile)) {coloc_updateObsData(ofile);}
-	coloc_showCOLOC();
-    };
+    //};
+    coloc_showCOLOC();
 };
 function coloc_getConfigFile() {
     return coloc_file;
@@ -667,8 +673,8 @@ function coloc_showObsTargetTable() {
 	    } else {
 		color="black";
 	    };
-	    coloc_insertOTargetRow(tail,target,otargets[target]["pos"],otargets[target]["descr"],color,
-				   otargets[target]["info"],otargets[target]["min"],otargets[target]["max"]);
+	    coloc_insertOTargetRow(tail,target,otargets[target]["pos"],
+				   otargets[target]["descr"],color,otargets[target]["info"]);
 	}
     };
     // make index row
@@ -786,7 +792,7 @@ function coloc_insertOTargetIndexRow(item,target,exp,min,max) {
     item.parentNode.insertBefore(row,item);
 }
 // create auto table row
-function coloc_insertOTargetRow(item,target,pos,descr,color,info,min,max) {
+function coloc_insertOTargetRow(item,target,pos,descr,color,info) {
     var row = document.createElement("TR");
     var td, inp;
     // make "-" column  ***************************
@@ -814,15 +820,8 @@ function coloc_insertOTargetRow(item,target,pos,descr,color,info,min,max) {
     row.appendChild(td);
     // make info column  ***************************
     td=document.createElement("TD");
+    td.setAttribute("colspan","3");
     td.innerHTML=info;
-    row.appendChild(td);
-    // make min column  ***************************
-    td=document.createElement("TD");
-    td.innerHTML=min;
-    row.appendChild(td);
-    // make max column  ***************************
-    td=document.createElement("TD");
-    td.innerHTML=max;
     row.appendChild(td);
     // make add row to table  ***************************
     item.parentNode.insertBefore(row,item);

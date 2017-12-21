@@ -333,13 +333,17 @@ Arguments:
 
 =item (string) file mask.
 
+=item (string) minimum file age (in days)
+
+=item (string) maximum file age (in days)
+
 =item (int) test flag (1 or 0), 1= only check input
 
 =back
 
 =head4 EXAMPLE
 
-$fark->updateModelRegister($xmlfile,$modregfile,"/opdata/arome/", ".*\.nc",0);
+$fark->updateModelRegister($xmlfile,$modregfile,"/opdata/arome/", ".*\.nc","","",0);
 
 =cut
 
@@ -348,14 +352,16 @@ sub updateModelRegister {
     my $register_file = shift;
     my $mask_dir = shift;
     my $mask=shift;
-    my $test=shift // 0;
+    my $min = shift // "";
+    my $max = shift // "";
+    my $test = shift // 0;
     my $new_file_cnt = 0;
     my @new_file_list;
     my @push_files;
     my @pop_files;
     if ($test) {return ();};
     my $write_register_file=0;
-    my @new_line_list = GetFiles($mask_dir,$mask) or return @push_files;
+    my @new_line_list = GetFiles($mask_dir,$mask,$min,$max) or return @push_files;
     my %new_file_hash;
     foreach (@new_line_list) {
 	s/\s+/ /g; # replace any train of blanks with single blank
@@ -837,11 +843,15 @@ Arguments:
 
 =item (string) file mask.
 
+=item (string) minimum file age (in days)
+
+=item (string) maximum file age (in days)
+
 =back
 
 =head4 EXAMPLE
 
-$fark->updateObservationRegister($obsregfile,"/opdata/obs_dec/rdb/temp/temp_*06*.bufr");
+$fark->updateObservationRegister($obsregfile,"/opdata/obs_dec/rdb/temp/temp_*06*.bufr","","",0);
 
 =cut
 
@@ -850,6 +860,8 @@ sub updateObservationRegister {
     my $register_file = shift;
     my $mask_dir = shift;
     my $mask = shift;
+    my $min = shift // "";
+    my $max = shift // "";
     my $test = shift // 0; 
     my $new_file_cnt = 0;
     my @new_file_list;
@@ -857,7 +869,7 @@ sub updateObservationRegister {
     my @pop_files;
     my $write_register_file=0;
     if ($test) {return ();};
-    my @new_line_list = GetFiles($mask_dir,$mask) or return @push_files;
+    my @new_line_list = GetFiles($mask_dir,$mask,$min,$max) or return @push_files;
     my %new_file_hash;
     foreach (@new_line_list) {
 	s/\s+/ /g; # replace any train of blanks with single blank
@@ -1616,13 +1628,15 @@ Arguments:
 
 =item (string) Path to plot file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)
 
+=item (string) Path to Rscript file
+
 =item (int) test flag (1 or 0), 1= only check input
 
 =back
 
 =head4 EXAMPLE
 
-my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern,0);
+my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern,$catfile,0);
 
 =cut
 
@@ -1630,6 +1644,7 @@ sub makePlotTable {
     my $self = shift;
     my $tfile = shift;
     my $gfile = shift;
+    my $cfile = shift;
     my $test = shift//0;
     my $ret;
     my $msg;
@@ -1656,7 +1671,7 @@ sub makePlotTable {
     # make the output...
     ($ret,$msg,my $tablefile,my $graphicfile) = 
 	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},
-			 $tfile,$gfile,$test);
+			 $tfile,$gfile,$cfile,$test);
     if ($ret != 0) {
 	if (-e $tablefile) {unlink $tablefile;};
 	die $msg;
@@ -1716,14 +1731,26 @@ sub makeHashBranch{
 }
 
 sub GetFiles {
-    my($filterDir,$filter) = @_;
+    my($filterDir,$filter,$min,$max) = @_;
     my @files=();
     find({wanted => sub {
 	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
 	    my $file=$File::Find::name;
-	    my $sb=(stat($file))[9];
-	    my $s= $sb. " " . $file;
-	    push(@files, $s);
+	    my $ok=1;
+	    if ($min || $max) {
+		my $age=(-M $file);
+		if ($min && $age < $min) {
+		    $ok=0;
+		};
+		if ($max && $age > $max) {
+		    $ok=0;
+		};
+	    }
+	    if ($ok) {
+		my $sb=(stat($file))[9];
+		my $s= $sb. " " . $file;
+		push(@files, $s);
+	    }
 	}
 	  }}, $filterDir);
     return @files;

@@ -619,11 +619,10 @@ CONTAINS
     integer :: lenp,unitr
     character*250 :: buff250, str250
     character*22 :: myname = "observation_makeCache"
-    if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
+    !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(obs_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
-    if (test.eq.1) return
+    if(obs_bdeb)write(*,*)myname," *** Entering '"//path250(1:lenp)//"'",test,irc
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -674,7 +673,11 @@ CONTAINS
           end do
           currentCat=>currentCat%next
        end do
-       currentFile=>currentFile%next
+       if (test.eq.0) then
+          currentFile=>currentFile%next
+       else
+          currentFile=>css%lastFile
+       end if
     end do
     ! close file
     close(unitr,iostat=irc)
@@ -702,10 +705,18 @@ CONTAINS
     integer :: lenp,lenf,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
     character*22 :: myname = "observation_loadCache"
-    if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
+    !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(obs_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
+    if(obs_bdeb)write(*,*)myname," *** Entering '"//path250(1:lenp)//"'",irc
+    if (lenp.eq.0) then
+       irc=377
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Empty cache-file.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
     ! clear existing cache
     css%stackReady=.false.
     call observation_removeFiles(css,crc250,irc)
@@ -717,6 +728,7 @@ CONTAINS
        return
     end if
     ! open cache file
+    if(obs_bdeb)write(*,*)myname," Opening:'"//path250(1:lenp)//"'"
     open ( unit=unitr, status="old", form="formatted", &
          &        access="sequential", &
          &        iostat=irc, file=path250(1:lenp) )
@@ -747,6 +759,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    if(obs_bdeb)write(*,*)myname," Indexed filed:",css%nFileIndexes
     ! loop through cache file
     do ii=1,css%nFileIndexes
        allocate(newFile,stat=irc)
@@ -1707,7 +1720,7 @@ CONTAINS
           if (lend.eq.0.and.lenp.eq.0) then ! this is a delayed variable
              css%trg_type(ii)=parse_delay ! delay processing
              css%trg_descr(ii)=0
-             write(*,*)myname,' Duplicator candidate at:',ii
+             if(obs_bdeb)write(*,*)myname,' Duplicator candidate at:',ii
           else if (css%trg_type(ii).ne.parse_internal) then ! no descriptor
              read(currenttarget%descr80(1:lend),*,iostat=irc) css%trg_descr(ii)
              if (irc.ne.0) then
@@ -1867,7 +1880,7 @@ CONTAINS
           end if
           if (css%trg_lval(1,ii).and.css%trg_lval(2,ii)) then ! max min available
              if (css%trg_type(ii).eq.parse_delay) then ! no descriptor or position...
-                write(*,*)myname,' Found duplicator at:',ii
+                if(obs_bdeb)write(*,*)myname,' Found duplicator at:',ii
                 jj=jj+1
                 ind(jj)=ii
                 inc(jj)=abs(nint(css%trg_maxval(ii))-nint(css%trg_minval(ii))+1)*inc(jj-1)
@@ -3759,7 +3772,7 @@ CONTAINS
           return
        end if
        if (css%currentFile%nsubset.eq.0) then
-          write(*,*)myname,'No subsets found.'
+          if(obs_bdeb)write(*,*)myname,'No subsets found.'
        else
           !write(*,*)myname,'Subsets:',css%currentFile%nsubset
        end if
@@ -3914,7 +3927,7 @@ CONTAINS
     CALL PBOPEN(UNIT,css%currentfile%fn250(1:css%currentfile%lenf),'R',irc)
     !write(*,*)myname,'Opened file: ',css%currentfile%fn250(1:css%currentfile%lenf)
     if (irc.ne.0) then
-       write(*,*)myname,'Unable to open file.',irc
+       if(obs_bdeb)write(*,*)myname,'Unable to open file.',irc
        call observation_errorappend(crc250,myname)
        IF(irc.EQ.-1) call observation_errorappend(crc250,'OPEN FAILED.')
        IF(irc.EQ.-2) call observation_errorappend(crc250,'INVALID FILE NAME.')
@@ -3975,7 +3988,7 @@ CONTAINS
           return
        end if
        IF (IRC.NE.0) THEN
-          write(*,*)myname,'Unable to read file.',irc
+          if(obs_bdeb)write(*,*)myname,'Unable to read file.',irc
           call observation_errorappend(crc250,myname)
           IF(irc.EQ.-2) call observation_errorappend(crc250,'FILE HANDLING PROBLEM.' )
           IF(irc.EQ.-3) call observation_errorappend(crc250,'ARRAY TOO SMALL FOR PRODUCT.')
@@ -4609,14 +4622,14 @@ CONTAINS
           open(unit=iunit,file=c250(1:lent),iostat=irc,status="old",&
                & FORM='FORMATTED',ACCESS='SEQUENTIAL')
           if (irc.ne.0) then
-             write(*,*) myname,'Unable to open: ',c250(1:lent)
+             if(obs_bdeb)write(*,*) myname,'Unable to open: ',c250(1:lent)
              return
           end if
           line=0
           read(iunit,'(I6,X,I4,X,I8,X,I2,X,A)',iostat=irc) code, scnt, subcode, lcnt, val250
           line=line+1
           if (irc.ne.0) then
-             write(*,*) myname,'Unable to read: ',c250(1:lent)
+             if(obs_bdeb)write(*,*) myname,'Unable to read: ',c250(1:lent)
              return
           end if
           bdone=irc.ne.0
@@ -4652,7 +4665,7 @@ CONTAINS
                       ctable%tables(cnt)%values(pos)=val250
                       ctable%tables(cnt)%index(pos)=pos
                    end if
-                else
+                else if (obs_bdeb) then
                    write(*,*)myname,'Error reading line:',line
                 end if
              end do

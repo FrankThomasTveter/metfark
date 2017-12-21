@@ -12,11 +12,12 @@ plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
 				  password: "test"
 				}
 	      };
-plot_cats = { "Text": {"attributes":{xlabel:"X", ylabel:"Y"},
+plot_org_cats = { "Text": {"attributes":{xlabel:"X", ylabel:"Y"},
 		       "order":["xlabel","ylabel"],
 		       "lines": {1:"solid"},
                        "columns" : ["X-expression","Y-expression"]}
 	    };
+plot_cats  ={};
 plot_order =["Text"];
 plot_configEd = 0;
 
@@ -39,11 +40,12 @@ function plot_allocate(file) {
 function plot_setConfigFile(file) {
     showValue('plotConfigFile',file);
     showValue('plotConfigFileSave',file);
-    if (file != "") {
+    //if (file != "") {
 	console.log("Setting plot config file:",file);
 	plot_allocate(file);
 	plot_file=file;
-    };
+        plot_setCat();
+    //};
 }
 function plot_getConfigFile() {
     return plot_file;
@@ -70,10 +72,100 @@ function plot_setArray(parameter,value) {
     //console.log("File:",file,parameter,plot_config[file]);
     plot_config[file][parameter]=decodeURI(value);
 };
+
+function plot_expandCat(cat) {
+    var file=plot_getConfigFile();
+    plot_cats[cat]=goclone(plot_org_cats[cat]);
+    for (var attr in plot_org_cats[cat]["attributes"]) {
+	console.log("Found org attribute:",attr);
+    }
+    for (var attr in plot_org_cats[cat]["attributes"]) {
+	if (attr.substr(0,1) === "_") {
+	    if (plot_config[file]!== undefined &&
+		plot_config[file]["attributes"][attr] !== undefined) {
+		var nn = plot_config[file]["attributes"][attr];
+	    } else {
+		var val=plot_org_cats[cat]["attributes"][attr];
+		if (val instanceof Array) {
+		    var nn=val[0]; // first element
+		} else {
+		    var nn=val;
+		}
+	    };
+	    console.log("Duplicator attribute '"+attr+"' = ",nn);
+	    var re = new RegExp("(\w*)"+RegExp.quote(attr)+"(\w*)", "g");
+	    for (var aa in plot_cats[cat]["attributes"]) {
+		if (aa.match(re) && aa !== attr) {
+		    //console.log("Attribute match '"+aa+"' == '"+attr+"'");
+		    // delete aa attribute
+		    var val=plot_cats[cat]["attributes"][aa];
+		    delete plot_cats[cat]["attributes"][aa];
+		    var index = plot_cats[cat]["order"].indexOf(aa);
+		    plot_cats[cat]["order"].splice(index, 1);
+		    for (var ii=nn;ii>0;ii--) {
+			var newattr = aa.replace(re, '$1'+ii.toString()+'$2');
+			// add attribute
+			console.log("Adding attribute '"+newattr+"' = ",val);
+			plot_cats[cat]["attributes"][newattr]=val;
+			plot_cats[cat]["order"].splice(index,0,newattr);
+		    }
+		} else {
+		    //console.log("Attribute mismatch '"+aa+"' != '"+attr+"'");
+		}
+	    }
+	    for (var jj = 0; jj <  plot_cats[cat]["columns"].length;jj++) {
+		var cc=plot_cats[cat]["columns"][jj];
+		if (cc.match(re)) {
+		    // delete cc column
+		    console.log("Column match '"+cc+"' == '"+attr+"'");
+		    var index = plot_cats[cat]["columns"].indexOf(cc);
+		    plot_cats[cat]["columns"].splice(index, 1);
+		    for (var ii=nn;ii>0;ii--) {
+			var newcol = cc.replace(re, '$1'+ii.toString()+'$2');
+			console.log("Adding column '"+newattr+"'");
+			// add column
+			plot_cats[cat]["columns"].splice(index,0,newcol);
+		    }
+		}else {
+		    console.log("Column mismatch '"+cc+"' != '"+attr+"'");
+		}
+	    }
+	}
+    }
+}
+
+RegExp.quote = function(str) {
+    return (str+'').replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&");
+};
+function goclone(source) {
+    if (Object.prototype.toString.call(source) === '[object Array]') {
+        var clone = [];
+        for (var i=0; i<source.length; i++) {
+            clone[i] = goclone(source[i]);
+        }
+        return clone;
+    } else if (typeof(source)=="object") {
+        var clone = {};
+        for (var prop in source) {
+            if (source.hasOwnProperty(prop)) {
+                clone[prop] = goclone(source[prop]);
+            }
+        }
+        return clone;
+    } else {
+        return source;
+    }
+}
+
 function plot_setCat(value) {
     var file=plot_getConfigFile();
+    if (value===undefined) {
+	value=plot_config[file]["cat"]
+    };
     //console.log("File:",file,parameter,plot_config[file]);
     plot_config[file]["cat"]=value;
+    //
+    plot_expandCat(value);
     // sync file and cat attributes
     for (var attr in plot_config[file]["attributes"]) {
 	if (plot_cats[value]===undefined || 
@@ -529,10 +621,10 @@ function plot_showAttributesTable() {
     for (var ii=order.length-1;ii>=0;ii--) {
 	var attr=order[ii];
 	var val=plot_cats[cat]["attributes"][attr];
-	plot_insertAttributeRow(head,attr,value[attr],val);
+	plot_insertAttributeRow(head,cat,attr,value[attr],val);
     }
 }
-function plot_insertAttributeRow(item,attr,value,val) {
+function plot_insertAttributeRow(item,cat,attr,value,val) {
     var row = document.createElement("TR");
     var td,inp,div;
     var radio=val instanceof Array; // should we have radio button?
@@ -549,7 +641,12 @@ function plot_insertAttributeRow(item,attr,value,val) {
     inp.setAttribute("type","text");
     inp.setAttribute("value",value);
     inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","plot_setAttribute('"+attr+"',this.value);");
+    var dup=(attr.substr(0,1) === "_");
+    if (dup) {
+	inp.setAttribute("onblur","plot_setAttribute('"+attr+"',this.value);plot_setCat('"+cat+"');plot_show();");
+    } else {
+	inp.setAttribute("onblur","plot_setAttribute('"+attr+"',this.value);");
+    }
     if (radio) {
 	inp.disabled=true;
     }
@@ -596,6 +693,7 @@ function plot_updateData() {
 	      dataToArray(data,status,documentLog);
 	      plotLoaded=true;
 	      //console.log("Updating dropdown for ",arg);
+	      plot_setCat();
 	      plot_show();
 	      documentLog.innerHTML="";
 	  });

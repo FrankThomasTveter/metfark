@@ -84,8 +84,8 @@ module plot
      logical                         :: ind(3)   ! true if both ind_start and ind_stop are valid
      real                            :: ind_start=0.0D0         ! lowest index
      real                            :: ind_stop=0.0D0          ! highest index
-     character*250 :: obs250 ! observation cache file
-     character*250 :: mod250 ! model cache file
+     character*250 :: obs250="" ! observation cache file
+     character*250 :: mod250="" ! model cache file
      character*80                    :: ind_trg80=""            ! model index target name
      character*80                    :: ind_mod80=""            ! model index variable
      ! obs data
@@ -690,7 +690,7 @@ CONTAINS
     integer :: irc
     type(plot_column), pointer :: col, ncol
     character*22 :: myname ="clearcolumn"
-    if(plot_bdeb) write(*,*)myname, 'Entering.',irc,&
+    if(plot_bdeb)write(*,*)myname, 'Entering.',irc,&
          & associated(pss%firstColumn),associated(pss%lastColumn)
     col=>pss%firstColumn%next
     do while (.not.associated(col,target=pss%lastColumn))
@@ -704,7 +704,7 @@ CONTAINS
     pss%ncol=0
     !pss%firstColumn%next=>pss%lastColumn
     !pss%lastColumn%prev=>pss%firstColumn
-    if(plot_bdeb) write(*,*)myname, 'Done.',irc
+    if(plot_bdeb)write(*,*)myname, 'Done.',irc
     return
   end subroutine plot_clearcolumn
   !
@@ -785,25 +785,25 @@ CONTAINS
     integer :: irc
     character*22 :: myname ="pushset"
     type(plot_set), pointer :: set !  current set
-    if(plot_bdeb) write(*,*)myname,'Entering.',irc
+    if(plot_bdeb)write(*,*)myname,'Entering.',irc
     call plot_allocateSet(set,crc250,irc)
     set%name80=name80
     set%leg250=leg250
-    if(plot_bdeb) write(*,*)myname,'Importing obs.',irc
+    if(plot_bdeb)write(*,*)myname,'Importing obs.',irc
     call plot_obsImport(set,oss,crc250,irc) ! get obs data 
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from obsImport.")
        return
     end if
-    if(plot_bdeb) write(*,*)myname,'Importing model.',irc
+    if(plot_bdeb)write(*,*)myname,'Importing model.',irc
     call plot_modImport(set,mss,crc250,irc) ! get model data
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from modImport.")
        return
     end if
-    if(plot_bdeb) write(*,*)myname,'Importing colocation.',irc
+    if(plot_bdeb)write(*,*)myname,'Importing colocation.',irc
     call plot_colImport(set,css,crc250,irc) ! get colocation data
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -822,7 +822,7 @@ CONTAINS
     set%next%prev => set
     pss%nset=pss%nset+1
     nullify(set)
-    if(plot_bdeb) write(*,*)myname,'Exiting.',irc
+    if(plot_bdeb)write(*,*)myname,'Exiting.',irc
     return
   end subroutine plot_pushset
   !
@@ -1837,6 +1837,8 @@ CONTAINS
     integer :: irc
     character*80 :: n80,v80,l80,u80
     character*250 :: e250
+    integer, external :: length
+    integer :: leno
     character*22 :: myname ="colImport"
     call colocation_getmodcache(css,set%mod250,crc250,irc)
     if (irc.ne.0) then
@@ -1850,7 +1852,10 @@ CONTAINS
        call plot_errorappend(crc250," Error return from getobscache.")
        return
     end if
-    if (plot_bdeb) write(*,*)myname,'Get default stack.',irc
+    if (plot_bdeb) then
+       leno=length(set%obs250,250,10)
+       write(*,*)myname,"Get default stack '"//set%obs250(1:leno)//"'",irc
+    end if
     call plot_clearDefaultStack(set,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1982,7 +1987,7 @@ CONTAINS
   !###############################################################################
   !
   !
-  subroutine plot_maketable(pss,css,mss,oss,tab250,gra250,test,crc250,irc)
+  subroutine plot_maketable(pss,css,mss,oss,tab250,gra250,cat250,test,crc250,irc)
     use model
     use observations
     use colocation
@@ -1993,20 +1998,20 @@ CONTAINS
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
     integer :: cid,mid,oid
-    character*250 :: tab250,gra250
+    character*250 :: tab250,gra250,cat250
     integer :: test
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="maketable"
     type(parse_session), pointer :: psx,psy
-    integer :: nvar,ounit,lent
+    integer :: nvar,ounit
     character*250 :: leg250
     character*80 :: name80
     character*80, allocatable :: var80(:)
     real, allocatable :: val(:)
     integer :: mloc,mtrg,oloc,otrg
     integer, external :: length
-    integer :: lenc,lene,lenn,lenl
+    integer :: lenc,lene,lenn,lenl,lent,leng
     real :: valx, valy
     integer :: tmod,emod,dmod,tobs,ii,jj,ind_ii,nfunc
     logical :: bobsind
@@ -2035,6 +2040,12 @@ CONTAINS
     end if
     !
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
+    call chop0(cat250,250)
+    lenc=length(cat250,250,10)
+    call chop0(gra250,250)
+    leng=length(gra250,250,10)
+    write(ounit,'("# COMMAND: Rscript --vanilla ",A,X,A,X,A)',iostat=irc) &
+         & cat250(1:lenc),tab250(1:lent),gra250(1:leng)
     !
     ! loop over set and write attributes and legend as comments
     !
@@ -2046,7 +2057,7 @@ CONTAINS
        call plot_errorappend(crc250,pss%tab250(1:pss%lent))
        return
     end if
-    write(ounit,'("# Type:",A)',iostat=irc)pss%type250(1:pss%lenp)
+    write(ounit,'("# TYPE:",A)',iostat=irc)pss%type250(1:pss%lenp)
     write(ounit,'("#")',iostat=irc)
     ! print attributes
     write(ounit,'("# ATTRIBUTES:",I0)',iostat=irc)pss%natt
@@ -2072,6 +2083,11 @@ CONTAINS
        lenl=length(leg250,250,1)
        write(ounit,'("#",X,A,":",A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
     end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from loopset'.")
+       return
+    end if
     ! print legend table
     write(ounit,'("#")',iostat=irc)
     write(ounit,'("# COLUMNS:",I0)',iostat=irc) ncol+1
@@ -2092,6 +2108,26 @@ CONTAINS
        call plot_errorappend(crc250,pss%tab250(1:pss%lent))
        return
     end if
+    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
+    if (ncol.eq.0) then
+       write(ounit,'(X,A)',iostat=irc)"set"
+    else
+       write(ounit,'(X,A)',iostat=irc,advance="no")"set"
+    end if
+    do ii=1,ncol
+       lenc=length(col80(ii),80,1)
+       if (ii.eq.ncol) then
+          write(ounit,'(X,A)',iostat=irc)col80(ii)(1:lenc)
+       else
+          write(ounit,'(X,A)',iostat=irc,advance="no")col80(ii)(1:lenc)
+       end if
+    end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error writing to Table file'.")
+       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       return
+    end if
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
        ! make output data for this set
        irc=0
@@ -2106,6 +2142,11 @@ CONTAINS
           return
        end if
     end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from loopset'.")
+       return
+    end if
     !
     ! close table output file unit, ounit
     call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
