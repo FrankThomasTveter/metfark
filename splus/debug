@@ -1,0 +1,20 @@
+#!/usr/bin/env Rscript
+#
+# Attribute=_n|1:2:3:4:5:6:7:8:9
+# Attribute=Version|1.0:
+#
+# Column=value_n
+#
+# Id=1|set
+# Id=2|set
+# Id=3|set
+# Id=4|set
+# Id=5|set
+# Id=6|set
+# Id=7|set
+# Id=8|set
+# Id=9|set
+#
+# This script is only used for generating a table.
+#
+#
