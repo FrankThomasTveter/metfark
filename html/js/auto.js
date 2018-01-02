@@ -35,6 +35,7 @@ function auto_newConfigFile(item) {
     showValue('autoConfigFile',"");
     document.getElementById("autoCron").value=auto_cron[0];
     if (file !== "" ) {
+	fark_last[type]=file;
 	if (type === "model") {
 	    if (auto_config["model"][file] === undefined) {
 		auto_config["model"][file]={last:"",info:"",auto:auto};
@@ -53,16 +54,21 @@ function auto_newConfigFile(item) {
 	    };
 	}
 	auto_setTable();
+	console.log("Saving setup file.");
+	auto_saveConfigFile();
     } else {
 	alert("Invalid: Model config file ('"+file+"')");
     }
     console.log("Adding ",type,file,auto);
 };
-function auto_testNow(target,type,file) {
+function auto_testNow(target,type,file,row) {
     var root="";
     var password=document.getElementById("autoConfigFilePsw").value;
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
+	fark_last[type]=file;
+	row.children[5].innerHTML=""; // last
+	row.children[6].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1},
 	      function(data, status){
@@ -84,11 +90,14 @@ function auto_testNow(target,type,file) {
 	 );
     };
 };
-function auto_runNow(target,type,file) {
+function auto_runNow(target,type,file,row) {
     var root="";
     var password=document.getElementById("autoConfigFilePsw").value;
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
+	fark_last[type]=file;
+	row.children[5].innerHTML=""; // last
+	row.children[6].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file},
 	      function(data, status){
@@ -110,7 +119,7 @@ function auto_runNow(target,type,file) {
 	 );
     };
 };
-function auto_saveConfig(target) {
+function auto_saveConfigFile() {
     var root="auto.cfg";
     var password=document.getElementById("autoConfigFilePsw").value;
     var modelFiles="";
@@ -247,7 +256,7 @@ function auto_insertRow(item,type,file,last,info,auto,status) {
     td.setAttribute("style","min-width:25px;width:25px");
     td.setAttribute("align","center");
     btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","auto_testNow('','"+type+"','"+file+"')");
+    btn.setAttribute("onclick","auto_testNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","test");
     btn.innerHTML="&#9762"
     //var t=document.createTextNode();
@@ -259,7 +268,7 @@ function auto_insertRow(item,type,file,last,info,auto,status) {
     td.setAttribute("style","min-width:25px;width:25px");
     td.setAttribute("align","center");
     btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","auto_runNow('','"+type+"','"+file+"')");
+    btn.setAttribute("onclick","auto_runNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","run");
     btn.innerHTML="&#9762"
     //var t=document.createTextNode();

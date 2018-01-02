@@ -1116,7 +1116,7 @@ CONTAINS
   ! colocate data and write to table file
   !
   subroutine colocation_makeTable(css,mss,oss,ounit,name80,&
-       & ncol,col80,exp250,leg250,test,crc250,irc)
+       & ncol,col80,exp250,leg250,test,fill250,crc250,irc)
     use model
     use observations
     use parse
@@ -1131,6 +1131,7 @@ CONTAINS
     character*250, allocatable :: exp250(:)
     character*250 :: leg250
     integer :: test
+    character*250 :: fill250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="maketable"
@@ -1153,7 +1154,13 @@ CONTAINS
     real :: obs_maxval = 0.0D0
     logical :: bbok,first
     character*50 :: s2
-    integer :: len2
+    integer :: len2,lenf
+    logical :: fill, fillx
+    !
+    call chop0(fill250,250)
+    lenf=length(fill250,250,10)
+    fillx=(lenf.ne.0)
+    fill=.false.
     !
     irc=0
     !
@@ -1552,6 +1559,7 @@ CONTAINS
                    else
                       write(ounit,"(X,A)") name80(1:lena)
                    end if
+                   fill=fillx
                    do ii=1,ncol
                       call colocation_wash(val(ii),s2,len2)
                       if (ii.ne.ncol) then
@@ -1583,11 +1591,22 @@ CONTAINS
     ! remove location arrays
     call model_clearLoc(mss,crc250,irc)
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from clearLoc.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Error return from clearLoc.")
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
        return
+    end if
+    !
+    if (fill) then
+       call colocation_fill(fill250,lenf,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," Error return from fill.")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
     end if
     !write(*,*) myname,'Done.'
     return
@@ -1725,7 +1744,7 @@ CONTAINS
     return
   end subroutine colocation_getXmlfile
   !
-  subroutine colocation_makeXML(css,mss,oss,xml250,test,crc250, irc)
+  subroutine colocation_makeXML(css,mss,oss,xml250,test,fill250,crc250, irc)
     use model
     use observations
     use parse
@@ -1735,6 +1754,7 @@ CONTAINS
     type(obs_session), pointer :: oss !  current session
     character*250 :: xml250
     integer :: test
+    character*250 :: fill250
     character*250 :: crc250
     integer :: irc
     integer, external :: length,ftunit
@@ -1752,6 +1772,13 @@ CONTAINS
     real :: obs_minval = 0.0D0
     real :: obs_maxval = 0.0D0
     logical :: mod_lval(2),obs_lval(2),bok,bbok,first,lok
+    integer :: lenf
+    logical :: fill, fillx
+    !
+    call chop0(fill250,250)
+    lenf=length(fill250,250,10)
+    fillx=(lenf.ne.0)
+    fill=.false.
     !
     irc=0
     bok=.true.
@@ -2183,6 +2210,7 @@ CONTAINS
                       call colocation_errorappend(crc250,"observation_writeXML")
                       return
                    end if
+                   fill=fillx
                 end if
              end do OBSERVATION
           end if
@@ -2231,11 +2259,22 @@ CONTAINS
     ! remove location arrays
     call model_clearLoc(mss,crc250,irc)
     if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from clearLoc.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Error return from clearLoc.")
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
        return
+    end if
+    !
+    if (fill) then
+       call colocation_fill(fill250,lenf,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," Error return from fill.")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
     end if
     !write(*,*) myname,'Done.'
     return
@@ -2642,5 +2681,43 @@ CONTAINS
     end if
     return
   end subroutine colocation_wash
+  !
+  subroutine colocation_fill(fill250,lenf,crc250,irc)
+    character*250 :: fill250
+    integer :: lenf
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="colocation_fill"
+    integer, external :: ftunit
+    integer unitw
+    unitw=ftunit(irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250,'Error return from ftunit.')
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
+       if (col_bdeb) write(*,*) myname,'Error return from ftunit.', irc
+       return
+    endif
+    open (unit=unitw,form="formatted",action="write",iostat=irc,file=fill250(1:lenf))
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Unable to open:"//fill250(1:lenf))
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
+       if (col_bdeb)write(*,*) myname,'unable to open:'//fill250(1:lenf)
+       return
+    end if
+    write(unitw,'("Data available.")')
+    close (unitw)
+    irc=chmod(fill250(1:lenf),"a+w")
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Error chmod:"//fill250(1:lenf))
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
+    end if
+    return
+  end subroutine colocation_fill
   !
 end module colocation

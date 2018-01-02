@@ -57,8 +57,10 @@ function coloc_setConfigFile(file) {
 	coloc_allocate(file);
 	coloc_file=file;
 	var mfile=coloc_getModelConfigFile();
+        fark_last['model']=coloc_getModelConfigFile();
 	if (coloc_modelIsNotLoaded(mfile)) {coloc_updateModelData(mfile);}
 	var ofile=coloc_getObsConfigFile();
+        fark_last['obs']=coloc_getObsConfigFile();
 	if (coloc_obsIsNotLoaded(ofile)) {coloc_updateObsData(ofile);}
     //};
     coloc_showCOLOC();
@@ -1349,6 +1351,7 @@ function coloc_updateModelData(arg = "") {
 	    modelLoaded=true;
 	    //console.log("Updating dropdown for ",target);
 	    coloc_show();
+	    fark_last['model']=coloc_getModelConfigFile();
 	    documentLog.innerHTML="";
 	});
 };
@@ -1360,6 +1363,7 @@ function coloc_updateObsData(arg = "") {
 	obsLoaded=true;
 	//console.log("Updating dropdown for ",target);
 	coloc_show();
+	fark_last['obs']=coloc_getObsConfigFile();
 	documentLog.innerHTML="";
     });
 };
@@ -1370,11 +1374,13 @@ function coloc_updateData() {
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
 	    dataToArray(data,status,documentLog);
 	    documentLog.innerHTML="Sent model-load request.";
+	    fark_last['model']=coloc_getModelConfigFile();
 	    args=getArgs(coloc_getModelConfigFile());
 	    console.log("coloc: *****loading model ",args);
 	    $.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
 		dataToArray(data,status,documentLog);
 		modelLoaded=true;
+		fark_last['obs']=coloc_getObsConfigFile();
 		args=getArgs(coloc_getObsConfigFile());
 		console.log("coloc: *****loading obs ",args);
 		documentLog.innerHTML="Sent obs-load request.";

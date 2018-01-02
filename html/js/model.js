@@ -162,8 +162,8 @@ function model_saveConfigFile() {
 	 );
     makeUrl("model",file);
 };
-function model_updateData() {
-    var args=getArgs(model_getConfigFile());
+function model_updateData(arg=model_getConfigFile()) {
+    var args=getArgs(arg);
     documentLog.innerHTML="Sent model-load request.";
     $.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
 	dataToArray(data,status,documentLog);

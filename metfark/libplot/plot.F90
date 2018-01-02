@@ -1987,7 +1987,7 @@ CONTAINS
   !###############################################################################
   !
   !
-  subroutine plot_maketable(pss,css,mss,oss,tab250,gra250,cat250,test,crc250,irc)
+  subroutine plot_maketable(pss,css,mss,oss,tab250,gra250,cat250,test,fill250,crc250,irc)
     use model
     use observations
     use colocation
@@ -2000,6 +2000,7 @@ CONTAINS
     integer :: cid,mid,oid
     character*250 :: tab250,gra250,cat250
     integer :: test
+    character*250 :: fill250
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="maketable"
@@ -2132,7 +2133,8 @@ CONTAINS
        ! make output data for this set
        irc=0
        if(plot_bdeb)write(*,*)myname,'Making table.',ounit,ncol,size(col80),size(exp250)
-       call colocation_makeTable(css,mss,oss,ounit,name80,ncol,col80,exp250,leg250,test,crc250,irc)
+       call colocation_makeTable(css,mss,oss,ounit,name80,ncol,col80,&
+            & exp250,leg250,test,fill250,crc250,irc)
        if (irc.ne.0) then
           call chop0(name80,80)
           lenn=length(name80,80,10)

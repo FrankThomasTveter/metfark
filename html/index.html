@@ -40,7 +40,7 @@
                 <!-- onblur="coloc_setConfigFile(this.value);coloc_show()" -->
 		<div id="modelConfigFileDropdown" class="dropdown-content"/>
 	      </td>
-	      <td align="center"><button onclick="model_setConfigFile(coloc_getModelConfigFile());model_show();">←</button></td>
+	      <td align="center"><button onclick="model_setConfigFile(fark_last['model']);model_updateData();">←</button></td>
 	      <td align="center"><button onclick="showDropdown('modelConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
 	    </tr>
 	    <tr>
@@ -115,7 +115,7 @@
 	      <td class="fill" width="100%" colspan="3"><input id="obsConfigFile" type="text" value="" style="width:100%" onblur="obs_setConfigFile(this.value);obs_show();"/> 
 		<div id="obsConfigFileDropdown" class="dropdown-content"/>
 	      </td>
-	      <td align="center"><button onclick="obs_setConfigFile(coloc_getObsConfigFile());obs_show();">←</button></td>
+	      <td align="center"><button onclick="obs_setConfigFile(fark_last['obs']);obs_updateData();">←</button></td>
 	      <td align="center"><button onclick="showDropdown('obsConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
 	      <td></td>
 	      <td></td>
@@ -248,11 +248,12 @@
 		<input id="colocConfigFile" type="text" value="" style="width:100%" onblur="coloc_setConfigFile(this.value);coloc_show();"/> 
 		<div id="colocConfigFileDropdown" class="dropdown-content"/>
 	      </td>
+	      <td align="center"><button onclick="coloc_setConfigFile(fark_last['coloc']);coloc_updateData();">←</button></td>
 	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('colocConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
 	    </tr>
 	    <tr>
 	      <td>Model setup file:</td>
-	      <td class="fill" width="100%">
+	      <td class="fill" colspan="2" width="100%">
 		<input id="colocModelConfigFile" type="text" value="" style="width:100%" disabled /> 
 		<div id="colocModelConfigFileDropdown" class="dropdown-content"/>
 	      </td>
@@ -260,14 +261,15 @@
 	    </tr>
 	    <tr>
 	      <td>Observation setup file:</td>
-	      <td width="100% class="fill""><input id="colocObsConfigFile" type="text" value="" style="width:100%"disabled/> 
+	      <td width="100%" colspan="2" class="fill">
+		<input id="colocObsConfigFile" type="text" value="" style="width:100%"disabled/> 
 		<div id="colocObsConfigFileDropdown" class="dropdown-content"/>
 	      </td>
 	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('colocObsConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output XML file:</td>
-	      <td class="fill" width="100%">
+	      <td class="fill" colspan="2" width="100%">
 		<input id="colocXML" type="text" value="/elysium/data/default/YYYYMMDDHH.xml" onblur="coloc_setArray('xml',this.value);"/> 
 		<div id="colocXMLDropdown" class="dropdown-content"/>
 	      </td>
@@ -382,6 +384,21 @@
 		  <tr id="newlineTargetMatch" style="display:none"/> 
 		</table>
 	    </td></tr>
+	    <tr id="displayColocModelFilter">
+	      <td valign="top">
+		Model filter:
+	      </td>
+	      <td>
+		<table>
+		  <tr>
+		    <td width="100%">
+		      <textarea id="colocModelFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArray('filter',this.value)"></textarea>
+		      <div id="colocModelFilterDropdown" class="dropdown-content">
+		    </td>
+		    <td style="min-width:30px;width:30px" align="right"><button onclick="showDropdown('colocModelFilter')" class="dropbtn">&#9776</button></td>
+		  </tr>
+		</table>
+	    </tr>
 	    <tr id="colocDebugExpression">
 	      <td>Debug expression:</td>
 	      <td> 
@@ -397,21 +414,6 @@
 		</tr>
 		</table>
 	      </td>
-	    </tr>
-	    <tr id="displayColocModelFilter">
-	      <td valign="top">
-		Model filter:
-	      </td>
-	      <td>
-		<table>
-		  <tr>
-		    <td width="100%">
-		      <textarea id="colocModelFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArray('filter',this.value)"></textarea>
-		      <div id="colocModelFilterDropdown" class="dropdown-content">
-		    </td>
-		    <td style="min-width:30px;width:30px" align="right"><button onclick="showDropdown('colocModelFilter')" class="dropbtn">&#9776</button></td>
-		  </tr>
-		</table>
 	    </tr>
 	  </table>
 	  <table width="100%">
@@ -440,6 +442,7 @@
 		<input id="plotConfigFile" type="text" value="" style="width:100%" onblur="plot_setConfigFile(this.value);"/> 
 		<div id="plotConfigFileDropdown" class="dropdown-content"/>
 	      </td>
+	      <td style="min-width:30px;width:30px" align="center"><button onclick="plot_setConfigFile(fark_last['plot']);plot_updateData();">←</button></td>
 	      <td style="min-width:30px;width:30px" align="center"><button onclick="showDropdown('plotConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776</button></td>
 	      <td>Category:</td>
 	      <td class="fill" width="100%">
@@ -450,7 +453,7 @@
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output table file:</td>
-	      <td class="fill" width="100%" colspan="4">
+	      <td class="fill" width="100%" colspan="5">
 		<input id="plotTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="plot_setArray('table',this.value);"/> 
 		<div id="plotTableDropdown" class="dropdown-content"/>
 	      </td>
@@ -458,7 +461,7 @@
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output graphics file:</td>
-	      <td class="fill" width="100%" colspan="4">
+	      <td class="fill" width="100%" colspan="5">
 		<input id="plotGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="plot_setArray('graphics',this.value);"/> 
 		<div id="plotGraphicsDropdown" class="dropdown-content"/>
 	      </td>
@@ -550,7 +553,7 @@
 	      <td align="right">
 		File:<input id="autoConfigFileSave" type="text" value="" readonly/>
 		Password:<input type="password" id="autoConfigFilePsw" value="">
-		<button onclick="auto_saveConfig('autoConfigFilePsw')">Save</button></td>
+		<button onclick="auto_saveConfigFile()">Save</button></td>
 	    </tr>
 	  </table>
 	</div>

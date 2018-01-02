@@ -213,6 +213,7 @@ sub updateTime {
     my $node= shift;
     my $cls = shift;
     my $clsUseDir=    farkdir::getRootDir($cls."_use") || farkdir::term("Invalid root directory (use)");
+    my $clsFillDir=   farkdir::getRootDir($cls."_fill") || farkdir::term("Invalid root directory (fill)");
     my @clss=$node->findnodes($cls);
     foreach my $clsr (@clss) {
 	my $file=$clsr->getAttribute("file");
@@ -238,13 +239,24 @@ sub updateTime {
 	    } elsif (flock (MLOCKFILE,2+4)) {
 		my $duration = $lastStop-$lastStart;
 		if ($duration < 0) {
-		    $lastAccess="**abort**";
+		    $lastAccess="# abort";
 		} else {
-		    $lastAccess="**done** (".$duration . "s)";
+		    my $clsFillFile=$clsFillDir . $file; 
+		    my $lastFill=0;
+		    if (-f $clsFillFile) {
+			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+			    $mtime,$ctime,$blksize,$blocks) = stat($clsUseFile);
+			$lastFill=$atime;
+		    };
+		    if ($lastFill >= $lastStart) {
+			$lastAccess="> ok (".(farkdir::dtg($duration)) . ")";
+		    } else {
+			$lastAccess="# no data (".(farkdir::dtg($duration)) . ")";
+		    }
 		}
 	    } else {
 		my $duration = time()-$lastStart;
-		$lastAccess="**running** (".$duration . "s)";
+		$lastAccess="# running (".farkdir::dtg($duration) . ")";
 	    };	
 	    close(MLOCKFILE);
 	};

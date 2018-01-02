@@ -242,6 +242,7 @@ function plot_newDataset(item) {
     var cat =plot_config[file]["cat"];
     var set=item.parentNode.parentNode.children[1].children[0].value;
     var coloc=item.parentNode.parentNode.children[4].children[0].value;
+    fark_last["coloc"]=coloc;
     var clmns=plot_cats[cat]["columns"];
     var columns=[];
     for (var ii =0; ii< clmns.length;ii++) {
@@ -681,8 +682,8 @@ function plot_loadColoc(file) {
 	if (coloc_obsIsNotLoaded(ofile)) {coloc_updateObsData(ofile);}
     };
 };
-function plot_updateData() {
-    var args=getArgs(plot_getConfigFile());
+function plot_updateData(arg = plot_getConfigFile()) {
+    var args=getArgs(arg);
     documentLog.innerHTML="Sent plot-load request.";
     var types=[];
     types[0]="plot";

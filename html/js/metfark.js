@@ -1,4 +1,5 @@
 documentLog = document.getElementById("log");
+fark_last = {model:"default.cfg",obs:"default.cfg",coloc:"default.cfg",plot:"default.cfg"};
 dropdownEd = {};
 
 // directory structure
@@ -280,6 +281,8 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"log10()","addValue('"+target+"','log10()');");
     addChildButton(item,"log()","addValue('"+target+"','log()');");
     addChildButton(item,"sqrt()","addValue('"+target+"','sqrt()');");
+    addChildButton(item,"min(...)","addValue('"+target+"','min(,)');");
+    addChildButton(item,"max(...)","addValue('"+target+"','max(,)');");
     addChildButton(item,"sin()","addValue('"+target+"','sin()');");
     addChildButton(item,"cos()","addValue('"+target+"','cos()');");
     addChildButton(item,"tan()","addValue('"+target+"','tan()');");
@@ -287,6 +290,21 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"acos()","addValue('"+target+"','acos()');");
     addChildButton(item,"atan2(,)","addValue('"+target+"','atan2(,)');");
 };
+
+function addLogicalButtons( item, target) {
+    addChildButton(item,"msgmax(var(:))","addValue('"+target+"','msgmax()');");
+    addChildButton(item,"msgmin(var(:))","addValue('"+target+"','msgmin()');");
+    addChildButton(item,"msgclosest(var(:),trg1,trg2...)","addValue('"+target+"','msgclosest(,,)');");
+    addChildButton(item,"ismember(var,trg1,trg2...)","addValue('"+target+"','ismember(,,)');");
+    addChildButton(item,"isabove(var,max1,max2...)","addValue('"+target+"','isabove(,)');");
+    addChildButton(item,"isbelow(var,min1,min2...)","addValue('"+target+"','isbelow(,)');");
+    addChildButton(item,"isbetween(var,max1,min1,min2...)","addValue('"+target+"','isbetween(,,)');");
+    addChildButton(item,"thinned(percent_thinned)","addValue('"+target+"','thinned(0.0)');");
+    addChildButton(item,"and(l1,l2,l3...)","addValue('"+target+"','and(,)');");
+    addChildButton(item,"or(l1,l2,l3...)","addValue('"+target+"','or(,)');");
+    addChildButton(item,"not(l1,l2,l3...)","addValue('"+target+"','not(,)');");
+}
+
 function addWildcardButtons( item, target) {
     addChildButton(item,"YY (year)","addValue('"+target+"','YY');");
     addChildButton(item,"MM (month)","addValue('"+target+"','MM');");
@@ -1052,18 +1070,18 @@ function showDropdown(target, arg = "") {
 		    }
 		}
 		// add internal variables...
-		addChildButton(item," Internal :: fid = File id","showValue('colocObsPOS','fid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal file id');",'shaded');
-		addChildButton(item," Internal :: mid = Message id","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal message id');",'shaded');
-		addChildButton(item," Internal :: oid = Observation id","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal observation id');",'shaded');
-		addChildButton(item," Internal :: lid = Location id","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal location id');",'shaded');
+		addChildButton(item," fid (Internal File id)","showValue('colocObsPOS','fid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal file id');",'shaded');
+		addChildButton(item," mid (Internal Message id)","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal message id');",'shaded');
+		addChildButton(item," oid (Internal Observation id)","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal observation id');",'shaded');
+		addChildButton(item," lid (Internal Location id)","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal location id');",'shaded');
 		// add dimensions...
  		if (model_config[mfile] !== undefined) {
 		    for (var dim in model_config[mfile]["dimensions"]) {
 			var dimname=dim;
-			var dimv=model_config[file]["dimensions"][dim];
+			var dimv=model_config[mfile]["dimensions"][dim];
 			if (dimv !=  null) {
-			    addChildButton(item,"Duplication :: "+dimname+"("+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
-					   "showValue('colocObsInfo','Duplication ("+dimname+") 1:"+dimv+"');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');");
+			    addChildButton(item,"DUPLICATE (1:"+dimname+"="+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
+					   "showValue('colocObsInfo','DUPLICATE (1:"+dimname+"="+dimv+")');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');");
 			}
 		    }
 		}
@@ -1103,23 +1121,43 @@ function showDropdown(target, arg = "") {
 	addFunctionButtons(item,target);
     } else if (target.substr(0,13) === 'colocDebugExp') {
 	removeChildren(item);
+	addLogicalButtons(item,target);
 	addFunctionButtons(item,target);
     } else if (target === 'colocObsFilter') {
+	var file = coloc_getConfigFile();
+	var mfile = coloc_getModelConfigFile();
+	var ofile = coloc_getObsConfigFile();
 	removeChildren(item);
-	addChildButton(item,"and(l1,l2)","addValue('"+target+"','and(,)');");
-	addChildButton(item,"or(l1,l2)","addValue('"+target+"','or(,)');");
-	addChildButton(item,"member(var,1,2,3,4,5...)","addValue('"+target+"','member(,,,,,)');");
-	addChildButton(item,"between(var,min,max)","addValue('"+target+"','between(,,)');");
-	addChildButton(item,"above(var,min)","addValue('"+target+"','above(,)');");
-	addChildButton(item,"below(var,max)","addValue('"+target+"','below(,)');");
+	if ( coloc_config[file] !== undefined &&
+	     obs_config[ofile] !== undefined
+	   ) {
+	    // add obs-targets from obs-file, including index XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	    for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
+		addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+	    }
+	};
+	addLogicalButtons(item,target);
+	addFunctionButtons(item,target);
     } else if (target === 'colocModelFilter') {
+	var file = coloc_getConfigFile();
+	var mfile = coloc_getModelConfigFile();
+	var ofile = coloc_getObsConfigFile();
 	removeChildren(item);
-	addChildButton(item,"and(l1,l2)","addValue('"+target+"','and(,)');");
-	addChildButton(item,"or(l1,l2)","addValue('"+target+"','or(,)');");
-	addChildButton(item,"member(var,1,2,3,4,5...)","addValue('"+target+"','member(,,,,,)');");
-	addChildButton(item,"between(var,min,max)","addValue('"+target+"','between(,,)');");
-	addChildButton(item,"above(var,min)","addValue('"+target+"','above(,)');");
-	addChildButton(item,"below(var,max)","addValue('"+target+"','below(,)');");
+	if ( coloc_config[file] !== undefined &&
+	     model_config[mfile] !== undefined &&
+	     obs_config[ofile] !== undefined
+	   ) {
+	    // add obs-targets from obs-file, including index XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	    for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
+		addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+	    }
+	    // add model index XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	    for (var t in coloc_config[file]["modelConfigFile"]["targets"]) {
+		addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+	    }
+	}
+	addLogicalButtons(item,target);
+	addFunctionButtons(item,target);
     } else if (target === 'plotConfigFile') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent plot-load request.";

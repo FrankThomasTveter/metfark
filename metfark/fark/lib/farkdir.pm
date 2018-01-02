@@ -24,7 +24,6 @@ use Getopt::Long;
 use Pod::Usage qw(pod2usage);
 use File::Path qw( make_path );
 use Cwd 'abs_path';
-use Capture::Tiny 'capture';
 use File::Touch;
 
 require Exporter;
@@ -59,29 +58,33 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 			     "/lustre/storeB/project/"   => "ro",
 			     "/opdata/"                  => "ro",
 			     "/metfark/bufrtables/"      => "ro" }, 
-		  output => {"/lustre/storeA/project/nwp/fark/data/"     => "rw",
-			     "/metfark/data/"          => "rw" }, 
+		  output => {"/lustre/storeA/project/nwp/fark/output/"     => "rw",
+			     "/metfark/output/"          => "rw" }, 
 		  script      => {"/lustre/storeA/project/nwp/fark/splus/" => "rw" }, # splus scripts
 		  model       => {"/metfark/config/mod/"     => "rw" }, # model config files
 		  model_old   => {"/metfark/config/old/mod/" => "rw" }, # model old config files
 		  model_use   => {"/metfark/config/use/mod/" => "rw" }, # model use files
+		  model_fill  => {"/metfark/config/fill/mod/" => "rw" }, # model use files
 		  model_cache => {"/metfark/config/index/mod/" => "rw" }, # model cache/index files
 		  model_reg   => {"/metfark/config/reg/mod/" => "rw" }, # model register files
 		  model_log   => {"/lustre/storeA/project/nwp/fark/log/mod/" => "rw" }, # model log files
 		  obs       => {"/metfark/config/obs/"       => "rw" },
 		  obs_use   => {"/metfark/config/use/obs/"   => "rw" },
+		  obs_fill  => {"/metfark/config/fill/obs/"   => "rw" },
 		  obs_cache => {"/metfark/config/index/obs/"   => "rw" },
 		  obs_reg   => {"/metfark/config/reg/obs/"   => "rw" },
 		  obs_old   => {"/metfark/config/old/obs/"   => "rw" },
 		  obs_log   => {"/lustre/storeA/project/nwp/fark/log/obs/"   => "rw" },
 		  coloc       => {"/metfark/config/coloc/"   => "rw" },
 		  coloc_use   => {"/metfark/config/use/coloc/"   => "rw" },
+		  coloc_fill  => {"/metfark/config/fill/coloc/"   => "rw" },
 		  coloc_reg   => {"/metfark/config/reg/coloc/"   => "rw" },
 		  coloc_old   => {"/metfark/config/old/coloc/"   => "rw" },
 		  coloc_log   => {"/lustre/storeA/project/nwp/fark/log/coloc/"   => "rw" },
 		  plot =>      {"/metfark/config/plot/"    => "rw" },
 		  plot_old =>  {"/metfark/config/old/plot/"    => "rw" },
 		  plot_use =>  {"/metfark/config/use/plot/"    => "rw" },
+		  plot_fill => {"/metfark/config/fill/plot/"    => "rw" },
 		  plot_log =>  {"/lustre/storeA/project/nwp/fark/log/plot/"    => "rw" },
 		  auto  => {"/metfark/config/auto/"    => "rw" },       # auto config files
 		  url  =>  {"/metfark/config/url/"     => "rw" },       # url config files (not used?)
@@ -204,21 +207,20 @@ sub getRootDir {
 #
 
 sub makePath{
+    use Capture::Tiny 'capture_merged';
     my $path=shift;
 #    print "Path:$path\n";
-    eval {
-	my $log=capture {
+    my ($merged,$irc)=capture_merged {
+	eval {
 	    if(!-d $path) {
 		make_path $path; 
 		chmod 0777, $path;
 	    }
 	};
-#	print $log;
+	return ($@); # send error return code to $irc
     };
-    my $ret=$@;
-    if ($ret) {
-	$_=$ret;
-	return(0);
+    if ($irc) {
+	return(0); # failure
     }else {
 	return(1); # success
     }
@@ -354,17 +356,19 @@ sub removeDir {
 # my @files = &find (".*\.nc",$dir,"",time);
 #
 
-sub find{
+sub FindFiles{
+    use File::stat;
     use Cwd;
+    my $wdir = shift;
     my $pattern = shift;
-    my ($wdir) = shift;
     my $min = shift || "";
     my $max = shift || "";
+    my $maxtime = shift || 0;
     my $root = shift || "";
     my $t = shift || time;
     my $hits = shift || 0;
     my @ret = ();
-    if (time - $t > 2.0) {return @ret;}; # use maximum 2 seconds
+    if ($maxtime && time - $t > $maxtime) {return @ret;}; # use maximum 2 seconds
     #print "Time:" . (time-$t) . "\n";
     if ($root ne "") {
 	$root=$root . $wdir;
@@ -380,27 +384,39 @@ sub find{
     my @entries = sort { $a cmp $b } readdir(DIR);
     while ( my $name = shift @entries ){
 	#print "Checking $name\n";
-	if (time - $t > 2.0 && $hits > 1) {last;}; # use max 2 seconds if we have hits
-	if (time - $t > 10.0) {last;}; # use max 10 seconds
+	if ($maxtime && time - $t > $maxtime && $hits > 1) {last;}; # use max 2 seconds if we have hits
+	if ($maxtime && time - $t > $maxtime*3) {last;}; # use max 10 seconds
         next if ($name eq ".");
         next if ($name eq "..");
         next if (-l $name ); # skip symlinks
 	my $path=$root . $name;
         if (-d $path){
-	    push (@dirs, $name);
+	    my $ref=stat($path);
+	    my $ctime=($ref->ctime);
+	    my $mtime=($ref->mtime);
+	    my $age=($t-$mtime)/86400;
+	    my $cge=($t-$ctime)/86400; # inode change time...
+	    my $ok=1;
+	    if ($min || $max) {
+#		if ($min && $cge < $min) {$ok=0;}; # if directory has moved , this will fail
+		if ($max && $age > $max) {$ok=0;};
+	    };
+	    if ($ok) {
+		push (@dirs, $name);
+		#print "Directory: created=$cge, modified=$age  '$path' '$min' '$max' $t $ctime $mtime $ok\n";
+	    } else {
+		#print "Skipping: created=$cge, modified=$age  '$path' '$min' '$max' $t $ctime $mtime $ok\n";
+	    }
         } elsif (-f $path ) {
 	    if ($name  =~ m/$pattern/) {
+		my $age=(-M $path);
 		my $ok=1;
 		if ($min || $max) {
-		    my $age=(-M $path);
 		    #print "Age $age '$path' '$min' '$max'\n";
-		    if ($min && $age < $min) {
-			$ok=0;
-		    };
-		    if ($max && $age > $max) {
-			$ok=0;
-		    };
+		    if ($min && $age < $min) {$ok=0;};
+		    if ($max && $age > $max) {$ok=0;};
 		};
+		#print "File: '$path' '$age' '$ok'\n";
 		if ($ok) {
 		    push (@ret, $path);
 		    $hits++;
@@ -417,7 +433,7 @@ sub find{
     chdir($wdir) or die "Unable to enter dir $wdir:$!\n";
     foreach my $name (@dirs) {
 	#print "Processing $name\n";
-	my @lret=&find($pattern,$name,$min,$max,$root,$t,$hits);
+	my @lret=&FindFiles($name,$pattern,$min,$max,$maxtime,$root,$t,$hits);
 	push (@ret,@lret);
 	$hits+=@lret;
     }
@@ -425,10 +441,62 @@ sub find{
     return sort @ret;
 }
 
+sub GetFiles {   # full scan of all files...
+    my($filterDir,$filter,$min,$max) = @_;
+    my @files=();
+    find({wanted => sub {
+	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
+	    my $file=$File::Find::name;
+	    my $ok=1;
+	    if ($min || $max) {
+		my $age=(-M $file);
+		if ($min && $age < $min) {
+		    $ok=0;
+		};
+		if ($max && $age > $max) {
+		    $ok=0;
+		};
+	    }
+	    if ($ok) {
+		my $sb=(stat($file))[9];
+		my $s= $sb. " " . $file;
+		push(@files, $s);
+	    }
+	}
+	  }}, $filterDir);
+    return @files;
+}
+#
+# termval {system "ls -l";} "Error running ls -l";
+#
+sub termval (&@) {
+    use Capture::Tiny 'capture_merged';
+    my $code = shift; # reference to block to be executed
+    my $msg = shift;
+    my $log = shift;
+    my ($merged,$irc)=capture_merged {
+	eval {
+	    &{$code}; # execute block
+	};
+	if ($@) {return "termval Error:: $@\n";}
+    };
+    if (defined $log) {	# save to logfile
+	if (open(my $fh, '>', $log)) {
+	    print $fh $merged;
+	    print $fh $irc;
+	    close $fh;
+	};
+    }
+    if ($irc) {
+	term ($msg . " ($irc)"); # use error message if necessary...
+    } else {
+	return $log;
+    }
+}
+
 #
 # my $ret = &term ("System error...");
 #
-
 sub term {
     my $msg=shift;
     $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
@@ -452,6 +520,29 @@ sub termAll {
     $msg=~s/ +/ /g;
     print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
     print "<error message='".$msg."'/>\n";
+}
+
+sub dtg {
+    use POSIX qw (floor);
+    my $tsec=shift;
+    my $s="";
+    if ($tsec > 86400) {
+	my $dd=floor($tsec/86400);
+	$tsec=$tsec-$dd*86400;
+	$s=$s . $dd . "d";
+    }
+    if ($tsec > 3600) {
+	my $hh=floor($tsec/3600);
+	$tsec=$tsec-$hh*3600;
+	$s=$s . $hh . "h";
+    }
+    if ($tsec > 60) {
+	my $mm=floor($tsec/60);
+	$tsec=$tsec-$mm*60;
+	$s=$s . $mm . "m";
+    }
+    $s=$s . $tsec . "s";
+    return $s;
 }
 
 1;

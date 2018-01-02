@@ -606,10 +606,9 @@ CONTAINS
   !
   ! make cache file
   !
-  subroutine observation_makeCache(css,path250,test,crc250,irc)
+  subroutine observation_makeCache(css,path250,crc250,irc)
     type(obs_session), pointer :: css !  current session
     character*250 :: path250
-    integer :: test
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile !  current file
@@ -622,7 +621,7 @@ CONTAINS
     !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(obs_bdeb)write(*,*)myname," *** Entering '"//path250(1:lenp)//"'",test,irc
+    if(obs_bdeb)write(*,*)myname," *** Entering '"//path250(1:lenp)//"'",irc
     ! open file
     unitr=ftunit(irc)
     if (irc.ne.0) then
@@ -673,11 +672,7 @@ CONTAINS
           end do
           currentCat=>currentCat%next
        end do
-       if (test.eq.0) then
-          currentFile=>currentFile%next
-       else
-          currentFile=>css%lastFile
-       end if
+       currentFile=>currentFile%next
     end do
     ! close file
     close(unitr,iostat=irc)
@@ -2114,7 +2109,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
-    integer :: ii,jj
+    integer :: ii,jj,kk
     character*22 :: myname = "observation_sortStack"
     real :: buff
     !
@@ -2137,11 +2132,13 @@ CONTAINS
     end if
     currentFile => css%firstFile%next
     ii=0
+    kk=0
     do while (.not.associated(currentFile, target=css%lastFile))
        ii=ii+1
+       kk=kk+1
        if (ii.le.css%nFileIndexes) then
           css%fileStack(ii)%ptr => currentFile
-          if (currentFile%ind_lim) then
+          if (currentFile%ind_lim) then ! requested observations present?
              css%fileStackInd(ii,1)=ii
              css%fileStackInd(ii,2)=ii
              buff=css%trg_val(css%ntrg)
@@ -2178,17 +2175,18 @@ CONTAINS
        end if
        currentFile => currentFile%next
     end do
-    if (ii.ne.css%nFileIndexes) then
+    if (kk.ne.css%nFileIndexes) then
        irc=944
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Missing indexes:")
+       call observation_errorappend(crc250," System error:")
        call observation_errorappendi(crc250,css%nFileIndexes)
        call observation_errorappend(crc250,"!=")
-       call observation_errorappendi(crc250,ii)
+       call observation_errorappendi(crc250,kk)
        call observation_errorappend(crc250,"\n")
        return
     end if
     ! make sorted index (chronologically)
+    css%nFileIndexes=ii
     css%nFileSortIndexes=css%nFileIndexes
     css%newnFileSortIndexes(1)=css%nFileIndexes
     css%newnFileSortIndexes(2)=css%nFileIndexes
@@ -2229,7 +2227,7 @@ CONTAINS
             & css%nFileSortIndexes,css%fileStackInd(1,2),css%ind_minval,leftmin,rightmin)
        rightmin=max(leftmin,rightmin) ! ignore before first entry
        if (obs_bdeb) write(*,*)myname,' Minval:',css%ind_minval,&
-            & css%fileStackSort(:,2),css%fileStackInd(:,2),&
+            & css%fileStackSort(1,2),css%fileStackInd(1,2),&
             & leftmin,rightmin
     else
        leftmin=1
@@ -2240,7 +2238,7 @@ CONTAINS
             & css%nFileSortIndexes,css%fileStackInd(1,1),css%ind_maxval,leftmax,rightmax)
        leftmax=min(rightmax,leftmax) ! ignore after last entry
        if (obs_bdeb) write(*,*)myname,' Maxval:',css%ind_maxval,&
-            & css%fileStackSort(:,1),css%fileStackInd(:,1),&
+            & css%fileStackSort(1,1),css%fileStackInd(1,1),&
             & leftmax,rightmax
     else
        leftmax=css%nFileSortIndexes

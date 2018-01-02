@@ -1195,10 +1195,9 @@ CONTAINS
   ! CACHE ROUTINES
   !###############################################################################
   !
-  subroutine model_makecache(css,path250,test,crc250,irc)
+  subroutine model_makecache(css,path250,crc250,irc)
     type(mod_session), pointer :: css !  current session
     character*250 :: path250
-    integer :: test
     character*250 :: crc250
     integer :: irc
     type(mod_file), pointer :: currentFile !  current file
@@ -1271,11 +1270,7 @@ CONTAINS
                & currentFile%var(ii)%ptr%var80(1:lenv),&
                & (currentFile%var(ii)%ptr%ind(jj),jj=1,currentFile%var(ii)%ptr%ndim)
        end do
-       if (test.eq.0) then
-          currentFile=>currentFile%next
-       else
-          currentFile=>css%lastFile
-       end if
+       currentFile=>currentFile%next
     end do
     ! close file
     close(unitr,iostat=irc)

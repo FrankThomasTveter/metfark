@@ -306,8 +306,8 @@ function obs_insertIndexTargetRow(item,target,pos,descr,color,info) {
     item.parentNode.insertBefore(row,item);
     return row;
 }
-function obs_updateData() {
-    var args=getArgs(obs_getConfigFile());
+function obs_updateData(arg=obs_getConfigFile()) {
+    var args=getArgs(arg);
     documentLog.innerHTML="Sent obs-load request.";
     $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
 	dataToArray(data,status,documentLog);

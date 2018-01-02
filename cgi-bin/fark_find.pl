@@ -19,14 +19,14 @@ use farkdir;
 
 #dont know if you need this: sudo apt-get install libpath-tiny-perl
 #but you need this: sudo apt-get install libcapture-tiny-perl
-use Capture::Tiny 'capture';
+use Capture::Tiny 'capture_merged';
 # must end with slash...
 #
 # 1 = obs
 # 2 = model
 # 5 = parser
 #
-my $debug=0;
+my $debug=1;
 fark::debug($debug);
 #
 #
@@ -98,37 +98,39 @@ sub findModel {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
-	my @files=farkdir::find($filterFile,$filterDir,$filterDirMin,$filterDirMax);
-	if (@files) {
-	    $node->setAttribute("password",        $password//"");
-	    $node->setAttribute("filterDir",       $filterDir//"");
-	    $node->setAttribute("filterDirMin",    $filterDirMin // "");
-	    $node->setAttribute("filterDirMax",    $filterDirMax // "");
-	    $node->setAttribute("filterFile",      $filterFile//"");
-	    $node->setAttribute("indexTarget",     $indexTarget//"");
-	    $node->setAttribute("indexVariable",   $indexVariable//"");
-	    $node->setAttribute("hits",            scalar @files);
-	    foreach my $sfile (@files) {
-		my $parent = XML::LibXML::Element->new( 'stack' );
-		$parent->setAttribute("name",$sfile//"");
-		if (-f $sfile) {$parent->setAttribute("age",(-M $sfile//""))};
-		$node->addChild( $parent );
-	    };
-	    # put xml-structure into file
-	    if ($passok) {
-		if (open(my $fh, '>', $fpath)) {
-		    print $fh $doc->toString;
-		    close $fh;
-		    chmod 0666, $fpath;
-		} else {
-		    farkdir::term("Unable to open:".$fpath);
+	my $log=farkdir::termval {
+	    my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
+	    if (@files) {
+		$node->setAttribute("password",        $password//"");
+		$node->setAttribute("filterDir",       $filterDir//"");
+		$node->setAttribute("filterDirMin",    $filterDirMin // "");
+		$node->setAttribute("filterDirMax",    $filterDirMax // "");
+		$node->setAttribute("filterFile",      $filterFile//"");
+		$node->setAttribute("indexTarget",     $indexTarget//"");
+		$node->setAttribute("indexVariable",   $indexVariable//"");
+		$node->setAttribute("hits",            scalar @files);
+		foreach my $sfile (@files) {
+		    my $parent = XML::LibXML::Element->new( 'stack' );
+		    $parent->setAttribute("name",$sfile//"");
+		    if (-f $sfile) {$parent->setAttribute("age",(-M $sfile//""))};
+		    $node->addChild( $parent );
 		};
+		# put xml-structure into file
+		if ($passok) {
+		    if (open(my $fh, '>', $fpath)) {
+			print $fh $doc->toString;
+			close $fh;
+			chmod 0666, $fpath;
+		    } else {
+			return "Unable to open:".$fpath;
+		    };
+		}
+	    } else {
+		return "No files found.";
 	    }
-	    # report xml-structure
-	    print $doc->toString . "\n";
-	} else {
-	    farkdir::term("No files found.");
-	}
+	} "Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax";
+	# report xml-structure
+	print $doc->toString . "\n";
     } else {
 	farkdir::term("Permission denied.");
     };
@@ -188,17 +190,19 @@ sub findModelFile {
     my $indexVariable=$node->getAttribute("indexVariable")//"";
     if (-f $spath) {
 	if ($debug) {
+	    print "Calling processModelFile\n";
 	    &processModelFile($node,$cls,$ipath,$password,$spath,
 			      $indexTarget,$indexVariable);
+	    print "Done calling processModelFile\n";
 	} else {
-	    my $log="";
-	    eval {
-		$log=capture {
+	    my ($log,$irc)=capture_merged {
+		eval {
 		    &processModelFile($node,$cls,$ipath,$password,$spath,
 				      $indexTarget,$indexVariable);
 		};
+		return $@;
 	    };
-	    my $ret=$@;if ($ret) {farkdir::term($ret);}
+	    if ($irc) { farkdir::term("Unable to process, $irc $log");}
 	}
 	if ($passok) {
 	    # put xml-structure into file
@@ -326,7 +330,7 @@ sub findObs {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
-	my @files=farkdir::find($filterFile,$filterDir,$filterDirMin,$filterDirMax);
+	my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
 	if (@files) {
 	    $node->setAttribute("password",        $password//"");
 	    $node->setAttribute("filterDir",       $filterDir//"");
@@ -424,18 +428,19 @@ sub findObsFile {
     $node->setAttribute("status",    $priv//"");
     if (-f $spath) {
 	if ($debug) {
+	    print "Calling processObsFile\n";
 	    &processObsFile($node,$cls,$ipath,$password,$spath,$obsTargets,
 			    $indexTarget,$indexExp,$bufrType,$subType,$typeInfo,$table);
+	    print "Done calling processObsFile\n";
 	} else {
-	    my $log="";
-	    eval {
-		$log=capture {
+	    my ($log,$irc)=capture_merged {
+		eval {
 		    &processObsFile($node,$cls,$ipath,$password,$spath,$obsTargets,
 				    $indexTarget,$indexExp,$bufrType,$subType,$typeInfo,$table);
 		};
+		return $@;
 	    };
-	    #print $log;
-	    my $ret=$@;if ($ret) {farkdir::term($ret);}
+	    if ($irc) { farkdir::term("Unable to process $irc $log");}
 	}
 	# put xml-structure into file
 	if ($passok) {
@@ -483,13 +488,11 @@ sub processObsFile {
 	if (! @lines) {
 	    my @targets=$node->findnodes("target");
 	    foreach my $trg (@targets) {
-		my $s=sprintf ("%s/%s/%s/%s/%s/%s",
+		my $s=sprintf ("%s/%s/%s/%s",
 			       $trg->getAttribute("name"),
 			       $trg->getAttribute("pos"),
 			       $trg->getAttribute("descr"),
-			       $trg->getAttribute("info"),
-			       $trg->getAttribute("min"),
-			       $trg->getAttribute("max"));
+			       $trg->getAttribute("info"));
 		push(@lines,$s);
 	    }
 	}
@@ -498,7 +501,8 @@ sub processObsFile {
 		if ($line ne "") {
 		    my @items=split (/\~/, $line,-1);
 		    my $len=$#items;
-		    if ($len == 5) {
+		    if ($len == 3) {
+			if ($debug) {print "fark_find.pl Setting observation target ".@items ."\n";};
 			$fark->pushObservationTarget(@items); # name,pos,descr,info,min,max
 		    }
 		}

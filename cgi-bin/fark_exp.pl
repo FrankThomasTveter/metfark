@@ -15,6 +15,8 @@ use Data::Dumper;
 #but you need this: sudo apt-get install libcapture-tiny-perl
 use Capture::Tiny 'capture';
 #
+fark::debug(5);  # debug parse
+#
 my $ref=CGI->new();
 my $param= $ref->{param};
 my $parser = XML::LibXML->new();
@@ -27,16 +29,22 @@ my $doc = $parser->parse_string("<expression><result></result></expression>");
 my ($node) = $doc->findnodes("expression/result");
 my $res="";
 my $log="";
+my ($stdout,$stderr,$irc)=("","",0);
 eval {
-    $log=capture {
-    my $fark=fark->open();
-    $res=$fark->expression($param->{exp}[0]);
-    $fark->close();
+    ($stdout,$stderr,$irc)=capture {
+	my $fark=fark->open();
+	print "Processing '".($param->{exp}[0]//"")."'\n";
+	$res=$fark->expression($param->{exp}[0]//"");
+	$fark->close();
     };
 };
-my $ret=$@; if ($ret) {farkdir::term($ret . $log);}
-#print "Res:$res\n";
+my $mret=$@;if ($mret || $irc) {farkdir::term("fark_exp.pl $stderr $mret");}
+#print "Output: $stdout\n\n $stderr\n";
+#
 $node->setAttribute("value",$res);
 #
+if (defined $param->{debug}[0]) {
+    print "$stdout\n\n$stderr\n";
+}
 # report xml-structure
 print $doc->toString . "\n";
