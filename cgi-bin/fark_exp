@@ -1,5 +1,7 @@
 #
-#./fark_exp.pl '?expression=sin(+-abs(pi))'
-#./fark_exp.pl '?expression=log10(3455435'
-./fark_exp.pl '?exp=sec1970(2015%2C5%2C25%2C12)'
+#./fark_exp.pl '?exp=sin(+-abs(pi))'
+#./fark_exp.pl '?exp=log10(3455435)'
+#./fark_exp.pl '?exp="1.0%2B2.0"'
+./fark_exp.pl '?exp=ismax(45%2C2234%2C123);debug=1'
 #
+#  %2B = +

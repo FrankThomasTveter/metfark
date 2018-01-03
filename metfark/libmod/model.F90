@@ -210,7 +210,6 @@ module model
      integer :: leftFileSortIndex = 0         ! ref fileStackSort(*,2) - maxvalues
      integer :: rightFileSortIndex = 0        ! ref fileStackSort(*,1) - minvalues
      logical :: sortLimitsOk  = .false.       ! is there overlap between current file and min/max limits
-     logical :: lastIteration  = .false.
      character*80, allocatable :: var(:)
      real, allocatable :: val(:)
      integer,dimension(8) :: values    
@@ -1033,6 +1032,11 @@ CONTAINS
   ! Used in this way
   ! 1) model_setFileStackLimits: make index limits of files in stack
   ! 2) model_loopFileStack: loop over files until false return...
+  integer function model_getFileId(css)
+    type(mod_session), pointer :: css !  current session
+    model_getFileId=css%currentFileIndex
+    return
+  end function model_getFileId
   !
   logical function model_loopFileStack(css,crc250,irc)
     type(mod_session), pointer :: css !  current session
@@ -1041,13 +1045,13 @@ CONTAINS
     character*22 :: myname="model_loopFileStack"
     logical :: bdone,found
     found=.false.
-    bdone=(css%lastIteration.or..not. css%sortLimitsOk)
+    bdone=(.not. css%sortLimitsOk)
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
        css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
        css%currentFile => css%fileStack(css%currentFileIndex)%ptr
        if ((css%currentFileIndex.eq.css%fileStackInd(css%rightFileSortIndex,1))) then ! last iteration
-          css%lastIteration=.true.
+          css%currentFileSortIndex=0 ! reset index
           bdone=.true.
        end if
        ! check if inside limits
@@ -4217,7 +4221,7 @@ CONTAINS
                 if(mod_bdeb)write(*,'(X,A,A,I0)')myname,&
                      & 'Insane dimension index, batch index: ',jj
              end if
-             write(*,*)myname,'Debug:',jj,b%ind(jj),b%ndim
+             !write(*,*)myname,'Debug:',jj,b%ind(jj),b%ndim
              if (newFile%istart(b%ind(jj)).eq.newFile%istop(b%ind(jj))) then
                 b%inc(jj)=0                 ! no valid increment
              else
@@ -5987,6 +5991,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    css%currentFileSortIndex=0 ! reset index
     if (mod_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine model_setFileStackLimits

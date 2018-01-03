@@ -78,7 +78,7 @@ LIBS = ../libmodel/libmodel.a \
 # BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
 # OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
 #
- OPTIONS = -g -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -g -fdefault-real-8 -fPIC  -fmax-errors=10 
  ORDER = plot.F90
 #------------------------------------------------------------------------
 #		the rest not is not likely to be changed

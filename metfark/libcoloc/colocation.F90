@@ -1303,22 +1303,30 @@ CONTAINS
        return
     end if
     if(col_bdeb)write(*,*)myname,'Analyse limits.',ncol,size(col80),size(exp250)
-    ! convert obs-limits to mod-limits
-    mod_lval(1)= mss%ind_lval(1)
-    mod_minval = mss%ind_minval
-    if (mod_lval(1).and.oss%ind_lval(1)) then
-       mod_minval=max(mod_minval,oss%ind_minval)
+    ! get overall max/min limits...
+    if (mss%ind_lval(1).and.oss%ind_lval(1)) then
+       mod_minval=max(mss%ind_minval,oss%ind_minval)
+       mod_lval(1)=.true.
+    else if (mss%ind_lval(1)) then
+       mod_minval=mss%ind_minval
+       mod_lval(1)=.true.
     else if (oss%ind_lval(1)) then
        mod_minval=oss%ind_minval
        mod_lval(1)=.true.
+    else
+       mod_lval(1)=.false.
     end if
-    mod_lval(2)= mss%ind_lval(2)
-    mod_maxval = mss%ind_maxval
-    if (mod_lval(2).and.oss%ind_lval(2)) then
-       mod_maxval=min(mod_maxval,oss%ind_maxval)
+    if (mss%ind_lval(2).and.oss%ind_lval(2)) then
+       mod_maxval=min(mss%ind_maxval,oss%ind_maxval)
+       mod_lval(2)=.true.
+    else if(mss%ind_lval(2)) then
+       mod_maxval=mss%ind_maxval
+       mod_lval(2)=.true.
     else if(oss%ind_lval(2)) then
        mod_maxval=oss%ind_maxval
        mod_lval(2)=.true.
+    else
+       mod_lval(2)=.false.
     end if
     if(col_bdeb)write(*,*)myname,'Adjusting mod limits:',mod_lval,mod_minval,mod_maxval,&
          & associated(mss),associated(oss),associated(css)
@@ -1344,25 +1352,36 @@ CONTAINS
              exit MODFILE ! no more files to process
           else 
              mod_cnt=mod_cnt+1
+             call observation_setModelFileId(oss,model_getFileId(mss))
              if(col_bdeb)write(*,*)myname,"Found model file: '"//&
-                  & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'"
+                  & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
+                  & mod_cnt,model_getFileId(mss)
           end if
-          ! adjust observation file limits
-          obs_lval(1)=mod_lval(1)
-          obs_minval=mod_minval
-          if (obs_lval(1).and.mss%currentFile%ind_lim) then
-             obs_minval=max(obs_minval,mss%currentFile%ind_start)
+          ! get observation file limits
+          if (mod_lval(1).and.mss%currentFile%ind_lim) then
+             obs_minval=max(mod_minval,mss%currentFile%ind_start)
+             obs_lval(1)=.true.
+          else if (mod_lval(1)) then
+             obs_minval=mod_minval
+             obs_lval(1)=.true.
           else if (mss%currentFile%ind_lim) then
              obs_minval=mss%currentFile%ind_start
              obs_lval(1)=.true.
+          else
+             obs_lval(1)=.false.
           end if
           obs_lval(2)=mod_lval(2)
           obs_maxval=mod_maxval
-          if (obs_lval(2).and.mss%currentFile%ind_lim) then
-             obs_maxval=max(obs_maxval,mss%currentFile%ind_stop)
+          if (mod_lval(2).and.mss%currentFile%ind_lim) then
+             obs_maxval=max(mod_maxval,mss%currentFile%ind_stop)
+          else if (mod_lval(2)) then
+             obs_maxval=mod_maxval
+             obs_lval(2)=.true.
           else if (mss%currentFile%ind_lim) then
              obs_maxval=mss%currentFile%ind_stop
              obs_lval(2)=.true.
+          else
+             obs_lval(2)=.false.
           end if
        end if
        !
@@ -1420,7 +1439,7 @@ CONTAINS
              locstart=locid
              ! loop over obs data, using model start/end limits
              LOCATION : do
-                if(col_bdeb)write(*,*)myname,'Slice observation file.'
+                !if(col_bdeb)write(*,*)myname,'Slice observation file.'
                 ! read next observation into static BUFR memory and set oss%trg_val
                 call observation_sliceCurrentFile(oss,bok,crc250,irc)
                 if (irc.ne.0) then
@@ -1460,7 +1479,7 @@ CONTAINS
 
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb)write(*,*)myname,'Push location.',locid
+                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location.',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -1546,7 +1565,7 @@ CONTAINS
                 if (tmod.ne.0) then ! we have match expressions specified
                    call model_locSearchOk(mss,locid,bbok)        
                 end if
-                if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
+                !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
                 if (bbok) then
                    call model_evalExpr(mss,ncol,val,crc250,irc)
@@ -1568,7 +1587,7 @@ CONTAINS
                          write(ounit,"(X,A)") s2(1:len2)
                       end if
                    end do
-                   if(col_bdeb)write(*,'(2(X,A),100(X,F0.1))')myname,'Val:',mss%mpo_val
+                   if(col_bdeb.and.locid.lt.100)write(*,'(2(X,A),100(X,F0.1))')myname,'Val:',mss%mpo_val
                 end if
              end do OBSERVATION
           end if
@@ -1978,8 +1997,10 @@ CONTAINS
              exit MODFILE ! no more files to process
           else 
              mod_cnt=mod_cnt+1
+             call observation_setModelFileId(oss,model_getFileId(mss))
              if(col_bdeb)write(*,*)myname,"Found model file: '"//&
-                  & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'"
+                  & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
+                  & mod_cnt,model_getFileId(mss)
           end if
           !
           ! write file opening xml-tag
@@ -2197,7 +2218,7 @@ CONTAINS
                 if (tmod.ne.0) then ! we have match expressions specified
                    call model_locSearchOk(mss,locid,bbok)        
                 end if
-                if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
+                !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
                 if (bbok) then
                    call observation_writeXML(oss,ounit,locid,crc250,irc)

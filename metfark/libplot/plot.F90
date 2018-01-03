@@ -466,6 +466,37 @@ CONTAINS
     return
   end subroutine plot_openfile
   !
+  subroutine plot_openfileapp(pss,ounit,tab250,lent,crc250,irc)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    integer :: ounit
+    character*250 :: tab250
+    integer :: lent
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: ftunit,length
+    character*22 :: myname = "openFileApp"
+    call chop0(tab250,250)
+    lent=length(tab250,250,10)
+    ounit=ftunit(irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from FTUNIT.")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    open(unit=ounit,file=tab250(1:lent), &
+         & access="append",form="formatted",status="old",iostat=irc)
+    if(plot_bdeb)write(*,*)myname,'Appending:',tab250(1:lent),ounit,irc
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Unable to open table file '"//tab250(1:lent)//"'")
+       call plot_errorappendi(crc250,irc)
+       return
+    end if
+    return
+  end subroutine plot_openfileapp
+  !
   subroutine plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
     implicit none
     type(plot_session), pointer :: pss !  current session
@@ -484,6 +515,128 @@ CONTAINS
     end if
     return
   end subroutine plot_closeFile
+  !
+  subroutine plot_addComments(pss,css,mss,oss,ounit,tab250,lent,gra250,cat250,crc250,irc)
+    use model
+    use observations
+    use colocation
+    use parse
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    type(col_session), pointer ::  css !  current session
+    type(mod_session), pointer ::  mss !  current session
+    type(obs_session), pointer ::  oss !  current session
+    integer :: cid,mid,oid
+    integer :: ounit
+    character*250 :: tab250,gra250,cat250
+    integer :: lent
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname ="makecomments"
+    integer, external :: length
+    integer :: lenc,lene,lenn,lenl,leng
+    type(plot_attribute), pointer :: attr => null()
+    character*250 :: leg250
+    character*80 :: name80
+    character*80, allocatable :: var80(:)
+    integer :: ii,jj
+    integer :: ncol
+    character*80, allocatable :: col80(:)
+    character*250, allocatable :: exp250(:)
+    call chop0(cat250,250)
+    lenc=length(cat250,250,10)
+    call chop0(gra250,250)
+    leng=length(gra250,250,10)
+    write(ounit,'("# COMMAND: Rscript --vanilla ",A,X,A,X,A)',iostat=irc) &
+         & cat250(1:lenc),tab250(1:lent),gra250(1:leng)
+    !
+    ! loop over set and write attributes and legend as comments
+    !
+    if(plot_bdeb)write(*,*)myname,'Writing attributes and legends.',ounit
+    write(ounit,'("#")',iostat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error writing to table file'.")
+       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       return
+    end if
+    write(ounit,'("# TYPE:",A)',iostat=irc)pss%type250(1:pss%lenp)
+    write(ounit,'("#")',iostat=irc)
+    ! print attributes
+    write(ounit,'("# ATTRIBUTES:",I0)',iostat=irc)pss%natt
+    attr => pss%firstAttribute%next
+    do while (.not.associated(attr,target=pss%lastAttribute))
+       write(ounit,'("# ",A,":",A)',iostat=irc)&
+            & attr%name80(1:attr%lenn),attr%value250(1:attr%lenv)
+       attr => attr%next
+    end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error writing to Table file'.")
+       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       return
+    end if
+    ! print legend table
+    write(ounit,'("#")',iostat=irc)
+    write(ounit,'("# LEGENDS:",I0)',iostat=irc) pss%nset
+    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
+       call chop0(name80,80)
+       lenn=length(name80,80,1)
+       call chop0(leg250,250)
+       lenl=length(leg250,250,1)
+       write(ounit,'("#",X,A,":",A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
+    end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error return from loopset'.")
+       return
+    end if
+    ! print legend table
+    write(ounit,'("#")',iostat=irc)
+    write(ounit,'("# COLUMNS:",I0)',iostat=irc) ncol+1
+    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
+    do ii=1,ncol
+       call chop0(col80(ii),80)
+       lenc=length(col80(ii),80,1)
+       call chop0(exp250(ii),80)
+       lene=length(exp250(ii),80,1)
+       write(ounit,'("#",X,A,":",A)',iostat=irc)col80(ii)(1:lenc),exp250(ii)(1:lene)
+    end do
+    if(plot_bdeb)write(*,*)myname,'Writing data.',ounit,ncol,size(col80),size(exp250)
+    write(ounit,'("#")',iostat=irc)
+    write(ounit,'("# Data table")',iostat=irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error writing to Table file'.")
+       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       return
+    end if
+    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
+    if (ncol.eq.0) then
+       write(ounit,'(X,A)',iostat=irc)"set"
+    else
+       write(ounit,'(X,A)',iostat=irc,advance="no")"set"
+    end if
+    do ii=1,ncol
+       lenc=length(col80(ii),80,1)
+       if (ii.eq.ncol) then
+          write(ounit,'(X,A)',iostat=irc)col80(ii)(1:lenc)
+       else
+          write(ounit,'(X,A)',iostat=irc,advance="no")col80(ii)(1:lenc)
+       end if
+    end do
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250,"Error writing to Table file'.")
+       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       return
+    end if
+    !
+    if (allocated(var80)) deallocate(var80)
+    if (allocated(col80)) deallocate(col80)
+    if (allocated(exp250)) deallocate(exp250)
+    !
+  end subroutine plot_addComments
   !
   subroutine plot_setTime(pss,crc250,irc)
     implicit none
@@ -2004,31 +2157,17 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname ="maketable"
-    type(parse_session), pointer :: psx,psy
-    integer :: nvar,ounit
+    integer :: ounit
     character*250 :: leg250
     character*80 :: name80
-    character*80, allocatable :: var80(:)
-    real, allocatable :: val(:)
-    integer :: mloc,mtrg,oloc,otrg
     integer, external :: length
     integer :: lenc,lene,lenn,lenl,lent,leng
-    real :: valx, valy
-    integer :: tmod,emod,dmod,tobs,ii,jj,ind_ii,nfunc
-    logical :: bobsind
-    type(parse_session), pointer :: pse
-    type(parse_pointer), pointer :: ppt(:) ! parse sessions
+    integer :: ii,jj
     integer :: ncol
     character*80, allocatable :: col80(:)
     character*250, allocatable :: exp250(:)
-    integer :: locid,locstart
     !
-    real :: mod_start = 0.0D0
-    real :: mod_stop = 0.0D0
-    real :: obs_start = 0.0D0
-    real :: obs_stop = 0.0D0
-    logical :: mod_lim,obs_lim,bok,first,lok
-    type(plot_attribute), pointer :: attr => null()
+    if(plot_bdeb)write(*,*)myname,'Entering.',irc
     !
     ! open table file
     call plot_openFile(pss,ounit,tab250,lent,crc250,irc)
@@ -2040,96 +2179,33 @@ CONTAINS
        return
     end if
     !
-    if(plot_bdeb)write(*,*)myname,'Entering.',irc
-    call chop0(cat250,250)
-    lenc=length(cat250,250,10)
-    call chop0(gra250,250)
-    leng=length(gra250,250,10)
-    write(ounit,'("# COMMAND: Rscript --vanilla ",A,X,A,X,A)',iostat=irc) &
-         & cat250(1:lenc),tab250(1:lent),gra250(1:leng)
-    !
-    ! loop over set and write attributes and legend as comments
-    !
-    if(plot_bdeb)write(*,*)myname,'Writing attributes and legends.',ounit
-    write(ounit,'("#")',iostat=irc)
+    call plot_addComments(pss,css,mss,oss,ounit,tab250,lent,gra250,cat250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error writing to table file'.")
-       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       call plot_errorappend(crc250," Error return from makecomments.")
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
        return
     end if
-    write(ounit,'("# TYPE:",A)',iostat=irc)pss%type250(1:pss%lenp)
-    write(ounit,'("#")',iostat=irc)
-    ! print attributes
-    write(ounit,'("# ATTRIBUTES:",I0)',iostat=irc)pss%natt
-    attr => pss%firstAttribute%next
-    do while (.not.associated(attr,target=pss%lastAttribute))
-       write(ounit,'("# ",A,":",A)',iostat=irc)&
-            & attr%name80(1:attr%lenn),attr%value250(1:attr%lenv)
-       attr => attr%next
-    end do
+    ! close table output file unit, ounit
+    call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error writing to Table file'.")
-       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
+       call plot_errorappend(crc250," unable to close:"//tab250(1:lent))
+       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"\n")
        return
     end if
-    ! print legend table
-    write(ounit,'("#")',iostat=irc)
-    write(ounit,'("# LEGENDS:",I0)',iostat=irc) pss%nset
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
-       call chop0(name80,80)
-       lenn=length(name80,80,1)
-       call chop0(leg250,250)
-       lenl=length(leg250,250,1)
-       write(ounit,'("#",X,A,":",A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
-    end do
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from loopset'.")
-       return
-    end if
-    ! print legend table
-    write(ounit,'("#")',iostat=irc)
-    write(ounit,'("# COLUMNS:",I0)',iostat=irc) ncol+1
-    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
-    do ii=1,ncol
-       call chop0(col80(ii),80)
-       lenc=length(col80(ii),80,1)
-       call chop0(exp250(ii),80)
-       lene=length(exp250(ii),80,1)
-       write(ounit,'("#",X,A,":",A)',iostat=irc)col80(ii)(1:lenc),exp250(ii)(1:lene)
-    end do
-    if(plot_bdeb)write(*,*)myname,'Writing data.',ounit,ncol,size(col80),size(exp250)
-    write(ounit,'("#")',iostat=irc)
-    write(ounit,'("# Data table")',iostat=irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error writing to Table file'.")
-       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
-       return
-    end if
-    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
-    if (ncol.eq.0) then
-       write(ounit,'(X,A)',iostat=irc)"set"
-    else
-       write(ounit,'(X,A)',iostat=irc,advance="no")"set"
-    end if
-    do ii=1,ncol
-       lenc=length(col80(ii),80,1)
-       if (ii.eq.ncol) then
-          write(ounit,'(X,A)',iostat=irc)col80(ii)(1:lenc)
-       else
-          write(ounit,'(X,A)',iostat=irc,advance="no")col80(ii)(1:lenc)
+       ! append table file
+       call plot_openFileApp(pss,ounit,tab250,lent,crc250,irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250," unable to append:"//tab250(1:lent))
+          call plot_errorappendi(crc250,irc)
+          call plot_errorappend(crc250,"\n")
+          return
        end if
-    end do
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error writing to Table file'.")
-       call plot_errorappend(crc250,pss%tab250(1:pss%lent))
-       return
-    end if
-    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
        ! make output data for this set
        irc=0
        if(plot_bdeb)write(*,*)myname,'Making table.',ounit,ncol,size(col80),size(exp250)
@@ -2143,6 +2219,15 @@ CONTAINS
           call plot_errorappend(crc250,name80(1:lenn))
           return
        end if
+       ! close table output file unit, ounit
+       call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250," unable to close:"//tab250(1:lent))
+          call plot_errorappendi(crc250,irc)
+          call plot_errorappend(crc250,"\n")
+          return
+       end if
     end do
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2150,17 +2235,11 @@ CONTAINS
        return
     end if
     !
-    ! close table output file unit, ounit
-    call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," unable to close:"//tab250(1:lent))
-       call plot_errorappendi(crc250,irc)
-       call plot_errorappend(crc250,"\n")
-       return
-    end if
-    !
     if (irc.ne.0) irc=0 ! oh well...
+    !
+    if (allocated(col80)) deallocate(col80)
+    if (allocated(exp250)) deallocate(exp250)
+    !
     if(plot_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine plot_maketable

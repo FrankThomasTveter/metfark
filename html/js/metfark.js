@@ -1070,10 +1070,11 @@ function showDropdown(target, arg = "") {
 		    }
 		}
 		// add internal variables...
-		addChildButton(item," fid (Internal File id)","showValue('colocObsPOS','fid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal file id');",'shaded');
-		addChildButton(item," mid (Internal Message id)","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal message id');",'shaded');
-		addChildButton(item," oid (Internal Observation id)","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal observation id');",'shaded');
-		addChildButton(item," lid (Internal Location id)","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Internal location id');",'shaded');
+		addChildButton(item," mid (Model File id)","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Model file id');",'shaded');
+		addChildButton(item," oid (Observation File id)","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Observation file id');",'shaded');
+		addChildButton(item," bid (Bufr message id)","showValue('colocObsPOS','bid');showValue('colocObsDESCR','');showValue('colocObsInfo','Bufr message id');",'shaded');
+		addChildButton(item," sid (Sub message id)","showValue('colocObsPOS','sid');showValue('colocObsDESCR','');showValue('colocObsInfo','Sub message id');",'shaded');
+		addChildButton(item," lid (Location id)","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Location id');",'shaded');
 		// add dimensions...
  		if (model_config[mfile] !== undefined) {
 		    for (var dim in model_config[mfile]["dimensions"]) {

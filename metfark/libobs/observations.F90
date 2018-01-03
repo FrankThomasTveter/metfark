@@ -214,7 +214,6 @@ module observations
      integer :: leftFileSortIndex=0           ! ref fileStackSort(*,2) - maxvalues
      integer :: rightFileSortIndex=0          ! ref fileStackSort(*,1) - minvalues
      logical :: sortLimitsOk  = .false.
-     logical :: lastIteration  = .false.
      !
      ! data selection
      !
@@ -429,7 +428,7 @@ CONTAINS
     css%firstFile%next => css%lastFile
     css%lastFile%prev => css%firstFile
     ! internal variables
-    css%nint=4
+    css%nint=5
     if (allocated(css%int_var)) deallocate(css%int_var)
     if (allocated(css%int_lenv)) deallocate(css%int_lenv)
     if (allocated(css%int_val)) deallocate(css%int_val)
@@ -442,15 +441,17 @@ CONTAINS
        return
     end if
     !
-    css%int_var(1)="fid" ! observation file id
-    css%int_var(2)="mid" ! message id 
-    css%int_var(3)="oid" ! obs id
-    css%int_var(4)="lid" ! location id
+    css%int_var(1)="mid" ! model file id
+    css%int_var(2)="oid" ! observation file id
+    css%int_var(3)="bid" ! message id 
+    css%int_var(4)="sid" ! obs id
+    css%int_var(5)="lid" ! location id
     !
-    css%int_val(1)=0 ! observation file id
-    css%int_val(2)=0 ! message id
-    css%int_val(3)=0 ! obs id
-    css%int_val(4)=1 ! location id
+    css%int_val(1)=0 ! model file id
+    css%int_val(2)=0 ! observation file id
+    css%int_val(3)=0 ! message id
+    css%int_val(4)=0 ! obs id
+    css%int_val(5)=1 ! location id
     ! reports
     allocate(css%firstReport,css%lastReport,stat=irc)
     if (irc.ne.0) then
@@ -2056,6 +2057,13 @@ CONTAINS
     return
   end subroutine observation_sortFiles
   !
+  subroutine observation_setModelFileId(css,mid)
+    type(obs_session), pointer :: css !  current session
+    integer :: mid
+    css%int_val(1)=mid
+    return
+  end subroutine observation_setModelFileId
+  !
   ! get next observation file within limits...
   !
   logical function observation_loopFileStack(css,crc250,irc)
@@ -2065,17 +2073,17 @@ CONTAINS
     character*22 :: myname = "observation_getNextFile"
     logical :: bdone,found
     found=.false.
-    bdone=(css%lastIteration.or..not. css%sortLimitsOk)
+    bdone=(.not. css%sortLimitsOk)
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
        css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
-       css%int_val(1)=css%currentFileIndex ! observation file id
-       css%int_val(2)=1
+       css%int_val(2)=css%currentFileIndex ! observation file id
        css%int_val(3)=1
        css%int_val(4)=1
+       css%int_val(5)=1
        css%currentFile => css%fileStack(css%currentFileIndex)%ptr
        if ((css%currentFileIndex.eq.css%fileStackInd(css%rightFileSortIndex,1))) then ! last iteration
-          css%lastIteration=.true.
+          css%currentFileSortIndex=0 ! reset index
           bdone=.true.
        end if
        ! check if inside limits
@@ -2091,10 +2099,10 @@ CONTAINS
        observation_loopFileStack=.true.
     else
        css%currentFileIndex=0
-       css%int_val(1)=css%currentFileIndex ! observation file id
-       css%int_val(2)=1
+       css%int_val(2)=css%currentFileIndex ! observation file id
        css%int_val(3)=1
        css%int_val(4)=1
+       css%int_val(5)=1
        nullify(css%currentFile)
        observation_loopFileStack=.false.
     end if
@@ -2206,10 +2214,10 @@ CONTAINS
     character*22 :: myname = "observation_stackfirst"
     css%currentFileSortIndex=0
     css%currentFileIndex=0
-    css%int_val(1)=css%currentFileIndex ! observation file id
-    css%int_val(2)=1
+    css%int_val(2)=css%currentFileIndex ! observation file id
     css%int_val(3)=1
     css%int_val(4)=1
+    css%int_val(5)=1
   end subroutine observation_stackfirst
   !
   subroutine observation_findStackLimits(css,crc250,irc)
@@ -2253,10 +2261,10 @@ CONTAINS
        css%rightFileSortIndex=0
     end if
     css%currentFileIndex=0
-    css%int_val(1)=css%currentFileIndex ! observation file id
-    css%int_val(2)=1
+    css%int_val(2)=css%currentFileIndex ! observation file id
     css%int_val(3)=1
     css%int_val(4)=1
+    css%int_val(5)=1
     if (obs_bdeb)write(*,*)myname,'Done.', css%sortLimitsOk,&
          & css%leftFileSortIndex, css%rightFileSortIndex,css%nFileIndexes
     return
@@ -2445,6 +2453,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    css%currentFileSortIndex=0 ! reset index
     return
   end subroutine observation_setFileStackLimits
   !
@@ -2747,7 +2756,7 @@ CONTAINS
     end do LOOP
     if (bok)then
        if(obs_bdeb)write(*,*)myname,"INCREMENTING lid:",css%int_val
-       css%int_val(4)=css%int_val(4)+1 ! obs id
+       css%int_val(5)=css%int_val(5)+1 ! obs id
     end if
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
@@ -2849,7 +2858,7 @@ CONTAINS
        end if
        if (css%msg%nobs.ne.0.or..not.bok) exit MSG ! valid obs in matrix
     end do MSG
-    if (bok) css%int_val(3)=css%int_val(3)+1 ! obs id
+    if (bok) css%int_val(4)=css%int_val(4)+1 ! obs id
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
     return
@@ -3953,9 +3962,9 @@ CONTAINS
        css%trg_ook(ii)=0
        css%trg_orm(ii)=0
     end do
-    css%int_val(2)=0 ! message id
-    css%int_val(3)=0 ! obs id
-    css%int_val(4)=1 ! location id
+    css%int_val(3)=0 ! message id
+    css%int_val(4)=0 ! obs id
+    css%int_val(5)=1 ! location id
     call observation_clearCat(css%currentFile)
     fopen=.true.
     return
@@ -3996,7 +4005,7 @@ CONTAINS
        end if
        bread=.true. ! new message in memory
        css%currentfile%nmessage=css%currentfile%nmessage+1
-       css%int_val(2)=css%int_val(2)+1 ! message id
+       css%int_val(3)=css%int_val(3)+1 ! message id
        !     PRINT*,'----------------------------------',N,' ',KBUFL
        KBUFL=KBUFL/NBYTPW+1
        !

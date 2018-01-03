@@ -258,61 +258,34 @@ sub loopCls {
 	    my $parser = XML::LibXML->new();
 	    my $clsdoc = $parser->parse_file($xmlfile);
 	    if ( my ($clsnode)=$clsdoc->findnodes($cls."/".$cls."_config")) {
-		farkdir::termval {
-		    print "Processing $cls $xmlfile\n";
-		    if ($cls eq "model") {
-			my $cachefile=$modelCacheDir . $clsfile;
-			my $registerfile=$modelRegDir . $clsfile;
-			if ($clean) {
-			    if($debug){print "Unlinking '$cachefile' '$registerfile'\n";}
-			    unlink $cachefile;
-			    unlink $clsFillFile;
-			    unlink $registerfile;
-			}
-			&processModel($xmlfile,
-				      $clsnode,
-				      $cachefile,
-				      $registerfile,
-				      $cls,
-				      $test,$clsFillFile);
-		    } elsif ($cls eq "obs") {
-			my $cachefile=$obsCacheDir . $clsfile;
-			my $registerfile=$obsRegDir . $clsfile;
-			if ($clean) {
-			    if($debug){print "Unlinking '$cachefile' '$registerfile'\n";}
-			    unlink $cachefile;
-			    unlink $registerfile;
-			}
-			&processObs($xmlfile,
+		if ($debug) {
+		    &processCls($xmlfile,
+				$clsnode,
+				$colocDir,
+				$modelDir,
+				$modelCacheDir,
+				$modelRegDir,
+				$obsDir,
+				$obsCacheDir,
+				$obsRegDir,
+				$cls,$clsfile,$clean,
+				$test,$clsFillFile);
+		} else {
+		    farkdir::termval {
+			&processCls($xmlfile,
 				    $clsnode,
-				    $cachefile,
-				    $registerfile,
-				    $cls,
+				    $colocDir,
+				    $modelDir,
+				    $modelCacheDir,
+				    $modelRegDir,
+				    $obsDir,
+				    $obsCacheDir,
+				    $obsRegDir,
+				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
-		    } elsif ($cls eq "coloc") {
-			&processColoc($xmlfile,
-				      $clsnode,
-				      $colocDir,
-				      $modelDir,
-				      $modelCacheDir,
-				      $obsDir,
-				      $obsCacheDir,
-				      $cls,
-				      $test,$clsFillFile);
-		    } elsif ($cls eq "plot") {
-			&processPlot($xmlfile,
-				     $clsnode,
-				     $colocDir,
-				     $modelDir,
-				     $modelCacheDir,
-				     $obsDir,
-				     $obsCacheDir,
-				     $cls,
-				     $test,$clsFillFile);
-		    };
-		    #### if (-e $clsFillFile) {chmod 0777, $clsFillFile;}
-		} "$myname $cls file: $xmlfile, see $logfile",$logfile;
-	    } else {
+		    } "$myname $cls file: $xmlfile, see $logfile",$logfile;
+		}
+		} else {
 		farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
 	    }
 	    my $clsUseFile=$clsUseDir . $clsfile; 
@@ -352,10 +325,76 @@ sub loopCls {
     return \%clshash;
 };
 
+sub processCls{
+    my ($xmlfile,
+	$clsnode,
+	$colocDir,
+	$modelDir,
+	$modelCacheDir,
+	$modelRegDir,
+	$obsDir,
+	$obsCacheDir,
+	$obsRegDir,
+	$cls,$clsfile,$clean,
+	$test,$clsFillFile) =@_;
+    print "Processing $cls $xmlfile\n";
+    if ($cls eq "model") {
+	my $cachefile=$modelCacheDir . $clsfile;
+	my $registerfile=$modelRegDir . $clsfile;
+	if ($clean) {
+	    if($debug){print "Unlinking '$cachefile' '$registerfile'\n";}
+	    unlink $cachefile;
+	    unlink $clsFillFile;
+	    unlink $registerfile;
+	}
+	&processModel($xmlfile,
+		      $clsnode,
+		      $cachefile,
+		      $registerfile,
+		      $cls,
+		      $test,$clsFillFile);
+    } elsif ($cls eq "obs") {
+	my $cachefile=$obsCacheDir . $clsfile;
+	my $registerfile=$obsRegDir . $clsfile;
+	if ($clean) {
+	    if($debug){print "Unlinking '$cachefile' '$registerfile'\n";}
+	    unlink $cachefile;
+	    unlink $registerfile;
+	}
+	&processObs($xmlfile,
+		    $clsnode,
+		    $cachefile,
+		    $registerfile,
+		    $cls,
+		    $test,$clsFillFile);
+    } elsif ($cls eq "coloc") {
+	&processColoc($xmlfile,
+		      $clsnode,
+		      $colocDir,
+		      $modelDir,
+		      $modelCacheDir,
+		      $obsDir,
+		      $obsCacheDir,
+		      $cls,
+		      $test,$clsFillFile);
+    } elsif ($cls eq "plot") {
+	&processPlot($xmlfile,
+		     $clsnode,
+		     $colocDir,
+		     $modelDir,
+		     $modelCacheDir,
+		     $obsDir,
+		     $obsCacheDir,
+		     $cls,
+		     $test,$clsFillFile);
+    };
+    #### if (-e $clsFillFile) {chmod 0777, $clsFillFile;}
+};
+
 sub updateCls { 
     my $cls    = shift // "";
     my $node   = shift;
-    my $clsr = shift;
+    my $clsr   = shift;
     my %clshash=%{$clsr};
     my @clsnodes=$node->findnodes($cls);
     my $found=0;
@@ -570,9 +609,9 @@ sub processPlot {
     }
     #
     # colocate and generate table file...
-    if($debug){print "****** Make table\n";}
     my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
     my $fpath=$root . $loc . $cat;
+    if($debug){print "****** Make table\n";}
     my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics,$fpath,$test,$fillfile); 
     #
     if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}

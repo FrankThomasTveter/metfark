@@ -1,4 +1,4 @@
-subroutine col_makexml(cid,mid,oid,xml250,test,crc250, irc)
+subroutine col_makexml(cid,mid,oid,xml250,test,fill250,crc250, irc)
   use model
   use observations
   use colocation
@@ -8,6 +8,7 @@ subroutine col_makexml(cid,mid,oid,xml250,test,crc250, irc)
   integer :: oid ! observation session id
   character*250 :: xml250
   integer :: test
+  character*250 :: fill250
   character*250 :: crc250
   integer :: irc
   character*25 :: myname = "col_makexml"
@@ -41,7 +42,7 @@ subroutine col_makexml(cid,mid,oid,xml250,test,crc250, irc)
      return
   end if
   !
-  call  colocation_makexml(css,mss,oss,xml250,test,crc250,irc)
+  call  colocation_makexml(css,mss,oss,xml250,test,fill250,crc250,irc)
   if (irc.ne.0) then
      call colocation_errorappend(crc250,"|")
      call colocation_errorappend(crc250,trim(myname))
