@@ -430,9 +430,10 @@ function showDropdown(target, arg = "") {
 			  console.log("Found file entries: ",fils.length);
 			  for (var ii=0; ii< fils.length; ii++) {
 			      var dd = getFile(fils[ii].getAttribute("path"));
+			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd);
-				  addChildButton(item,dd,"model_setArray('filterFile','"+dd+"');model_show();");
+				  addChildButton(item,size+" "+dd,"model_setArray('filterFile','"+dd+"');model_show();");
 			      };
 			  };
 		      };
@@ -474,7 +475,8 @@ function showDropdown(target, arg = "") {
 			  for (var ii=0; ii<len;ii++) {
 			      var sfile=model_config[file]["files"][ii][0];
 			      var sage=parseFloat(model_config[file]["files"][ii][1]).toFixed(2);
-			      addChildButton(item,sfile+" ("+sage+")","model_fileFind('"+sfile+"');");
+			      var ssize=model_config[file]["files"][ii][2];
+			      addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","model_fileFind('"+sfile+"');");
 			  }
 		      };
 		      documentLog.innerHTML="";
@@ -615,9 +617,10 @@ function showDropdown(target, arg = "") {
 			  console.log("Found file entries: ",fils.length);
 			  for (var ii=0; ii< fils.length; ii++) {
 			      var dd = getFile(fils[ii].getAttribute("path"));
+			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd);
-				  addChildButton(item,dd,"obs_setArray('filterFile','"+dd+"');obs_show();");
+				  addChildButton(item,size+" "+dd,"obs_setArray('filterFile','"+dd+"');obs_show();");
 			      };
 			  };
 		      };
@@ -677,7 +680,8 @@ function showDropdown(target, arg = "") {
 			  for (var ii=0; ii<len;ii++) {
 			      var sfile=obs_config[file]["files"][ii][0];
 			      var sage=parseFloat(obs_config[file]["files"][ii][1]).toFixed(2);
-			      addChildButton(item,sfile+" ("+sage+")","obs_fileFind('"+sfile+"');");
+			      var ssize=obs_config[file]["files"][ii][2];
+			      addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","obs_fileFind('"+sfile+"');");
 			  }
 		      };
 		      documentLog.innerHTML="";
@@ -793,7 +797,11 @@ function showDropdown(target, arg = "") {
 		if (pos !== "info" && pos !== "cnt")  {
 		    var descr=bufr[pos]["descr"];
 		    var info=bufr[pos]["info"];
-		    addChildButton(item,pos+" : "+descr+" "+info,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');");
+		    if (descr == "31001") {
+			addChildButton(item,pos+" : "+descr+" "+info,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","shaded");
+		    } else {
+			addChildButton(item,pos+" : "+descr+" "+info,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');");
+		    }
 		}
 	    }
 	}
@@ -1035,9 +1043,10 @@ function showDropdown(target, arg = "") {
 			  console.log("Found file entries: ",fils.length);
 			  for (var ii=0; ii< fils.length; ii++) {
 			      var dd = fils[ii].getAttribute("path");
+			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd,ii);
-				  addChildButton(item,dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
+				  addChildButton(item,size+" "+dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
 			      };
 			  };
 		      };
@@ -1279,9 +1288,10 @@ function showDropdown(target, arg = "") {
 			  console.log("Found file entries: ",fils.length);
 			  for (var ii=0; ii< fils.length; ii++) {
 			      var dd = fils[ii].getAttribute("path");
+			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd,ii);
-				  addChildButton(item,dd,"plot_setArray('table','"+dd+"');plot_show();");
+				  addChildButton(item,size+" "+dd,"plot_setArray('table','"+dd+"');plot_show();");
 			      };
 			  };
 		      };
@@ -1336,9 +1346,10 @@ function showDropdown(target, arg = "") {
 			  console.log("Found file entries: ",fils.length);
 			  for (var ii=0; ii< fils.length; ii++) {
 			      var dd = fils[ii].getAttribute("path");
+			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd,ii);
-				  addChildButton(item,dd,"plot_setArray('graphics','"+dd+"');plot_show();");
+				  addChildButton(item,size+" "+dd,"plot_setArray('graphics','"+dd+"');plot_show();");
 			      };
 			  };
 		      };
@@ -1630,8 +1641,9 @@ function dataToModel(data) {
 	    for (var jj = 0; jj < files.length; jj++) {
 		var sname=files[jj].getAttribute("name");
 		var sage=files[jj].getAttribute("age");
+		var ssize=files[jj].getAttribute("size");
 		console.log("Found stack file:",sname,' (',path,')');
-		model_config[path]["files"].push([sname,sage]);
+		model_config[path]["files"].push([sname,sage,ssize]);
 	    }
 	    model_config[path]["stack"]=files[0].getAttribute("name");
 	} else if (model_config[path]["files"] === undefined) {
@@ -1735,7 +1747,8 @@ function dataToObs(data) {
 	    for (var jj = 0; jj < files.length; jj++) {
 		var sname=files[jj].getAttribute("name");
 		var sage=files[jj].getAttribute("age");
-		obs_config[path]["files"].push([sname,sage]);
+		var ssize=files[jj].getAttribute("size");
+		obs_config[path]["files"].push([sname,sage,ssize]);
 	    };
 	    obs_config[path]["stack"]=files[0].getAttribute("name");
 	} else if (obs_config[path]["files"] === undefined) {
@@ -2162,7 +2175,8 @@ function getSubDirs(cls,root,loc,child) {
 	metfark_config[cls][root]={};
     }
     var pos=metfark_config[cls][root];
-    if (loc === null) {loc="";};
+    if (loc === null || loc === undefined) {loc="";};
+    console.log("Location:",loc);
     var steps = loc.split("/");
     var parent = null;
     var sub = null;

@@ -246,6 +246,7 @@ function plot_newDataset(item) {
     var clmns=plot_cats[cat]["columns"];
     var columns=[];
     for (var ii =0; ii< clmns.length;ii++) {
+	console.log("newDataset, cleaning:",ii);
 	columns.push(item.parentNode.parentNode.children[6+ii*2].children[0].value);
 	item.parentNode.parentNode.children[6+ii*2].children[0].value="";
     }

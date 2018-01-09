@@ -42,9 +42,11 @@ module model
      real, allocatable :: sli_val(:)   ! value of slice variable
      integer :: ctrg=0                 ! number of target variables
      real, allocatable :: trg_val(:)   ! value of target variable
+     logical, allocatable :: trg_vok(:)! value of target variable
      logical, allocatable :: trg_lval(:)! is target variable set?
      integer :: cobs=0                 ! number of obs variables
      real, allocatable :: obs_val(:)   ! value of obs variable
+     logical, allocatable :: obs_vok(:)! value of obs variable
      integer :: ndim                   ! number of dimensions
      integer, allocatable :: pos(:)    ! current position (unexpanded)
      real, allocatable :: rpos(:)      ! current position in real (unexpanded)
@@ -130,7 +132,7 @@ module model
      integer*4::   m4
      real*4::      mr
      real*8::      md
-     integer       :: len = 0
+     integer*8    :: len = 0
      character*1,allocatable::  fc(:)
      integer*1,  allocatable::  f1(:)
      integer*2,  allocatable::  f2(:)
@@ -210,9 +212,9 @@ module model
      integer :: leftFileSortIndex = 0         ! ref fileStackSort(*,2) - maxvalues
      integer :: rightFileSortIndex = 0        ! ref fileStackSort(*,1) - minvalues
      logical :: sortLimitsOk  = .false.       ! is there overlap between current file and min/max limits
-     character*80, allocatable :: var(:)
-     real, allocatable :: val(:)
-     integer,dimension(8) :: values    
+     character*80, allocatable :: sys_var(:)
+     real, allocatable         :: sys_val(:)
+     integer,dimension(8)      :: values    
      !
      integer :: tsort = 0              ! total number of "index values" on the stack
      integer :: msort                  ! maximum number of "index variables"
@@ -261,6 +263,8 @@ module model
      logical, pointer      :: trg_valset(:) => null()  ! is target value set by match?
      logical, pointer      :: trg_minset(:) => null()  ! list of is lower set?
      logical, pointer      :: trg_maxset(:) => null()  ! list of is upper set?
+     logical, pointer      :: trg_req(:) => null()     ! is variable required?
+     logical, pointer      :: trg_vok(:) => null()     ! is variable required?
      real, pointer         :: trg_val(:) => null()     ! list of values
      integer, pointer      :: trg_ook(:) => null()
      integer, pointer      :: trg_orm(:) => null()
@@ -270,6 +274,8 @@ module model
      integer :: cobs = 0                            ! number of observation values
      character*80, pointer :: obs_var(:)  => null() ! list of obs target names
      integer, pointer      :: obs_lenv(:) => null() ! list of obs target name length
+     logical, pointer      :: obs_req(:)  => null() ! list of required variables
+     logical, pointer      :: obs_vok(:)  => null() ! list of observation values
      real, pointer         :: obs_val(:)  => null() ! list of observation values
      !
      integer :: cpsp=0
@@ -280,8 +286,10 @@ module model
      logical ::  mpo_set=.false.
      integer :: cmpo=0
      character*80, allocatable :: mpo_var(:)   ! list of variable names
-     integer, allocatable    :: mpo_lenv(:)    ! list of target name length
-     real, allocatable       :: mpo_val(:)     ! list of values
+     integer, allocatable      :: mpo_lenv(:)  ! list of target name length
+     logical, allocatable      :: mpo_req(:)   ! list of required variables
+     logical, allocatable      :: mpo_vok(:)   ! list of valid varlues
+     real, allocatable         :: mpo_val(:)   ! list of values
      type(parse_session), pointer :: psf => null()
      !
      ! output
@@ -334,16 +342,16 @@ CONTAINS
     end if
     !
     call date_and_time(VALUES=css%values) ! get current date
-    if (allocated(css%var)) deallocate (css%var)
-    if (allocated(css%val)) deallocate (css%val)
-    allocate(css%var(2),css%val(2),stat=irc)
-    css%var(1)="now"
-    css%var(2)="midnight"
-    css%val(1)=parse_f1970(&
+    if (allocated(css%sys_var)) deallocate (css%sys_var)
+    if (allocated(css%sys_val)) deallocate (css%sys_val)
+    allocate(css%sys_var(2),css%sys_val(2),stat=irc)
+    css%sys_var(1)="now"
+    css%sys_var(2)="midnight"
+    css%sys_val(1)=parse_f1970(&
          & real(css%values(1)),real(css%values(2)),&
          & real(css%values(3)),real(css%values(5)),&
          & real(css%values(6)),real(css%values(7)))
-    css%val(2)=parse_f1970(&
+    css%sys_val(2)=parse_f1970(&
          & real(css%values(1)),real(css%values(2)),&
          & real(css%values(3)),0.0D0,&
          & 0.0D0,0.0D0) ! midnight
@@ -466,8 +474,8 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,'Entering.',irc
     if(mod_bdeb)write(*,*)myname,'Un-slice.'
     !
-    if (allocated(css%var)) deallocate (css%var)
-    if (allocated(css%val)) deallocate (css%val)
+    if (allocated(css%sys_var)) deallocate (css%sys_var)
+    if (allocated(css%sys_val)) deallocate (css%sys_val)
     !
     ! remove global slice arrays
     if (allocated(css%sli_v80)) deallocate(css%sli_v80)
@@ -546,6 +554,8 @@ CONTAINS
     if (associated(css%trg_valset)) deallocate(css%trg_valset)
     if (associated(css%trg_minset)) deallocate(css%trg_minset)
     if (associated(css%trg_maxset)) deallocate(css%trg_maxset)
+    if (associated(css%trg_req)) deallocate(css%trg_req)
+    if (associated(css%trg_vok)) deallocate(css%trg_vok)
     if (associated(css%trg_val)) deallocate(css%trg_val)
     if (associated(css%trg_ook)) deallocate(css%trg_ook)
     if (associated(css%trg_orm)) deallocate(css%trg_orm)
@@ -573,6 +583,8 @@ CONTAINS
     !
     if (associated(css%obs_var)) deallocate(css%obs_var)
     if (associated(css%obs_lenv)) deallocate(css%obs_lenv)
+    if (associated(css%obs_req)) deallocate(css%obs_req)
+    if (associated(css%obs_vok)) deallocate(css%obs_vok)
     if (associated(css%obs_val)) deallocate(css%obs_val)
     css%cobs=0
     !
@@ -588,6 +600,8 @@ CONTAINS
     !
     if (allocated(css%mpo_var)) deallocate(css%mpo_var)
     if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
+    if (allocated(css%mpo_req)) deallocate(css%mpo_req)
+    if (allocated(css%mpo_vok)) deallocate(css%mpo_vok)
     if (allocated(css%mpo_val)) deallocate(css%mpo_val)
     !
     call model_clearPSP(css,crc250,irc)
@@ -1734,6 +1748,8 @@ CONTAINS
        if(associated(css%trg_valset)) deallocate(css%trg_valset)
        if(associated(css%trg_minset)) deallocate(css%trg_minset)
        if(associated(css%trg_maxset)) deallocate(css%trg_maxset)
+       if(associated(css%trg_req)) deallocate(css%trg_req)
+       if(associated(css%trg_vok)) deallocate(css%trg_vok)
        if(associated(css%trg_val)) deallocate(css%trg_val)
        if(associated(css%trg_ook)) deallocate(css%trg_ook)
        if(associated(css%trg_orm)) deallocate(css%trg_orm)
@@ -1744,7 +1760,7 @@ CONTAINS
                & css%trg_minval(css%ctrg), css%trg_maxval(css%ctrg), &
                & css%trg_sliceset(css%ctrg), css%trg_valset(css%ctrg), &
                & css%trg_minset(css%ctrg), css%trg_maxset(css%ctrg), &
-               & css%trg_val(css%ctrg), &
+               & css%trg_req(css%ctrg), css%trg_vok(css%ctrg), css%trg_val(css%ctrg), &
                & css%trg_ook(0:css%ctrg), css%trg_orm(0:css%ctrg), stat=irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
@@ -1765,7 +1781,7 @@ CONTAINS
              call chop0(css%trg_l80(ii),80)
              lens=length(css%trg_l80(ii),80,10)
              if (lens.ne.0) then
-                call parse_parsef(plim,css%trg_l80(ii)(1:lens),css%var,crc250,irc)
+                call parse_parsef(plim,css%trg_l80(ii)(1:lens),css%sys_var,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
                    call model_errorappend(crc250," Error return from parsef.")
@@ -1773,7 +1789,7 @@ CONTAINS
                    call model_errorappend(crc250,"\n")
                    return
                 end if
-                css%trg_minval(ii)=parse_evalf(plim,css%val)
+                css%trg_minval(ii)=parse_evalf(plim,css%sys_val)
                 css%trg_minset(ii)=.true.
                 if (mod_bdeb) write(*,*)myname,'Minval:',css%trg_minval(ii),css%trg_minset(ii)
              else
@@ -1784,7 +1800,7 @@ CONTAINS
              call chop0(css%trg_u80(ii),80)
              lens=length(css%trg_u80(ii),80,10)
              if (lens.ne.0) then
-                call parse_parsef(plim,css%trg_u80(ii)(1:lens),css%var,crc250,irc)
+                call parse_parsef(plim,css%trg_u80(ii)(1:lens),css%sys_var,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
                    call model_errorappend(crc250," Error return from parsef.")
@@ -1792,7 +1808,7 @@ CONTAINS
                    call model_errorappend(crc250,"\n")
                    return
                 end if
-                css%trg_maxval(ii)=parse_evalf(plim,css%val)
+                css%trg_maxval(ii)=parse_evalf(plim,css%sys_val)
                 css%trg_maxset(ii)=.true.
                 if (mod_bdeb) write(*,*)myname,'Maxval:',css%trg_maxval(ii),css%trg_maxset(ii)
              else
@@ -1801,6 +1817,8 @@ CONTAINS
              ! read (css%trg_u80(ii)(1:lens),*,iostat=irc2)css%trg_maxval(ii)
              !css%trg_maxset(ii)=(irc2.eq.0)
              css%trg_sliceset(ii)=currentTarget%lslice
+             css%trg_req(ii)=.false.
+             css%trg_vok(ii)=.false.
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
              css%trg_orm(ii)=0
@@ -1819,6 +1837,8 @@ CONTAINS
              css%trg_valset(ii)=.true.
              css%trg_minset(ii)=.false.
              css%trg_maxset(ii)=.false.
+             css%trg_req(ii)=.false.
+             css%trg_vok(ii)=.false.
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
              css%trg_orm(ii)=0
@@ -1856,10 +1876,14 @@ CONTAINS
     if (css%cobs.ne.nn) then
        if (associated(css%obs_var)) deallocate(css%obs_var)
        if (associated(css%obs_lenv)) deallocate(css%obs_lenv)
+       if (associated(css%obs_req)) deallocate(css%obs_req)
+       if (associated(css%obs_vok)) deallocate(css%obs_vok)
        if (associated(css%obs_val)) deallocate(css%obs_val)
     end if
     css%cobs=nn
-    allocate(css%obs_var(css%cobs),css%obs_lenv(css%cobs),css%obs_val(css%cobs),stat=irc)
+    allocate(css%obs_var(css%cobs),css%obs_lenv(css%cobs),&
+         & css%obs_req(css%cobs),css%obs_vok(css%cobs),&
+         & css%obs_val(css%cobs),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate 'obs'.")
@@ -1870,25 +1894,35 @@ CONTAINS
        css%obs_var(ii)=var(ii)
        call chop0(css%obs_var(ii),80)
        css%obs_lenv(ii)=length(css%obs_var(ii),80,10)
+       css%obs_req(ii)=.false.
     end do
     return
   end subroutine model_setObsVar
  !
  ! set observation values
  !
- subroutine model_setObsVal(css,nn,val,crc250,irc)
+ subroutine model_setObsVal(css,nn,val,vok,crc250,irc)
     type(mod_session), pointer :: css !  current session
     integer :: nn
     real :: val(nn)
+    logical :: vok(nn)
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="model_setObsVal"
     integer :: ii
     if (css%cobs.ne.nn) then
+       if (associated(css%obs_vok)) deallocate(css%obs_vok)
        if (associated(css%obs_val)) deallocate(css%obs_val)
+       irc=844
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Invalid ntrg.")
+       call model_errorappendi(crc250,nn)
+       call model_errorappendi(crc250,css%cobs)
+       call model_errorappend(crc250,"\n")
+       return
     end if
     css%cobs=nn
-    allocate(css%obs_val(css%cobs),stat=irc)
+    allocate(css%obs_val(css%cobs),css%obs_vok(css%cobs),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate 'obs'.")
@@ -1897,6 +1931,7 @@ CONTAINS
     end if
     do ii=1,css%cobs
        css%obs_val(ii)=val(ii)
+       css%obs_vok(ii)=vok(ii)
     end do
     return
   end subroutine model_setObsVal
@@ -1972,6 +2007,7 @@ CONTAINS
        end if
        if (css%trg_valset(ind(ii))) then
           css%trg_val(ind(ii))=val(ii)
+          css%trg_vok(ind(ii))=.true.
        else
           css%trg_val(ind(ii))=0.0D0
        end if
@@ -2002,6 +2038,7 @@ CONTAINS
     do ii=1,nn
        if (vset(ii)) then
           css%trg_val(ii)=val(ii)
+          css%trg_vok(ii)=.true.
        else
           css%trg_val(ii)=0.0D0
        end if
@@ -2018,7 +2055,8 @@ CONTAINS
     character*25 :: myname="model_setTarget"
     integer :: ii
     do ii=1,nn
-       css%trg_valset(ind(ii))=.true.
+       css%trg_valset(ind(ii))=.true. ! target is set in search
+       css%trg_req(ind(ii))=.true.    ! target variable is required (can not be undefined)
     end do
     return
   end subroutine model_setTarget
@@ -2531,7 +2569,7 @@ CONTAINS
        newLoc%sli_val(ii)=css%trg_val(css%sli_2trg(ii))
     end do
     newLoc%cobs=css%cobs
-    allocate(newLoc%obs_val(newLoc%cobs),stat=irc)
+    allocate(newLoc%obs_val(newLoc%cobs),newLoc%obs_vok(newLoc%cobs),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Unable to allocate newLoc%obs_val.")
@@ -2542,9 +2580,11 @@ CONTAINS
     do ii=1,newLoc%cobs
        if(mod_bdeb)write(*,*)myname,'Obs target:',ii,css%obs_val(ii)
        newLoc%obs_val(ii)=css%obs_val(ii)
+       newLoc%obs_vok(ii)=css%obs_vok(ii)
     end do
     newLoc%ctrg=css%ctrg
     allocate(newLoc%trg_val(newLoc%ctrg),&
+         & newLoc%trg_vok(newLoc%ctrg),&
          & newLoc%trg_lval(newLoc%ctrg),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -2623,13 +2663,15 @@ CONTAINS
        if (bok) then
           ! evaluate filter
           if (css%mpo_set) then
-             if (mod_bdeb)write(*,*)myname,'Evaluating filter:',ii,associated(css%psf),css%cmpo
-             ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+             if (mod_bdeb)write(*,*)myname,'Evaluating filter:',ii,&
+                  & associated(css%psf),css%cmpo
              do ii=1,loc%ctrg
                 css%mpo_val(ii)=loc%trg_val(ii)
+                css%mpo_vok(ii)=loc%trg_vok(ii)
              end do
              do ii=1,loc%cobs
                 css%mpo_val(ii+css%ctrg)=loc%obs_val(ii)
+                css%mpo_vok(ii+css%ctrg)=loc%obs_vok(ii)
              end do
              val=parse_evalf(css%psf,css%mpo_val)
              bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
@@ -2711,6 +2753,15 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
+       call used(css%psf,css%mpo_req)
+       call model_getMPO(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from getMPO.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
     return
   end subroutine model_compileFilter
@@ -2761,25 +2812,35 @@ CONTAINS
           call model_errorappend(crc250,"parse_parsef")
           return
        end if
+       call parse_used(css%psp(ii)%ptr,css%mpo_req)
     end do
+    call model_getMPO(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getMPO.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     if(mod_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine model_compileExpr
   !
   ! evaluate expressions
   !
-  subroutine model_evalExpr(css,nexp,val,crc250,irc)
+  subroutine model_evalExpr(css,nexp,val,set,crc250,irc)
     use parse
     implicit none
     type(mod_session), pointer :: css !  current session
     integer :: nexp
     real :: val(nexp)
+    logical :: set(nexp)
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="evalExpr"
     integer :: ii
     do ii=1,css%cpsp
-       val(ii)=parse_evalf(css%psp(ii)%ptr,css%mpo_val)
+       call parse_evalf(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,val(ii),set(ii))
        if (irc.ne.0) then
           call model_errorappend(crc250,"parse_evalf")
           return
@@ -2856,8 +2917,12 @@ CONTAINS
          & css%cmpo,css%ctrg,css%cobs
     if (allocated(css%mpo_var)) deallocate(css%mpo_var)
     if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
+    if (allocated(css%mpo_req)) deallocate(css%mpo_req)
+    if (allocated(css%mpo_vok)) deallocate(css%mpo_vok)
     if (allocated(css%mpo_val)) deallocate(css%mpo_val)
-    allocate(css%mpo_var(css%cmpo),css%mpo_lenv(css%cmpo),css%mpo_val(css%cmpo),stat=irc)
+    allocate(css%mpo_var(css%cmpo),css%mpo_lenv(css%cmpo),&
+         & css%mpo_req(css%cmpo),css%mpo_vok(css%cmpo),&
+         & css%mpo_val(css%cmpo),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250,"Unable to allocate 'filter'.")
@@ -2867,15 +2932,36 @@ CONTAINS
     do ii=1,css%ctrg
        css%mpo_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
        css%mpo_lenv(ii)=css%trg_lent(ii)
+       css%mpo_req(ii)=.false.
+       css%mpo_vok(ii)=.false.
     end do
     do ii=1,css%cobs
        css%mpo_var(ii+css%ctrg)=css%obs_var(ii)(1:css%obs_lenv(ii))
        css%mpo_lenv(ii+css%ctrg)=css%obs_lenv(ii)
+       css%mpo_req(ii+css%ctrg)=.false.
+       css%mpo_vok(ii+css%ctrg)=.false.
     end do
     css%mpo_set=.true.
     if(mod_bdeb)write(*,*)myname,"Done.",css%ctrg,css%cobs,css%cmpo
     return
   end subroutine model_setMPO
+  !
+  subroutine model_getMPO(css,crc250,irc)
+    implicit none
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="getMPO"
+    integer :: ii
+    do ii=1,css%ctrg
+       if (css%mpo_req(ii)) css%trg_req(ii)=.true.
+    end do
+    do ii=1,css%cobs
+       if (css%mpo_req(ii+css%ctrg)) css%obs_req(ii)=.true.
+    end do
+    if(mod_bdeb)write(*,*)myname,"Done.",css%ctrg,css%cobs,css%cmpo
+    return
+  end subroutine model_getMPO
   !
   subroutine model_getfilter(css,flt,crc250,irc)
     implicit none
@@ -2945,8 +3031,10 @@ CONTAINS
        loc%prev%next => loc%next
        if (allocated(loc%sli_val))  deallocate(loc%sli_val)
        if (allocated(loc%trg_val))  deallocate(loc%trg_val)
+       if (allocated(loc%trg_vok))  deallocate(loc%trg_vok)
        if (allocated(loc%trg_lval)) deallocate(loc%trg_lval)
        if (allocated(loc%obs_val))  deallocate(loc%obs_val)
+       if (allocated(loc%obs_vok))  deallocate(loc%obs_vok)
        if (allocated(loc%pos))      deallocate(loc%pos)
        if (allocated(loc%rpos))     deallocate(loc%rpos)
        if (allocated(loc%istart))   deallocate(loc%istart)
@@ -3886,50 +3974,114 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_setBatchValue"
     integer :: ii,kk,ll
+    logical :: set
     type(mod_variable), pointer :: v
     do ii=1,b%nvar
        v => newFile%var(b%var(ii))%ptr
-       b%val(ii)=model_getValue(newFile,v,loc,crc250,irc)
+       set=.true.
+       b%val(ii)=model_getLocValue(v,loc,set,crc250,irc)
+       if (.not.set)b%val(ii)=nf_fill_double
     end do
     return
   end subroutine model_setBatchValue
   !
   ! get current batch values
   !
-  real function model_getValue(newFile,v,loc,crc250,irc)
-    type(mod_file),pointer :: newFile   ! current file
+  real function model_getLocValue(v,loc,set,crc250,irc)
     type(mod_variable), pointer :: v       ! variable
     type(mod_location), pointer :: loc       ! current batch
+    logical :: set
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_getValue"
+    character*25 :: myname="model_getLocValue"
     integer :: ii
     character*50 :: pos50,loc50,val50
     integer :: lenp,lenl,lenv
     integer, external :: length
     if (v%ndim.gt.0) then
        ii=model_getLoc(v%ndim,v%ind,v%istart,v%istop,loc%ndim,loc%pos)
+    else 
+       ii=1
+    end if
+    if (mod_bdeb) then
        write(loc50,'(I10)') ii
        call chop0(loc50,50,10)
        lenl=length(loc50,50,10)
        pos50=model_getPos50(v%ndim,v%ind,loc%ndim,loc%pos)
        call chop0(pos50,50,10)
        lenp=length(pos50,50,10)
-       if (mod_bdeb) then
-          if (ii.lt.1.or.ii.gt.v%len) then
-             write(*,*)myname," *** Invalid pos: '"&
-                  & //v%var80(1:v%lenv)//"("//pos50(1:lenp)//&
-                  & ")' loc=",ii,"(max=",v%len,")"
-          end if
+       if (ii.lt.1.or.ii.gt.v%len) then
+          write(*,*)myname," *** Invalid pos: '"&
+               & //v%var80(1:v%lenv)//"("//pos50(1:lenp)//&
+               & ")' loc=",ii,"(max=",v%len,")"
        end if
-       model_getValue=v%fd(ii)
-       write(val50,*)model_getValue
+    end if
+    set=.true.
+    model_getLocValue=model_getValue(v,ii,set,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from getValue.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    if (.not.set) model_getLocValue=nf_fill_double
+    if(mod_bdeb)then
+       write(val50,*)model_getLocValue
        call chop0(val50,50,10)
        lenv=length(val50,50,10)
-       if(mod_bdeb)write(*,*)myname,"Pos="//pos50(1:lenp)//&
-            & " ll="//loc50(1:lenl)//" val="//val50(1:lenv)
+       write(*,*)myname,"Pos="//pos50(1:lenp)//&
+            & " ll="//loc50(1:lenl)//" val="//val50(1:lenv)," set=",set
+    end if
+    return
+  end function model_getLocValue
+
+  real function model_getValue(v,ii,set,crc250,irc)
+    type(mod_variable), pointer :: v       ! variable
+    integer :: ii
+    logical :: set
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname="model_getValue"
+    if (ii.lt.1.or.ii.gt.v%len) then
+       set=.false.
     else
-       model_getValue=v%fd(1)
+       select case (v%type)
+       case (nf_char)
+          set=.false.
+       case (nf_int1)
+          if (v%f1(ii).eq.v%m1) then
+             set=.false.
+          else
+             model_getValue=v%f1(ii)*v%scale
+          end if
+       case (nf_int2)
+          if (v%f2(ii).eq.v%m2) then
+             set=.false.
+          else
+             model_getValue=v%f2(ii)*v%scale
+          end if
+       case (nf_int)
+          if (v%f4(ii).eq.v%m4) then
+             set=.false.
+          else
+             model_getValue=v%f4(ii)*v%scale
+          end if
+       case (nf_real)
+          if (v%fr(ii).eq.v%mr) then
+             set=.false.
+          else
+             model_getValue=v%fr(ii)*v%scale
+          end if
+       case (nf_double)
+          if (v%fd(ii).eq.v%md) then
+             set=.false.
+          else
+             model_getValue=v%fd(ii)*v%scale
+          end if
+       case DEFAULT
+          set=.false.
+       end select
     end if
     return
   end function model_getValue
@@ -4923,7 +5075,7 @@ CONTAINS
     real :: sum,tsum,wgt,twgt,tval
     integer, allocatable :: inn(:), out(:), ind(:)
     integer ::cnt,cval,ctot,jj
-    logical :: first
+    logical :: first,set
     if (.not.loc%bok .or. loc%search .ne. 0) return
     v => newFile%var(varid)%ptr
     !
@@ -4982,10 +5134,11 @@ CONTAINS
        cval=0 ! number of valid grid points
        binn=.false.
        do while (.not. binn) ! INNER SEARCH LOOP
-          val = model_getValue(newFile,v,loc,crc250,irc)
+          set=.true.
+          val = model_getLocValue(v,loc,set,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from getValue.")
+             call model_errorappend(crc250," Error return from getLocValue.")
              call model_errorappendi(crc250,irc)
              call model_errorappend(crc250,"\n")
              return
@@ -4994,7 +5147,7 @@ CONTAINS
           cnt=cnt+1
           ctot=ctot+1
           if(mod_bdeb)write(*,*)myname," Loc:",loc%iloc,"Calling Incrementing position."
-          if (val.ne.nf_fill_double) then
+          if (set) then ! val.ne.nf_fill_double
              wgt=model_getWeight(ninn,inn,loc%ndim,&
                & loc%pos,loc%istart,loc%istop,loc%intpf) ! current weight
              tsum=tsum+wgt*val
@@ -5525,7 +5678,7 @@ CONTAINS
     real :: sum,tsum,wgt,twgt,tval
     integer, allocatable :: inn(:), out(:),ind(:)
     integer ::cnt,cval,ctot,jj
-    logical :: first
+    logical :: first,set
     if (.not.loc%bok .or. loc%search .ne. 0) return
     v => newFile%var(varid)%ptr
     !
@@ -5605,11 +5758,12 @@ CONTAINS
        cval=0 ! number of valid grid points
        binn=.false.
        do while (.not. binn)
-          if(mod_bdeb)write(*,*)myname,"Calling getValue."
-          val = model_getValue(newFile,v,loc,crc250,irc)
+          if(mod_bdeb)write(*,*)myname,"Calling getLocValue."
+          set=.true.
+          val = model_getLocValue(v,loc,set,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from getValue.")
+             call model_errorappend(crc250," Error return from getLocValue.")
              call model_errorappendi(crc250,irc)
              call model_errorappend(crc250,"\n")
              return
@@ -5617,7 +5771,7 @@ CONTAINS
           cnt=cnt+1
           ctot=ctot+1
           if(mod_bdeb)write(*,*)myname,"Calling Incrementing position."
-          if (val.ne.nf_fill_double) then
+          if (set) then ! val.ne.nf_fill_double
              if (first) then
                 write(ounit,'(4X,A)') "<field "//loc250(1:lenl)//" "//&
                      & var250(1:lenv)//pos250(1:lenp)//">"
@@ -6167,6 +6321,7 @@ CONTAINS
     real*4,     pointer::  ar(:)
     real*8,     pointer::  ad(:)
     type(mod_attribute),pointer :: att
+    type(mod_variable),pointer :: v
     !
     ! get number of dimension, variables, att, unlimited dimension id
     !
@@ -6234,7 +6389,7 @@ CONTAINS
        newFile%dim_trg(dd)=0
     end do
     !
-    if(mod_bdeb)write(*,*)myname,' Allocate var.',newFile%nvar
+    if(mod_bdeb)write(*,*)myname,' Allocate var pointers.',newFile%nvar
     !     allocate variables in file
     allocate(newFile%var(newFile%nvar),stat=irc)
     if (irc.ne.0) then
@@ -6244,10 +6399,10 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,' Init var.'
-    !     initialise variables
-    do ii=1,newFile%nvar
-       allocate(newFile%var(ii)%ptr,stat=irc)
+    if(mod_bdeb)write(*,*)myname,' Process var.'
+    !     -> store variable names
+    do varid=1,newFile%nvar
+       allocate(newFile%var(varid)%ptr,stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to allocate vars.")
@@ -6255,14 +6410,10 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       newFile%var(ii)%ptr%ndim=0
-       newFile%var(ii)%ptr%natt=0
-       newFile%var(ii)%ptr%scale=1.0
-    end do
-    if(mod_bdeb)write(*,*)myname,' Store var.'
-    !     -> store variable names
-    do varid=1,newFile%nvar
-       ret = NF_INQ_VARNDIMS (newFile%ncid, varid, newFile%var(varid)%ptr%ndim);
+       v=>newFile%var(varid)%ptr
+       v%ndim=0
+       v%natt=0
+       ret = NF_INQ_VARNDIMS (newFile%ncid, varid, v%ndim);
        if (ret .ne. NF_NOERR) then
           irc=802
           call model_errorappend(crc250,myname)
@@ -6272,10 +6423,7 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       allocate(newFile%var(varid)%ptr%ind(newFile%var(varid)%ptr%ndim),&
-            &   newFile%var(varid)%ptr%istart(newFile%var(varid)%ptr%ndim),&
-            &   newFile%var(varid)%ptr%istop(newFile%var(varid)%ptr%ndim),&
-            &   stat=irc)
+       allocate(v%ind(v%ndim),v%istart(v%ndim),v%istop(v%ndim),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to allocate var.")
@@ -6283,12 +6431,7 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       RET = NF_INQ_VAR(newFile%ncid, varid, &
-            &           newFile%var(varid)%ptr%var80, &
-            &           newFile%var(varid)%ptr%type,&
-            &           newFile%var(varid)%ptr%ndim,&
-            &           newFile%var(varid)%ptr%ind,&
-            &           newFile%var(varid)%ptr%natt)
+       RET = NF_INQ_VAR(newFile%ncid, varid,v%var80,v%type,v%ndim,v%ind,v%natt)
        if (ret .ne. NF_NOERR) then
           irc=802
           call model_errorappend(crc250,myname)
@@ -6297,22 +6440,27 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       call chop0(newFile%var(varid)%ptr%var80,80)
-       newFile%var(varid)%ptr%lenv=length(newFile%var(varid)%ptr%var80,80,10)
-       newFile%var80(varid)=newFile%var(varid)%ptr%var80
-       newFile%lenv(varid)=newFile%var(varid)%ptr%lenv
-       do ii=1,newFile%var(varid)%ptr%ndim
-          newFile%var(varid)%ptr%istop(ii)=newFile%istop(&
-               &              newFile%var(varid)%ptr%ind(ii))
-          newFile%var(varid)%ptr%istart(ii)=1
+       call chop0(v%var80,80)
+       v%lenv=length(v%var80,80,10)
+       newFile%var80(varid)=v%var80
+       newFile%lenv(varid)=v%lenv
+       do ii=1,v%ndim
+          v%istop(ii)=newFile%istop(v%ind(ii))
+          v%istart(ii)=1
        end do
-       call chop0(newFile%var(varid)%ptr%var80,80)
+       call chop0(v%var80,80)
        ! process attributes
-       newFile%var(varid)%ptr%scale=1.0D0
-       newFile%var(varid)%ptr%misstype=0
+       v%scale=1.0
+       v%mc=char(nf_fill_char)
+       v%m1=nf_fill_int1
+       v%m2=nf_fill_int2
+       v%m4=nf_fill_int
+       v%mr=nf_fill_real
+       v%md=nf_fill_double
+       v%misstype=0
        !
        if(mod_bdeb)write(*,*)myname,' Store attr.'
-       allocate(newFile%var(varid)%ptr%att(newFile%var(varid)%ptr%natt),stat=irc)
+       allocate(v%att(v%natt),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to allocate var-att.")
@@ -6320,7 +6468,7 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       do ii=1,newFile%var(varid)%ptr%natt
+       do ii=1,v%natt
           allocate(att,stat=irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
@@ -6333,36 +6481,37 @@ CONTAINS
           if (ret .ne. NF_NOERR) cycle
           RET=NF_INQ_ATT(newFile%NCID,VARID,att%att80,att%type,att%len)
           if (ret.ne.NF_NOERR) cycle
-          if (att%type.eq.nf_char)then
+          select case (att%type)
+          case (nf_char)
              if (allocated(att%ac)) deallocate(att%ac)
              allocate(att%ac(att%len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_text (newFile%ncid, varid,att%att80,att%ac)
-          else if (att%type.eq.nf_int1)then
+          case(nf_int1)
              if (allocated(att%a1)) deallocate(att%a1)
              allocate(att%a1(len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_int1 (newFile%ncid, varid,att%att80,att%a1)
-          else if (att%type.eq.nf_int2)then
+          case(nf_int2)
              if (allocated(att%a2)) deallocate(att%a2)
              allocate(att%a2(len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_int2 (newFile%ncid, varid,att%att80,att%a2)
-          else if (att%type.eq.nf_int)then
+          case(nf_int)
              if (allocated(att%a4)) deallocate(att%a4)
              allocate(att%a4(len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_int (newFile%ncid, varid,att%att80,att%a4)
-          else if (att%type.eq.nf_real)then
+          case(nf_real)
              if (allocated(att%ar)) deallocate(att%ar)
              allocate(att%ar(len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_real (newFile%ncid, varid, att%att80,att%ar)
-          elseif (att%type.eq.nf_double)then
+          case(nf_double)
              if (allocated(att%ad)) deallocate(att%ad)
              allocate(att%ad(len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_double (newFile%ncid, varid,att%att80,att%ad)
-          else
-          end if
+          case DEFAULT
+          end select
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250,"Unable to allocate att value.")
-             call model_errorappendi(crc250,newFile%var(varid)%ptr%ndim)
+             call model_errorappendi(crc250,v%ndim)
              call model_errorappendi(crc250,irc)
              call model_errorappend(crc250,"\n")
              return
@@ -6373,32 +6522,35 @@ CONTAINS
           if(mod_bdeb)write(*,*)myname,' get attr.',ii,att%att80(1:att%lena)
           !     check if we have scale-factor/missing value
           if (att%att80(1:att%lena).eq."scale_factor") then
-             if (att%type.eq.nf_real)then
-                newFile%var(varid)%ptr%scale=att%ar(1)
-             elseif (att%type.eq.nf_double)then
-                newFile%var(varid)%ptr%scale=att%ad(1)
-             end if
+             select case (att%type)
+             case(nf_real)
+                v%scale=att%ar(1)
+             case(nf_double)
+                v%scale=att%ad(1)
+             case DEFAULT
+             end select
           else if (att%att80(1:att%lena).eq."missing_value") then
-             if (att%type.eq.nf_char)then
-                newFile%var(varid)%ptr%mc=att%ac(1)
-                newFile%var(varid)%ptr%misstype=nf_char
-             else if (att%type.eq.nf_int1)then
-                newFile%var(varid)%ptr%m1=att%a1(1)
-                newFile%var(varid)%ptr%misstype=nf_int1
-             else if (att%type.eq.nf_int2)then
-                newFile%var(varid)%ptr%m2=att%a2(1)
-                newFile%var(varid)%ptr%misstype=nf_int2
-             else if (att%type.eq.nf_int)then
-                newFile%var(varid)%ptr%m4=att%a4(1)
-                newFile%var(varid)%ptr%misstype=nf_int
-             else if (att%type.eq.nf_real)then
-                newFile%var(varid)%ptr%mr=att%ar(1)
-                newFile%var(varid)%ptr%misstype=nf_real
-             elseif (att%type.eq.nf_double)then
-                newFile%var(varid)%ptr%md=att%ad(1)
-                newFile%var(varid)%ptr%misstype=nf_double
-             else
-             end if
+             select case (att%type)
+             case (nf_char)
+                v%mc=att%ac(1)
+                v%misstype=nf_char
+             case (nf_int1)
+                v%m1=att%a1(1)
+                v%misstype=nf_int1
+             case (nf_int2)
+                v%m2=att%a2(1)
+                v%misstype=nf_int2
+             case (nf_int)
+                v%m4=att%a4(1)
+                v%misstype=nf_int
+             case (nf_real)
+                v%mr=att%ar(1)
+                v%misstype=nf_real
+             case (nf_double)
+                v%md=att%ad(1)
+                v%misstype=nf_double
+             case DEFAULT
+             end select
           else
              if (allocated(att%ac)) deallocate(att%ac,stat=irc)
              if (allocated(att%a1)) deallocate(att%a1,stat=irc)
@@ -6407,7 +6559,7 @@ CONTAINS
              if (allocated(att%ar)) deallocate(att%ar,stat=irc)
              if (allocated(att%ad)) deallocate(att%ad,stat=irc)
           end if
-          newFile%var(varid)%ptr%att(ii)%ptr => att
+          v%att(ii)%ptr => att
           att => null()
        end do
     end do
@@ -6433,8 +6585,9 @@ CONTAINS
     character*50 :: dim50
     type(mod_variable),pointer :: v
     !
+    v => newFile%var(varid)%ptr
+    !
     if(mod_bdeb)then
-       v => newFile%var(varid)%ptr
        dim50=model_getDim(newFile,v)
        call chop0(dim50,50)
        lend=length(dim50,50,10)
@@ -6447,45 +6600,52 @@ CONTAINS
        end do
     end if
     ! find length of grid
-    newFile%var(varid)%ptr%len=1
-    do ii=1,newFile%var(varid)%ptr%ndim
-       newFile%var(varid)%ptr%len=newFile%var(varid)%ptr%len*&
-               & (newFile%istop(newFile%var(varid)%ptr%ind(ii)) &
-            & - newFile%istart(newFile%var(varid)%ptr%ind(ii)) + 1)
+    v%len=1
+    do ii=1,v%ndim
+       v%len=v%len*(newFile%istop(v%ind(ii)) - newFile%istart(v%ind(ii)) + 1)
     end do
     !
-    ! allocate
     if (mod_bdeb) then
        write(*,'(X,A,A,I0,A)')myname,&
-            &" *** Allocating: '"//newFile%var(varid)%ptr%&
-            & var80(1:newFile%var(varid)%ptr%lenv)//"(",&
-            & newFile%var(varid)%ptr%len,")"
-    end if
-    allocate( newFile%var(varid)%ptr%fd(newFile%var(varid)%ptr%len),stat=irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Unable to allocate var value.")
-       call model_errorappendi(crc250,newFile%var(varid)%ptr%ndim)
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
+            &" *** Allocating: '"//v%&
+            & var80(1:v%lenv)//"(",&
+            & v%len,")"
     end if
     !
-    if (newFile%var(varid)%ptr%type.eq.nf_int2) then
-       if(mod_bdeb)write(*,*)myname,'Int 2.'
-       allocate( newFile%var(varid)%ptr%f2(newFile%var(varid)%ptr%len),stat=irc)
+    select case (v%type)
+    case (nf_int1)
+       if(mod_bdeb)write(*,*)myname,'Allocating Int 1.',v%len
+       allocate( v%f1(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to allocate var value.")
-          call model_errorappendi(crc250,newFile%var(varid)%ptr%len)
+          call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
        end if
-       ret = nf_get_vara_int2(newFile%ncid,varid,&
-            &                 newFile%var(varid)%ptr%istart, &
-            &                 newFile%var(varid)%ptr%istop,&
-            &                 newFile%var(varid)%ptr%f2)
+       ret = nf_get_vara_int1(newFile%ncid,varid,v%istart,v%istop,v%f1)
+       if (ret .ne. NF_NOERR) then
+          irc=812
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Error return from NF_GET_VARA_INT1."//&
+               & nf_strerror(ret))
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    case (nf_int2)
+       if(mod_bdeb)write(*,*)myname,'Allocating Int 2.',v%len
+       allocate( v%f2(v%len),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate var value.")
+          call model_errorappendi8(crc250,v%len)
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       ret = nf_get_vara_int2(newFile%ncid,varid,v%istart,v%istop,v%f2)
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
@@ -6495,43 +6655,19 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       ! handle missing values gracefully...
-       fill2=nf_fill_int2
-       filld=nf_fill_double
-       if (newFile%var(varid)%ptr%misstype.eq.nf_int2) then
-          fill2=newFile%var(varid)%ptr%m2
-       end if
-       do ii=1,newFile%var(varid)%ptr%len
-          if (newFile%var(varid)%ptr%f2(ii).eq.fill2) then
-             newFile%var(varid)%ptr%fd(ii)=filld
-          else
-             newFile%var(varid)%ptr%fd(ii)=newFile%var(varid)%ptr%scale &
-                  & * newFile%var(varid)%ptr%f2(ii)
-          end if
-       end do
-       deallocate(newFile%var(varid)%ptr%f2,stat=irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to deallocate f2.")
-          call model_errorappendi(crc250,irc)
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-    else if (newFile%var(varid)%ptr%type.eq.nf_int) then
-       if(mod_bdeb)write(*,*)myname,'Int 4.'
-       allocate( newFile%var(varid)%ptr%f4(newFile%var(varid)%ptr%len),stat=irc)
+    case (nf_int)
+       if(mod_bdeb)write(*,*)myname,'Allocating Int 4.',v%len
+       allocate( v%f4(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to allocate var value.")
-          call model_errorappendi(crc250,newFile%var(varid)%ptr%len)
+          call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
        end if
-       ret = nf_get_vara_int(newFile%ncid,varid,&
-            &                 newFile%var(varid)%ptr%istart,&
-            &                 newFile%var(varid)%ptr%istop,&
-            &                 newFile%var(varid)%ptr%f4)
+       if(mod_bdeb)write(*,*)myname,'Reading Int 4.'
+       ret = nf_get_vara_int(newFile%ncid,varid,v%istart,v%istop,v%f4)
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
@@ -6541,43 +6677,18 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       !     handle missing values gracefully...
-       fill4=nf_fill_int
-       filld=nf_fill_double
-       if (newFile%var(varid)%ptr%misstype.eq.nf_int) then
-          fill4=newFile%var(varid)%ptr%m4
-       end if
-       do ii=1,newFile%var(varid)%ptr%len
-          if (newFile%var(varid)%ptr%f4(ii).eq.fill4) then
-             newFile%var(varid)%ptr%fd(ii)=filld
-          else
-             newFile%var(varid)%ptr%fd(ii)=newFile%var(varid)%ptr%scale*&
-                  &                       newFile%var(varid)%ptr%f4(ii)
-          end if
-       end do
-       deallocate(newFile%var(varid)%ptr%f4,stat=irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to deallocate f4.")
-          call model_errorappendi(crc250,irc)
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-    else if (newFile%var(varid)%ptr%type.eq.nf_real) then
-       if(mod_bdeb)write(*,*)myname,'Real.'
-       allocate( newFile%var(varid)%ptr%fr(newFile%var(varid)%ptr%len),stat=irc)
+    case (nf_real)
+       if(mod_bdeb)write(*,*)myname,'Allocating Real.',v%len
+       allocate( v%fr(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to allocate var value.")
-          call model_errorappendi(crc250,newFile%var(varid)%ptr%len)
+          call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
        end if
-       ret = nf_get_vara_real(newFile%ncid,varid,&
-            &                 newFile%var(varid)%ptr%istart, &
-            &                 newFile%var(varid)%ptr%istop,&
-            &                 newFile%var(varid)%ptr%fr)
+       ret = nf_get_vara_real(newFile%ncid,varid,v%istart,v%istop,v%fr)
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
@@ -6587,45 +6698,28 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       !     handle missing values gracefully...
-       fillr=nf_fill_real
-       filld=nf_fill_double
-       if (newFile%var(varid)%ptr%misstype.eq.nf_real) then
-          fillr=newFile%var(varid)%ptr%mr
-       end if
-       do ii=1,newFile%var(varid)%ptr%len
-          if (newFile%var(varid)%ptr%fr(ii).eq.fillr) then
-             newFile%var(varid)%ptr%fd(ii)=filld
-          else
-             newFile%var(varid)%ptr%fd(ii)=newFile%var(varid)%ptr%scale*&
-               & newFile%var(varid)%ptr%fr(ii)
-          end if
-       end do
-       newFile%var(varid)%ptr%scale=1.0D0
-       deallocate(newFile%var(varid)%ptr%fr,stat=irc)
+    case (nf_double) 
+       if(mod_bdeb)write(*,*)myname,'Allocating Double.'
+       allocate( v%fd(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to deallocate f2.")
+          call model_errorappend(crc250,"Unable to allocate var value.")
+          call model_errorappendi(crc250,v%ndim)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
        end if
-    else if (newFile%var(varid)%ptr%type.eq.nf_double) then
-       if(mod_bdeb)write(*,*)myname,'Double.'
-       ret = nf_get_vara_double(newFile%ncid,varid,&
-            &                 newFile%var(varid)%ptr%istart,&
-            &                 newFile%var(varid)%ptr%istop,&
-            &                 newFile%var(varid)%ptr%fd)
+       ret = nf_get_vara_double(newFile%ncid,varid,v%istart,v%istop,v%fd)
        if (ret .ne. NF_NOERR) then
           write(*,*) myname,"ERROR from NF_GET_VARA_DOUBLE:",&
                &                    nf_strerror(ret)
           irc=812
           return
        end if
-    else
+    case DEFAULT
        if(mod_bdeb)write(*,*)myname,'Undefined.'
-       newFile%var(varid)%ptr%len=0
-       deallocate( newFile%var(varid)%ptr%fd,stat=irc)
+       v%len=0
+       deallocate( v%fd,stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250,"Unable to deallocate fd.")
@@ -6634,9 +6728,8 @@ CONTAINS
           return
        end if
        return
-    end if
-    if(mod_bdeb)write(*,*)myname,'Done. ',newFile%var(varid)%ptr%type,&
-         & newFile%var(varid)%ptr%len,allocated(newFile%var(varid)%ptr%fd)
+    end select
+    if(mod_bdeb)write(*,*)myname,'Done. ',v%type,v%len,allocated(v%fd)
     return
   end subroutine model_readVariable
   !
@@ -6721,6 +6814,9 @@ CONTAINS
     character*25 :: myname="model_readSortVariable"
     integer :: iisort,jj,ii
     integer, external :: length
+    logical :: set
+    real :: vv
+    type(mod_variable),pointer :: v
     !
     ! load ind_var into memory
     !
@@ -6759,8 +6855,16 @@ CONTAINS
              call model_errorappend(crc250,"\n")
              return
           end if
-          newFile%nsort=newFile%var(iisort)%ptr%len
-          if (newFile%nsort .lt.1000) then
+          v=>newFile%var(iisort)%ptr
+          newFile%nsort=0
+          do ii=1,v%len
+             set=.true.
+             vv=model_getValue(v,jj,set,crc250,irc)
+             if (set) then
+                newFile%nsort=newFile%nsort+1
+             end if
+          end do
+          if (newFile%nsort.gt.0.and.newFile%nsort .lt.1000) then
              allocate(newFile%sort(newFile%nsort),&
                   & newFile%indsort(newFile%nsort), &
                   & newFile%desc250(newFile%nsort),stat=irc)
@@ -6773,29 +6877,33 @@ CONTAINS
                 call model_errorappend(crc250,"\n")
                 return
              end if
-             do jj=1,newFile%nsort
-                newFile%sort(jj)=newFile%var(iisort)%ptr%fd(jj)
-                if (jj.eq.1) then
-                   newFile%ind_start=newFile%sort(jj)
-                   newFile%ind_stop=newFile%sort(jj)
-                else
-                   newFile%ind_start=min(newFile%ind_start,newFile%sort(jj))
-                   newFile%ind_stop=max(newFile%ind_stop,newFile%sort(jj))
+             do ii=1,v%len
+                set=.true.
+                newFile%sort(jj)=model_getValue(v,jj,set,crc250,irc)
+                if (set) then
+                   jj=jj+1
+                   if (jj.eq.1) then
+                      newFile%ind_start=newFile%sort(jj)
+                      newFile%ind_stop=newFile%sort(jj)
+                   else
+                      newFile%ind_start=min(newFile%ind_start,newFile%sort(jj))
+                      newFile%ind_stop=max(newFile%ind_stop,newFile%sort(jj))
+                   end if
+                   newFile%indsort(jj)=jj
+                   newFile%desc250(jj)=model_getdesc250(jj, &
+                        &     newFile%ndim,                 &
+                        &     newFile%dim80,               &
+                        &     newFile%var(iisort)%ptr%ndim,     &
+                        &     newFile%var(iisort)%ptr%ind,      &
+                        &     newFile%var(iisort)%ptr%istart,    &
+                        &     newFile%var(iisort)%ptr%istop,  &
+                        &     crc250,irc)
                 end if
-                newFile%indsort(jj)=jj
-                newFile%desc250(jj)=model_getdesc250(jj, &
-                     &     newFile%ndim,                 &
-                     &     newFile%dim80,               &
-                     &     newFile%var(iisort)%ptr%ndim,     &
-                     &     newFile%var(iisort)%ptr%ind,      &
-                     &     newFile%var(iisort)%ptr%istart,    &
-                     &     newFile%var(iisort)%ptr%istop,  &
-                     &     crc250,irc)
              end do
              if(mod_bdeb)write(*,*)myname,' Sorting.'
              newFile%tsort=newFile%nsort
              call sort_heapsort1r(newFile%nsort,newFile%sort,1.0D-5,&
-               & newFile%tsort,newFile%nsort,newFile%indsort,.false.)
+                  & newFile%tsort,newFile%nsort,newFile%indsort,.false.)
              if(mod_bdeb)write(*,*)myname,' Sorting done.'
              newFile%ind_lim=.true. ! target is available
              newFile%ind_start=newFile%sort(newFile%indsort(1))
@@ -6879,6 +6987,25 @@ CONTAINS
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
   end subroutine model_errorappendi
+  !
+  subroutine model_errorappendi8(crc250,inum)
+    implicit none
+    character*250 :: crc250
+    integer*8 :: inum
+    character*250 :: buff250
+    integer :: lenc, lenb
+    integer, external :: length
+    call chop0(crc250,250)
+    lenc=length(crc250,250,10)
+    write(buff250,'(I12)')inum
+    call chop0(buff250,250)
+    lenb=length(buff250,250,1)
+    if (lenc.eq.0) then
+       crc250=buff250(1:lenb)
+    else
+       crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
+    end if
+  end subroutine model_errorappendi8
   !
   !###############################################################################
   ! STRING ROUTINES

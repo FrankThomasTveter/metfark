@@ -203,7 +203,11 @@ function coloc_newModelTarget(item) {
 function coloc_newModelDefault(item) {
     var file= coloc_getConfigFile();
     var mfile=coloc_getModelConfigFile();
-    var indexTarget=model_config[mfile]["indexTarget"];
+    if (model_config[mfile] !== undefined) {
+	var indexTarget=model_config[mfile]["indexTarget"];
+    } else {
+	var indexTarget="";
+    }
     var line={targets:{},info:{}};
     var ok=false;
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
@@ -310,7 +314,11 @@ function coloc_showModelTargetTable() {
 	};
 	coloc_insertModelTargetIndexRow(tail,indexTarget,indexVariable,color,indexMin,indexMax);
 	//for (var target in targets) {
-	var dimensions=model_config[mfile]["dimensions"];
+	if (model_config[mfile] !== undefined) {
+	    var dimensions=model_config[mfile]["dimensions"];
+	} else {
+	    var dimensions;
+	}
 	for (var ii =0; ii< targeto.length;ii++) {
 	    var target=targeto[ii];
 	    var variable = targets[target]["variable"];
@@ -504,7 +512,11 @@ function coloc_insertModelDefaultHeader(row,file) {
     td.setAttribute("style","min-width:25px;width:25px");
     row.appendChild(td);
     var mfile=coloc_getModelConfigFile();
-    var indexTarget=model_config[mfile]["indexTarget"];
+    if (model_config[mfile] !== undefined) {
+	var indexTarget=model_config[mfile]["indexTarget"];
+    } else {
+	var indexTarget="";
+    }
     td=document.createElement("TD");
     bf=document.createElement("BF");
     bf.innerHTML=indexTarget;
@@ -533,7 +545,11 @@ function coloc_insertModelDefaultRow(item,file) {
     var td;
     // make "-" column
     var mfile=coloc_getModelConfigFile();
-    var indexTarget=model_config[mfile]["indexTarget"];
+    if (model_config[mfile] !== undefined) {
+	var indexTarget=model_config[mfile]["indexTarget"];
+    } else {
+	var indexTarget="";
+    }
     var defs=coloc_config[file]["modelConfigFile"]["def"];
     var len=defs.length;
     for (var ii=0;ii<len;ii++){
@@ -595,7 +611,11 @@ function coloc_insertModelDefaultNewline(row,file) {
     var td,btn,inp;
     // make "-" column
     var mfile=coloc_getModelConfigFile();
-    var indexTarget=model_config[mfile]["indexTarget"];
+    if (model_config[mfile] !== undefined) {
+	var indexTarget=model_config[mfile]["indexTarget"];
+    } else {
+	var indexTarget="";
+    }
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
     btn=document.createElement("BUTTON");
@@ -918,7 +938,11 @@ function coloc_showTargetMatchTable() {
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
     // insert index match
     var cnt=0;
-    var indexTarget=model_config[mfile]["indexTarget"];
+    if (model_config[mfile]!== undefined) {
+	var indexTarget=model_config[mfile]["indexTarget"];
+    } else {
+	var indexTarget="";
+    }
     var indexExp=coloc_config[file]["modelConfigFile"]["exp"];;
     coloc_insertTargetMatchRow(tail,cnt,indexTarget,indexExp);
     cnt=cnt+1;
@@ -944,7 +968,11 @@ function coloc_insertTargetMatchRow(item,cnt,target,expr) {
         var td, inp,div,itemId;
         // make model target column  ***************************
         td=document.createElement("TD");
-	var indexTarget=model_config[mfile]["indexTarget"];
+	if (model_config[mfile]!== undefined) {
+	    var indexTarget=model_config[mfile]["indexTarget"];
+	} else {
+	    var indexTarget="";
+	}
 	if (target == indexTarget) {
             td.setAttribute("style","color:darkorange");
 	}

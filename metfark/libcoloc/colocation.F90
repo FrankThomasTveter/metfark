@@ -581,7 +581,7 @@ CONTAINS
     integer :: irc
     type(col_match), pointer :: curmatch => null() !  current match
     type(col_match), pointer :: nextmatch => null() !  next match session
-    character*25 :: myname = "colocation_clearmatchstack"
+    character*28 :: myname = "colocation_clearmatchstack"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     curmatch => css%firstMatch%next
     do while (.not.associated(curmatch,target=css%lastMatch))
@@ -890,37 +890,47 @@ CONTAINS
   !
   ! compile match
   !
-  subroutine colocation_compileMatch(css,var80,crc250,irc)
+  subroutine colocation_compileMatch(css,oss,crc250,irc)
     use parse
     implicit none
     type(col_session), pointer :: css !  current session
-    character*80, allocatable :: var80(:) ! variables
+    type(obs_session), pointer :: oss !  current session
     character*250 :: crc250
     integer :: irc
     character*25 :: myname = "colocation_compileMatch"
     integer :: lene
     integer :: ii,jj ! match number
-    if(col_bdeb)write(*,*)myname,'Entering.',size(var80),css%cmatch
+    if(col_bdeb)write(*,*)myname,'Entering.',size(oss%trg80),css%cmatch
     if (css%cmatch.ne.0) then
        do ii=1,css%cmatch
           if(col_bdeb)then
-             write(*,*)myname,'nvar:',size(var80),allocated(var80)
-             do jj=1,size(var80)
-                write(*,'(X,A,A,I0,A)') myname,"      var(",jj,")='"//trim(var80(jj))//"'"
+             write(*,*)myname,'nvar:',size(oss%trg80),allocated(oss%trg80)
+             do jj=1,size(oss%trg80)
+                write(*,'(X,A,A,I0,A)') myname,"      var(",jj,")='"//trim(oss%trg80(jj))//"'"
              end do
              write(*,*)myname,"'Calling parsef: '"//css%mat_e250(ii)(1:css%mat_lene(ii))//"'"
           end if
-          call parse_parsef(css%mat_psp(ii)%ptr,css%mat_e250(ii)(1:css%mat_lene(ii)),var80,crc250,irc)
+          call parse_parsef(css%mat_psp(ii)%ptr,css%mat_e250(ii)(1:css%mat_lene(ii)),&
+               & oss%trg80,crc250,irc)
           if (irc.ne.0) then
              if(col_bdeb)then
-                write(*,*)myname,"Unable to parse:'"//css%mat_e250(ii)(1:css%mat_lene(ii))//"'",ii
-!                write(*,*)myname,'nvar:',size(var80)
-!                do jj=1,size(var80)
-!                   write(*,*) myname,'var:',jj,trim(var80(jj))
+                write(*,*)myname,"Unable to parse:'"//&
+                     & css%mat_e250(ii)(1:css%mat_lene(ii))//"'",ii
+!                write(*,*)myname,'nvar:',size(oss%trg80)
+!                do jj=1,size(oss%trg80)
+!                   write(*,*) myname,'var:',jj,trim(oss%trg80(jj))
 !                end do
              end if
              call colocation_errorappend(crc250,myname)
              call colocation_errorappend(crc250," Error return from parsef.")
+             call colocation_errorappendi(crc250,irc)
+             call colocation_errorappend(crc250,"\n")
+             return
+          end if
+          call parse_used(css%mat_psp(ii)%ptr,oss%trg_req,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250," Error return from used.")
              call colocation_errorappendi(crc250,irc)
              call colocation_errorappend(crc250,"\n")
              return
@@ -1145,6 +1155,7 @@ CONTAINS
     integer, external :: length
     integer :: irc2
     real:: val(ncol)            ! internal column values
+    logical:: vok(ncol)            ! internal column values
     !
     integer :: mod_cnt=0
     integer :: obs_cnt=0
@@ -1251,7 +1262,7 @@ CONTAINS
     if(col_bdeb)write(*,*)myname,'Compile expressions.',emod,associated(css)
     if (associated(css)) then
        ! compile match-experssions
-       call colocation_compileMatch(css,oss%trg80,crc250,irc)
+       call colocation_compileMatch(css,oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_compileMatch")
           return
@@ -1280,7 +1291,7 @@ CONTAINS
     ! set observation target names
     call  model_setObsVar(mss,oss%ntrg,oss%trg80,crc250,irc)
     if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_setObsVal")
+       call colocation_errorappend(crc250,"model_setObsVar")
        return
     end if
     ! compile model filter (called after model_setFilter and model_setObsVar)
@@ -1462,7 +1473,7 @@ CONTAINS
                 !
                 ! set observation variables...
                 !write(*,*)myname,'Set model targets.'
-                call  model_setObsVal(mss,oss%ntrg,oss%trg_val,crc250,irc)
+                call  model_setObsVal(mss,oss%ntrg,oss%trg_val,oss%trg_vok,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setObsVal")
                    return
@@ -1568,7 +1579,7 @@ CONTAINS
                 !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
                 if (bbok) then
-                   call model_evalExpr(mss,ncol,val,crc250,irc)
+                   call model_evalExpr(mss,ncol,val,vok,crc250,irc)
                    if (irc.ne.0) then
                       call colocation_errorappend(crc250,"evalExpr")
                       return
@@ -1580,14 +1591,20 @@ CONTAINS
                    end if
                    fill=fillx
                    do ii=1,ncol
-                      call colocation_wash(val(ii),s2,len2)
+                      if (vok(ii)) then
+                         call colocation_wash(val(ii),s2,len2)
+                      else
+                         s2="NA"
+                         len2=2
+                      end if
                       if (ii.ne.ncol) then
                          write(ounit,"(X,A)",advance="no") s2(1:len2)
                       else
                          write(ounit,"(X,A)") s2(1:len2)
                       end if
                    end do
-                   if(col_bdeb.and.locid.lt.100)write(*,'(2(X,A),100(X,F0.1))')myname,'Val:',mss%mpo_val
+                   if(col_bdeb.and.locid.lt.100)write(*,'(2(X,A),100(X,F0.1))')&
+                        & myname,'Val:',mss%mpo_val
                 end if
              end do OBSERVATION
           end if
@@ -1885,7 +1902,7 @@ CONTAINS
     if(col_bdeb)write(*,*)myname,'Compile expressions.',emod,associated(css)
     if (associated(css)) then
        ! compile match-experssions
-       call colocation_compileMatch(css,oss%trg80,crc250,irc)
+       call colocation_compileMatch(css,oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_compileMatch")
           return
@@ -1914,7 +1931,7 @@ CONTAINS
     ! set observation target names
     call  model_setObsVar(mss,oss%ntrg,oss%trg80,crc250,irc)
     if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_setObsVal")
+       call colocation_errorappend(crc250,"model_setObsVar")
        return
     end if
     ! compile model filter (called after model_setFilter and model_setObsVar)
@@ -2114,7 +2131,7 @@ CONTAINS
                 !
                 ! set observation variables...
                 !write(*,*)myname,'Set model targets.'
-                call  model_setObsVal(mss,oss%ntrg,oss%trg_val,crc250,irc)
+                call  model_setObsVal(mss,oss%ntrg,oss%trg_val,oss%trg_vok,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setObsVal")
                    return

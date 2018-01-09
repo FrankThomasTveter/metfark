@@ -10,9 +10,9 @@ subroutine col_pushmatch(sid, nam80, expr250, l80, u80, crc250, irc)
   integer :: irc
   character*250 :: buff250
   integer :: lenc
-  character*25 :: myname = "pushMatch"
+  character*25 :: myname = "col_pushMatch"
   type(col_session), pointer :: css !  current session
-  !write(*,*) myname,'Entering.',irc,sid
+  if(col_bdeb)write(*,*) myname,'Entering.',irc,sid
   call colocation_getSession(css,sid,crc250,irc)
   if (irc.ne.0) then
      call colocation_errorappend(crc250,myname)
@@ -30,6 +30,6 @@ subroutine col_pushmatch(sid, nam80, expr250, l80, u80, crc250, irc)
      call colocation_errorappendi(crc250,irc)
      return
   end if
-  !write(*,*) myname,'Done.'
+  if(col_bdeb)write(*,*) myname,'Done.'
   return
 end subroutine col_pushmatch

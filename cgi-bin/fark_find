@@ -1,3 +1,3 @@
 #! /bin/csh
-./fark_find.pl '?type=model&file=starc%2Farome30d.cfg&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F&filterDirMin=&filterDirMax=300&filterFile=AROME_MetCoOp_%5Cd%5Cd_DEF.nc_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd&indexTarget=time_trg&indexVariable=time'
+./fark_find.pl '?type=model&file=meps%2F&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FMEPS%2F2018%2F01%2F03%2Fobsmon%2Fobsmon_mbr_0_20180103T00Z&filterDirMin=&filterDirMax=300&filterFile=AROME_MetCoOp_%5Cd%5Cd_DEF.nc_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd&indexTarget=time_trg&indexVariable=time'
 

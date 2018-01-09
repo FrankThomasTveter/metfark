@@ -259,6 +259,8 @@ module observations
      CHARACTER (LEN=80), allocatable :: trg_var(:)      ! target variable names
      integer, allocatable            :: trg_lenv(:)      ! target variable name length
 !     REAL(rn),           allocatable :: trg_val(:)      ! target variable values
+     logical,allocatable             :: trg_req(:)      ! is target required?
+     logical,allocatable             :: trg_vok(:)      ! is target valid?
      REAL,allocatable                :: trg_val(:)      ! target variable values
      type(obs_targetPointer), pointer:: trg_ptr(:)=> null()
      logical                         :: trg_set=.false. ! is target list set?
@@ -1665,6 +1667,8 @@ CONTAINS
        if (allocated(css%trg_orm)) deallocate(css%trg_orm)
        if (allocated(css%trg_var)) deallocate(css%trg_var)
        if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
+       if (allocated(css%trg_req)) deallocate(css%trg_req)
+       if (allocated(css%trg_vok)) deallocate(css%trg_vok)
        if (allocated(css%trg_val)) deallocate(css%trg_val)
        if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
        allocate(css%trg80(css%ntrg),css%trg_lent(css%ntrg),&
@@ -1675,6 +1679,7 @@ CONTAINS
             & css%trg_minval(css%ntrg),css%trg_maxval(css%ntrg),&
             & css%trg_ook(css%ntrg),css%trg_orm(css%ntrg),&
             & css%trg_var(css%ntrg),css%trg_lenv(css%ntrg),&
+            & css%trg_req(css%ntrg),css%trg_vok(css%ntrg), &
             & css%trg_val(css%ntrg),css%trg_ptr(css%ntrg),stat=irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
@@ -1712,6 +1717,7 @@ CONTAINS
           lend=length(currenttarget%descr80,80,10)
           css%trg80(ii)=currenttarget%trg80(1:lent)
           css%trg_lent(ii)=lent
+          css%trg_req(ii)=.false.           ! is target required?
           css%trg_type(ii)=currenttarget%type
           if (lend.eq.0.and.lenp.eq.0) then ! this is a delayed variable
              css%trg_type(ii)=parse_delay ! delay processing
@@ -1790,6 +1796,7 @@ CONTAINS
           css%trg_lval(2,ii)=css%ind_lval(2)
           css%trg_minval(ii)=css%ind_minval
           css%trg_maxval(ii)=css%ind_maxval
+          css%trg_req(ii)=(css%ind_lval(1).or.css%ind_lval(2))
        end if
        css%trg_set=.true.
        css%dyn_set=.true.
@@ -1847,6 +1854,7 @@ CONTAINS
                 call observation_errorappend(crc250,"\n")
                 return
              end if
+             css%trg_req(ii)=.true.
              css%trg_minval(ii)=parse_evalf(plim,val)
              css%trg_lval(1,ii)=.true.
           else
@@ -1869,6 +1877,7 @@ CONTAINS
                 call observation_errorappend(crc250,"\n")
                 return
              end if
+             css%trg_req(ii)=.true.
              css%trg_maxval(ii)=parse_evalf(plim,val)
              css%trg_lval(2,ii)=.true.
           else
@@ -1954,6 +1963,8 @@ CONTAINS
     if (allocated(css%trg_orm)) deallocate(css%trg_orm)
     if (allocated(css%trg_var)) deallocate(css%trg_var)
     if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
+    if (allocated(css%trg_req)) deallocate(css%trg_req)
+    if (allocated(css%trg_vok)) deallocate(css%trg_vok)
     if (allocated(css%trg_val)) deallocate(css%trg_val)
     if(obs_bdeb)write(*,*)myname,' Deallocating trg_ptr.'
     if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
@@ -2874,16 +2885,25 @@ CONTAINS
     integer :: ii
     real :: val
     logical :: bok
+    real :: res(css%msg%nobs)
     ! loop over observations
     if (css%flt_set) then ! check if we have an observation filter...
        ! should probably reset the parser here if msg-functions are implemented...
+       call parse_evala(css%psf,css%msg%ctrg,css%msg%cobs,css%msg%nobs, &
+            & css%msg%trg_val,css%msg%trg_set,res,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from evala.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        do ii=1,css%msg%nobs
           if (css%msg%trg_set(ii)) then
              ! evaluate filter
              if (obs_bdeb)write(*,*)myname,'Evaluating filter:',ii,associated(css%psf),&
                   & allocated(css%msg%trg_val)
-             val=parse_evala(css%psf,css%msg%ctrg,css%msg%cobs,css%msg%trg_val,ii)
-             bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
+             bok=(nint(res(ii)).ne.0) ! NB bok is local, reject obs using trg_set->.false.
              if (obs_bdeb)write(*,*)myname,'Returned:',val,bok
              if (bok) then
                 css%currentFile%ook(5)=css%currentFile%ook(5)+1
@@ -2926,8 +2946,7 @@ CONTAINS
              do ii=1,css%ntarget
                 select case (css%trg_type(ii))
                 case (parse_internal)
-                   css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,&
-                        & css%int_val)
+                   css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
                    if (obs_bdeb)write(*,*)myname,' Internal:',&
                         & ii,css%trg_val(ii)
                 end select
@@ -3004,6 +3023,7 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
+       call parse_used(css%psf,css%trg_req)
        css%flt_set=.true.
     end if
     if(obs_bdeb)write(*,*)myname,"Done."
@@ -4056,7 +4076,8 @@ CONTAINS
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250,"Unable to decode:"//css%currentFile%fn250(1:css%currentFile%lenf));
           call observation_errorappend(crc250,"\n")
-          RETURN
+          IRC=0
+          cycle msg
        else
           css%currentfile%mok(3)=css%currentfile%mok(3)+1 ! able to decode body
        END IF
@@ -4836,6 +4857,7 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
+       call parse_used(css%ind_pe,css%trg_req)
     end if
     if (css%dyn_set) then
        ! parse position expressions
@@ -4913,7 +4935,8 @@ CONTAINS
                    css%trg_seq(ii)=css%dyn_pos
                    ipos=css%trg_seq(ii)+(isubset-1)*KEL
                    css%trg_val(ii)=values(ipos)
-                   if (values(ipos).eq.rvind) then
+                   css%trg_req(ii)=(values(ipos).ne.rvind)
+                   if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                       write(css%currentfile%hint80(2),'(A," (",I0,"), value=undefined")')&
                            & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos
                       bok=.false. ! missing target value
@@ -4925,7 +4948,8 @@ CONTAINS
              case (parse_constant)
                 ipos=css%trg_seq(ii)+(isubset-1)*KEL
                 css%trg_val(ii)=values(ipos)
-                if (values(ipos).eq.rvind) then
+                css%trg_vok(ii)=(values(ipos).ne.rvind)
+                if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                    write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
                         & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
                    bok=.false. ! missing target value
@@ -4939,7 +4963,8 @@ CONTAINS
                    ipos=css%trg_seq(ii)+(isubset-1)*KEL
                    css%trg_val(ii)=values(ipos)
                    css%dyn_val(css%trg_ind(ii))=css%dyn_pos
-                   if (values(ipos).eq.rvind) then
+                   css%trg_vok(ii)=(values(ipos).ne.rvind)
+                   if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                       write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
                            & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
                       bok=.false. ! missing target value
@@ -4961,7 +4986,8 @@ CONTAINS
                    else
                       ipos=css%trg_seq(ii)+(isubset-1)*KEL
                       css%trg_val(ii)=values(ipos)
-                      if (values(ipos).eq.rvind) then
+                      css%trg_vok(ii)=(values(ipos).ne.rvind)
+                      if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                          write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
                               & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
 

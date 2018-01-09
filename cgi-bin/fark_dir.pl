@@ -80,8 +80,10 @@ sub cmdls {
 			$parent->addChild( $d );
 		    } elsif (-f $path) {
 			if (! $filter || $name =~ m/$filter/ ) {
+			    my $size = size_in_mb(-s $path);
 			    my $f = XML::LibXML::Element->new( 'file' );
 			    $f->setAttribute("path",$path);
+			    $f->setAttribute("size",$size);
 			    $parent->addChild( $f );
 			    push(@files,$name);
 			}
@@ -163,8 +165,10 @@ sub cmdmk {
 			    $parent->addChild( $d );
 			} elsif (-f $path) {
 			    if (! $filter || $name =~ m/$filter/ ) {
+				my $size = size_in_mb(-s $path);
 				my $f = XML::LibXML::Element->new( 'file' );
 				$f->setAttribute("path",$npath);
+				$f->setAttribute("size",$size);
 				$parent->addChild( $f );
 			    }
 			}
@@ -560,4 +564,10 @@ sub mod {
     return $mod;
 }
 
-
+sub size_in_mb {
+    my $size=shift;
+    my $text= reverse (sprintf "%.2fMb", $size/(1024 * 1024));
+    $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    $text=reverse $text;
+    return $text;
+}

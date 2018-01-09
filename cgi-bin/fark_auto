@@ -2,22 +2,5 @@
 #
 # Note: if "test" is defined, it is always true (regardless of value)!
 #
-./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc%2FaromeSyno30d.debug'
+./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc_syno30d.cfg'
 
-#'?root=auto.cfg&password=&type=model&file=starc%2Farome30d.cfg'
-
-# '?root=auto.cfg&password=&type=model&file=starc%2Farome20170101.cfg'
-# colocation
-#./fark_auto.pl '?root=&password=&type=coloc&file=starc%2FaromeSyno20170101.cfg'
-
-
-# plot
-#./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc%2FaromeSyno20170101.cfg&test=1'
-
-
-##'?root=&password=&type=plot&file=starc%2FaromeSyno20170101.cfg&test=1'
-
-
-#'?root=auto.cfg&password=&type=coloc&file=starc%2FaromeSyno20170101.cfg'
-
-#

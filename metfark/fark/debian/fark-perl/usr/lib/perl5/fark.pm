@@ -355,19 +355,17 @@ sub updateModelRegister {
     my $min = shift // "";
     my $max = shift // "";
     my $test = shift // 0;
+    my $fill_file = shift // "";
     my $new_file_cnt = 0;
     my @new_file_list;
     my @push_files;
     my @pop_files;
-    if ($test) {return ();};
     my $write_register_file=0;
-    my @new_line_list = GetFiles($mask_dir,$mask,$min,$max) or return @push_files;
+    my @new_line_list = farkdir::FindFiles($mask_dir,$mask,$min,$max) or return @push_files;
     my %new_file_hash;
-    foreach (@new_line_list) {
-	s/\s+/ /g; # replace any train of blanks with single blank
-	my $line = $_;
-	#next if (substr($line,0,1) ne '-'); # only process files
-	my ($file) = ($line =~ m/\s+(\S+)$/); # last column is file name
+    foreach my $file (@new_line_list) {
+	my $sb=(stat($file))[9];
+	my $line = $sb . " " . $file;
 	$new_file_hash{$file} = $line;
 	push(@new_file_list, $file);
     }
@@ -411,10 +409,30 @@ sub updateModelRegister {
 	if (not defined $file_loaded{$file}) {
 	    $write_register_file=1;
 	    push (@push_files,$file);
+
+	    print "File: '$file'\n";
+
+	    # touch fill-file...
+	    if ($fill_file) {
+		farkdir::touchFile ($fill_file);
+		if ($test) {
+		    # do not update register or stack
+		    $self->popModelFile(@pop_files); # remove old files
+
+		    foreach my $f (@push_files) {
+			print "File: '$f' '$file'\n";
+		    }
+
+		    print "pushing...\n";
+		    $self->pushModelFile(@push_files); # add new files
+		    return @push_files;
+		};
+		$fill_file="";
+	    };
 	}
     }
     $self->popModelFile(@pop_files); # remove old files
-    $self->pushModelFile(@push_files); # add new files
+    if (@push_files) {print "Pushing...\n";$self->pushModelFile(@push_files);} # add new files
     # Update local register file
     if ($write_register_file) {
 	#print "Updating: $register_file\n";
@@ -442,23 +460,20 @@ Arguments:
 
 =item (string) path to model cache file.
 
-=item (int) test flag (1 or 0), 1= only check input
-
 =back
 
 =head4 EXAMPLE
 
-$fark->makeModelCache($modfile,0);
+$fark->makeModelCache($modfile);
 
 =cut
 
 sub makeModelCache { 
     my $self = shift; 
     my $modfile = shift;
-    my $test = shift // 0;
     my ($dir,$name)=farkdir::splitName($modfile);
     farkdir::makePath($dir);
-    if (my ($ret,$msg) = xs_makeModelCache($self->{MID},$modfile,$test)){
+    if (my ($ret,$msg) = xs_makeModelCache($self->{MID},$modfile)){
 	if ($ret != 0) {die $msg;}
 	chmod 0666, $modfile;
     }
@@ -863,19 +878,17 @@ sub updateObservationRegister {
     my $min = shift // "";
     my $max = shift // "";
     my $test = shift // 0; 
+    my $fill_file = shift // "";
     my $new_file_cnt = 0;
     my @new_file_list;
     my @push_files;
     my @pop_files;
     my $write_register_file=0;
-    if ($test) {return ();};
-    my @new_line_list = GetFiles($mask_dir,$mask,$min,$max) or return @push_files;
+    my @new_line_list = farkdir::FindFiles($mask_dir,$mask,$min,$max) or return @push_files;
     my %new_file_hash;
-    foreach (@new_line_list) {
-	s/\s+/ /g; # replace any train of blanks with single blank
-	my $line = $_;
-	#next if (substr($line,0,1) ne '-'); # only process files
-	my ($file) = ($line =~ m/\s+(\S+)$/); # last column is file name
+    foreach my $file (@new_line_list) {
+	my $sb=(stat($file))[9];
+	my $line = $sb . " " . $file;
 	$new_file_hash{$file} = $line;
 	push(@new_file_list, $file);
     }
@@ -923,10 +936,20 @@ sub updateObservationRegister {
 	if (not defined $file_loaded{$file}) {
 	    $write_register_file=1;
 	    push (@push_files,$file);
+	    if ($fill_file) {
+		farkdir::touchFile ($fill_file);
+		if ($test) {
+		    # do not update register or stack
+		    $self->popObservationFile(@pop_files); # remove old files
+		    $self->pushObservationFile(@push_files); # add new files
+		    return @push_files;
+		};
+		$fill_file="";
+	    };
 	}
     }
     $self->popObservationFile(@pop_files); # remove old files
-    $self->pushObservationFile(@push_files); # add new files
+    if (@push_files) {$self->pushObservationFile(@push_files);} # add new files
     # Update local register file
     if ($write_register_file) {
 	#print "Updating: $register_file\n";
@@ -966,10 +989,9 @@ $fark->makeObservationCache($obsfile);
 sub makeObservationCache { 
     my $self = shift; 
     my $obsfile = shift;
-    my $test = shift // 0;
     my ($dir,$name)=farkdir::splitName($obsfile);
     farkdir::makePath($dir);
-    if (my ($ret,$msg) = xs_makeObsCache($self->{OID},$obsfile,$test)){
+    if (my ($ret,$msg) = xs_makeObsCache($self->{OID},$obsfile)){
 	if ($ret != 0) {die $msg;}
 	chmod 0666, $obsfile;
     }
@@ -1307,15 +1329,16 @@ sub makeColocXML {
     my $self = shift;
     my $patt = shift;
     my $test = shift//0;
+    my $fill_file = shift // "";
     #print "fark.pm Pattern $patt";
     my ($ret,$msg)= xs_setColocXMLFile($self->{PID},$patt);
     if ($ret != 0) {die $msg;}
     ($ret,$msg,my $xml)= xs_getColocXMLFile($self->{PID});
     if ($ret != 0) {die $msg;}
     my ($dir,$name)=farkdir::splitName($xml);
-    if (!$test) {farkdir::makePath($dir);};
+    farkdir::makePath($dir);
     #print " -> $xml\n";
-    ($ret,$msg) = xs_makeColocXML($self->{CID},$self->{MID},$self->{OID},$xml,$test);
+    ($ret,$msg) = xs_makeColocXML($self->{CID},$self->{MID},$self->{OID},$xml,$test,$fill_file);
     if ($ret != 0) {
 	if (-e $xml) {unlink $xml;};
 	die $msg;
@@ -1628,13 +1651,15 @@ Arguments:
 
 =item (string) Path to plot file (with wildcards YYYY,MM,DD,HH,MI,SS for timestamp)
 
+=item (string) Path to Rscript file
+
 =item (int) test flag (1 or 0), 1= only check input
 
 =back
 
 =head4 EXAMPLE
 
-my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern,0);
+my ($tablefile,$plotfile) = $fark->makePlotTable($tablepattern,$plotpattern,$catfile,0);
 
 =cut
 
@@ -1642,7 +1667,9 @@ sub makePlotTable {
     my $self = shift;
     my $tfile = shift;
     my $gfile = shift;
+    my $cfile = shift;
     my $test = shift//0;
+    my $fill_file = shift // "";
     my $ret;
     my $msg;
     my $dir;
@@ -1668,7 +1695,7 @@ sub makePlotTable {
     # make the output...
     ($ret,$msg,my $tablefile,my $graphicfile) = 
 	xs_makePlotTable($self->{PID},$self->{CID},$self->{MID},$self->{OID},
-			 $tfile,$gfile,$test);
+			 $tfile,$gfile,$cfile,$test,$fill_file);
     if ($ret != 0) {
 	if (-e $tablefile) {unlink $tablefile;};
 	die $msg;
@@ -1727,31 +1754,6 @@ sub makeHashBranch{
     }
 }
 
-sub GetFiles {
-    my($filterDir,$filter,$min,$max) = @_;
-    my @files=();
-    find({wanted => sub {
-	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
-	    my $file=$File::Find::name;
-	    my $ok=1;
-	    if ($min || $max) {
-		my $age=(-M $file);
-		if ($min && $age < $min) {
-		    $ok=0;
-		};
-		if ($max && $age > $max) {
-		    $ok=0;
-		};
-	    }
-	    if ($ok) {
-		my $sb=(stat($file))[9];
-		my $s= $sb. " " . $file;
-		push(@files, $s);
-	    }
-	}
-	  }}, $filterDir);
-    return @files;
-}
 
 =head2 expression
 

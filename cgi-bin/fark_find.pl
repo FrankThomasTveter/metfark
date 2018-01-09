@@ -112,7 +112,10 @@ sub findModel {
 		foreach my $sfile (@files) {
 		    my $parent = XML::LibXML::Element->new( 'stack' );
 		    $parent->setAttribute("name",$sfile//"");
-		    if (-f $sfile) {$parent->setAttribute("age",(-M $sfile//""))};
+		    if (-f $sfile) {
+			$parent->setAttribute("age",(-M $sfile//""));
+			$parent->setAttribute("size",size_in_mb(-s $sfile))
+		    };
 		    $node->addChild( $parent );
 		};
 		# put xml-structure into file
@@ -347,7 +350,10 @@ sub findObs {
 	    foreach my $spath (@files) {
 		my $parent = XML::LibXML::Element->new( 'stack' );
 		$parent->setAttribute("name",$spath//"");
-		if (-f $spath) {$parent->setAttribute("age",(-M $spath//""))};
+		if (-f $spath) {
+		    $parent->setAttribute("age",(-M $spath//""));
+		    $parent->setAttribute("size",size_in_mb(-s $spath))
+		};
 		$node->addChild( $parent );
 	    };
 	    # put xml-structure into file
@@ -574,4 +580,12 @@ sub tostring (&) {
     open local *STDOUT, '>', \$s;
     shift->();
     $s
+}
+
+sub size_in_mb {
+    my $size=shift;
+    my $text= reverse (sprintf "%.2fMb", $size/(1024 * 1024));
+    $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    $text=reverse $text;
+    return $text;
 }

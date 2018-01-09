@@ -909,6 +909,11 @@ CONTAINS
             & set%col_exp250(set%ccol), &
             & set%col_lene(set%ccol), &
             & stat=irc)
+       if (irc.ne.0) then
+          call plot_errorappend(crc250,myname)
+          call plot_errorappend(crc250,"Unable to allocate 'set%col'.")
+          return
+       end if
        ii=0
        col=>pss%firstColumn%next
        do while (.not.associated(col,target=pss%lastColumn))
@@ -1018,10 +1023,12 @@ CONTAINS
           call plot_errorappend(crc250," Error return from colExport.")
           return
        end if
+       if(plot_bdeb)write(*,*)myname,"Cleaning.",irc
        call plot_unlinkSet(set)       
        call plot_deallocateSet(set)
        plot_pullset=.true.
     end if
+    if(plot_bdeb)write(*,*)myname,"Done.",irc
     return
   end function plot_pullset
   !
@@ -1064,10 +1071,12 @@ CONTAINS
           call plot_errorappend(crc250," Error return from colExport.")
           return
        end if
+       if(plot_bdeb)write(*,*)myname,"Cleaning.",irc
        call plot_unlinkSet(set)       
        call plot_deallocateSet(set)
        plot_popset=.true.
     end if
+    if(plot_bdeb)write(*,*)myname,"Done.",irc
     return
   end function plot_popset
   !
@@ -1120,10 +1129,13 @@ CONTAINS
           return
        end if
        !
+       if(plot_bdeb)write(*,*)myname,"Make columns.",pss%currentSet%ccol,size(col80)
        ncol=pss%currentSet%ccol
-       if (pss%currentSet%ccol > size(col80).or.pss%currentSet%ccol > size(exp250)) then
+       if (.not.allocated(col80).or..not.allocated(exp250).or.&
+            & pss%currentSet%ccol > size(col80).or.pss%currentSet%ccol > size(exp250)) then
           if (allocated(col80)) deallocate(col80)
           if (allocated(exp250)) deallocate(exp250)
+          if(plot_bdeb)write(*,*)myname,"Allocating columns.",ncol
           allocate(col80(ncol),exp250(ncol),stat=irc)
           if (irc.ne.0) then
              call plot_errorappend(crc250,myname)
@@ -1131,6 +1143,8 @@ CONTAINS
              return
           end if
        end if
+       if(plot_bdeb)write(*,*)myname,"Assigning columns.",ncol,&
+            & allocated(col80),allocated(exp250),size(col80),size(exp250)
        do ii=1,ncol
           col80(ii)=pss%currentSet%col80(ii)
           exp250(ii)=pss%currentSet%col_exp250(ii)
@@ -1139,6 +1153,7 @@ CONTAINS
        !
        plot_loopset=.true.
     end if
+    if(plot_bdeb)write(*,*)myname,"Done.",plot_loopset
     return
   end function plot_loopSet
   !
@@ -2111,6 +2126,7 @@ CONTAINS
        return
     end if
     !
+    if(plot_bdeb)write(*,*)myname,"Setting colocation match."
     call colocation_clearMatchStack(css,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2130,6 +2146,7 @@ CONTAINS
        call plot_errorappend(crc250," Error return from loopMatch.")
        return
     end if
+    if(plot_bdeb)write(*,*)myname,"Done.",irc
     !
     return
   end subroutine plot_colExport

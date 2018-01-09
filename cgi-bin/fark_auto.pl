@@ -19,12 +19,12 @@ use File::Copy;
 my $user=$ENV{USERNAME} // "www";
 my $pub="/metfark/pub";
 #
-my $debug=0;       # debug this script (0=omit output)
-#fark::debug(1);  # debug observations
-#fark::debug(2);  # debug models
-#fark::debug(3);  # debug colocation
-#fark::debug(4);  # debug plot
-#fark::debug(5);  # debug parse
+my $debug=1;       # debug this script (0=omit output)
+fark::debug(1);  # debug observations
+fark::debug(2);  # debug models
+fark::debug(3);  # debug colocation
+fark::debug(4);  # debug plot
+fark::debug(5);  # debug parse
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 #
@@ -53,7 +53,7 @@ my ($dir,$name)=farkdir::splitName($ipath);
 my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 my $file = $loc . $name;
 my $test = (defined $param->{test}[0]) ? 1 : 0;
-
+if ($debug) {print "Processing $file\n";}
 # auto config file...
 my $parser = XML::LibXML->new();
 if (-f $autopath) { # we have a config file...
@@ -80,13 +80,13 @@ if (-f $autopath) { # we have a config file...
 	    &loopCls("plot",$test, $plotr) || farkdir::term("Error return from loopPlot:$file");
         } else {
 	    if($debug){print "Processing all... '$cron'\n";}
-	    $modelr=&getCls("model",$node,$cron,$file);
+	    $modelr=&getCls("model",$node,$cron);
 	    &loopCls("model",$test, $modelr) || farkdir::term("Error return from loopModel:$file");
-	    $obsr=&getCls("obs",$node,$cron,$file);
+	    $obsr=&getCls("obs",$node,$cron);
 	    &loopCls("obs",$test, $obsr) || farkdir::term("Error return from loopObs:$file");
-	    $colocr=&getCls("coloc",$node,$cron,$file);
+	    $colocr=&getCls("coloc",$node,$cron);
 	    &loopCls("coloc",$test, $colocr) || farkdir::term("Error return from loopColoc:$file");
-	    $plotr=&getCls("plot",$node,$cron,$file);
+	    $plotr=&getCls("plot",$node,$cron);
 	    &loopCls("plot",$test, $plotr) || farkdir::term("Error return from loopPlot:$file");
 	}
     }
@@ -253,7 +253,7 @@ sub loopCls {
 		copy ($xmlfile,$xmloldfile);
 	    };
 	    # auto config file...
-	    if ( ! -e $xmlfile) { farkdir::term("$myname unable to find: $xmlfile");}
+	    if ( ! -e $xmlfile) { farkdir::term("$myname unable to find: $xmlfile $cls $clsDir $clsfile");}
 	    # read config file into memory
 	    my $parser = XML::LibXML->new();
 	    my $clsdoc = $parser->parse_file($xmlfile);
@@ -480,7 +480,7 @@ sub processModel {
     my $filterFile=$node->getAttribute("filterFile");
     # registerfile is updated if (! $test)
     $fark->updateModelRegister($registerfile,$filterDir,$filterFile,$filterDirMin,$filterDirMax,$test,$fillfile);
-    if (! $test) {$fark->makeModelCache($cachefile);}
+    $fark->makeModelCache($cachefile);
     #
     $fark->close();
     #
@@ -508,7 +508,7 @@ sub processObs {
     my $filterFile=$node->getAttribute("filterFile");
     # registerfile is updated if (! $test)
     $fark->updateObservationRegister($registerfile,$filterDir,$filterFile,$filterDirMin,$filterDirMax,$test,$fillfile);
-    if (! $test) {$fark->makeObservationCache($cachefile);}
+    $fark->makeObservationCache($cachefile);
     #
     $fark->close();
     #
