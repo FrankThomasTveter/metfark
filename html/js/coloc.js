@@ -1460,6 +1460,7 @@ function coloc_debugExp(f,t) {
     var fitem=document.getElementById(f);
     var titem=document.getElementById(t);
     var expin=fitem.value;
+    titem.innerHTML="";
     documentLog.innerHTML="Sent coloc-exp request:"+expin;
     $.get("cgi-bin/fark_exp.pl",{exp:expin},
 	  function(data, status){
