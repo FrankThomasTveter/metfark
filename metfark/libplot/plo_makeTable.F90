@@ -20,7 +20,7 @@ subroutine plo_maketable(sid,cid,mid,oid,tab250,gra250,cat250,test,fill250,crc25
   type(col_session), pointer ::  css !  current session
   type(mod_session), pointer ::  mss !  current session
   type(obs_session), pointer ::  oss !  current session
-  if (plot_bdeb)write(*,*)myname,'Entering.',irc,test
+  !if (plot_bdeb)write(*,*)myname,'Entering.',irc,test
   ! get session objects
   call model_getSession(mss,mid,crc250,irc)
   if (irc.ne.0) then

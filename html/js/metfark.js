@@ -1426,6 +1426,11 @@ function showDropdown(target, arg = "") {
 	var cfile=plot_getColocConfigFile();
 	var mfile=plot_getModelConfigFile();
 	var ofile=plot_getObsConfigFile();
+	// model index
+	if (model_config[mfile]!== undefined) {
+	    var indexTarget=model_config[mfile]["indexTarget"];
+	    addChildButton(item,indexTarget,"addValue('"+target+"','"+indexTarget+"');");
+	};
 	// list model trgs in coloc_config
  	if (coloc_config[cfile] !== undefined) {
 	    var trgs=coloc_config[cfile]["modelConfigFile"]["targets"];

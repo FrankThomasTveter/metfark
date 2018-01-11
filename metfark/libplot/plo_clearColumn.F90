@@ -6,7 +6,7 @@ subroutine plo_clearcolumn(sid, crc250, irc)
   integer :: irc
   character*25 :: myname = "plo_clearcolumn"
   type(plot_session), pointer :: css !  current session
-  if(plot_bdeb)write(*,*) myname, 'Entering.',irc
+  !if(plot_bdeb)write(*,*) myname, 'Entering.',irc
   call plot_getSession(css,sid,crc250,irc)
   if (irc.ne.0) then
      call plot_errorappend(crc250,myname)
@@ -23,6 +23,6 @@ subroutine plo_clearcolumn(sid, crc250, irc)
      call plot_errorappendi(crc250,irc)
      return
   end if
-  if(plot_bdeb)write(*,*) myname,' Done.'
+  !if(plot_bdeb)write(*,*) myname,' Done.'
   return
 end subroutine plo_clearcolumn

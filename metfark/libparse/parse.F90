@@ -24,124 +24,123 @@ module parse
   ! Nieminen <warp@iki.fi> available from http://warp.povusers.org/FunctionParser/
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   INTEGER, PARAMETER :: rn = KIND(0.0d0)          ! Precision of real numbers
-  INTEGER, PARAMETER :: is = 4 ! Data type of bytecode
+  INTEGER, PARAMETER :: is = 4                    ! Data type of bytecode
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   PUBLIC                     :: parse_open,    & ! Open parse session
-                                parse_close,   & ! Close parse session
-                                parse_parsef,   & ! Parse single function string
-                                parse_evalf,    & ! Evaluate single function
-                                parse_used,     & ! which targets are used?
-                                parse_EvalErrMsg  ! Error message (Use only when EvalErrType>0)
+       parse_close,   & ! Close parse session
+       parse_parsef,   & ! Parse single function string
+       parse_evalf,    & ! Evaluate single function
+       parse_evals,    & ! Evaluate single function
+       parse_used,     & ! which targets are used?
+       parse_EvalErrMsg  ! Error message (Use only when EvalErrType>0)
   INTEGER, PUBLIC            :: EvalErrType ! =0: no error occured, >0: evaluation error
-!  !------- -------- --------- --------- --------- --------- --------- --------- -------
-!  PRIVATE
-!  SAVE
+  !  !------- -------- --------- --------- --------- --------- --------- --------- -------
+  !  PRIVATE
+  !  SAVE
   integer,                                  PARAMETER :: parse_laa=ichar('a')
   integer,                                  PARAMETER :: parse_lzz=ichar('z')
   integer,                                  PARAMETER :: parse_uaa=ichar('A')
   integer,                                  PARAMETER :: parse_uzz=ichar('Z')
   integer,                                  PARAMETER :: parse_und=ichar('_')
   INTEGER(is),                              PARAMETER :: parse_delay       = 0,&
-                                                         parse_empty       = 1,&
-                                                         parse_constant    = 2,&
-                                                         parse_internal    = 3,&
-                                                         parse_variable    = 4,&
-                                                         parse_expression  = 5
+       parse_empty       = 1,&
+       parse_constant    = 2,&
+       parse_internal    = 3,&
+       parse_variable    = 4,&
+       parse_expression  = 5
   INTEGER(is),                              PARAMETER :: cImmed     = 1,          &
-                                                         cNeg       = 2,          &
-                                                         cAdd       = 3,          & 
-                                                         cSub       = 4,          & 
-                                                         cMul       = 5,          & 
-                                                         cDiv       = 6,          & 
-                                                         cPow       = 7,          & 
-                                                         cAbs       = 8,          &
-                                                         cExp       = 9,          &
-                                                         cLog10     = 10,         &
-                                                         cLog       = 11,         &
-                                                         cSqrt      = 12,         &
-                                                         cmsgmax    = 13,         &
-                                                         cmsgmin    = 14,         &
-                                                         cmsgclosest= 15,         &
-                                                         cismember  = 16,         &
-                                                         cisbelow   = 17,         &
-                                                         cisabove   = 18,         &
-                                                         cisbetween = 19,         &
-                                                         cthinned   = 20,         &
-                                                         cand       = 21,         &
-                                                         cor        = 22,         &
-                                                         cnot       = 23,         &
-                                                         c1970yy    = 24,         &
-                                                         c1970mm    = 25,         &
-                                                         c1970dd    = 26,         &
-                                                         c1970hh    = 27,         &
-                                                         c1970mi    = 28,         &
-                                                         c1970      = 29,         &
-                                                         cjulianyy  = 30,         &
-                                                         cjulianmm  = 31,         &
-                                                         cjuliandd  = 32,         &
-                                                         cjulianhh  = 33,         &
-                                                         cjulianmi  = 34,         &
-                                                         cjulian    = 35,         &
-                                                         cSinh      = 36,         &
-                                                         cCosh      = 37,         &
-                                                         cTanh      = 38,         &
-                                                         cSin       = 39,         &
-                                                         cCos       = 40,         &
-                                                         cTan       = 41,         &
-                                                         cAsin      = 42,         &
-                                                         cAcos      = 43,         &
-                                                         cAtan2     = 44,         &
-                                                         cAtan      = 45,         &
-                                                         cArgs      = 46,         &
-                                                         VarBegin   = 47,         &
-                                                         VarEnd     = VarBegin+cAtan-cAbs
+       cNeg       = 2,          &
+       cAdd       = 3,          & 
+       cSub       = 4,          & 
+       cMul       = 5,          & 
+       cDiv       = 6,          & 
+       cPow       = 7,          & 
+       cAbs       = 8,          &
+       cExp       = 9,          &
+       cLog10     = 10,         &
+       cLog       = 11,         &
+       cSqrt      = 12,         &
+       cmsgmax    = 13,         &
+       cmsgmin    = 14,         &
+       cmsgclosest= 15,         &
+       cismember  = 16,         &
+       cisbelow   = 17,         &
+       cisabove   = 18,         &
+       cisbetween = 19,         &
+       cthinned   = 20,         &
+       cand       = 21,         &
+       cor        = 22,         &
+       cnot       = 23,         &
+       c1970yy    = 24,         &
+       c1970mm    = 25,         &
+       c1970dd    = 26,         &
+       c1970hh    = 27,         &
+       c1970mi    = 28,         &
+       c1970      = 29,         &
+       cjulianyy  = 30,         &
+       cjulianmm  = 31,         &
+       cjuliandd  = 32,         &
+       cjulianhh  = 33,         &
+       cjulianmi  = 34,         &
+       cjulian    = 35,         &
+       cSinh      = 36,         &
+       cCosh      = 37,         &
+       cTanh      = 38,         &
+       cSin       = 39,         &
+       cCos       = 40,         &
+       cTan       = 41,         &
+       cAsin      = 42,         &
+       cAcos      = 43,         &
+       cAtan2     = 44,         &
+       cAtan      = 45,         &
+       VarBegin   = 46,         &
+       VarEnd     = VarBegin+cAtan-cAbs
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
-                                                                         '-',     &
-                                                                         '*',     &
-                                                                         '/',     &
-                                                                         '^' /)
+       '-',     &
+       '*',     &
+       '/',     &
+       '^' /)
   CHARACTER (LEN=10), DIMENSION(cAbs:cAtan), PARAMETER :: Funcs      = (/ 'abs       ', &
-                                                                          'exp       ', &
-                                                                          'log10     ', &
-                                                                          'log       ', &
-                                                                          'sqrt      ', &
-                                                                          'msgmax    ', &
-                                                                          'msgmin    ', &
-                                                                          'msgclosest', &
-                                                                          'ismember  ', &
-                                                                          'isbelow   ', &
-                                                                          'isabove   ', &
-                                                                          'isbetween ', &
-                                                                          'thinned   ', &
-                                                                          'and       ', &
-                                                                          'or        ', &
-                                                                          'not       ', &
-                                                                          'sec1970yy ', &
-                                                                          'sec1970mm ', &
-                                                                          'sec1970dd ', &
-                                                                          'sec1970hh ', &
-                                                                          'sec1970mi ', &
-                                                                          'sec1970   ', &
-                                                                          'julianyy  ', &
-                                                                          'julliamm  ', &
-                                                                          'juliandd  ', &
-                                                                          'julianhh  ', &
-                                                                          'julianmi  ', &
-                                                                          'julian    ', &
-                                                                          'sinh      ', &
-                                                                          'cosh      ', &
-                                                                          'tanh      ', &
-                                                                          'sin       ', &
-                                                                          'cos       ', &
-                                                                          'tan       ', &
-                                                                          'asin      ', &
-                                                                          'acos      ', &
-                                                                          'atan2     ', &
-                                                                          'atan      ' /)
+       'exp       ', &
+       'log10     ', &
+       'log       ', &
+       'sqrt      ', &
+       'msgmax    ', &
+       'msgmin    ', &
+       'msgclosest', &
+       'ismember  ', &
+       'isbelow   ', &
+       'isabove   ', &
+       'isbetween ', &
+       'thinned   ', &
+       'and       ', &
+       'or        ', &
+       'not       ', &
+       'sec1970yy ', &
+       'sec1970mm ', &
+       'sec1970dd ', &
+       'sec1970hh ', &
+       'sec1970mi ', &
+       'sec1970   ', &
+       'julianyy  ', &
+       'julliamm  ', &
+       'juliandd  ', &
+       'julianhh  ', &
+       'julianmi  ', &
+       'julian    ', &
+       'sinh      ', &
+       'cosh      ', &
+       'tanh      ', &
+       'sin       ', &
+       'cos       ', &
+       'tan       ', &
+       'asin      ', &
+       'acos      ', &
+       'atan2     ', &
+       'atan      ' /)
   integer, parameter :: nconst = 3
   CHARACTER (LEN=2), allocatable :: Const(:)
   real(rn), allocatable  :: constval(:)
-
   TYPE,PUBLIC ::  parse_session
      INTEGER(is), DIMENSION(:), POINTER  :: ByteCode => null()
      INTEGER                              :: ByteCodeSize
@@ -151,22 +150,16 @@ module parse
      integer                              :: nPos=0
      REAL(rn),    DIMENSION(:,:), POINTER :: Stacka => null()
      INTEGER                              :: StackSize,StackPtr
-     REAL(rn),    DIMENSION(:), POINTER   :: Args => null()
-     REAL(rn),    DIMENSION(:,:), POINTER :: Argsa => null()
      real(rn),    DIMENSION(:), POINTER   :: Wrka => null()
      INTEGER                              :: ArgsSize
-     INTEGER                              :: ArgsAlloc
+     INTEGER,     DIMENSION(:), POINTER   :: ArgsByte => null()
      INTEGER                              :: ArgsPtr
-     INTEGER,     DIMENSION(:), POINTER   :: ArgsPos => null()
-     INTEGER                              :: ArgsCnt
      character*100 :: funcStr100=""
      integer :: lenf =0
   END TYPE parse_session
-  
   type parse_pointer
      type(parse_session), pointer  :: ptr => null()
   end type parse_pointer
-
   INTEGER,   DIMENSION(:),  ALLOCATABLE :: ipos              ! Associates function strings
   !
 CONTAINS
@@ -199,7 +192,7 @@ CONTAINS
     !css%parse_uaa=ichar('A')
     !css%parse_uzz=ichar('Z')
     !css%parse_und=ichar('_')
-    if(parse_bdeb)write(*,*)myname,"Done"
+    !if(parse_bdeb)write(*,*)myname,"Done"
     return
   END SUBROUTINE parse_open
   !
@@ -213,11 +206,9 @@ CONTAINS
        IF (ASSOCIATED(css%ByteCode)) DEALLOCATE ( css%ByteCode,stat=irc)
        IF (ASSOCIATED(css%Immed))    DEALLOCATE ( css%Immed,   stat=irc)
        IF (ASSOCIATED(css%Stack))    DEALLOCATE ( css%Stack,   stat=irc)
-       IF (ASSOCIATED(css%Args))     DEALLOCATE ( css%Args,    stat=irc)
-       IF (ASSOCIATED(css%ArgsPos))  DEALLOCATE ( css%ArgsPos, stat=irc)
+       IF (ASSOCIATED(css%ArgsByte)) DEALLOCATE ( css%ArgsByte,stat=irc)
        IF (ASSOCIATED(css%Stacka))   DEALLOCATE ( css%Stacka,  stat=irc)
-       IF (ASSOCIATED(css%Argsa))    DEALLOCATE ( css%Argsa,   stat=irc)
-       IF (ASSOCIATED(css%Wrka))     DEALLOCATE ( css%Wrka,   stat=irc)
+       IF (ASSOCIATED(css%Wrka))     DEALLOCATE ( css%Wrka,    stat=irc)
        deallocate(css,stat=irc)
        nullify(css)
     end if
@@ -300,7 +291,8 @@ CONTAINS
     css%funcStr100=FuncStr
     call chop0(css%funcStr100,100)
     css%lenf=length(css%funcStr100,100,10)
-    if(parse_bdeb)write(*,*) myname,"Done '"//funcstr(1:LEN_TRIM(FuncStr))//"'"
+    if(parse_bdeb)write(*,'(X,A,X,A,1000(X,I0))') myname,"Done '"//&
+         & funcstr(1:LEN_TRIM(FuncStr))//"'",css%bytecode
     return
   END SUBROUTINE parse_parsef
   !
@@ -309,66 +301,125 @@ CONTAINS
     ! Evaluate bytecode of ith function for the values passed in array Val(:)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
-    type(parse_session), pointer :: css
-    integer,dimension(8) :: values    
-    REAL(rn), allocatable, INTENT(in) :: Val(:)                ! Variable values
-    REAL(rn)                           :: res                ! Result
-    INTEGER                            :: IP,              & ! Instruction pointer
-                                          DP,              & ! Data pointer
-                                          SP,              & ! Stack pointer
-                                          AP,              & ! arguments pointer
-                                          AI                 ! arguments index
+    type(parse_session), pointer,INTENT(IN) :: css
+    REAL(rn), allocatable, INTENT(in)       :: Val(:)  ! Variable values
+    REAL(rn)                                :: res     ! Result
+    !
+    INTEGER                                 :: IP,   & ! Instruction pointer
+         DP,   & ! Data pointer
+         SP,   & ! Stack pointer
+         AP,   & ! arguments pointer
+         AI      ! arguments index
     REAL(rn),                PARAMETER :: zero = 0._rn
-    integer :: ii, nargs
-    character*50 :: str
+    integer,dimension(8) :: values    
+    integer :: ii, imax,nargs
     character*22 :: myname ="parse_evalf"
+    character*500 :: str500
+    integer :: lens
+    integer, external :: length
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-
-    if(parse_bdeb)write(*,*)myname,"Entering"
+    imax=size(val)
+    if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",imax,allocated(val)
     DP = 1
     SP = 0
     AP = 0 ! argument position
     AI = 0 ! argument function index
-    str=''
     DO IP=1,css%ByteCodeSize
-
-       if (AI.eq.0) then
-          NARGS=AP+1;
-       else
-          NARGS=AP-css%ArgsPos(AI)+1;
+       NARGS=css%ArgsByte(AI+1)
+       if(parse_bdeb)then
+          write(*,'(X,A,X,A,X,I3,X,I3,3X,A,3X,I0,X,I0)')myname,"Looping",&
+               & IP,css%ByteCode(IP),parse_code20(css%bytecode(ip),nargs)
        end if
-
-       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') &
-            & "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,min(SP,100))
-       if(parse_bdeb)write(*,'(X,A,X,A,2(X,I1),100(X,F8.2))') myname,&
-            & str,AP,nargs,(css%Args(II),II=1,min(AP,100))
-
        SELECT CASE (css%ByteCode(IP))
-
-       CASE (cImmed); SP=SP+1; css%Stack(SP)=css%Immed(DP); DP=DP+1
-       CASE   (cNeg); css%Stack(SP)=-css%Stack(SP)
-       CASE   (cAdd); css%Stack(SP-1)=css%Stack(SP-1)+css%Stack(SP); SP=SP-1
-       CASE   (cSub); css%Stack(SP-1)=css%Stack(SP-1)-css%Stack(SP); SP=SP-1
-       CASE   (cMul); css%Stack(SP-1)=css%Stack(SP-1)*css%Stack(SP); SP=SP-1
-       CASE   (cDiv); IF (css%Stack(SP)==0._rn) THEN; EvalErrType=1; res=zero; RETURN; ENDIF
-                       css%Stack(SP-1)=css%Stack(SP-1)/css%Stack(SP); SP=SP-1
-       CASE   (cPow); css%Stack(SP-1)=css%Stack(SP-1)**css%Stack(SP); SP=SP-1
-       CASE   (cAbs); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=ABS(css%Stack(SP))
-       CASE   (cExp); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=EXP(css%Stack(SP))
-       CASE (cLog10); AI=AI+1;AP=css%ArgsPos(AI);IF (css%Stack(SP)<=0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=LOG10(css%Stack(SP))
-       CASE   (cLog); AI=AI+1;AP=css%ArgsPos(AI);IF (css%Stack(SP)<=0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=LOG(css%Stack(SP))
-       CASE  (cSqrt); AI=AI+1;AP=css%ArgsPos(AI);IF (css%Stack(SP)<0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=SQRT(css%Stack(SP))
-       CASE  (cMsgMax); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=1.0D0;
-       CASE  (cMsgMin); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=1.0D0;
-       CASE  (cMsgClosest); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=1.0D0;
-       CASE  (cisMember); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE (cImmed)
+          SP=SP+1
+          css%Stack(SP)=css%Immed(DP)
+          DP=DP+1
+       CASE   (cNeg)
+          css%Stack(SP)=-css%Stack(SP)
+       CASE   (cAdd)
+          css%Stack(SP-1)=css%Stack(SP-1)+css%Stack(SP)
+          SP=SP-1
+       CASE   (cSub)
+          css%Stack(SP-1)=css%Stack(SP-1)-css%Stack(SP)
+          SP=SP-1
+       CASE   (cMul)
+          css%Stack(SP-1)=css%Stack(SP-1)*css%Stack(SP)
+          SP=SP-1
+       CASE   (cDiv)
+          IF (css%Stack(SP)==0._rn) THEN
+             EvalErrType=1
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP-1)=css%Stack(SP-1)/css%Stack(SP)
+          SP=SP-1
+       CASE   (cPow)
+          css%Stack(SP-1)=css%Stack(SP-1)**css%Stack(SP)
+          SP=SP-1
+       CASE   (cAbs)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=ABS(css%Stack(SP))
+       CASE   (cExp)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=EXP(css%Stack(SP))
+       CASE (cLog10)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF (css%Stack(SP)<=0._rn) THEN
+             EvalErrType=3
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=LOG10(css%Stack(SP))
+       CASE   (cLog)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF (css%Stack(SP)<=0._rn) THEN
+             EvalErrType=3
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=LOG(css%Stack(SP))
+       CASE  (cSqrt)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF (css%Stack(SP)<0._rn) THEN
+             EvalErrType=3
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=SQRT(css%Stack(SP))
+       CASE  (cMsgMax)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
+       CASE  (cMsgMin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
+       CASE  (cMsgClosest)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
+       CASE  (cisMember)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=.false.
           ISMEMBER: DO II=1,NARGS-1
-             if (css%stack(SP).eq.css%Args(AP+II)) then
+             if (css%stack(SP).eq.css%Stack(SP+II)) then
                 found=.true.
                 exit ISMEMBER
              end if
@@ -378,10 +429,13 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cisBelow); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cisBelow)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=.true.
           ISBELOW: DO II=1,NARGS-1
-             if (css%stack(SP).ge.css%Args(AP+II)) then
+             if (css%stack(SP).ge.css%Stack(SP+II)) then
                 found=.false.
                 exit ISBELOW
              end if
@@ -391,10 +445,13 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cisAbove); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cisAbove)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=.true.
           ISABOVE: DO II=1,NARGS-1
-             if (css%stack(SP).le.css%Args(AP+II)) then
+             if (css%stack(SP).le.css%Stack(SP+II)) then
                 found=.false.
                 exit ISABOVE
              end if
@@ -404,14 +461,17 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cisBetween); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cisBetween)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           above=.false.
           below=.false.
           ISBETWEEN: DO II=1,NARGS-1
-             if (css%stack(SP).le.css%Args(AP+II)) then
+             if (css%stack(SP).le.css%Stack(SP+II)) then
                 BELOW=.TRUE.
              end if
-             if (css%stack(SP).ge.css%Args(AP+II)) then
+             if (css%stack(SP).ge.css%Stack(SP+II)) then
                 ABOVE=.TRUE.
              end if
              if (above.and.below) exit ISBETWEEN
@@ -421,7 +481,10 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cThinned); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cThinned)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.ge.1) THEN ! 
              if (rand()*100 .gt. css%Stack(SP)) then
                 css%Stack(SP)=1.0D0
@@ -429,11 +492,14 @@ CONTAINS
                 css%Stack(SP)=0.0D0
              end if
           end if
-       CASE  (cand); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cand)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=(abs(css%stack(SP)).gt.0.5D0)
           if (found) then
              AND: DO II=1,NARGS-1
-                if (abs(css%Args(AP+II)).lt.0.5D0) then
+                if (abs(css%Stack(SP+II)).lt.0.5D0) then
                    found=.false.
                    exit AND
                 end if
@@ -444,11 +510,14 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cor); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cor)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=(abs(css%stack(SP)).gt.0.5D0)
           if (.not.found) then
              OR: DO II=1,NARGS-1
-                if (abs(css%Args(AP+II)).gt.0.5D0) then
+                if (abs(css%Stack(SP+II)).gt.0.5D0) then
                    found=.true.
                    exit OR
                 end if
@@ -459,11 +528,15 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cnot); AI=AI+1;AP=css%ArgsPos(AI); ! .not.a .and. .not.b ....
+       CASE  (cnot)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          ! .not.a .and. .not.b ....
           found=(abs(css%stack(SP)).lt.0.5D0)
           if (found) then
              NOT: DO II=1,NARGS-1
-                if (abs(css%Args(AP+II)).gt.0.5D0) then
+                if (abs(css%Stack(SP+II)).gt.0.5D0) then
                    found=.false.
                    exit NOT
                 end if
@@ -474,109 +547,213 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (c1970yy); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_yy(css%Stack(SP))
-       CASE  (c1970mm); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_mm(css%Stack(SP))
-       CASE  (c1970dd); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_dd(css%Stack(SP))
-       CASE  (c1970hh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_hh(css%Stack(SP))
-       CASE  (c1970mi); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_mi(css%Stack(SP))
-       CASE  (c1970);AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (c1970yy)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_yy(css%Stack(SP))
+       CASE  (c1970mm)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_mm(css%Stack(SP))
+       CASE  (c1970dd)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_dd(css%Stack(SP))
+       CASE  (c1970hh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_hh(css%Stack(SP))
+       CASE  (c1970mi)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_mi(css%Stack(SP))
+       CASE  (c1970)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
              css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
                   &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  css%Args(AP+5));
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  css%Stack(SP+5))
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  0.0D0);
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  0.0D0)
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
                   0.0D0, &
-                  0.0D0);
+                  0.0D0)
           ELSE 
              write(*,*)"*** Unexpected number of arguments to s1970:",nargs
-             EvalErrType=5; res=zero; RETURN; 
-          END IF;
-       CASE  (cjulianyy); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_yy(css%Stack(SP))
-       CASE  (cjulianmm); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_mm(css%Stack(SP))
-       CASE  (cjuliandd); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_dd(css%Stack(SP))
-       CASE  (cjulianhh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_hh(css%Stack(SP))
-       CASE  (cjulianmi); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_mi(css%Stack(SP))
-       CASE  (cjulian);AI=AI+1;AP=css%ArgsPos(AI);
+             EvalErrType=5
+             res=zero
+             RETURN
+          END IF
+       CASE  (cjulianyy)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_yy(css%Stack(SP))
+       CASE  (cjulianmm)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_mm(css%Stack(SP))
+       CASE  (cjuliandd)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_dd(css%Stack(SP))
+       CASE  (cjulianhh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_hh(css%Stack(SP))
+       CASE  (cjulianmi)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_mi(css%Stack(SP))
+       CASE  (cjulian)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
              css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
                   &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  css%Args(AP+5));
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  css%Stack(SP+5))
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  0.0D0);
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  0.0D0)
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
                   0.0D0, &
-                  0.0D0);
+                  0.0D0)
           ELSE 
              write(*,*)"*** Unexpected number of arguments to d2000:",nargs
-             EvalErrType=5; res=zero; RETURN; 
-          END IF;
-       CASE  (cSinh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=SINH(css%Stack(SP))
-       CASE  (cCosh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=COSH(css%Stack(SP))
-       CASE  (cTanh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=TANH(css%Stack(SP))
-       CASE   (cSin); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=SIN(css%Stack(SP))
-       CASE   (cCos); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=COS(css%Stack(SP))
-       CASE   (cTan); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=TAN(css%Stack(SP))
-       CASE  (cAsin); AI=AI+1;AP=css%ArgsPos(AI);IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
-                      EvalErrType=4; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=ASIN(css%Stack(SP))
-       CASE  (cAcos); AI=AI+1;AP=css%ArgsPos(AI);IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
-                      EvalErrType=4; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=ACOS(css%Stack(SP))
-       CASE  (cAtan2); AI=AI+1;AP=css%ArgsPos(AI);
+             EvalErrType=5
+             res=zero
+             RETURN
+          END IF
+       CASE  (cSinh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=SINH(css%Stack(SP))
+       CASE  (cCosh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=COSH(css%Stack(SP))
+       CASE  (cTanh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=TANH(css%Stack(SP))
+       CASE   (cSin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=SIN(css%Stack(SP))
+       CASE   (cCos)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=COS(css%Stack(SP))
+       CASE   (cTan)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=TAN(css%Stack(SP))
+       CASE  (cAsin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             EvalErrType=4
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=ASIN(css%Stack(SP))
+       CASE  (cAcos)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             EvalErrType=4
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=ACOS(css%Stack(SP))
+       CASE  (cAtan2)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.2) THEN
-             css%Stack(SP)=ATAN2(css%Stack(SP),css%Args(AP+1));
+             css%Stack(SP)=ATAN2(css%Stack(SP),css%Stack(SP+1))
           ELSE 
              write(*,*)"*** Unexpected number of arguments to atan2:",nargs
-             EvalErrType=5; res=zero; RETURN; 
-          END IF;
-       CASE  (cAtan); css%Stack(SP)=ATAN(css%Stack(SP))
-       CASE  (cArgs); AP=AP+1;css%Args(AP)=css%Stack(SP);SP=SP-1;
-       CASE  DEFAULT; SP=SP+1; 
+             EvalErrType=5
+             res=zero
+             RETURN
+          END IF
+       CASE  (cAtan)
+          css%Stack(SP)=ATAN(css%Stack(SP))
+       CASE  DEFAULT
+          SP=SP+1
           if (css%ByteCode(IP) .le. VarEnd) then
-             css%Stack(SP)=Val(css%ByteCode(IP)-VarBegin+1)
+             ii=css%ByteCode(IP)-VarBegin+1
+             if (parse_bdeb.and.ii.gt.imax)write(*,*) myname,'Invalid VAL-index:',ii,"(max=",size(val),")"
+             css%Stack(SP)=Val(ii)
           else
              css%Stack(SP)=ConstVal(css%ByteCode(IP)-VarEnd)
           end if
        END SELECT
+       if(parse_bdeb)then
+          write(str500,'(100(X,F0.2))') &
+               & (css%Stack(II),II=1,min(SP,100))
+          call chop0(str500,500)
+          lens=length(str500,500,10)
+          write(*,'(X,A,5X,A)') myname,&
+               & "Stack=["//str500(1:LENS)//"]"
+       end if
     END DO
     EvalErrType = 0
     res = css%Stack(1)
-    if(parse_bdeb)write(*,'(X,A,X,A,A,F0.10)') myname,str," result=",res
-    if(parse_bdeb)write(*,*)myname,"Done."
+    if(parse_bdeb)write(*,*) myname,"Result=",res
+    !if(parse_bdeb)write(*,*)myname,"Done."
   END FUNCTION parse_evalf
   !
   subroutine parse_evals (css, Val, set, res, ret) 
@@ -587,66 +764,118 @@ CONTAINS
     type(parse_session), pointer :: css
     integer,dimension(8) :: values    
     REAL(rn), allocatable, INTENT(in)  :: Val(:)             ! Variable values
-    logical, allocatable, INTENT(in)   :: set(:)             ! is variable set?
+    logical, allocatable, INTENT(in)   :: set(:)            ! is variable set?
     REAL(rn)                           :: res                ! Result
     logical                            :: ret                ! is result set?
     INTEGER                            :: IP,              & ! Instruction pointer
-                                          DP,              & ! Data pointer
-                                          SP,              & ! Stack pointer
-                                          AP,              & ! arguments pointer
-                                          AI                 ! arguments index
+         DP,              & ! Data pointer
+         SP,              & ! Stack pointer
+         AP,              & ! arguments pointer
+         AI                 ! arguments index
     REAL(rn),                PARAMETER :: zero = 0._rn
     integer :: ii, nargs
-    character*50 :: str
-    character*22 :: myname ="parse_evalf"
+    character*22 :: myname ="parse_evals"
+    character*500 :: str500
+    integer :: lens
+    integer, external :: length
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-
     if(parse_bdeb)write(*,*)myname,"Entering"
     ret=.true.
     DP = 1
     SP = 0
     AP = 0 ! argument position
     AI = 0 ! argument function index
-    str=''
     DO IP=1,css%ByteCodeSize
-
-       if (AI.eq.0) then
-          NARGS=AP+1;
-       else
-          NARGS=AP-css%ArgsPos(AI)+1;
-       end if
-
-       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') &
-            & "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,min(SP,100))
-       if(parse_bdeb)write(*,'(X,A,X,A,2(X,I1),100(X,F8.2))') myname,&
-            & str,AP,nargs,(css%Args(II),II=1,min(AP,100))
-
        SELECT CASE (css%ByteCode(IP))
-
-       CASE (cImmed); SP=SP+1; css%Stack(SP)=css%Immed(DP); DP=DP+1
-       CASE   (cNeg); css%Stack(SP)=-css%Stack(SP)
-       CASE   (cAdd); css%Stack(SP-1)=css%Stack(SP-1)+css%Stack(SP); SP=SP-1
-       CASE   (cSub); css%Stack(SP-1)=css%Stack(SP-1)-css%Stack(SP); SP=SP-1
-       CASE   (cMul); css%Stack(SP-1)=css%Stack(SP-1)*css%Stack(SP); SP=SP-1
-       CASE   (cDiv); IF (css%Stack(SP)==0._rn) THEN; EvalErrType=1; res=zero; RETURN; ENDIF
-                       css%Stack(SP-1)=css%Stack(SP-1)/css%Stack(SP); SP=SP-1
-       CASE   (cPow); css%Stack(SP-1)=css%Stack(SP-1)**css%Stack(SP); SP=SP-1
-       CASE   (cAbs); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=ABS(css%Stack(SP))
-       CASE   (cExp); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=EXP(css%Stack(SP))
-       CASE (cLog10); AI=AI+1;AP=css%ArgsPos(AI);IF (css%Stack(SP)<=0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=LOG10(css%Stack(SP))
-       CASE   (cLog); AI=AI+1;AP=css%ArgsPos(AI);IF (css%Stack(SP)<=0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=LOG(css%Stack(SP))
-       CASE  (cSqrt); AI=AI+1;AP=css%ArgsPos(AI);IF (css%Stack(SP)<0._rn) THEN; EvalErrType=3; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=SQRT(css%Stack(SP))
-       CASE  (cMsgMax); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=1.0D0;
-       CASE  (cMsgMin); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=1.0D0;
-       CASE  (cMsgClosest); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=1.0D0;
-       CASE  (cisMember); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE (cImmed)
+          SP=SP+1
+          css%Stack(SP)=css%Immed(DP)
+          DP=DP+1
+       CASE   (cNeg)
+          css%Stack(SP)=-css%Stack(SP)
+       CASE   (cAdd)
+          css%Stack(SP-1)=css%Stack(SP-1)+css%Stack(SP)
+          SP=SP-1
+       CASE   (cSub)
+          css%Stack(SP-1)=css%Stack(SP-1)-css%Stack(SP)
+          SP=SP-1
+       CASE   (cMul)
+          css%Stack(SP-1)=css%Stack(SP-1)*css%Stack(SP)
+          SP=SP-1
+       CASE   (cDiv)
+          IF (css%Stack(SP)==0._rn) THEN
+             EvalErrType=1
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP-1)=css%Stack(SP-1)/css%Stack(SP)
+          SP=SP-1
+       CASE   (cPow)
+          css%Stack(SP-1)=css%Stack(SP-1)**css%Stack(SP)
+          SP=SP-1
+       CASE   (cAbs)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=ABS(css%Stack(SP))
+       CASE   (cExp)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=EXP(css%Stack(SP))
+       CASE (cLog10)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF (css%Stack(SP)<=0._rn) THEN
+             EvalErrType=3
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=LOG10(css%Stack(SP))
+       CASE   (cLog)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF (css%Stack(SP)<=0._rn) THEN
+             EvalErrType=3
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=LOG(css%Stack(SP))
+       CASE  (cSqrt)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF (css%Stack(SP)<0._rn) THEN
+             EvalErrType=3
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=SQRT(css%Stack(SP))
+       CASE  (cMsgMax)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
+       CASE  (cMsgMin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
+       CASE  (cMsgClosest)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
+       CASE  (cisMember)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=.false.
           ISMEMBER: DO II=1,NARGS-1
-             if (css%stack(SP).eq.css%Args(AP+II)) then
+             if (css%stack(SP).eq.css%Stack(SP+II)) then
                 found=.true.
                 exit ISMEMBER
              end if
@@ -656,10 +885,13 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cisBelow); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cisBelow)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=.true.
           ISBELOW: DO II=1,NARGS-1
-             if (css%stack(SP).ge.css%Args(AP+II)) then
+             if (css%stack(SP).ge.css%Stack(SP+II)) then
                 found=.false.
                 exit ISBELOW
              end if
@@ -669,10 +901,13 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cisAbove); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cisAbove)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=.true.
           ISABOVE: DO II=1,NARGS-1
-             if (css%stack(SP).le.css%Args(AP+II)) then
+             if (css%stack(SP).le.css%Stack(SP+II)) then
                 found=.false.
                 exit ISABOVE
              end if
@@ -682,14 +917,17 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cisBetween); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cisBetween)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           above=.false.
           below=.false.
           ISBETWEEN: DO II=1,NARGS-1
-             if (css%stack(SP).le.css%Args(AP+II)) then
+             if (css%stack(SP).le.css%Stack(SP+II)) then
                 BELOW=.TRUE.
              end if
-             if (css%stack(SP).ge.css%Args(AP+II)) then
+             if (css%stack(SP).ge.css%Stack(SP+II)) then
                 ABOVE=.TRUE.
              end if
              if (above.and.below) exit ISBETWEEN
@@ -699,7 +937,10 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cThinned); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cThinned)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.ge.1) THEN ! 
              if (rand()*100 .gt. css%Stack(SP)) then
                 css%Stack(SP)=1.0D0
@@ -707,11 +948,14 @@ CONTAINS
                 css%Stack(SP)=0.0D0
              end if
           end if
-       CASE  (cand); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cand)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=(abs(css%stack(SP)).gt.0.5D0)
           if (found) then
              AND: DO II=1,NARGS-1
-                if (abs(css%Args(AP+II)).lt.0.5D0) then
+                if (abs(css%Stack(SP+II)).lt.0.5D0) then
                    found=.false.
                    exit AND
                 end if
@@ -722,11 +966,14 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cor); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cor)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           found=(abs(css%stack(SP)).gt.0.5D0)
           if (.not.found) then
              OR: DO II=1,NARGS-1
-                if (abs(css%Args(AP+II)).gt.0.5D0) then
+                if (abs(css%Stack(SP+II)).gt.0.5D0) then
                    found=.true.
                    exit OR
                 end if
@@ -737,11 +984,15 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (cnot); AI=AI+1;AP=css%ArgsPos(AI); ! .not.a .and. .not.b ....
+       CASE  (cnot)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          ! .not.a .and. .not.b ....
           found=(abs(css%stack(SP)).lt.0.5D0)
           if (found) then
              NOT: DO II=1,NARGS-1
-                if (abs(css%Args(AP+II)).gt.0.5D0) then
+                if (abs(css%Stack(SP+II)).gt.0.5D0) then
                    found=.false.
                    exit NOT
                 end if
@@ -752,98 +1003,192 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
-       CASE  (c1970yy); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_yy(css%Stack(SP))
-       CASE  (c1970mm); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_mm(css%Stack(SP))
-       CASE  (c1970dd); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_dd(css%Stack(SP))
-       CASE  (c1970hh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_hh(css%Stack(SP))
-       CASE  (c1970mi); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_f1970_mi(css%Stack(SP))
-       CASE  (c1970);AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (c1970yy)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_yy(css%Stack(SP))
+       CASE  (c1970mm)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_mm(css%Stack(SP))
+       CASE  (c1970dd)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_dd(css%Stack(SP))
+       CASE  (c1970hh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_hh(css%Stack(SP))
+       CASE  (c1970mi)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_f1970_mi(css%Stack(SP))
+       CASE  (c1970)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
              css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
                   &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  css%Args(AP+5));
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  css%Stack(SP+5))
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  0.0D0);
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  0.0D0)
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
                   0.0D0, &
-                  0.0D0);
+                  0.0D0)
           ELSE 
              write(*,*)"*** Unexpected number of arguments to s1970:",nargs
-             EvalErrType=5; res=zero; RETURN; 
-          END IF;
-       CASE  (cjulianyy); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_yy(css%Stack(SP))
-       CASE  (cjulianmm); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_mm(css%Stack(SP))
-       CASE  (cjuliandd); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_dd(css%Stack(SP))
-       CASE  (cjulianhh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_hh(css%Stack(SP))
-       CASE  (cjulianmi); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=parse_fjulian_mi(css%Stack(SP))
-       CASE  (cjulian);AI=AI+1;AP=css%ArgsPos(AI);
+             EvalErrType=5
+             res=zero
+             RETURN
+          END IF
+       CASE  (cjulianyy)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_yy(css%Stack(SP))
+       CASE  (cjulianmm)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_mm(css%Stack(SP))
+       CASE  (cjuliandd)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_dd(css%Stack(SP))
+       CASE  (cjulianhh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_hh(css%Stack(SP))
+       CASE  (cjulianmi)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=parse_fjulian_mi(css%Stack(SP))
+       CASE  (cjulian)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
              css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
                   &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  css%Args(AP+5));
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  css%Stack(SP+5))
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
-                  css%Args(AP+4), &
-                  0.0D0);
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
+                  css%Stack(SP+4), &
+                  0.0D0)
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
-                  css%Args(AP+1), &
-                  css%Args(AP+2), &
-                  css%Args(AP+3), &
+                  css%Stack(SP+1), &
+                  css%Stack(SP+2), &
+                  css%Stack(SP+3), &
                   0.0D0, &
-                  0.0D0);
+                  0.0D0)
           ELSE 
              write(*,*)"*** Unexpected number of arguments to d2000:",nargs
-             EvalErrType=5; res=zero; RETURN; 
-          END IF;
-       CASE  (cSinh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=SINH(css%Stack(SP))
-       CASE  (cCosh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=COSH(css%Stack(SP))
-       CASE  (cTanh); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=TANH(css%Stack(SP))
-       CASE   (cSin); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=SIN(css%Stack(SP))
-       CASE   (cCos); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=COS(css%Stack(SP))
-       CASE   (cTan); AI=AI+1;AP=css%ArgsPos(AI);css%Stack(SP)=TAN(css%Stack(SP))
-       CASE  (cAsin); AI=AI+1;AP=css%ArgsPos(AI);IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
-                      EvalErrType=4; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=ASIN(css%Stack(SP))
-       CASE  (cAcos); AI=AI+1;AP=css%ArgsPos(AI);IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
-                      EvalErrType=4; res=zero; RETURN; ENDIF
-                      css%Stack(SP)=ACOS(css%Stack(SP))
-       CASE  (cAtan2); AI=AI+1;AP=css%ArgsPos(AI);
+             EvalErrType=5
+             res=zero
+             RETURN
+          END IF
+       CASE  (cSinh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=SINH(css%Stack(SP))
+       CASE  (cCosh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=COSH(css%Stack(SP))
+       CASE  (cTanh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=TANH(css%Stack(SP))
+       CASE   (cSin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=SIN(css%Stack(SP))
+       CASE   (cCos)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=COS(css%Stack(SP))
+       CASE   (cTan)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=TAN(css%Stack(SP))
+       CASE  (cAsin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             EvalErrType=4
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=ASIN(css%Stack(SP))
+       CASE  (cAcos)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             EvalErrType=4
+             res=zero
+             RETURN
+          ENDIF
+          css%Stack(SP)=ACOS(css%Stack(SP))
+       CASE  (cAtan2)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.2) THEN
-             css%Stack(SP)=ATAN2(css%Stack(SP),css%Args(AP+1));
+             css%Stack(SP)=ATAN2(css%Stack(SP),css%Stack(SP+1))
           ELSE 
              write(*,*)"*** Unexpected number of arguments to atan2:",nargs
-             EvalErrType=5; res=zero; RETURN; 
-          END IF;
-       CASE  (cAtan); css%Stack(SP)=ATAN(css%Stack(SP))
-       CASE  (cArgs); AP=AP+1;css%Args(AP)=css%Stack(SP);SP=SP-1;
-       CASE  DEFAULT; SP=SP+1; 
+             EvalErrType=5
+             res=zero
+             RETURN
+          END IF
+       CASE  (cAtan)
+          css%Stack(SP)=ATAN(css%Stack(SP))
+       CASE  DEFAULT
+          SP=SP+1
           if (css%ByteCode(IP) .le. VarEnd) then
              css%Stack(SP)=Val(css%ByteCode(IP)-VarBegin+1)
              if (.not.set(css%ByteCode(IP)-VarBegin+1)) ret=.false.
@@ -851,10 +1196,18 @@ CONTAINS
              css%Stack(SP)=ConstVal(css%ByteCode(IP)-VarEnd)
           end if
        END SELECT
+       if(parse_bdeb)then
+          write(str500,'(100(X,F0.2))') &
+               & (css%Stack(II),II=1,min(SP,100))
+          call chop0(str500,500)
+          lens=length(str500,500,10)
+          write(*,'(X,A,5X,A)') myname,&
+               & "Stack=["//str500(1:LENS)//"]"
+       end if
     END DO
     EvalErrType = 0
     res = css%Stack(1)
-    if(parse_bdeb)write(*,'(X,A,X,A,A,F0.10,X,L1)') myname,str," result=",res,ret
+    if(parse_bdeb)write(*,'(X,A,X,A,X,F0.2,X,L1)') myname," result=",res,ret
     if(parse_bdeb)write(*,*)myname,"Done."
   END subroutine parse_evals
   !
@@ -863,39 +1216,39 @@ CONTAINS
     ! Evaluate bytecode of ith function for the values passed in array Val(:)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
-    type(parse_session), pointer :: css
-    integer(is),INTENT(in)  :: ctrg,cpos                     ! allocated targets, positions
-    integer(is),INTENT(in)  :: npos                          ! number of positions
-    REAL(rn), INTENT(in)    :: Val(ctrg,cpos)                ! Variable values
-    logical                 :: Set(cpos)                     ! is position defined?
-    REAL(rn)                :: res(cpos)                     ! Result
+    type(parse_session), pointer,INTENT(IN):: css
+    integer(is),INTENT(in)                 :: ctrg,cpos  ! allocated targets, positions
+    integer(is),INTENT(in)                 :: npos       ! number of positions
+    REAL(rn), allocatable, INTENT(in)      :: Val(:,:)   ! Variable values
+    logical, allocatable, INTENT(in)       :: Set(:)     ! is position defined?
+    REAL(rn),allocatable,INTENT(INOUT)       :: res(:)     ! Result
     character*250 :: crc250
     integer :: irc
     integer,dimension(8)    :: values                        ! time array
     INTEGER                            :: IP,              & ! Instruction pointer
-                                          DP,              & ! Data pointer
-                                          SP,              & ! Stack pointer
-                                          AP,              & ! arguments pointer
-                                          AI                 ! arguments index
+         DP,              & ! Data pointer
+         SP,              & ! Stack pointer
+         AP,              & ! arguments pointer
+         AI                 ! arguments index
     REAL(rn),                PARAMETER :: zero = 0._rn
     integer :: ii, jj, nargs, imax,imin,iclo
     real :: vmax,vmin,vclo,v
     logical :: above, below, found
-    character*50 :: str
-    character*22 :: myname ="parse_evala"
+    character*50 :: str500
+    integer :: lens
+    integer, external :: length
+    character*12 :: myname ="parse_evala"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-
-    if(parse_bdeb)write(*,*)myname,"Entering",css%ByteCodeSize
-
+    if(parse_bdeb)write(*,*)myname,"Entering",css%ByteCodeSize,ctrg,npos,cpos,&
+         & size(val),size(set),size(res),allocated(val),allocated(set),allocated(res)
     if (css%npos.lt.npos) then
        css%npos=npos
        IF (ASSOCIATED(css%Stacka)) DEALLOCATE ( css%Stacka, stat=irc)
-       IF (ASSOCIATED(css%Argsa))  DEALLOCATE ( css%Argsa,  stat=irc)
        IF (ASSOCIATED(css%Wrka))   DEALLOCATE ( css%Wrka,   stat=irc)
-       ALLOCATE (css%Stacka(css%StackSize,css%npos),css%Argsa(css%ArgsAlloc,css%npos),css%Wrka(css%npos),STAT = irc)
+       ALLOCATE (css%Stacka(css%StackSize,css%npos),css%Wrka(css%npos),STAT = irc)
        IF (irc.ne. 0) THEN
           call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,'Unable to allocate stacka, argsa, wrka.')
+          call parse_errorappend(crc250,'Unable to allocate stacka, stacka, wrka.')
           call parse_errorappend(crc250,"\n")
           return
        end if
@@ -905,86 +1258,150 @@ CONTAINS
     SP = 0
     AP = 0
     AI = 0
-    str=''
     DO IP=1,css%ByteCodeSize
-
-       if (AI.eq.0) then
-          nargs=ap+1;
-       else
-          NARGS=AP-css%ArgsPos(AI)+1;
+       if(parse_bdeb)then
+          write(*,'(X,A,X,A,X,I3,X,I3,3X,A,3X,I0,X,I0)')myname,"Looping",&
+               & IP,css%ByteCode(IP),parse_code20(css%bytecode(ip),nargs)
        end if
-
-       if(parse_bdeb)write(str,'(X,A,I3,100(X,F8.2))') &
-            & "Stack:",css%ByteCode(IP),(css%Stack(II),II=1,min(SP,100))
-       if(parse_bdeb)write(*,'(X,A,X,A,2(X,I1),100(X,F8.2))') myname,&
-            & str,AP,nargs,(css%Args(II),II=1,min(AP,100))
-
-       if(parse_bdeb)write(*,*)myname,"Looping",IP,css%ByteCode(IP)
-
        SELECT CASE (css%ByteCode(IP))
-          
-       CASE (cImmed); SP=SP+1; DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP,JJ)=css%Immed(DP);END IF;END DO; DP=DP+1
-       CASE   (cNeg); DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP,JJ)=-css%Stacka(SP,JJ);END IF;END DO
-       CASE   (cAdd); DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)+css%Stacka(SP,JJ);END IF;END DO; SP=SP-1;
-       CASE   (cSub); DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)-css%Stacka(SP,JJ);END IF;END DO; SP=SP-1;
-       CASE   (cMul); DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)*css%Stacka(SP,JJ);END IF;END DO; SP=SP-1;
-       CASE   (cDiv); DO JJ=1,CPOS;IF(SET(JJ))THEN;
-          IF (css%Stacka(SP,JJ)==0._rn) THEN; 
-             irc=300
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Division by zero.')
-             call parse_errorappend(crc250,"\n")
-             EvalErrType=1; 
-             RETURN; 
-          ENDIF
-          css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)/css%Stacka(SP,JJ); END IF;END DO;SP=SP-1;
-       CASE   (cPow); DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)**css%Stacka(SP,JJ); END IF;END DO;SP=SP-1;
-       CASE   (cAbs); AI=AI+1;AP=css%ArgsPos(AI);DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP,JJ)=ABS(css%Stacka(SP,JJ));END IF;END DO
-       CASE   (cExp); AI=AI+1;AP=css%ArgsPos(AI);DO JJ=1,CPOS;IF(SET(JJ))THEN;css%Stacka(SP,JJ)=EXP(css%Stacka(SP,JJ));END IF;END DO
-       CASE (cLog10); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             IF (css%Stacka(SP,JJ)<=0._rn) THEN; 
-                irc=301
-                call parse_errorappend(crc250,myname)
-                call parse_errorappend(crc250,'Invalid logarithm argument.')
-                call parse_errorappend(crc250,"\n")
-                EvalErrType=3; 
-                RETURN; 
-             ELSE
-                css%Stacka(SP,JJ)=LOG10(css%Stacka(SP,JJ));
-             ENDIF
-          END IF;END DO
-       CASE   (cLog); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             IF (css%Stacka(SP,JJ)<=0._rn) THEN; 
-                irc=302
-                call parse_errorappend(crc250,myname)
-                call parse_errorappend(crc250,'Invalid logarithm argument.')
-                call parse_errorappend(crc250,"\n")
-                EvalErrType=3;
-                RETURN; 
-             ELSE
-                css%Stacka(SP,JJ)=LOG(css%Stacka(SP,JJ));
-             ENDIF
-          END IF;END DO
-       CASE  (cSqrt); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             IF (css%Stacka(SP,JJ)<0._rn) THEN; 
-                irc=303
-                call parse_errorappend(crc250,myname)
-                call parse_errorappend(crc250,'Negative square root.')
-                call parse_errorappend(crc250,"\n")
-                EvalErrType=3; 
-                RETURN; 
-             ELSE
-                css%Stacka(SP,JJ)=SQRT(css%Stacka(SP,JJ));
-             ENDIF
-          END IF;END DO
-       CASE  (cMsgMax); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE (cImmed)
+          SP=SP+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=css%Immed(DP)
+             END IF
+          END DO
+          DP=DP+1
+       CASE   (cNeg)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                if (parse_bdeb)write(*,*)myname,'Neg.'
+                css%Stacka(SP,JJ)=-css%Stacka(SP,JJ)
+             END IF
+          END DO
+       CASE   (cAdd)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)+css%Stacka(SP,JJ)
+             END IF
+          END DO
+          SP=SP-1
+       CASE   (cSub)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)-css%Stacka(SP,JJ)
+             END IF
+          END DO
+          SP=SP-1
+       CASE   (cMul)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)*css%Stacka(SP,JJ)
+             END IF
+          END DO
+          SP=SP-1
+       CASE   (cDiv)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF (css%Stacka(SP,JJ)==0._rn) THEN
+                   irc=300
+                   call parse_errorappend(crc250,myname)
+                   call parse_errorappend(crc250,'Division by zero.')
+                   call parse_errorappend(crc250,"\n")
+                   EvalErrType=1
+                   RETURN
+                ENDIF
+                css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)/css%Stacka(SP,JJ)
+             END IF
+          END DO
+          SP=SP-1
+       CASE   (cPow)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP-1,JJ)=css%Stacka(SP-1,JJ)**css%Stacka(SP,JJ)
+             END IF
+          END DO
+          SP=SP-1
+       CASE   (cAbs)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=ABS(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE   (cExp)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=EXP(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE (cLog10)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF (css%Stacka(SP,JJ)<=0._rn) THEN
+                   irc=301
+                   call parse_errorappend(crc250,myname)
+                   call parse_errorappend(crc250,'Invalid logarithm argument.')
+                   call parse_errorappend(crc250,"\n")
+                   EvalErrType=3
+                   RETURN
+                ELSE
+                   css%Stacka(SP,JJ)=LOG10(css%Stacka(SP,JJ))
+                ENDIF
+             END IF
+          END DO
+       CASE   (cLog)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF (css%Stacka(SP,JJ)<=0._rn) THEN
+                   irc=302
+                   call parse_errorappend(crc250,myname)
+                   call parse_errorappend(crc250,'Invalid logarithm argument.')
+                   call parse_errorappend(crc250,"\n")
+                   EvalErrType=3
+                   RETURN
+                ELSE
+                   css%Stacka(SP,JJ)=LOG(css%Stacka(SP,JJ))
+                ENDIF
+             END IF
+          END DO
+       CASE  (cSqrt)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF (css%Stacka(SP,JJ)<0._rn) THEN
+                   irc=303
+                   call parse_errorappend(crc250,myname)
+                   call parse_errorappend(crc250,'Negative square root.')
+                   call parse_errorappend(crc250,"\n")
+                   EvalErrType=3
+                   RETURN
+                ELSE
+                   css%Stacka(SP,JJ)=SQRT(css%Stacka(SP,JJ))
+                ENDIF
+             END IF
+          END DO
+       CASE  (cMsgMax)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IMAX=0
           VMAX=0.0D0
-          DO JJ=1,CPOS;
-             if(set(jj))then;
+          DO JJ=1,NPOS
+             if(set(jj))then
                 if (imax.eq.0) then
                    imax=jj
                    vmax=css%Stacka(SP,JJ)
@@ -992,19 +1409,22 @@ CONTAINS
                    imax=jj
                    vmax=css%Stacka(SP,JJ)
                 end if
-             end if;
-          END DO;
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=0.0D0;
+             end if
+          END DO
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=0.0D0
              END IF
           END DO
-          IF (IMAX.NE.0) css%Stacka(SP,imax)=1.0D0;
-       CASE  (cMsgMin); AI=AI+1;AP=css%ArgsPos(AI);
+          IF (IMAX.NE.0) css%Stacka(SP,imax)=1.0D0
+       CASE  (cMsgMin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IMIN=0
           VMIN=0.0D0
-          DO JJ=1,CPOS;
-             if(set(jj))then;
+          DO JJ=1,NPOS
+             if(set(jj))then
                 if (imin.eq.0) then
                    imin=jj
                    vmin=css%Stacka(SP,JJ)
@@ -1012,24 +1432,27 @@ CONTAINS
                    imin=jj
                    vmin=css%Stacka(SP,JJ)
                 end if
-             end if;
-          END DO;
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=0.0D0;
+             end if
+          END DO
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=0.0D0
              END IF
           END DO
-          IF (IMIN.NE.0) css%Stacka(SP,imin)=1.0D0;
-       CASE  (cMsgClosest); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
+          IF (IMIN.NE.0) css%Stacka(SP,imin)=1.0D0
+       CASE  (cMsgClosest)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
              css%wrka(jj)=0.0D0
           END DO
           DO II=1,NARGS-1
              iclo=0
              vclo=0.0D0
-             DO JJ=1,CPOS;
-                if(set(jj))then;
-                   v=abs(css%Stacka(SP,jj)-css%Argsa(AP+II,JJ))
+             DO JJ=1,NPOS
+                if(set(jj))then
+                   v=abs(css%Stacka(SP,jj)-css%stacka(SP+II,JJ))
                    if (iclo.eq.0) then
                       iclo=jj
                       vclo=v
@@ -1037,397 +1460,535 @@ CONTAINS
                       iclo=jj
                       vclo=v
                    end if
-                end if;
-             END DO;
+                end if
+             END DO
              if (iclo.ne.0)css%wrka(iclo)=1.0D0
           end do
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
                 css%Stacka(SP,JJ)=css%wrka(jj)
              END IF
           END DO
-       CASE  (cisMember); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             found=.false.
-             ISMEMBER: DO II=1,NARGS-1
-                if (css%stacka(SP,JJ).eq.css%Argsa(AP+II,JJ)) then
-                   found=.true.
-                   exit ISMEMBER
-                end if
-             end do ISMEMBER
-             if (found) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if; 
-          END IF;END DO
-       CASE  (cisBelow); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             found=.true.
-             ISBELOW: DO II=1,NARGS-1
-                if (css%stacka(SP,JJ).ge.css%Argsa(AP+II,JJ)) then
-                   found=.false.
-                   exit ISBELOW
-                end if
-             end do ISBELOW
-             if (found) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if
-          END IF;END DO
-       CASE  (cisAbove); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             found=.true.
-             ISABOVE: DO II=1,NARGS-1
-                if (css%stacka(SP,JJ).le.css%Argsa(AP+II,JJ)) then
-                   found=.false.
-                   exit ISABOVE
-                end if
-             end do ISABOVE
-             if (found) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if
-          END IF;END DO
-       CASE  (cisBetween); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             above=.false.
-             below=.false.
-             ISBETWEEN: DO II=1,NARGS-1
-                if (css%stacka(SP,JJ).le.css%Argsa(AP+II,JJ)) then
-                   BELOW=.TRUE.
-                end if
-                if (css%stacka(SP,JJ).ge.css%Argsa(AP+II,JJ)) then
-                   ABOVE=.TRUE.
-                end if
-                if (above.and.below) exit ISBETWEEN
-             end do ISBETWEEN
-             if (above.and.below) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if
-          END IF;END DO
-       CASE  (cThinned); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             IF (NARGS.ge.1) THEN ! 
-                if (rand()*100 .gt. css%Stacka(SP,JJ)) then
+       CASE  (cisMember)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                found=.false.
+                ISMEMBER: DO II=1,NARGS-1
+                   if (css%stacka(SP,JJ).eq.css%stacka(SP+II,JJ)) then
+                      found=.true.
+                      exit ISMEMBER
+                   end if
+                end do ISMEMBER
+                if (found) then
                    css%Stacka(SP,JJ)=1.0D0
                 else
                    css%Stacka(SP,JJ)=0.0D0
                 end if
-             end if
-          END IF;END DO
-       CASE  (cand); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             found=(abs(css%stacka(SP,JJ)).gt.0.5D0)
-             if (found) then
-                AND: DO II=1,NARGS-1
-                   if (abs(css%Argsa(AP+II,JJ)).lt.0.5D0) then
+             END IF
+          END DO
+       CASE  (cisBelow)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                found=.true.
+                ISBELOW: DO II=1,NARGS-1
+                   if (css%stacka(SP,JJ).ge.css%stacka(SP+II,JJ)) then
                       found=.false.
-                      exit AND
+                      exit ISBELOW
                    end if
-                end do AND
-             end if
-             if (found) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if
-          END IF;END DO
-       CASE  (cor); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             found=(abs(css%stacka(SP,JJ)).gt.0.5D0)
-             if (.not.found) then
-                OR: DO II=1,NARGS-1
-                   if (abs(css%Argsa(AP+II,JJ)).gt.0.5D0) then
-                      found=.true.
-                      exit OR
-                   end if
-                end do OR
-             end if
-             if (found) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if
-          END IF;END DO
-       CASE  (cnot); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN; ! .not.a .and. .not.b ....
-             found=(abs(css%stacka(SP,JJ)).lt.0.5D0)
-             if (found) then
-                NOT: DO II=1,NARGS-1
-                   if (abs(css%Argsa(AP+II,JJ)).gt.0.5D0) then
+                end do ISBELOW
+                if (found) then
+                   css%Stacka(SP,JJ)=1.0D0
+                else
+                   css%Stacka(SP,JJ)=0.0D0
+                end if
+             END IF
+          END DO
+       CASE  (cisAbove)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                found=.true.
+                ISABOVE: DO II=1,NARGS-1
+                   if (parse_bdeb) write(*,*)myname,'Isabove:',jj,sp,css%stacka(SP,JJ),css%stacka(SP+II,JJ)
+                   if (css%stacka(SP,JJ).le.css%stacka(SP+II,JJ)) then
                       found=.false.
-                      exit NOT
+                      exit ISABOVE
                    end if
-                end do NOT
-             end if
-             if (found) then
-                css%Stacka(SP,JJ)=1.0D0
-             else
-                css%Stacka(SP,JJ)=0.0D0
-             end if
-          END IF;END DO
-       CASE  (c1970yy); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970_yy(css%Stacka(SP,JJ));
-             END IF;
-          END DO;
-       CASE  (c1970mm); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970_mm(css%Stacka(SP,JJ));
-             END IF;
-          END DO;
-       CASE  (c1970dd); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970_dd(css%Stacka(SP,JJ));
-             END IF;
-          END DO;
-       CASE  (c1970hh); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970_hh(css%Stacka(SP,JJ));
-             END IF;
-          END DO;
-       CASE  (c1970mi); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970_mi(css%Stacka(SP,JJ));
-             END IF;
-          END DO;
-       CASE  (c1970);AI=AI+1;AP=css%ArgsPos(AI);
+                end do ISABOVE
+                if (found) then
+                   css%Stacka(SP,JJ)=1.0D0
+                else
+                   css%Stacka(SP,JJ)=0.0D0
+                end if
+                if (parse_bdeb) write(*,*)myname,'Isabove done:',jj,sp,found
+             END IF
+          END DO
+       CASE  (cisBetween)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                above=.false.
+                below=.false.
+                ISBETWEEN: DO II=1,NARGS-1
+                   if (css%stacka(SP,JJ).le.css%stacka(SP+II,JJ)) then
+                      BELOW=.TRUE.
+                   end if
+                   if (css%stacka(SP,JJ).ge.css%stacka(SP+II,JJ)) then
+                      ABOVE=.TRUE.
+                   end if
+                   if (above.and.below) exit ISBETWEEN
+                end do ISBETWEEN
+                if (above.and.below) then
+                   css%Stacka(SP,JJ)=1.0D0
+                else
+                   css%Stacka(SP,JJ)=0.0D0
+                end if
+             END IF
+          END DO
+       CASE  (cThinned)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF (NARGS.ge.1) THEN ! 
+                   if (rand()*100 .gt. css%Stacka(SP,JJ)) then
+                      css%Stacka(SP,JJ)=1.0D0
+                   else
+                      css%Stacka(SP,JJ)=0.0D0
+                   end if
+                end if
+             END IF
+          END DO
+       CASE  (cand)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                found=(abs(css%stacka(SP,JJ)).gt.0.5D0)
+                if (found) then
+                   AND: DO II=1,NARGS-1
+                      if (abs(css%stacka(SP+II,JJ)).lt.0.5D0) then
+                         found=.false.
+                         exit AND
+                      end if
+                   end do AND
+                end if
+                if (found) then
+                   css%Stacka(SP,JJ)=1.0D0
+                else
+                   css%Stacka(SP,JJ)=0.0D0
+                end if
+             END IF
+          END DO
+       CASE  (cor)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                found=(abs(css%stacka(SP,JJ)).gt.0.5D0)
+                if (.not.found) then
+                   OR: DO II=1,NARGS-1
+                      if (abs(css%stacka(SP+II,JJ)).gt.0.5D0) then
+                         found=.true.
+                         exit OR
+                      end if
+                   end do OR
+                end if
+                if (found) then
+                   css%Stacka(SP,JJ)=1.0D0
+                else
+                   css%Stacka(SP,JJ)=0.0D0
+                end if
+             END IF
+          END DO
+       CASE  (cnot)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                ! .not.a .and. .not.b ....
+                found=(abs(css%stacka(SP,JJ)).lt.0.5D0)
+                if (found) then
+                   NOT: DO II=1,NARGS-1
+                      if (abs(css%stacka(SP+II,JJ)).gt.0.5D0) then
+                         found=.false.
+                         exit NOT
+                      end if
+                   end do NOT
+                end if
+                if (found) then
+                   css%Stacka(SP,JJ)=1.0D0
+                else
+                   css%Stacka(SP,JJ)=0.0D0
+                end if
+             END IF
+          END DO
+       CASE  (c1970yy)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_f1970_yy(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE  (c1970mm)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_f1970_mm(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE  (c1970dd)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_f1970_dd(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE  (c1970hh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_f1970_hh(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE  (c1970mi)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_f1970_mi(css%Stacka(SP,JJ))
+             END IF
+          END DO
+       CASE  (c1970)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_f1970(real(values(1)),real(values(2)),&
-                     &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_f1970(real(values(1)),real(values(2)),&
+                        &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+                END IF
+             END DO
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970(css%Stacka(SP,JJ), &
-                     css%Argsa(AP+1,JJ), &
-                     css%Argsa(AP+2,JJ), &
-                     css%Argsa(AP+3,JJ), &
-                     css%Argsa(AP+4,JJ), &
-                     css%Argsa(AP+5,JJ));
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=parse_f1970(css%Stacka(SP,JJ), &
+                        css%stacka(SP+1,JJ), &
+                        css%stacka(SP+2,JJ), &
+                        css%stacka(SP+3,JJ), &
+                        css%stacka(SP+4,JJ), &
+                        css%stacka(SP+5,JJ))
+                END IF
+             END DO
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970(css%Stacka(SP,JJ), &
-                     css%Argsa(AP+1,JJ), &
-                     css%Argsa(AP+2,JJ), &
-                     css%Argsa(AP+3,JJ), &
-                     css%Argsa(AP+4,JJ), &
-                     0.0D0);
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=parse_f1970(css%Stacka(SP,JJ), &
+                        css%stacka(SP+1,JJ), &
+                        css%stacka(SP+2,JJ), &
+                        css%stacka(SP+3,JJ), &
+                        css%stacka(SP+4,JJ), &
+                        0.0D0)
+                END IF
+             END DO
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_f1970(css%Stacka(SP,JJ), &
-                     css%Argsa(AP+1,JJ), &
-                     css%Argsa(AP+2,JJ), &
-                     css%Argsa(AP+3,JJ), &
-                     0.0D0, &
-                     0.0D0);
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=parse_f1970(css%Stacka(SP,JJ), &
+                        css%stacka(SP+1,JJ), &
+                        css%stacka(SP+2,JJ), &
+                        css%stacka(SP+3,JJ), &
+                        0.0D0, &
+                        0.0D0)
+                END IF
+             END DO
           ELSE 
              irc=304
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Invalid number of arguments to s1970.')
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
-             EvalErrType=5; 
-             RETURN; 
-          END IF;
-       CASE  (cjulianyy); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_fjulian_yy(css%Stacka(SP,JJ));
-             END IF;
+             EvalErrType=5
+             RETURN
+          END IF
+       CASE  (cjulianyy)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_fjulian_yy(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cjulianmm); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_fjulian_mm(css%Stacka(SP,JJ));
-             END IF;
+       CASE  (cjulianmm)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_fjulian_mm(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cjuliandd); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_fjulian_dd(css%Stacka(SP,JJ));
-             END IF;
+       CASE  (cjuliandd)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_fjulian_dd(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cjulianhh); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_fjulian_hh(css%Stacka(SP,JJ));
-             END IF;
+       CASE  (cjulianhh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_fjulian_hh(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cjulianmi); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=parse_fjulian_mi(css%Stacka(SP,JJ));
-             END IF;
+       CASE  (cjulianmi)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=parse_fjulian_mi(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cjulian);AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cjulian)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
              call date_and_time(VALUES=values)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN
-                css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_fjulian(real(values(1)),real(values(2)),&
-                     &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_fjulian(real(values(1)),real(values(2)),&
+                        &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+                END IF
+             END DO
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN
-                css%Stacka(SP,JJ)=parse_fjulian(css%Stacka(SP,JJ), &
-                     css%Argsa(AP+1,JJ), &
-                     css%Argsa(AP+2,JJ), &
-                     css%Argsa(AP+3,JJ), &
-                     css%Argsa(AP+4,JJ), &
-                     css%Argsa(AP+5,JJ));
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=parse_fjulian(css%Stacka(SP,JJ), &
+                        css%stacka(SP+1,JJ), &
+                        css%stacka(SP+2,JJ), &
+                        css%stacka(SP+3,JJ), &
+                        css%stacka(SP+4,JJ), &
+                        css%stacka(SP+5,JJ))
+                END IF
+             END DO
           ELSE IF (NARGS.EQ.5) THEN ! dtg(year,month,day,hour,min)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN
-                css%Stacka(SP,JJ)=parse_fjulian(css%Stacka(SP,JJ), &
-                     css%Argsa(AP+1,JJ), &
-                     css%Argsa(AP+2,JJ), &
-                     css%Argsa(AP+3,JJ), &
-                     css%Argsa(AP+4,JJ), &
-                     0.0D0);
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=parse_fjulian(css%Stacka(SP,JJ), &
+                        css%stacka(SP+1,JJ), &
+                        css%stacka(SP+2,JJ), &
+                        css%stacka(SP+3,JJ), &
+                        css%stacka(SP+4,JJ), &
+                        0.0D0)
+                END IF
+             END DO
           ELSE IF (NARGS.EQ.4) THEN ! dtg(year,month,day,hour)
-             DO JJ=1,CPOS;IF(SET(JJ))THEN
-                css%Stacka(SP,JJ)=parse_fjulian(css%Stacka(SP,JJ), &
-                     css%Argsa(AP+1,JJ), &
-                     css%Argsa(AP+2,JJ), &
-                     css%Argsa(AP+3,JJ), &
-                     0.0D0, &
-                     0.0D0);
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=parse_fjulian(css%Stacka(SP,JJ), &
+                        css%stacka(SP+1,JJ), &
+                        css%stacka(SP+2,JJ), &
+                        css%stacka(SP+3,JJ), &
+                        0.0D0, &
+                        0.0D0)
+                END IF
+             END DO
           ELSE 
              irc=305
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Invalid number of arguments to d2000.')
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
-             EvalErrType=5; 
-             RETURN; 
-          END IF;
-       CASE  (cSinh); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=SINH(css%Stacka(SP,JJ));
-             END IF;
+             EvalErrType=5
+             RETURN
+          END IF
+       CASE  (cSinh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=SINH(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cCosh); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=COSH(css%Stacka(SP,JJ));
-             END IF;
+       CASE  (cCosh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=COSH(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cTanh); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=TANH(css%Stacka(SP,JJ));
-             END IF;
+       CASE  (cTanh)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=TANH(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE   (cSin); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=SIN(css%Stacka(SP,JJ));
-             END IF;
+       CASE   (cSin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=SIN(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE   (cCos); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=COS(css%Stacka(SP,JJ));
-             END IF;
+       CASE   (cCos)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=COS(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE   (cTan); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=TAN(css%Stacka(SP,JJ));
-             END IF;
+       CASE   (cTan)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=TAN(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cAsin); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
-                irc=306
-                call parse_errorappend(crc250,myname)
-                call parse_errorappend(crc250,'Invalid arguments to asin.')
-                call parse_errorappendr(crc250,css%Stacka(SP,JJ))
-                call parse_errorappend(crc250,"\n")
-                EvalErrType=4; 
-                RETURN; 
-             ELSE
-                css%Stacka(SP,JJ)=ASIN(css%Stacka(SP,JJ))
-             ENDIF
-          END IF;END DO
-       CASE  (cAcos); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;IF(SET(JJ))THEN;
-             IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
-                irc=307
-                call parse_errorappend(crc250,myname)
-                call parse_errorappend(crc250,'Invalid arguments to acos.')
-                call parse_errorappendr(crc250,css%Stacka(SP,JJ))
-                call parse_errorappend(crc250,"\n")
-                EvalErrType=4; 
-                RETURN; 
-             ELSE
-                css%Stacka(SP,JJ)=ACOS(css%Stacka(SP,JJ))
-             ENDIF
-          END IF;END DO
-       CASE  (cAtan2); AI=AI+1;AP=css%ArgsPos(AI);
+       CASE  (cAsin)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
+                   irc=306
+                   call parse_errorappend(crc250,myname)
+                   call parse_errorappend(crc250,'Invalid arguments to asin.')
+                   call parse_errorappendr(crc250,css%Stacka(SP,JJ))
+                   call parse_errorappend(crc250,"\n")
+                   EvalErrType=4
+                   RETURN
+                ELSE
+                   css%Stacka(SP,JJ)=ASIN(css%Stacka(SP,JJ))
+                ENDIF
+             END IF
+          END DO
+       CASE  (cAcos)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
+                   irc=307
+                   call parse_errorappend(crc250,myname)
+                   call parse_errorappend(crc250,'Invalid arguments to acos.')
+                   call parse_errorappendr(crc250,css%Stacka(SP,JJ))
+                   call parse_errorappend(crc250,"\n")
+                   EvalErrType=4
+                   RETURN
+                ELSE
+                   css%Stacka(SP,JJ)=ACOS(css%Stacka(SP,JJ))
+                ENDIF
+             END IF
+          END DO
+       CASE  (cAtan2)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
           IF (NARGS.EQ.2) THEN
-             DO JJ=1,CPOS;IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=ATAN2(css%Stacka(SP,JJ),css%Argsa(AP+1,JJ));
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=ATAN2(css%Stacka(SP,JJ),css%stacka(SP+1,JJ))
+                END IF
+             END DO
           ELSE 
              irc=308
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
-             EvalErrType=5; 
-             RETURN; 
-          END IF;
-       CASE  (cAtan); AI=AI+1;AP=css%ArgsPos(AI);
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=ATAN(css%Stacka(SP,JJ));
-             END IF;
+             EvalErrType=5
+             RETURN
+          END IF
+       CASE  (cAtan)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=ATAN(css%Stacka(SP,JJ))
+             END IF
           END DO
-       CASE  (cArgs); AP=AP+1;
-          DO JJ=1,CPOS;
-             IF(SET(JJ))THEN;
-                css%Argsa(AP,JJ)=css%Stacka(SP,JJ);
-             END IF;
-          END DO;
-          SP=SP-1;
-       CASE  DEFAULT; SP=SP+1; 
+       CASE  DEFAULT
+          SP=SP+1
           if (css%ByteCode(IP) .le. VarEnd) then
-             if(parse_bdeb)write(*,*)myname,'Using val-index:',css%ByteCode(IP)-VarBegin+1,npos
-             DO JJ=1,CPOS;IF(SET(JJ))THEN
-                css%Stacka(SP,JJ)=Val(css%ByteCode(IP)-VarBegin+1,JJ)
-             END IF;END DO
+             ii=css%ByteCode(IP)-VarBegin+1
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=Val(ii,JJ)
+                END IF
+             END DO
           else
-             DO JJ=1,CPOS;IF(SET(JJ))THEN;
-                css%Stacka(SP,JJ)=ConstVal(css%ByteCode(IP)-VarEnd)
-             END IF;END DO
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=ConstVal(css%ByteCode(IP)-VarEnd)
+                END IF
+             END DO
           end if
        END SELECT
+       if(parse_bdeb)then
+          write(str500,'(100(X,F0.2))') &
+               & (css%Stacka(II,1),II=1,min(SP,100))
+          call chop0(str500,500)
+          lens=length(str500,500,10)
+          write(*,'(X,A,5X,A,2(X,I0),100(X,F0.2))') myname,&
+               & "Stack=["//str500(1:LENS)//"]",AP,nargs
+       end if
     END DO
+    if(parse_bdeb)write(*,*)myname,'Loop done.',npos,allocated(set)
     EvalErrType = 0
-    DO JJ=1,CPOS;
-       IF(SET(JJ))THEN;
+    DO JJ=1,NPOS
+       IF(SET(JJ))THEN
+          if(parse_bdeb)write(*,'(X,A,X,A,I0,A,F0.10)') myname," result(",jj,")=",css%Stacka(1,JJ)
           res(JJ) = css%Stacka(1,JJ)
        END IF
     END DO
-    if(parse_bdeb)write(*,'(X,A,X,A,A,F0.10)') myname,str," result=",res(1)
     if(parse_bdeb)write(*,*)myname,"Done."
     return
   END subroutine parse_evala
@@ -1442,7 +2003,6 @@ CONTAINS
     INTEGER                      :: IP       ! Instruction pointer
     character*22 :: myname ="parse_used"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-
     if(parse_bdeb)write(*,*)myname,"Entering"
     DO IP=1,css%ByteCodeSize
        if (css%ByteCode(IP).ge.VarBegin.and.css%ByteCode(IP).le.VarEnd)then
@@ -1467,7 +2027,7 @@ CONTAINS
     REAL(rn)                                    :: r
     LOGICAL                                     :: err
     INTEGER                                     :: ParCnt, & ! Parenthesis counter
-                                                   j,ib,in,lFunc
+         j,ib,in,lFunc
     character*22 :: myname ="parse_checkSyntax"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if(parse_bdeb)write(*,*)myname,'Entering.',irc
@@ -1598,11 +2158,10 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
     CHARACTER (LEN=*), DIMENSION(5), PARAMETER :: m = (/ 'Division by zero                ', &
-                                                         'Argument of SQRT negative       ', &
-                                                         'Argument of LOG negative        ', &
-                                                         'Argument of ASIN or ACOS illegal', &
-                                                         'Unexpected number of arguments  ' /)
-                                                         
+         'Argument of SQRT negative       ', &
+         'Argument of LOG negative        ', &
+         'Argument of ASIN or ACOS illegal', &
+         'Unexpected number of arguments  ' /)
     CHARACTER (LEN=LEN(m))                     :: msg
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IF (EvalErrType < 1 .OR. EvalErrType > SIZE(m)) THEN
@@ -1626,10 +2185,10 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     call parse_errorappend(crc250,myname)
     call parse_errorappend(crc250,'*** Error in syntax of function string: ')
-    call parse_errorappend(crc250,' '//FuncStr);
+    call parse_errorappend(crc250,' '//FuncStr)
     call parse_errorappend(crc250,"\nPos=")
-    call parse_errorappendi(crc250,j);
-    call parse_errorappend(crc250,' '//Msg);
+    call parse_errorappendi(crc250,j)
+    call parse_errorappend(crc250,' '//Msg)
     call parse_errorappend(crc250,"\n")
     irc=309
     return
@@ -1682,7 +2241,7 @@ CONTAINS
     CHARACTER (LEN=*), allocatable, INTENT(in) :: Var(:)       ! Array with variable names
     INTEGER(is)                                 :: n         ! Index of variable
     INTEGER, OPTIONAL,              INTENT(out) :: ibegin, & ! Start position of variable name
-                                                   inext     ! Position of character after name
+         inext     ! Position of character after name
     INTEGER                                     :: j,ib,in,lstr
     character*25 :: myname = "parse_VariableIndex"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -1692,7 +2251,7 @@ CONTAINS
     IF (lstr > 0) THEN
        DO ib=1,lstr                                          ! Search for first character in str
           IF (str(ib:ib) /= ' ') EXIT                        ! When lstr>0 at least 1 char in str
-       END DO                        
+       END DO
        DO in=ib,lstr                                         ! Search for name terminators
           IF (SCAN(str(in:in),'+-*/^) ,') > 0) EXIT
        END DO
@@ -1700,12 +2259,12 @@ CONTAINS
           IF (str(ib:in-1) .eq. trim(Var(j))) THEN                     
              n = j                                           ! Variable name found
              IF (PARSE_BDEB) THEN
-                write(*,*) myname,"** Match: '"//str(ib:in-1)//"' == '"//trim(Var(j))//"'"
+                write(*,*) myname,"** MATCH: '"//str(ib:in-1)//"' == '"//trim(Var(j))//"'"
              end if
              EXIT
-          ELSE IF (PARSE_BDEB) THEN
-             write(*,*) myname,"Mismatch: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
-                  & in-ib,len_trim(var(j))
+             !          ELSE IF (PARSE_BDEB) THEN
+             !             write(*,*) myname,"no match: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
+             !                  & in-ib,len_trim(var(j))
           END IF
        END DO
     END IF
@@ -1766,28 +2325,23 @@ CONTAINS
     character*25 :: myname = "parse_compile"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IF (ASSOCIATED(css%ByteCode)) DEALLOCATE ( css%ByteCode, &
-                                                   css%Immed,    &
-                                                   css%Stack,    &
-                                                   css%Args,    &
-                                                   css%ArgsPos     )
+         css%Immed,    &
+         css%Stack,    &
+         css%ArgsByte     )
     css%ByteCodeSize = 0
     css%ImmedSize    = 0
     css%StackSize    = 0
     css%StackPtr     = 0
     css%ArgsSize     = 0
-    css%ArgsAlloc    = 0
-    css%ArgsPtr      = 0
-    css%ArgsCnt      = 0
-    if (parse_bdeb) write(*,*)myname,"Compiling:",F(1:LEN_TRIM(F))
-    CALL parse_CompileSubstr (css,F,1,LEN_TRIM(F),Var)               ! Compile string to determine size
-    css%ArgsAlloc    = css%ArgsSize
-    if(parse_bdeb) write(*,*)myname,'>>>>> Arg size:',css%ArgsAlloc
+    css%ArgsPtr     = 0
+    if (parse_bdeb) write(*,*)myname,"Compiling '"//F(1:LEN_TRIM(F))//"'"
+    CALL parse_CompileSubstr (css,F,1,LEN_TRIM(F),Var,.false.)               ! Compile string to determine size
+    if(parse_bdeb) write(*,*)myname,'>>>>> Arg size:',css%ArgsSize,css%ArgsPtr
     ALLOCATE ( css%ByteCode(css%ByteCodeSize), & 
-               css%Immed(css%ImmedSize),       &
-               css%Stack(css%StackSize),       &
-               css%Args(css%ArgsAlloc),         &
-               css%ArgsPos(css%ArgsAlloc),    &
-               STAT = istat                            )
+         css%Immed(css%ImmedSize),       &
+         css%Stack(css%StackSize),       &
+         css%ArgsByte(css%ArgsSize+1),    &
+         STAT = istat                            )
     IF (istat /= 0) THEN
        call parse_errorappend(crc250,myname)
        call parse_errorappend(crc250,'*** Parser error: Memmory allocation for byte code failed')
@@ -1800,9 +2354,9 @@ CONTAINS
        css%StackSize    = 0
        css%StackPtr     = 0
        css%ArgsSize     = 0
-       css%ArgsPtr      = 0
-       css%ArgsCnt      = 0
-       CALL parse_CompileSubstr (css,F,1,LEN_TRIM(F),Var)            ! Compile string into bytecode
+       css%ArgsPtr     = 0
+       css%argsByte(css%ArgsSize+1)=0 ! dummy value...
+       CALL parse_CompileSubstr (css,F,1,LEN_TRIM(F),Var,.false.)            ! Compile string into bytecode
     END IF
     !
   END SUBROUTINE Parse_compile
@@ -1814,9 +2368,11 @@ CONTAINS
     IMPLICIT NONE
     type(parse_session), pointer :: css
     INTEGER(is), INTENT(in) :: b                             ! Value of byte to be added
+    character*22 :: myname ="parse_AddCompiledByte"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     css%ByteCodeSize = css%ByteCodeSize + 1
     IF (ASSOCIATED(css%ByteCode)) css%ByteCode(css%ByteCodeSize) = b
+    if (parse_bdeb)write(*,'(X,A,"Cmd(",I0,") -> ",A)')myname,css%ByteCodeSize,parse_code20(b,0)
   END SUBROUTINE parse_AddCompiledByte
   !
   FUNCTION parse_MathItemIndex (css, F, Var) RESULT (n)
@@ -1830,6 +2386,7 @@ CONTAINS
     INTEGER(is)                                 :: n         ! Byte value of math item
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     n = 0
+    if (len_trim(f).eq.0)return
     IF (SCAN(F(1:1),'0123456789.') > 0) THEN                 ! Check for begin of a number
        css%ImmedSize = css%ImmedSize + 1
        IF (ASSOCIATED(css%Immed)) css%Immed(css%ImmedSize) = parse_RealNum (F)
@@ -1872,7 +2429,7 @@ CONTAINS
     END IF
   END FUNCTION parse_CompletelyEnclosed
   !
-  RECURSIVE SUBROUTINE parse_CompileSubstr (css, F, b, e, Var)
+  RECURSIVE SUBROUTINE parse_CompileSubstr (css, F, b, e, Var, comma)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Compile css function string F into bytecode
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -1880,26 +2437,33 @@ CONTAINS
     type(parse_session), pointer :: css
     CHARACTER (LEN=*),               INTENT(in) :: F         ! Function substring
     INTEGER,                         INTENT(in) :: b,e       ! Begin and end position substring
-    CHARACTER (LEN=*), allocatable, INTENT(in) :: Var(:)       ! Array with variable names
+    CHARACTER (LEN=*), allocatable, INTENT(in)  :: Var(:)       ! Array with variable names
+    logical, INTENT(in)                         :: comma
     INTEGER(is)                                 :: n
     INTEGER                                     :: b2,j,k,io
     CHARACTER (LEN=*),                PARAMETER :: calpha = 'abcdefghijklmnopqrstuvwxyz'// &
-                                                            'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    integer :: iArgsPos
+         'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    integer :: iArgsPtr
+    integer :: nargs
     character*22 :: myname ="parse_compileSustr"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check for special cases of substring
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    iArgsPos=0
-    if (parse_bdeb) write(*,*) myname,'Processing:',F(b:e)
-
-    IF     (F(b:b) == '+') THEN                              ! Case 1: F(b:e) = '+...'
-      if (parse_bdeb) WRITE(*,*)myname,'1. F(b:e) = "+..."'
-       CALL parse_CompileSubstr (css, F, b+1, e, Var)
+    nargs=0
+    if (parse_bdeb) write(*,*) myname,'** Processing:',F(b:e)
+    if (b.gt.e) return ! nothing to do
+    IF (F(b:b) == '+') THEN                              ! Case 1: F(b:e) = '+...'
+       if (parse_bdeb) WRITE(*,*)myname,'1. F(b:e) = "+..."'
+       CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
+       RETURN
+    ELSEIF (F(b:b) == '-') THEN
+       if (parse_bdeb) WRITE(*,*)myname,'3. Found Minus'
+       CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
+       CALL parse_AddCompiledByte (css, cNeg)
        RETURN
     ELSEIF (parse_CompletelyEnclosed (F, b, e)) THEN               ! Case 2: F(b:e) = '(...)'
-      if (parse_bdeb) WRITE(*,*)myname,'2. F(b:e) = "(...)"',F(b:e)
-       CALL parse_CompileSubstr (css, F, b+1, e-1, Var)
+       if (parse_bdeb) WRITE(*,*)myname,'2. F(b:e) = "(...)"',F(b:e)
+       CALL parse_CompileSubstr (css, F, b+1, e-1, Var,.true.)
        RETURN
     ELSEIF (SCAN(F(b:b),calpha) > 0) THEN        
        if (parse_bdeb) WRITE(*,*)myname,'3. Found Alphanumeric: ',F(b:b)
@@ -1907,53 +2471,44 @@ CONTAINS
        IF (n > 0) THEN
           b2 = b+INDEX(F(b:e),'(')-1
           IF (parse_CompletelyEnclosed(F, b2, e)) THEN             ! Case 3: F(b:e) = 'fcn(...)'
-            if (parse_bdeb) WRITE(*,*)myname,'3. F(b:e) = "fcn(...)"',F(b2+1:e-1)
-            iArgsPos=css%ArgsPtr ! current argument pointer
-            CALL parse_CompileSubstr(css, F, b2+1, e-1, Var)
-            css%ArgsCnt=css%ArgsCnt+1 ! increase function counter
-            IF (css%ArgsAlloc .gt. 0) THEN
-!               write(*,*) 'Argscnt:',i,css%ArgsCnt,css%ArgsSize,lbound(css%ArgsPos),ubound(css%ArgsPos)
-               css%ArgsPos(css%ArgsCnt)=iArgsPos ! point to first argument
-            END IF
-            !if (css%ArgsPtr-iArgsPos+1 .ne. 1/) then ! check number of arguments here...
-               ! throw error...
-            !end if
-            css%ArgsPtr=iArgsPos ! reset argument pointer
-            CALL parse_AddCompiledByte (css, n)
-            RETURN
+             if (parse_bdeb) WRITE(*,*)myname,'3. F(b:e) = "fcn(...)" ',F(b2+1:e-1)
+             iArgsPtr=css%ArgsPtr ! current argument pointer
+             CALL parse_CompileSubstr(css, F, b2+1, e-1, Var,.true.)
+             css%ArgsSize=css%ArgsSize+1 ! increase function counter
+             nargs=css%ArgsPtr-iArgsPtr+1 ! (number of commas) + 1
+             css%ArgsPtr=iArgsPtr
+             if (parse_bdeb) WRITE(*,'(X,A,X,A,I0,A,A)')myname,&
+                  & '3. Number of arguments= ',nargs," '"//F(b2+1:e-1)//"'"
+             IF (ASSOCIATED(css%ArgsByte))then
+                css%ArgsByte(css%ArgsSize)=nargs ! number of arguments
+                if (parse_bdeb)write(*,'(X,A,X,A,I0,A,I0)')myname,&
+                     & 'Argsbyte(',css%ArgsSize,')=',css%ArgsByte(css%ArgsSize)
+             end if
+             CALL parse_AddCompiledByte (css, n)
+             RETURN
           END IF
        END IF
-    ELSEIF (F(b:b) == '-') THEN
-       if (parse_bdeb) WRITE(*,*)myname,'3. Found Minus'
-       IF (parse_CompletelyEnclosed (F, b+1, e)) THEN              ! Case 4: F(b:e) = '-(...)'
-         if (parse_bdeb) WRITE(*,*)myname,'4. F(b:e) = "-(...)"'
-          CALL parse_CompileSubstr (css, F, b+2, e-1, Var)
-          CALL parse_AddCompiledByte (css, cNeg)
-          RETURN
-       ELSEIF (SCAN(F(b+1:b+1),calpha) > 0) THEN
-          n = parse_MathFunctionIndex (F(b+1:e))
-          IF (n > 0) THEN
-             b2 = b+INDEX(F(b+1:e),'(')
-             IF (parse_CompletelyEnclosed(F, b2, e)) THEN          ! Case 5: F(b:e) = '-fcn(...)'
-                iArgsPos=css%ArgsPtr ! current argument pointer
-                if (parse_bdeb) WRITE(*,*)myname,'5. F(b:e) = "-fcn(...)"'
-                CALL parse_CompileSubstr(css, F, b2+1, e-1, Var)
-                css%ArgsCnt=css%ArgsCnt+1 ! increase function counter
-                IF (css%ArgsAlloc .gt. 0) THEN
-!                   write(*,*) 'Argscnt:',i,css%ArgsCnt,css%ArgsSize,lbound(css%ArgsPos),ubound(css%ArgsPos)
-                   css%ArgsPos(css%ArgsCnt)=iArgsPos  ! point to first argument
-                END IF
-                !if (css%ArgsPtr-iArgsPos+1 .ne. 1/) then ! check number of arguments here...
-                ! throw error...
-                !end if
-                css%ArgsPtr=iArgsPos ! reset argument pointer
-                CALL parse_AddCompiledByte (css, n)
-                CALL parse_AddCompiledByte (css, cNeg)
-                RETURN
-             END IF
-          END IF
-       ENDIF
     END IF
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    ! Check for commas in argument lists
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    if (comma) then
+       k = 0
+       DO j=e,b,-1
+          IF     (F(j:j) == ')') THEN
+             k = k+1
+          ELSEIF (F(j:j) == '(') THEN
+             k = k-1
+          END IF
+          IF (k == 0 .AND. F(j:j) == ",") THEN
+             if (parse_bdeb) WRITE(*,*)myname,'3. Found comma: ', F(j:j)
+             CALL parse_CompileSubstr (css, F, b, j-1, Var,comma)
+             CALL parse_CompileSubstr (css, F, j+1, e, Var,comma)
+             css%ArgsPtr=css%ArgsPtr+1 ! increase function counter
+             RETURN
+          END IF
+       END DO
+    end if
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check for operator in substring: check only base level (k=0), exclude expr. in ()
     !----- -------- --------- --------- --------- --------- --------- --------- -------    
@@ -1966,16 +2521,16 @@ CONTAINS
              k = k-1
           END IF
           IF (k == 0 .AND. F(j:j) == Ops(io) .AND. parse_IsBinaryOp (j, F)) THEN
-             if (parse_bdeb) WRITE(*,*)myname,'3. Found Binary op: ', F(j:j)
+             if (parse_bdeb) WRITE(*,*)myname,'3. Found Binary op at: ',j,'('//F(j:j)//')'
              IF (ANY(F(j:j) == Ops(cMul:cPow)) .AND. F(b:b) == '-') THEN ! Case 6: F(b:e) = '-...Op...' with Op > -
-               if (parse_bdeb) WRITE(*,*)myname,'6. F(b:e) = "-...Op..." with Op > -'
-                CALL parse_CompileSubstr (css, F, b+1, e, Var)
+                if (parse_bdeb) WRITE(*,*)myname,'6. F(b:e) = "-...Op..." with Op > -'
+                CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
                 CALL parse_AddCompiledByte (css, cNeg)
                 RETURN                 
              ELSE                                                        ! Case 7: F(b:e) = '...BinOp...'
-               if (parse_bdeb) WRITE(*,*)myname,'7. Binary operator ',F(j:j)
-                CALL parse_CompileSubstr (css, F, b, j-1, Var)
-                CALL parse_CompileSubstr (css, F, j+1, e, Var)
+                if (parse_bdeb) WRITE(*,*)myname,'7. Binary operator ',F(j:j),b,j,e
+                CALL parse_CompileSubstr (css, F, b, j-1, Var,comma)
+                CALL parse_CompileSubstr (css, F, j+1, e, Var,comma)
                 CALL parse_AddCompiledByte (css, parse_OperatorIndex(Ops(io)))
                 css%StackPtr = css%StackPtr - 1
                 RETURN
@@ -1984,33 +2539,13 @@ CONTAINS
        END DO
     END DO
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    ! Check for commas in argument lists
-    !----- -------- --------- --------- --------- --------- --------- --------- -------
-    k = 0
-    DO j=e,b,-1
-       IF     (F(j:j) == ')') THEN
-          k = k+1
-       ELSEIF (F(j:j) == '(') THEN
-          k = k-1
-       END IF
-       IF (k == 0 .AND. F(j:j) == ",") THEN
-          if (parse_bdeb) WRITE(*,*)myname,'3. Found comma: ', F(j:j)
-          CALL parse_CompileSubstr (css, F, b, j-1, Var)
-          CALL parse_CompileSubstr (css, F, j+1, e, Var)
-          CALL parse_AddCompiledByte (css, cArgs)
-          css%ArgsPtr = css%ArgsPtr +1
-          !write(*,*) '>>>ARGS:',css%ArgsSize, css%ArgsPtr
-          IF (css%ArgsPtr > css%ArgsSize) css%ArgsSize = css%ArgsPtr
-          RETURN
-       END IF
-    END DO
-    !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check for remaining items, i.e. variables or explicit numbers
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     b2 = b
     IF (F(b:b) == '-') b2 = b2+1
     n = parse_MathItemIndex(css, F(b2:e), Var)
-    if (parse_bdeb) WRITE(*,*)myname,'8. parse_AddCompiledByte ',n,css%StackPtr,css%ArgsPtr
+    if (parse_bdeb) WRITE(*,*)myname,'8. parse_AddCompiledByte ',parse_code20(n,0)," = '"//F(b2:e)//"'",&
+         & css%StackPtr
     CALL parse_AddCompiledByte (css, n)
     css%StackPtr = css%StackPtr + 1
     IF (css%StackPtr > css%StackSize) css%StackSize = css%StackSize + 1
@@ -2037,8 +2572,9 @@ CONTAINS
        ELSEIF (SCAN(F(j-1:j-1),'+-*/^(') > 0) THEN           ! - other unary operator ?
           res = .false.
        ELSEIF (SCAN(F(j+1:j+1),'0123456789') > 0 .AND. &     ! - in exponent of real number ?
-               SCAN(F(j-1:j-1),'eEdD')       > 0) THEN
-          Dflag=.false.; Pflag=.false.
+            SCAN(F(j-1:j-1),'eEdD')       > 0) THEN
+          Dflag=.false.
+          Pflag=.false.
           k = j-1
           DO WHILE (k > 1)                                   !   step to the left in mantissa 
              k = k-1
@@ -2067,20 +2603,25 @@ CONTAINS
     CHARACTER (LEN=*),  INTENT(in) :: str                    ! String
     REAL(rn)                       :: res                    ! Real number
     INTEGER, OPTIONAL, INTENT(out) :: ibegin,              & ! Start position of real number
-                                      inext                  ! 1st character after real number
+         inext                  ! 1st character after real number
     LOGICAL, OPTIONAL, INTENT(out) :: error                  ! Error flag
     INTEGER                        :: ib,in,istat
     LOGICAL                        :: Bflag,               & ! .T. at begin of number in str
-                                      InMan,               & ! .T. in mantissa of number
-                                      Pflag,               & ! .T. after 1st '.' encountered
-                                      Eflag,               & ! .T. at exponent identifier 'eEdD'
-                                      InExp,               & ! .T. in exponent of number
-                                      DInMan,              & ! .T. if at least 1 digit in mant.
-                                      DInExp,              & ! .T. if at least 1 digit in exp.
-                                      err                    ! Local error flag
+         InMan,               & ! .T. in mantissa of number
+         Pflag,               & ! .T. after 1st '.' encountered
+         Eflag,               & ! .T. at exponent identifier 'eEdD'
+         InExp,               & ! .T. in exponent of number
+         DInMan,              & ! .T. if at least 1 digit in mant.
+         DInExp,              & ! .T. if at least 1 digit in exp.
+         err                    ! Local error flag
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    Bflag=.true.; InMan=.false.; Pflag=.false.; Eflag=.false.; InExp=.false.
-    DInMan=.false.; DInExp=.false.
+    Bflag=.true.
+    InMan=.false.
+    Pflag=.false.
+    Eflag=.false.
+    InExp=.false.
+    DInMan=.false.
+    DInExp=.false.
     ib   = 1
     in   = 1
     DO WHILE (in <= LEN_TRIM(str))
@@ -2090,24 +2631,29 @@ CONTAINS
           IF (InMan .OR. Eflag .OR. InExp) EXIT
        CASE ('+','-')                                        ! Permitted only
           IF     (Bflag) THEN           
-             InMan=.true.; Bflag=.false.                     ! - at beginning of mantissa
+             InMan=.true.
+             Bflag=.false.                     ! - at beginning of mantissa
           ELSEIF (Eflag) THEN               
-             InExp=.true.; Eflag=.false.                     ! - at beginning of exponent
+             InExp=.true.
+             Eflag=.false.                     ! - at beginning of exponent
           ELSE
              EXIT                                            ! - otherwise STOP
           ENDIF
        CASE ('0':'9')                                        ! Mark
           IF     (Bflag) THEN           
-             InMan=.true.; Bflag=.false.                     ! - beginning of mantissa
+             InMan=.true.
+             Bflag=.false.                     ! - beginning of mantissa
           ELSEIF (Eflag) THEN               
-             InExp=.true.; Eflag=.false.                     ! - beginning of exponent
+             InExp=.true.
+             Eflag=.false.                     ! - beginning of exponent
           ENDIF
           IF (InMan) DInMan=.true.                           ! Mantissa contains digit
           IF (InExp) DInExp=.true.                           ! Exponent contains digit
        CASE ('.')
           IF     (Bflag) THEN
              Pflag=.true.                                    ! - mark 1st appearance of '.'
-             InMan=.true.; Bflag=.false.                     !   mark beginning of mantissa
+             InMan=.true.
+             Bflag=.false.                     !   mark beginning of mantissa
           ELSEIF (InMan .AND..NOT.Pflag) THEN
              Pflag=.true.                                    ! - mark 1st appearance of '.'
           ELSE
@@ -2115,7 +2661,8 @@ CONTAINS
           END IF
        CASE ('e','E','d','D')                                ! Permitted only
           IF (InMan) THEN
-             Eflag=.true.; InMan=.false.                     ! - following mantissa
+             Eflag=.true.
+             InMan=.false.                     ! - following mantissa
           ELSE
              EXIT                                            ! - otherwise STOP
           ENDIF
@@ -2426,5 +2973,33 @@ CONTAINS
     end if
     if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
   end subroutine parse_errorappendi
+  !
+  character*20 function parse_code20(code,nargs)
+    integer code,nargs,ii
+    if (code.ge.cabs.and.code.le.catan) then
+       if (nargs.eq.0) then
+          parse_code20=funcs(code)
+       else
+          write(parse_code20,'(A,"(",I0,")")')trim(funcs(code)),nargs
+       end if
+    ELSE IF (code.eq.cImmed) THEN
+       parse_code20="+stack=fix"
+    ELSE IF (code.eq.cNeg) THEN
+       parse_code20="neg"
+    ELSE IF (code.eq.cAdd) THEN
+       parse_code20="add"
+    ELSE IF (code.eq.cSub) THEN
+       parse_code20="sub"
+    ELSE IF (code.eq.cMul) THEN
+       parse_code20="mul"
+    ELSE IF (code.eq.cDiv) THEN
+       parse_code20="div"
+    ELSE IF (code.eq.cPow) THEN
+       parse_code20="pow"
+    else
+       ii=code-VarBegin+1
+       write(parse_code20,'("+stack=",I0)')ii
+    end if
+    return
+  end function parse_code20
 end module parse
- 

@@ -38,22 +38,22 @@ module model
   type :: mod_location
      integer :: locid
      integer :: iloc
-     integer :: csli=0                 ! number of slice variables
-     real, allocatable :: sli_val(:)   ! value of slice variable
-     integer :: ctrg=0                 ! number of target variables
-     real, allocatable :: trg_val(:)   ! value of target variable
-     logical, allocatable :: trg_vok(:)! value of target variable
+     integer :: csli=0                  ! number of slice variables
+     real, allocatable :: sli_val(:)    ! value of slice variable
+     integer :: ctrg=0                  ! number of target variables
+     real, allocatable    :: trg_val(:) ! value of target variable
+     logical, allocatable :: trg_vok(:) ! value of target variable
      logical, allocatable :: trg_lval(:)! is target variable set?
-     integer :: cobs=0                 ! number of obs variables
-     real, allocatable :: obs_val(:)   ! value of obs variable
-     logical, allocatable :: obs_vok(:)! value of obs variable
-     integer :: ndim                   ! number of dimensions
-     integer, allocatable :: pos(:)    ! current position (unexpanded)
-     real, allocatable :: rpos(:)      ! current position in real (unexpanded)
-     integer, allocatable :: istart(:) ! start position (unexpanded)
-     integer, allocatable :: istop(:)  ! stop position
-     real, allocatable :: intpf(:)     ! interpolation factor
-     integer :: search = 0             ! is grid search successful, 0=ok?
+     integer :: cobs=0                  ! number of obs variables
+     real, allocatable    :: obs_val(:) ! value of obs variable
+     logical, allocatable :: obs_vok(:) ! value of obs variable
+     integer :: ndim                    ! number of dimensions
+     integer, allocatable :: pos(:)     ! current position (unexpanded)
+     real, allocatable    :: rpos(:)    ! current position in real (unexpanded)
+     integer, allocatable :: lstart(:)  ! start position (unexpanded)
+     integer, allocatable :: lstop(:)   ! stop position
+     real, allocatable    :: intpf(:)   ! interpolation factor
+     integer :: search = 0              ! is grid search successful, 0=ok?
      logical :: bok = .true.
      type(mod_location), pointer :: prev => null()   ! linked list
      type(mod_location), pointer :: next => null()   ! linked list
@@ -422,6 +422,7 @@ CONTAINS
     css => firstSession%next
     do while ( .not.associated(css,target=lastSession))
        if (css%sid .eq. sid) then
+          !if (mod_bdeb) write(*,*)myname,'Exiting with sid:',sid,irc
           return
        end if
        css=>css%next
@@ -457,7 +458,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_closeSession
 
@@ -615,7 +616,7 @@ CONTAINS
     css%prev%next => css%next
     css%next%prev => css%prev
     deallocate(css)
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_removeSession
   !
@@ -729,10 +730,10 @@ CONTAINS
        if (allocated(df%var80)) deallocate(df%var80,stat=irc2)
        if (allocated(df%lenv)) deallocate(df%lenv,stat=irc2)
        do ii=1,df%nvar
-          call model_clearVariable(df%var(ii)%ptr,crc250,irc)
+          call model_deleteVariable(df%var(ii)%ptr,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from clearVariable.")
+             call model_errorappend(crc250," Error return from deleteVariable.")
              call model_errorappendi(crc250,irc)
              call model_errorappend(crc250,"\n")
              return
@@ -742,7 +743,7 @@ CONTAINS
        if (associated(df%var)) deallocate(df%var,stat=irc2)
        deallocate(df)
     end if
-    !if(mod_bdeb)write(*,*)myname,'Done.'
+    !if(mod_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine model_deleteFile
   !
@@ -1062,28 +1063,25 @@ CONTAINS
     bdone=(.not. css%sortLimitsOk)
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
-       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
-       css%currentFile => css%fileStack(css%currentFileIndex)%ptr
-       if ((css%currentFileIndex.eq.css%fileStackInd(css%rightFileSortIndex,1))) then ! last iteration
-          css%currentFileSortIndex=0 ! reset index
+       if (css%currentFileSortIndex.gt.css%rightFileSortIndex) then
+          css%currentFileSortIndex=0
+          css%currentFileIndex=0
+          nullify(css%currentFile)
           bdone=.true.
-       end if
-       ! check if inside limits
-       if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
-            & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then ! overlap
-          found=.true.
-          bdone=.true.
-          if (mod_bdeb) write(*,*)myname,' Found:',css%sortLimitsOk,&
-               & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+       else
+          css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
+          css%currentFile => css%fileStack(css%currentFileIndex)%ptr
+          ! check if inside limits
+          if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
+               & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then ! overlap
+             found=.true.
+             bdone=.true.
+             if (mod_bdeb) write(*,*)myname,' Found:',css%sortLimitsOk,&
+                  & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+          end if
        end if
     end do
-    if (found) then
-       model_loopFileStack=.true.
-    else
-       css%currentFileIndex=0
-       nullify(css%currentFile)
-       model_loopFileStack=.false.
-    end if
+    model_loopFileStack=found
     return
   end function model_loopFileStack
   !
@@ -1204,7 +1202,7 @@ CONTAINS
        css%rightFileSortIndex=0
     end if
     css%currentFileIndex=0
-    if (mod_bdeb)write(*,*)myname,'Done.', css%sortLimitsOk,&
+    if (mod_bdeb)write(*,*)myname,' Done.', css%sortLimitsOk,&
          & css%leftFileSortIndex, css%rightFileSortIndex,css%nFileIndexes
     return
   end subroutine model_findStackLimits
@@ -1313,12 +1311,12 @@ CONTAINS
     type(mod_file),pointer :: newFile
     integer, external :: length
     integer :: lenp,lenb,lend,ii,jj,kk,opos,pos,unitr
+    type(mod_variable),pointer :: v     ! variable
     character*250 :: buff250
     character*22 :: myname="model_loadCache"
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(mod_bdeb)write(*,*)myname,' Path.',path250(1:lenp)
     ! clear existing cache
     css%stackReady=.false.
     if (associated(css%firstFile)) then
@@ -1337,6 +1335,7 @@ CONTAINS
        end do
     end if
     ! open cache file
+    if(mod_bdeb)write(*,*)myname," Opening modcache: '",path250(1:lenp)//"'"
     open ( unit=unitr, status="old", form="formatted", &
          &        access="sequential", &
          &        iostat=irc, file=path250(1:lenp) )
@@ -1478,32 +1477,30 @@ CONTAINS
              call model_errorappend(crc250,"\n")
              return
           end if
+          v => newFile%var(jj)%ptr
           read(unitr,'(A)',iostat=irc) buff250
           call chop0(buff250,250)
           lenb=length(buff250,250,10)
           pos=0
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
-          read(buff250(opos+1:pos-1),*,iostat=irc)newFile%var(jj)%ptr%ndim
+          read(buff250(opos+1:pos-1),*,iostat=irc)v%ndim
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
-          newfile%var(jj)%ptr%var80=buff250(opos+1:min(80+opos,pos-1))
-          allocate(newFile%var(jj)%ptr%ind(newFile%var(jj)%ptr%ndim), &
-               & newFile%var(jj)%ptr%istart(newFile%var(jj)%ptr%ndim), &
-               & newFile%var(jj)%ptr%istop(newFile%var(jj)%ptr%ndim), &
-               & stat=irc)
+          v%var80=buff250(opos+1:min(80+opos,pos-1))
+          allocate(v%ind(v%ndim),v%istart(v%ndim),v%istop(v%ndim),stat=irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250," Unable to allocate new Var dim item.")
              call model_errorappendi(crc250,jj)
-             call model_errorappendi(crc250,newFile%var(jj)%ptr%ndim)
+             call model_errorappendi(crc250,v%ndim)
              call model_errorappend(crc250,"\n")
              return
           end if
-          do kk=1,newFile%var(jj)%ptr%ndim
+          do kk=1,v%ndim
              opos=pos
              call findDelimiter(buff250(1:lenb)," ",pos)
-             read(buff250(opos+1:pos-1),*,iostat=irc)newfile%var(jj)%ptr%ind(kk)
+             read(buff250(opos+1:pos-1),*,iostat=irc) v%ind(kk)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
                 call model_errorappend(crc250," Unable to read cache.'"//buff250(1:lenb)//"'")
@@ -1601,7 +1598,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="loopTarget"
+    character*22 :: myname="model_loopTarget"
     model_looptarget=.false. ! only true if all is ok...
     if (.not.associated(css%currentTrg)) then
        css%currentTrg =>  css%firstTrg%next 
@@ -1774,9 +1771,20 @@ CONTAINS
           currentTarget => css%firstTrg%next
           do while (.not.associated(currentTarget,target=css%lastTrg))
              ii=min(css%ctrg,ii+1)
+             !
              css%trg80(ii)=currentTarget%n80
-             css%trg_valset(ii)=.true.
+             call chop0(css%trg80(ii),80)
+             css%trg_lent(ii)=length(css%trg80(ii),80,10)
+             !
              css%trg_v80(ii)=currentTarget%v80
+             call chop0(css%trg_v80(ii),80)
+             css%trg_lenv(ii)=length(css%trg_v80(ii),80,10)
+             !
+             css%trg_valset(ii)=.true.
+             if (mod_bdeb) write(*,'(2(X,A),X,I0,2(X,A))')myname,'Target:',II,&
+                  & css%trg80(ii)(1:css%trg_lent(ii)),&
+                  & css%trg_v80(ii)(1:css%trg_lenv(ii))
+             !
              css%trg_l80(ii)=currentTarget%l80
              call chop0(css%trg_l80(ii),80)
              lens=length(css%trg_l80(ii),80,10)
@@ -1789,6 +1797,7 @@ CONTAINS
                    call model_errorappend(crc250,"\n")
                    return
                 end if
+                if (mod_bdeb)write(*,*)myname,' System:',css%sys_val
                 css%trg_minval(ii)=parse_evalf(plim,css%sys_val)
                 css%trg_minset(ii)=.true.
                 if (mod_bdeb) write(*,*)myname,'Minval:',css%trg_minval(ii),css%trg_minset(ii)
@@ -1808,6 +1817,7 @@ CONTAINS
                    call model_errorappend(crc250,"\n")
                    return
                 end if
+                if (mod_bdeb)write(*,*)myname,' System:',css%sys_val
                 css%trg_maxval(ii)=parse_evalf(plim,css%sys_val)
                 css%trg_maxset(ii)=.true.
                 if (mod_bdeb) write(*,*)myname,'Maxval:',css%trg_maxval(ii),css%trg_maxset(ii)
@@ -1822,10 +1832,6 @@ CONTAINS
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
              css%trg_orm(ii)=0
-             call chop0(css%trg80(ii),80)
-             css%trg_lent(ii)=length(css%trg80(ii),80,10)
-             call chop0(css%trg_v80(ii),80)
-             css%trg_lenv(ii)=length(css%trg_v80(ii),80,10)
              currentTarget => currentTarget%next
              css%trg_dim(ii)=0
              css%trg_var(ii)=0
@@ -1834,6 +1840,14 @@ CONTAINS
              ii=min(css%ctrg,ii+1)
              css%trg80(ii)=css%ind_trg
              css%trg_v80(ii)=css%ind_var
+             call chop0(css%trg80(ii),80)
+             css%trg_lent(ii)=length(css%trg80(ii),80,10)
+             call chop0(css%trg_v80(ii),80)
+             css%trg_lenv(ii)=length(css%trg_v80(ii),80,10)
+             if (mod_bdeb) write(*,'(2(X,A),X,I0,2(X,A))')myname,'Target:',II,&
+                  & css%trg80(ii)(1:css%trg_lent(ii)),&
+                  & css%trg_v80(ii)(1:css%trg_lenv(ii))
+             !
              css%trg_valset(ii)=.true.
              css%trg_minset(ii)=.false.
              css%trg_maxset(ii)=.false.
@@ -1842,10 +1856,6 @@ CONTAINS
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
              css%trg_orm(ii)=0
-             call chop0(css%trg80(ii),80)
-             css%trg_lent(ii)=length(css%trg80(ii),80,10)
-             call chop0(css%trg_v80(ii),80)
-             css%trg_lenv(ii)=length(css%trg_v80(ii),80,10)
              css%trg_dim(ii)=0
              css%trg_var(ii)=0
           end if
@@ -1858,7 +1868,7 @@ CONTAINS
        end if
        css%trg_set=.true.
    end if 
-   if(mod_bdeb)write(*,*)myname,'Done.',irc,css%ctrg
+   if(mod_bdeb)write(*,*)myname,' Done.',irc,css%ctrg
    return
  end subroutine model_maketargetlist
  !
@@ -1898,6 +1908,20 @@ CONTAINS
     end do
     return
   end subroutine model_setObsVar
+ subroutine model_getObsReq(css,nn,req,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    integer :: nn
+    logical :: req(nn)
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname="model_setObsVar"
+    integer, external :: length
+    integer :: ii
+    do ii=1,min(nn,css%cobs)
+       if (css%obs_req(ii))req(ii)=.true.
+    end do
+    return
+  end subroutine model_getObsReq
  !
  ! set observation values
  !
@@ -1960,10 +1984,12 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    loc%trg_vok(itrg)=.true.
     loc%trg_val(itrg)=val
     loc%trg_lval(itrg)=.true.
     do jj=1,ninn
        if (ind(jj).gt.0.and.ind(jj).le.loc%ctrg) then
+          loc%trg_vok(ind(jj))=.true.
           loc%trg_val(ind(jj))=loc%rpos(inn(jj))
           loc%trg_lval(ind(jj))=.true.
        else if (ind(jj).ne.0) then
@@ -1976,8 +2002,8 @@ CONTAINS
        end if
     end do
     !
-    if (mod_bdeb)write(*,*)myname,' Value:',loc%locid,itrg,&
-         & "'"//css%trg80(itrg)(1:css%trg_lent(itrg))//"' = ",loc%trg_val(itrg)
+    if (mod_bdeb)write(*,'(X,A,X,A,X,I0,X,I0,X,A,F0.1,X,L1)')myname,' Assigned:',loc%locid,itrg,&
+         & "'"//css%trg80(itrg)(1:css%trg_lent(itrg))//"' = ",loc%trg_val(itrg),loc%trg_vok(itrg)
 
     return
   end subroutine model_setLocTrgVal
@@ -2006,9 +2032,10 @@ CONTAINS
           return
        end if
        if (css%trg_valset(ind(ii))) then
-          css%trg_val(ind(ii))=val(ii)
           css%trg_vok(ind(ii))=.true.
+          css%trg_val(ind(ii))=val(ii)
        else
+          css%trg_vok(ind(ii))=.false.
           css%trg_val(ind(ii))=0.0D0
        end if
     end do
@@ -2037,9 +2064,10 @@ CONTAINS
     end if
     do ii=1,nn
        if (vset(ii)) then
-          css%trg_val(ii)=val(ii)
           css%trg_vok(ii)=.true.
+          css%trg_val(ii)=val(ii)
        else
+          css%trg_vok(ii)=.false.
           css%trg_val(ii)=0.0D0
        end if
     end do
@@ -2186,7 +2214,7 @@ CONTAINS
     implicit none
     type(mod_session), pointer :: css !  current session
     type(mod_variable), pointer :: var
-    character*25 :: myname="variableTargetIndex"
+    character*25 :: myname="model_getTargetIndex"
     integer :: ii
     if(mod_bdeb)write(*,*)myname,' Entering.',var%var80(1:var%lenv)
     LOOP: do ii = 1, css%ctrg
@@ -2307,9 +2335,10 @@ CONTAINS
     end if
     do ii=1,nslice
        css%sli_2trg(ii)=ind(ii)
-       if (mod_bdeb) write(*,*) myname,'Slice index:',ii,ind(ii)
        css%sli_v80(ii)=css%trg_v80(ind(ii))
        css%sli_lenv(ii)=css%trg_lenv(ind(ii))
+       if (mod_bdeb) write(*,'(X,A,X,A,X,I0,A,I0,X,A)') myname,'Slice index:',ii," -> ",ind(ii), &
+            & "'"//css%trg_v80(ind(ii))(1:css%trg_lenv(ind(ii)))//"'"
     end do
     if(mod_bdeb)write(*,*)myname,' Done.',css%csli
   end subroutine model_sliceIndex
@@ -2517,7 +2546,8 @@ CONTAINS
     integer :: lenc
     integer, external :: length
     character*25 :: myname="model_locpushTarget"
-    if(mod_bdeb)write(*,*)myname,' Entering, csli:',css%csli," Loc%bok=",bok
+    if(mod_bdeb.and.locid.lt.10)write(*,*)myname,' Entering, csli:',&
+         & css%csli," Loc%bok=",bok
     ! initialise location stack
     if (css%nloc.eq.0) then
        css%locoffset=locid-1
@@ -2565,7 +2595,8 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       if(mod_bdeb)write(*,*)myname,'Slice target:',ii,css%trg_val(css%sli_2trg(ii))
+       if(mod_bdeb.and.locid.lt.10)write(*,*)myname,'Slice target:',&
+            & ii,css%trg_val(css%sli_2trg(ii))
        newLoc%sli_val(ii)=css%trg_val(css%sli_2trg(ii))
     end do
     newLoc%cobs=css%cobs
@@ -2578,7 +2609,7 @@ CONTAINS
        return
     end if
     do ii=1,newLoc%cobs
-       if(mod_bdeb)write(*,*)myname,'Obs target:',ii,css%obs_val(ii)
+       if(mod_bdeb.and.locid.lt.10)write(*,*)myname,'Obs target:',ii,css%obs_val(ii)
        newLoc%obs_val(ii)=css%obs_val(ii)
        newLoc%obs_vok(ii)=css%obs_vok(ii)
     end do
@@ -2613,7 +2644,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,' Done.'
+    if(mod_bdeb.and.locid.lt.10)write(*,*)myname,' Done.'
     return
   end subroutine model_locpushTarget
   !
@@ -2673,6 +2704,7 @@ CONTAINS
                 css%mpo_val(ii+css%ctrg)=loc%obs_val(ii)
                 css%mpo_vok(ii+css%ctrg)=loc%obs_vok(ii)
              end do
+             if (mod_bdeb)write(*,*)myname,' MPO:',css%mpo_val
              val=parse_evalf(css%psf,css%mpo_val)
              bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
              if (mod_bdeb)write(*,*)myname,'Returned:',val,bok
@@ -2707,14 +2739,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: length
-    character*22 :: myname="setfilter"
-    if(mod_bdeb)write(*,*)myname,'Entering.',irc
+    character*22 :: myname="model_setfilter"
+    !if(mod_bdeb)write(*,*)myname,' Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%flt250=trim(flt)
        call chop0(css%flt250,250)
        css%lenf=length(css%flt250,250,10)
-    end if
-    if(mod_bdeb)write(*,*)myname,'Exiting.',irc
+       if(mod_bdeb)write(*,*)myname,"Filter:'"//css%flt250(1:css%lenf)//"'",irc
+ end if
     !
   end subroutine model_setfilter
   !
@@ -2723,7 +2755,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="mod_compileFilter"
+    character*22 :: myname="model_compileFilter"
     integer :: ii
     if (css%lenf.ne.0) then
        call parse_open(css%psf,crc250,irc)
@@ -2753,7 +2785,7 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       call used(css%psf,css%mpo_req)
+       call parse_used(css%psf,css%mpo_req)
        call model_getMPO(css,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
@@ -2775,10 +2807,10 @@ CONTAINS
     character*250,allocatable :: exp250(:)
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="compileExpr"
+    character*22 :: myname="model_compileExpr"
     integer :: ii,lene
     integer, external :: length
-    if(mod_bdeb)write(*,*)myname,'Entering.',irc,nexp,size(exp250)
+    if(mod_bdeb)write(*,*)myname,' Entering.',irc,nexp,size(exp250)
     call model_setMPO(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -2822,7 +2854,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_compileExpr
   !
@@ -2837,12 +2869,12 @@ CONTAINS
     logical :: set(nexp)
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="evalExpr"
+    character*22 :: myname="model_evalExpr"
     integer :: ii
     do ii=1,css%cpsp
-       call parse_evalf(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,val(ii),set(ii))
+       call parse_evals(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,val(ii),set(ii))
        if (irc.ne.0) then
-          call model_errorappend(crc250,"parse_evalf")
+          call model_errorappend(crc250,"parse_evals")
           return
        end if
     end do
@@ -2857,7 +2889,7 @@ CONTAINS
     integer :: nexp
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="initPSP"
+    character*22 :: myname="model_initPSP"
     integer :: ii
     call model_clearPSP(css,crc250,irc)
     if (irc.ne.0) then
@@ -2886,7 +2918,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="clearPSP"
+    character*22 :: myname="model_clearPSP"
     integer :: ii
     if (associated(css%psp)) then
        do ii=1,css%cpsp
@@ -2909,7 +2941,7 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="setMPO"
+    character*22 :: myname="model_setMPO"
     integer :: ii
     if (css%mpo_set) return ! filter-variables is already set
     css%cmpo=css%ctrg+css%cobs
@@ -2951,13 +2983,19 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="getMPO"
+    character*22 :: myname="model_getMPO"
     integer :: ii
     do ii=1,css%ctrg
-       if (css%mpo_req(ii)) css%trg_req(ii)=.true.
+       if (css%mpo_req(ii)) then
+          write(*,*)myname,"Filter requires trg_mod(",ii,")"
+          css%trg_req(ii)=.true.
+       end if
     end do
     do ii=1,css%cobs
-       if (css%mpo_req(ii+css%ctrg)) css%obs_req(ii)=.true.
+       if (css%mpo_req(ii+css%ctrg)) then
+          write(*,*)myname,"Filter requires trg_obs(",ii,")"
+          css%obs_req(ii)=.true.
+       end if
     end do
     if(mod_bdeb)write(*,*)myname,"Done.",css%ctrg,css%cobs,css%cmpo
     return
@@ -2969,12 +3007,13 @@ CONTAINS
     character*(*) :: flt
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="getfilter"
-    if(mod_bdeb)write(*,*)myname,'Entering.',irc
+    character*22 :: myname="model_getfilter"
+    if(mod_bdeb)write(*,*)myname,' Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        flt=css%flt250(1:css%lenf)
+       if(mod_bdeb)write(*,*)myname,"Filter:'"//css%flt250(1:css%lenf)//"'",irc
     end if
-    if(mod_bdeb)write(*,*)myname,'Exiting.',irc
+    !if(mod_bdeb)write(*,*)myname,'Exiting.',irc
   end subroutine model_getfilter
   !
   ! Get arrays from MODEL POS
@@ -3037,8 +3076,8 @@ CONTAINS
        if (allocated(loc%obs_vok))  deallocate(loc%obs_vok)
        if (allocated(loc%pos))      deallocate(loc%pos)
        if (allocated(loc%rpos))     deallocate(loc%rpos)
-       if (allocated(loc%istart))   deallocate(loc%istart)
-       if (allocated(loc%istop))    deallocate(loc%istop)
+       if (allocated(loc%lstart))   deallocate(loc%lstart)
+       if (allocated(loc%lstop))    deallocate(loc%lstop)
        if (allocated(loc%intpf))    deallocate(loc%intpf)
        deallocate(loc)
     end if
@@ -3120,7 +3159,7 @@ CONTAINS
     return
   end subroutine model_deallocateOutput
   !
-  subroutine model_setOutput(css,val,itrg,iloc,crc250,irc)
+  subroutine model_setOutVal(css,val,itrg,iloc,crc250,irc)
     implicit none
     type(mod_session), pointer :: css !  current session
     real :: val           ! output value
@@ -3129,7 +3168,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc        ! error return code(0=ok)
     integer :: ii,jj
-    character*25 :: myname="model_setOutput"
+    character*25 :: myname="model_setOutVal"
     if (.not.associated(css%oval).or..not.associated(css%oset)) then
        irc=946
        call model_errorappend(crc250,myname)
@@ -3159,7 +3198,7 @@ CONTAINS
     css%oval(itrg,iloc)=val
     css%oset(itrg,iloc)=.true.
     return
-  end subroutine model_setOutput
+  end subroutine model_setOutVal
   !
   logical function model_getOutput(css,val,itrg,iloc,crc250,irc)
     implicit none
@@ -3209,14 +3248,10 @@ CONTAINS
   !###############################################################################
   ! get description of indexes
   !
-  character*250 function model_getdesc250(fpos,gdims,dim80,ndims,ind,istart,istop,crc250,irc)
+  character*250 function model_getdesc250(fpos,f,v,crc250,irc)
     integer :: fpos                   ! current dimension index 
-    integer :: gdims                  ! number of dimensions
-    character(len=80), allocatable :: dim80(:)
-    integer :: ndims                  ! number of dimensions
-    INTEGER(KIND=4), allocatable :: ind(:)
-    INTEGER(KIND=4), ALLOCATABLE :: istart(:)
-    INTEGER(KIND=4), ALLOCATABLE :: istop(:)
+    type(mod_file),pointer :: f
+    type(mod_variable),pointer :: v
     character*250 :: crc250  ! error message string
     integer :: irc        ! error return code(0=ok)
     integer, external :: length
@@ -3228,22 +3263,23 @@ CONTAINS
     logical :: bok
     integer, allocatable :: cdim(:)
     character*25 :: myname="model_getdesc250"
-    allocate(cdim(max(1,ndims)),stat=irc)
+
+    allocate(cdim(max(1,v%ndim)),stat=irc)
     cpos= (fpos-1)
     buff250=""
     lenb=0
     if (fpos.ne.-1) then
-       do ii=1,ndims
-          cdim(ii)=1+istart(ii)+mod(cpos,max(1,istop(ii)))
-          cpos=int(cpos/max(1,istop(ii)))
+       do ii=1,v%ndim
+          cdim(ii)=1+v%istart(ii)+mod(cpos,max(1,v%istop(ii)-v%istart(ii)+1))
+          cpos=int(cpos/max(1,(v%istop(ii)-v%istart(ii)+1)))
        end do
        ! print other dimensions
-       do ii=1,ndims
+       do ii=1,v%ndim
           write(ccdim10,'(I10)')cdim(ii)
           call chop0(ccdim10,10)
           lenc=length(ccdim10,10,10)
-          lend=length(dim80(ind(ii)),80,10)
-          buff250=sep//dim80(ind(ii))(1:lend)//sep//ccdim10(1:lenc)//buff250(1:lenb)
+          lend=length(f%dim80(v%ind(ii)),80,10)
+          buff250=sep//f%dim80(v%ind(ii))(1:lend)//sep//ccdim10(1:lenc)//buff250(1:lenb)
           call chop0(buff250,250)
           lenb=length(buff250,250,max(1,min(250,lenb)))
        end do
@@ -3274,7 +3310,7 @@ CONTAINS
     ! <value pos="1,21,100" val="3499.2"/>
     ! make dimension string
 
-    pos250=model_getPos50(v%ndim,v%ind,loc%ndim,loc%pos)
+    pos250=model_getPos50(v,loc)
     call chop0(pos250,250)
     lenp=length(pos250,250,10)
     if (lenp.ne.0) then
@@ -3363,13 +3399,9 @@ CONTAINS
   !
   ! get position string
   !
-  character*50 function model_getPos50(n,ind,m,ipos)
-    integer :: n          ! selected dimensions
-    integer :: istart(n)
-    integer :: istop(n)
-    integer :: ind(n)
-    integer :: m
-    integer :: ipos(m)
+  character*50 function model_getPos50(v,loc)
+    type(mod_variable), pointer :: v
+    type(mod_location), pointer :: loc
     character*50 :: buff50
     character*10 :: item10
     integer :: lenb,leni
@@ -3378,8 +3410,8 @@ CONTAINS
     character*25 :: myname="model_writePos"
     buff50=""
     lenb=0
-    do ii=1,n
-       write(item10,'(I10)') ipos(ind(ii))
+    do ii=1,v%ndim
+       write(item10,'(I10)') loc%pos(v%ind(ii))
        call chop0(item10,10)
        leni=length(item10,10,3)
        if (lenb.eq.0) then
@@ -3410,13 +3442,13 @@ CONTAINS
     lenb=0
     do ii=1,v%ndim
        if (loc%intpf(v%ind(ii)).lt.0) then
-          if (loc%istart(v%ind(ii)).ne.loc%istop(v%ind(ii))) then
-             write(pos20,'(I0,"..",I0)') loc%istart(v%ind(ii)),loc%istop(v%ind(ii))
+          if (loc%lstart(v%ind(ii)).ne.loc%lstop(v%ind(ii))) then
+             write(pos20,'(I0,"..",I0)') loc%lstart(v%ind(ii)),loc%lstop(v%ind(ii))
           else
-             write(pos20,'(I0)') loc%istart(v%ind(ii))
+             write(pos20,'(I0)') loc%lstart(v%ind(ii))
           end if
        else
-          write(pos20,'(F20.4)') real(loc%istart(v%ind(ii)))+loc%intpf(v%ind(ii))
+          write(pos20,'(F20.4)') real(loc%lstart(v%ind(ii)))+loc%intpf(v%ind(ii))
        end if
        call chop0(pos20,20)
        lenp=length(pos20,20,3)
@@ -3450,9 +3482,9 @@ CONTAINS
        itrg=file%dim_trg(v%ind(ii))
        if (itrg.ne.0) then ! dimension is a target
           if (loc%intpf(v%ind(ii)).lt.0) then
-             loc%rpos(v%ind(ii))=loc%istart(v%ind(ii))
+             loc%rpos(v%ind(ii))=loc%lstart(v%ind(ii))
           else
-             loc%rpos(v%ind(ii))=real(loc%istart(v%ind(ii)))+&
+             loc%rpos(v%ind(ii))=real(loc%lstart(v%ind(ii)))+&
                   & loc%intpf(v%ind(ii))
           end if
           if (mod_bdeb)write(*,*)myname,"VVariable '"//&
@@ -3560,14 +3592,14 @@ CONTAINS
     !
     if (allocated(loc%pos)) deallocate(loc%pos)
     if (allocated(loc%rpos)) deallocate(loc%rpos)
-    if (allocated(loc%istart)) deallocate(loc%istart)
-    if (allocated(loc%istop)) deallocate(loc%istop)
+    if (allocated(loc%lstart)) deallocate(loc%lstart)
+    if (allocated(loc%lstop)) deallocate(loc%lstop)
     if (allocated(loc%intpf)) deallocate(loc%intpf)
     loc%ndim=newFile%ndim
     allocate(loc%pos(loc%ndim),&
          & loc%rpos(loc%ndim),&
-         & loc%istart(loc%ndim),&
-         & loc%istop(loc%ndim),&
+         & loc%lstart(loc%ndim),&
+         & loc%lstop(loc%ndim),&
          & loc%intpf(loc%ndim),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -3578,8 +3610,8 @@ CONTAINS
     do ii=1,loc%ndim
        loc%pos(ii)=1
        loc%rpos(ii)=0.0D0
-       loc%istart(ii)=1
-       loc%istop(ii)=newFile%istop(ii)
+       loc%lstart(ii)=1
+       loc%lstop(ii)=newFile%istop(ii)
        loc%intpf(ii)=-1.0D0
     end do
     return
@@ -3598,8 +3630,8 @@ CONTAINS
           loc => css%locData(ii)%ptr
           if (allocated(loc%pos)) deallocate(loc%pos)
           if (allocated(loc%rpos)) deallocate(loc%rpos)
-          if (allocated(loc%istart)) deallocate(loc%istart)
-          if (allocated(loc%istop)) deallocate(loc%istop)
+          if (allocated(loc%lstart)) deallocate(loc%lstart)
+          if (allocated(loc%lstop)) deallocate(loc%lstop)
           if (allocated(loc%intpf)) deallocate(loc%intpf)
        end do
        deallocate(css%locData)
@@ -3670,7 +3702,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if (mod_bdeb) write(*,*)myname,'Done.'
+    if (mod_bdeb) write(*,*)myname,' Done.'
     return
   end subroutine model_search
   !
@@ -3703,11 +3735,11 @@ CONTAINS
     do ii=1,b%ndim
        if (b%dim2slc(ii).ne.0) then
           loc%pos(b%ind(ii)) =     floor(loc%sli_val(b%dim2slc(ii)))
-          loc%istart(b%ind(ii)) =  floor(loc%sli_val(b%dim2slc(ii)))
-          loc%istop(b%ind(ii)) = ceiling(loc%sli_val(b%dim2slc(ii)))
+          loc%lstart(b%ind(ii)) =  floor(loc%sli_val(b%dim2slc(ii)))
+          loc%lstop(b%ind(ii)) = ceiling(loc%sli_val(b%dim2slc(ii)))
           loc%intpf(b%ind(ii)) = loc%sli_val(b%dim2slc(ii))-loc%pos(b%ind(ii))
           if(mod_bdeb)write(*,*) myname,">>>>>>>Loc:",ii,&
-               & loc%pos(b%ind(ii)),loc%istart(b%ind(ii)),loc%istop(b%ind(ii))
+               & loc%pos(b%ind(ii)),loc%lstart(b%ind(ii)),loc%lstop(b%ind(ii))
        end if
     end do
     return
@@ -3918,22 +3950,22 @@ CONTAINS
           sum=nv(jj,0)+nv(jj,jj)
           if (sum.gt.1.0D-10) then
              if (nv(jj,0).lt.1.0D-10) then ! target at initial grid point
-                loc%istart(b%ind(jj))=loc%pos(b%ind(jj))
-                loc%istop(b%ind(jj))=loc%pos(b%ind(jj))
+                loc%lstart(b%ind(jj))=loc%pos(b%ind(jj))
+                loc%lstop(b%ind(jj))=loc%pos(b%ind(jj))
                 loc%intpf(b%ind(jj))=nv(jj,0)/sum
              else if(nv(jj,jj).lt.1.0D-10) then ! target at incremential grid point
-                loc%istart(b%ind(jj))=loc%pos(b%ind(jj))+1
-                loc%istop(b%ind(jj))=loc%pos(b%ind(jj))+1
+                loc%lstart(b%ind(jj))=loc%pos(b%ind(jj))+1
+                loc%lstop(b%ind(jj))=loc%pos(b%ind(jj))+1
                 loc%intpf(b%ind(jj))=nv(jj,jj)/sum
              else ! target between initial and incremental grid points
-                loc%istart(b%ind(jj))=loc%pos(b%ind(jj))
-                loc%istop(b%ind(jj))=loc%pos(b%ind(jj))+1
+                loc%lstart(b%ind(jj))=loc%pos(b%ind(jj))
+                loc%lstop(b%ind(jj))=loc%pos(b%ind(jj))+1
                 loc%intpf(b%ind(jj))=nv(jj,0)/sum
              end if
              ! write(*,*)myname,'FF:',loc%intpf(b%ind(jj)),nv(jj,0),nv(jj,jj),sum
           else ! grid points and target all coincide
-             loc%istart(b%ind(jj))=loc%pos(b%ind(jj))
-             loc%istop(b%ind(jj))=loc%pos(b%ind(jj))
+             loc%lstart(b%ind(jj))=loc%pos(b%ind(jj))
+             loc%lstop(b%ind(jj))=loc%pos(b%ind(jj))
              loc%intpf(b%ind(jj))=0.0D0
           end if
        end if
@@ -3953,8 +3985,9 @@ CONTAINS
     if (loc%bok) then
        loc%search=0
        do jj=1,b%ndim
-          if (loc%istart(b%ind(jj)).ne.loc%istop(b%ind(jj)) .and. &
-               & loc%istart(b%ind(jj))+1.ne.loc%istop(b%ind(jj))) then
+          if (loc%lstart(b%ind(jj)).ne.loc%lstop(b%ind(jj)) .and. &
+               & loc%lstart(b%ind(jj))+1.ne.loc%lstop(b%ind(jj)) .and. &
+               & loc%intpf(b%ind(jj)).ge.0.0D0) then
              loc%search=b%ind(jj)
           end if
        end do
@@ -3979,18 +4012,19 @@ CONTAINS
     do ii=1,b%nvar
        v => newFile%var(b%var(ii))%ptr
        set=.true.
-       b%val(ii)=model_getLocValue(v,loc,set,crc250,irc)
-       if (.not.set)b%val(ii)=nf_fill_double
+       if (.not.model_getLocValue(v,loc,b%val(ii),crc250,irc)) then
+          b%val(ii)=nf_fill_double
+       end if
     end do
     return
   end subroutine model_setBatchValue
   !
   ! get current batch values
   !
-  real function model_getLocValue(v,loc,set,crc250,irc)
+  logical function model_getLocValue(v,loc,val,crc250,irc)
     type(mod_variable), pointer :: v       ! variable
     type(mod_location), pointer :: loc       ! current batch
-    logical :: set
+    real :: val
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="model_getLocValue"
@@ -3999,7 +4033,7 @@ CONTAINS
     integer :: lenp,lenl,lenv
     integer, external :: length
     if (v%ndim.gt.0) then
-       ii=model_getLoc(v%ndim,v%ind,v%istart,v%istop,loc%ndim,loc%pos)
+       ii=model_getLoc(v,loc)
     else 
        ii=1
     end if
@@ -4007,7 +4041,7 @@ CONTAINS
        write(loc50,'(I10)') ii
        call chop0(loc50,50,10)
        lenl=length(loc50,50,10)
-       pos50=model_getPos50(v%ndim,v%ind,loc%ndim,loc%pos)
+       pos50=model_getPos50(v,loc)
        call chop0(pos50,50,10)
        lenp=length(pos50,50,10)
        if (ii.lt.1.or.ii.gt.v%len) then
@@ -4016,87 +4050,88 @@ CONTAINS
                & ")' loc=",ii,"(max=",v%len,")"
        end if
     end if
-    set=.true.
-    model_getLocValue=model_getValue(v,ii,set,crc250,irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from getValue.")
-       call model_errorappendi(crc250,irc)
-       call model_errorappend(crc250,"\n")
-       return
+    if (ii.eq.0) then
+       model_getLocValue=.false.
+    else
+       model_getLocValue=model_getValue(v,ii,val,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from getValue.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
-    if (.not.set) model_getLocValue=nf_fill_double
     if(mod_bdeb)then
        write(val50,*)model_getLocValue
        call chop0(val50,50,10)
        lenv=length(val50,50,10)
        write(*,*)myname,"Pos="//pos50(1:lenp)//&
-            & " ll="//loc50(1:lenl)//" val="//val50(1:lenv)," set=",set
+            & " ll="//loc50(1:lenl)//" val="//val50(1:lenv),&
+            & " set=",model_getLocValue
     end if
     return
   end function model_getLocValue
 
-  real function model_getValue(v,ii,set,crc250,irc)
+  logical function model_getValue(v,ii,val,crc250,irc)
     type(mod_variable), pointer :: v       ! variable
     integer :: ii
-    logical :: set
+    real :: val
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="model_getValue"
     if (ii.lt.1.or.ii.gt.v%len) then
-       set=.false.
+       model_getValue=.false.
     else
+       model_getValue=.true.
        select case (v%type)
        case (nf_char)
-          set=.false.
+          model_getValue=.false.
        case (nf_int1)
           if (v%f1(ii).eq.v%m1) then
-             set=.false.
+             model_getValue=.false.
           else
-             model_getValue=v%f1(ii)*v%scale
+             val=v%f1(ii)*v%scale
           end if
        case (nf_int2)
           if (v%f2(ii).eq.v%m2) then
-             set=.false.
+             model_getValue=.false.
           else
-             model_getValue=v%f2(ii)*v%scale
+             val=v%f2(ii)*v%scale
           end if
        case (nf_int)
           if (v%f4(ii).eq.v%m4) then
-             set=.false.
+             model_getValue=.false.
           else
-             model_getValue=v%f4(ii)*v%scale
+             val=v%f4(ii)*v%scale
           end if
        case (nf_real)
           if (v%fr(ii).eq.v%mr) then
-             set=.false.
+             model_getValue=.false.
           else
-             model_getValue=v%fr(ii)*v%scale
+             val=v%fr(ii)*v%scale
           end if
        case (nf_double)
           if (v%fd(ii).eq.v%md) then
-             set=.false.
+             model_getValue=.false.
           else
-             model_getValue=v%fd(ii)*v%scale
+             val=v%fd(ii)*v%scale
           end if
        case DEFAULT
-          set=.false.
+          model_getValue=.false.
        end select
     end if
     return
   end function model_getValue
   !
-  integer function model_getLoc(n,ind,istart,istop,m,ipos)
-    integer :: n          ! selected dimensions
-    integer :: istart(n)
-    integer :: istop(n)
-    integer :: ind(n)
-    integer :: m          ! all dimensions
-    integer :: ipos(m)    ! global position
+  integer function model_getLoc(v,loc)
+    type(mod_variable),pointer :: v
+    type(mod_location),pointer :: loc
     integer ii,ll
     model_getLoc=0
-    do ii=n,1,-1 ! do ii=1,n
-       model_getLoc=model_getLoc*istop(ii) + (ipos(ind(ii))-istart(ii))
+    do ii=v%ndim,1,-1 ! do ii=1,n
+       if (loc%pos(v%ind(ii)).lt.v%istart(ii).or.loc%pos(v%ind(ii)).gt.v%istop(ii)) return
+       model_getLoc=model_getLoc*v%istop(ii) + (loc%pos(v%ind(ii))-v%istart(ii))
     end do
     model_getLoc=model_getLoc+1
     return
@@ -4104,28 +4139,23 @@ CONTAINS
   !
   ! set position
   !
-  subroutine model_resetPos(n,ind,m,ipos,istart) 
+  subroutine model_resetPos(n,ind,loc)
     integer :: n          ! selected dimensions
     integer :: ind(n)
-    integer :: m          ! all dimensions
-    integer :: ipos(m)    ! global position
-    integer :: istart(m)
+    type(mod_location), pointer :: loc
     integer :: jj
     do jj=1,n
-       ipos(ind(jj))=istart(ind(jj))
+       loc%pos(ind(jj))=loc%lstart(ind(jj))
     end do
     return
   end subroutine model_resetPos
   !
   ! increment position
   !
-  integer function model_incrementPos(n,ind,m,ipos,istart,istop) 
+  integer function model_incrementPos(n,ind,loc)
     integer :: n          ! selected dimensions
     integer :: ind(n)     ! global dimension index
-    integer :: m          ! all dimensions
-    integer :: ipos(m)    ! global position
-    integer :: istart(m)
-    integer :: istop(m)
+    type(mod_location), pointer :: loc
     logical :: bdone
     integer :: jj
     model_incrementPos=0
@@ -4134,9 +4164,9 @@ CONTAINS
     do while (.not.bdone)
        jj=jj+1
        if (jj.le.n) then
-          ipos(ind(jj))=ipos(ind(jj))+1
-          if (ipos(ind(jj)).gt.istop(ind(jj))) then
-             ipos(ind(jj))=istart(ind(jj))
+          loc%pos(ind(jj))=loc%pos(ind(jj))+1
+          if (loc%pos(ind(jj)).gt.loc%lstop(ind(jj))) then
+             loc%pos(ind(jj))=loc%lstart(ind(jj))
           else
              model_incrementPos=jj
              bdone=.true.
@@ -4150,32 +4180,29 @@ CONTAINS
   !
   ! get accumulated weight
   !
-  real function model_getWeight(n,ind,m,ipos,istart,istop,wgt) 
+  real function model_getWeight(n,ind,loc)
     integer :: n          ! selected dimensions
     integer :: ind(n)
-    integer :: m          ! all dimensions
-    integer :: ipos(m)    ! global position
-    integer :: istart(m)
-    integer :: istop(m)
-    real :: wgt(m)
+    type(mod_location), pointer :: loc
     logical :: bdone
     integer :: ii,di
     real :: ww
     character*25 :: myname="model_getWeight"
+
     bdone=.false.
     model_getWeight=1.0
     do ii=1,n
-       di=istop(ind(ii))-istart(ind(ii))
+       di=loc%lstop(ind(ii))-loc%lstart(ind(ii))
        if (di.gt.0) then
-          if (ipos(ind(ii)).eq.istart(ind(ii))) then
-             ww=(1.0D0-wgt(ind(ii)))
+          if (loc%pos(ind(ii)).eq.loc%lstart(ind(ii))) then
+             ww=(1.0D0-loc%intpf(ind(ii)))
           else if (di.ge.1) then
-             ww=(wgt(ind(ii)))/real(di)
+             ww=(loc%intpf(ind(ii)))/real(di)
           else
              ww=1.0D0
           end if
           if(mod_bdeb)write(*,*)myname,'Weight:',ii,ww,&
-               & wgt(ind(ii)),ipos(ind(ii)),istart(ind(ii))
+               & loc%intpf(ind(ii)),loc%pos(ind(ii)),loc%lstart(ind(ii))
           model_getWeight=model_getWeight*ww
        end if
     end do
@@ -4210,7 +4237,7 @@ CONTAINS
     !
     ! make slice -- variable/dimension indexes
     !
-    if(mod_bdeb)write(*,*)myname,'Entering.',css%csli,newFile%nvar
+    if(mod_bdeb)write(*,*)myname,' Entering.',css%csli,newFile%nvar
     call model_initPlan(p,css,newFile,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
@@ -4422,7 +4449,7 @@ CONTAINS
     if (allocated(innerDim)) deallocate(innerDim)
     if (allocated(var2slc)) deallocate(var2slc)
     if (allocated(dim2slc)) deallocate(dim2slc)
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    if(mod_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine model_planBatch
   !
@@ -4459,7 +4486,7 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_clearPlan"
     type(mod_batch), pointer :: b,nb
-    if(mod_bdeb)write(*,*)myname,'Entering.',associated(p)
+    if(mod_bdeb)write(*,*)myname,' Entering.',associated(p)
     if (associated(p)) then
        if (allocated(p%innerDim)) deallocate(p%innerDim)
        if (allocated(p%trgvar)) deallocate(p%trgvar)
@@ -4482,7 +4509,7 @@ CONTAINS
           b => nb
        end do
     end if
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    if(mod_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine model_clearPlan
   !
@@ -4493,7 +4520,7 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_printPlan"
     type(mod_batch), pointer :: b,nb
-    if(mod_bdeb)write(*,*)myname,'Entering.',associated(p)
+    if(mod_bdeb)write(*,*)myname,' Entering.',associated(p)
     if (associated(p)) then
        b => p%first%next
        do while ( .not.associated(b,target=p%last))
@@ -4509,7 +4536,7 @@ CONTAINS
           b => nb
        end do
     end if
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    if(mod_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine model_printPlan
   !
@@ -4523,7 +4550,7 @@ CONTAINS
     integer :: lenb,lenn,lend,lenv
     integer, external :: length
     !
-    if(mod_bdeb)write(*,*)myname,'Entering.',irc,b%ndim,b%nvar
+    if(mod_bdeb)write(*,*)myname,' Entering.',irc,b%ndim,b%nvar
     buff250="Dims=("
     call chop0(buff250,250)
     lenb=length(buff250,250,lenb)
@@ -4554,7 +4581,7 @@ CONTAINS
     call chop0(buff250,250)
     lenb=length(buff250,250,lenb)
     write(*,'(A)') buff250(1:lenb)
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_printBatch
   !
@@ -4571,7 +4598,7 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_initPlan"
     !
-    if(mod_bdeb)write(*,*)myname,'Entering.',associated(p),&
+    if(mod_bdeb)write(*,*)myname,' Entering.',associated(p),&
                & allocated(p%slc2dim),associated(p%last),irc
     p%nvar=newFile%nvar
     p%ndim=newFile%ndim
@@ -4818,13 +4845,87 @@ CONTAINS
   ! call model_getSlice(css,nloc,ntrg,oval,oset)
   !
   !###############################################################################
+  ! GRID SECTION ROUTINES (WHEN VARIABLE GRID IS TOO LARGE FOR MEMORY)
+  !###############################################################################
+  !
+  logical function  model_locOffGrid(v,loc) ! is location outside grid section?
+    type(mod_variable), pointer :: v
+    type(mod_location), pointer :: loc
+    character*25 :: myname="model_locOffGrid"
+    integer :: ii
+    model_locOffGrid=.false.
+    do ii=1,v%ndim
+       if (loc%lstart(v%ind(ii)).lt.v%istart(ii).or.&
+            & loc%lstop(v%ind(ii)).gt.v%istop(ii)) then
+          if (mod_bdeb) write(*,*)myname,'Grid.',&
+               & loc%lstart(v%ind(ii)),loc%lstop(v%ind(ii)),&
+               & v%istart(ii),v%istop(ii)
+          model_locOffGrid=.true.
+       end if
+    end do
+    return
+  end function model_locOffGrid
+  !
+  ! set variable grid to the cell search-cell...
+  !
+  logical function model_setLocGrid(v,loc,p)
+    type(mod_location), pointer :: loc
+    type(mod_variable), pointer :: v
+    type(mod_plan), pointer :: p
+    character*25 :: myname="model_setLocGrid"
+    integer :: jj
+    if (loc%bok.and.loc%search.gt.0) then
+       do jj=1,v%ndim
+          if (p%innerDim(v%ind(jj))) then
+             v%istart(jj)=loc%lstart(v%ind(jj))
+             v%istop(jj)=loc%lstop(v%ind(jj))
+          end if
+       end do
+       model_setLocGrid=.true.
+    else
+       model_setLocGrid=.false.
+    end if
+    if (mod_bdeb)then
+       do jj=1,v%ndim
+          write(*,*)myname,'Dim:',jj,v%istart(jj),v%istop(jj),p%innerDim(v%ind(jj)),&
+               & nint(loc%rpos(v%ind(jj))),loc%lstart(v%ind(jj)),loc%lstop(v%ind(jj)),&
+               & loc%intpf(v%ind(jj))
+       end do
+       write(*,*)myname,'Dimlen:',model_varLen(v),v%ndim
+    end if
+    return
+  end function model_setLocGrid
+  !
+  integer*8 function model_varLen(v)
+    type(mod_variable), pointer :: v
+    integer :: jj
+    model_varLen=1
+    do jj=1,v%ndim
+       model_varLen=model_varLen*(v%istop(jj)-v%istart(jj)+1)
+    end do
+    return
+  end function model_varLen
+  !
+  integer*8 function model_fileLen(f,v)
+    type(mod_file), pointer :: f
+    type(mod_variable), pointer :: v
+    integer :: jj
+    model_fileLen=1
+    do jj=1,v%ndim
+       model_fileLen=model_fileLen*(f%istop(v%ind(jj))-f%istart(v%ind(jj))+1)
+    end do
+    return
+  end function model_fileLen
+
+  !
+  !###############################################################################
   ! OUTPUT-TABLE ROUTINES
   !###############################################################################
   !
-  subroutine model_makeoutput(css,nloc,loc,newFile,p,bok,crc250,irc)
+  subroutine model_makeoutput(css,nloc,lp,newFile,p,bok,crc250,irc)
     type(mod_session), pointer :: css ! current session
     integer :: nloc                   ! number of locations
-    type(mod_locPointer) :: loc(nloc) ! location pointer
+    type(mod_locPointer) :: lp(nloc) ! location pointer
     type(mod_file),pointer :: newFile
     type(mod_plan),pointer :: p
     logical :: bok ! was any data printed
@@ -4838,7 +4939,11 @@ CONTAINS
     character*80 :: trg80
     integer :: lenv, lend, lent, lens, itrg
     integer, external :: length
-    if(mod_bdeb)write(*,*)myname,'Entering.',nloc
+    type(mod_variable),pointer :: v
+    type(mod_location), pointer :: loc
+    integer*8, parameter :: maxlen=2147483647
+    integer*8 :: dimlen
+     if(mod_bdeb)write(*,*)myname,' Entering.',nloc
     !
     ! initialise location positions
     !
@@ -4846,7 +4951,7 @@ CONTAINS
        !
        ! initialise location position
        !
-       call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+       call model_initLocPos(css,newFile,p,b,lp(ll)%ptr,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Error return from initLocPos.")
@@ -4886,37 +4991,36 @@ CONTAINS
        !
        if(mod_bdeb)write(*,*)myname,'Location loop.',nloc,b%nvar
        do ll=1,nloc
-          if (loc(ll)%ptr%bok) then
-             if (loc(ll)%ptr%search .eq. 0) then
-                !
-                ! search for batch-dimension values
-                !
-                call model_search(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
-                if (irc.ne.0) then
-                   call model_errorappend(crc250,myname)
-                   call model_errorappend(crc250," Error return from search.")
-                   call model_errorappendi(crc250,irc)
-                   call model_errorappend(crc250,"\n")
-                   return
-                end if
+          loc => lp(ll)%ptr
+          if (loc%bok.and.loc%search .eq. 0) then
+             !
+             ! search for batch-dimension values
+             !
+             call model_search(css,newFile,p,b,loc,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from search.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
              end if
           end if
        end do
        b=>b%next
     end do
+    !
+    ! clear batch-variables from memory
+    !
     b=>p%first%next
     do while ( .not.associated(b,target=p%last))
-       !
-       ! clear batch-variables from memory
-       !
        if(mod_bdeb)write(*,*)myname,'Variable loop.',b%nvar
        do ii = 1, b%nvar 
           varid=b%var(ii)
           p%proc(varid)=.true.
-          if(mod_bdeb)write(*,*)myname,'Processed:',varid,p%proc(varid)
           var250=model_getVar250(newFile,varid)
           lenv=length(var250,250,10)
-          if(mod_bdeb)write(*,*)myname,'Variable:'//var250(1:lenv)
+          if(mod_bdeb)write(*,*)myname,"Processed "//var250(1:lenv),&
+               & varid,p%proc(varid)
           !
           itrg=css%sli_2trg(b%var2slc(ii))
           if (itrg.ne.0) then
@@ -4928,11 +5032,11 @@ CONTAINS
           end if
           !
           do ll=1,nloc
-             if (loc(ll)%ptr%bok) then
-                call model_getTarget50(loc(ll)%ptr%sli_val(b%var2slc(ii)),lens,sval50)
+             if (lp(ll)%ptr%bok) then
+                call model_getTarget50(lp(ll)%ptr%sli_val(b%var2slc(ii)),lens,sval50)
                 !
-                call model_setLoc(css,newFile,varid,lenv,var250,&
-                     & lent,trg80,lens,sval50,loc(ll)%ptr,p,bok,crc250,irc)
+                call model_setLocVal(css,newFile,varid,lenv,var250,&
+                     & lent,trg80,lens,sval50,lp(ll)%ptr,p,bok,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
                    call model_errorappend(crc250," Error return from setLoc.")
@@ -4964,64 +5068,128 @@ CONTAINS
     ! loop over remaining variables
     !
     VAR: do varid = 1, newFile%nvar
-       if(mod_bdeb)write(*,*)myname,'Processed:',varid,p%proc(varid)
-       if (p%proc(varid)) cycle VAR ! already processed
+       v => newFile%var(varid)%ptr
+       if (p%proc(varid)) then
+          if(mod_bdeb)write(*,*)myname,'Already processed:',v%var80(1:v%lenv)
+          cycle VAR ! already processed
+       end if
+       if (v%itrg.eq.0) then ! this is not a target variable
+          if(mod_bdeb)write(*,*)myname,' ** Not a target:',v%var80(1:v%lenv)
+          cycle VAR
+       end if
        var250=model_getvar250(newfile,varid)
        lenv=length(var250,250,10)
-       !
-       ! read variable into memory
-       !
-       call model_readVariable(css,newFile,varid,crc250,irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250," Error return from readVariable.")
-          call model_errorappendi(crc250,irc)
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-       !
-       ! should match newFile%var(varid)%ptr%itrg
-       itrg=model_getTargetIndex(css,newFile%var(varid)%ptr)
-       if (itrg.ne.0) then
-          trg80=css%trg80(itrg)
-          lent=css%trg_lent(itrg)
-       else
-          trg80=""
-          lent=0
-       end if
-       !
-       ! loop over locations
-       !
-       do ll=1,nloc
-          if (loc(ll)%ptr%bok) then
+       dimlen=model_varLen(v)
+       if(mod_bdeb)write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
+       if (dimlen.gt.maxlen) then ! read variable in segments
+          do ll=1,nloc
+             loc=>lp(ll)%ptr
+             if (model_setLocGrid(v,loc,p)) then
+                !
+                ! read variable into memory
+                !
+                call model_readVariable(css,newFile,varid,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from readVariable.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+                !
+                ! should match v%itrg
+                itrg=model_getTargetIndex(css,v)
+                if (itrg.ne.0) then
+                   trg80=css%trg80(itrg)
+                   lent=css%trg_lent(itrg)
+                else
+                   trg80=""
+                   lent=0
+                end if
+                !
+                ! make output for variables at location
+                !
+                lens=0
+                call model_setLocVal(css,newFile,varid,lenv,var250,&
+                     & lent,trg80,lens,sval50,lp(ll)%ptr,p,bok,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from setLoc.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+             end if
              !
-             ! make XML for variables at location
+             ! clear variable from memory
              !
-             lens=0
-             call model_setLoc(css,newFile,varid,lenv,var250,&
-                  & lent,trg80,lens,sval50,loc(ll)%ptr,p,bok,crc250,irc)
+             call model_clearVariable(v,crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Error return from setLoc.")
+                call model_errorappend(crc250," Error return from clearVariable.")
                 call model_errorappendi(crc250,irc)
                 call model_errorappend(crc250,"\n")
                 return
              end if
+          end do ! locations
+          !
+       else ! read variables once...
+          !
+          ! read variable into memory
+          !
+          call model_readVariable(css,newFile,varid,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from readVariable.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
           end if
           !
-          ! end loop over locations
+          ! should match newFile%var(varid)%ptr%itrg
+          itrg=model_getTargetIndex(css,newFile%var(varid)%ptr)
+          if (itrg.ne.0) then
+             trg80=css%trg80(itrg)
+             lent=css%trg_lent(itrg)
+          else
+             trg80=""
+             lent=0
+          end if
           !
-       end do
-       !
-       ! clear variable from memory
-       !
-       call model_clearVariable(newFile%var(varid)%ptr,crc250,irc)
-       if (irc.ne.0) then
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250," Error return from clearVariable.")
-          call model_errorappendi(crc250,irc)
-          call model_errorappend(crc250,"\n")
-          return
+          ! loop over locations
+          !
+          do ll=1,nloc
+             loc => lp(ll)%ptr
+             if (loc%bok) then
+                !
+                ! make output for variables at location
+                !
+                lens=0
+                call model_setLocVal(css,newFile,varid,lenv,var250,&
+                     & lent,trg80,lens,sval50,loc,p,bok,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from setLoc.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+             end if
+             !
+             ! end loop over locations
+             !
+          end do
+          !
+          ! clear variable from memory
+          !
+          call model_clearVariable(v,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from clearVariable.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
        end if
        !
        ! end loop over remaining variables
@@ -5034,7 +5202,7 @@ CONTAINS
     !    !
     !    ! clear location position
     !    !
-    !    call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+    !    call model_initLocPos(css,newFile,p,b,lp(ll)%ptr,crc250,irc)
     !    if (irc.ne.0) then
     !       call model_errorappend(crc250,myname)
     !       call model_errorappend(crc250," Error return from initLocPos.")
@@ -5043,11 +5211,11 @@ CONTAINS
     !       return
     !    end if
     ! end do
-    if(mod_bdeb)write(*,*)myname,'Done.'
+    if(mod_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine model_makeoutput
   !
-  subroutine model_setLoc(css,newFile,varid,lenv,&
+  subroutine model_setLocVal(css,newFile,varid,lenv,&
                & var250,lent,trg80,lens,sval50,loc,p,bok,crc250,irc)
     type(mod_session), pointer :: css   ! current session
     type(mod_file),pointer :: newFile   ! current file
@@ -5063,7 +5231,7 @@ CONTAINS
     logical :: bok                      ! was any data printed?
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_setLoc"
+    character*25 :: myname="model_setLocVal"
     real :: val
     logical :: bout, binn
     integer ::lenb,lenp,len1
@@ -5076,9 +5244,19 @@ CONTAINS
     integer, allocatable :: inn(:), out(:), ind(:)
     integer ::cnt,cval,ctot,jj
     logical :: first,set
-    if (.not.loc%bok .or. loc%search .ne. 0) return
+    !
+    ! check if location is ok
+    if (.not.loc%bok .or. loc%search .ne. 0) then
+       if (mod_bdeb) write(*,*)myname,'Ignoring loc:',loc%bok,loc%search
+       return
+    end if
     v => newFile%var(varid)%ptr
     !
+    ! Check if location is off grid section
+    if (model_locOffGrid(v,loc)) then
+       if (mod_bdeb) write(*,*)myname,'Loc off grid.',loc%locid
+       return
+    end if
     !
     ! get outer and inner loop indexes
     !
@@ -5087,7 +5265,7 @@ CONTAINS
     if(allocated(ind)) deallocate(ind)
     allocate(out(p%ndim),inn(p%ndim),ind(p%ndim))
     !
-    ! plan the inner (search dimensions) and outer loops
+    ! Split dimensions into inner and outer based on plan...
     !
     call model_planLoop(v,p,nout,out,ninn,inn,crc250,irc)
     if (irc.ne.0) then
@@ -5097,6 +5275,8 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    !
+    ! make target dimension index...
     !
     call model_planTrgInd(css,ninn,inn,ind,crc250,irc)
     if (irc.ne.0) then
@@ -5125,17 +5305,16 @@ CONTAINS
     twgt=0.0D0
     tsum=0.0D0
     cnt=0
-    call model_resetPos(nout,out,loc%ndim,loc%pos,loc%istart)
+    call model_resetPos(nout,out,loc)
     bout=.false.
     do while (.not. bout) ! OUTER DIMENSION LOOP
        pinn=0   ! previous  dimension index
-       call model_resetPos(ninn,inn,loc%ndim,loc%pos,loc%istart)
+       call model_resetPos(ninn,inn,loc)
        ctot=0 ! total number of grid points
        cval=0 ! number of valid grid points
        binn=.false.
        do while (.not. binn) ! INNER SEARCH LOOP
-          set=.true.
-          val = model_getLocValue(v,loc,set,crc250,irc)
+          set = model_getLocValue(v,loc,val,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250," Error return from getLocValue.")
@@ -5148,15 +5327,13 @@ CONTAINS
           ctot=ctot+1
           if(mod_bdeb)write(*,*)myname," Loc:",loc%iloc,"Calling Incrementing position."
           if (set) then ! val.ne.nf_fill_double
-             wgt=model_getWeight(ninn,inn,loc%ndim,&
-               & loc%pos,loc%istart,loc%istop,loc%intpf) ! current weight
+             wgt=model_getWeight(ninn,inn,loc) ! current weight
              tsum=tsum+wgt*val
              twgt=twgt+wgt
              cval=cval+1
           end if
           !if(mod_bdeb)write(*,*) myname,'Weight:',wgt,twgt,val
-          cinn=model_incrementPos(ninn,inn,loc%ndim,&
-               & loc%pos,loc%istart,loc%istop) ! current inn
+          cinn=model_incrementPos(ninn,inn,loc) ! current inn
           binn=((cnt.gt.250).or.(cinn.eq.0))
           if(mod_bdeb)write(*,'(X,A,3(A,I0),A,L1,2(A,F15.3))')myname," Loc:",loc%iloc,&
                & ' Count inner A newLoc=',cinn,' cnt=',cnt,' done=',binn,' wgt=',wgt,' vsum=',tsum
@@ -5172,17 +5349,17 @@ CONTAINS
                 call model_errorappend(crc250,"\n")
                 return
              end if
-             call model_setOutput(css,tval,v%itrg,loc%iloc,crc250,irc)
+             call model_setOutVal(css,tval,v%itrg,loc%iloc,crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Error return from setOutput.")
+                call model_errorappend(crc250," Error return from setOutVal.")
                 call model_errorappendi(crc250,irc)
                 call model_errorappend(crc250,"\n")
                 return
              end if
           end if
        end if
-       cout=model_incrementPos(nout,out,loc%ndim,loc%pos,loc%istart,loc%istop)
+       cout=model_incrementPos(nout,out,loc)
        bout=(cnt.gt.32.or.(cout.eq.0))
        if(mod_bdeb)write(*,*)myname," Loc:",loc%iloc,'Count outer:',cout,cnt,bout
     end do
@@ -5190,7 +5367,7 @@ CONTAINS
     if(allocated(inn)) deallocate(inn)
     if(allocated(ind)) deallocate(ind)
     return
-  end subroutine model_setLoc
+  end subroutine model_setLocVal
   !
   !###############################################################################
   ! OUTPUT-XML ROUTINES
@@ -5240,11 +5417,11 @@ CONTAINS
     return
   end subroutine model_slicecurrentfileXML
   !
-  subroutine model_locatefileXML(css,ounit,nloc,loc,f,bok,crc250,irc)
+  subroutine model_locatefileXML(css,ounit,nloc,lp,f,bok,crc250,irc)
     type(mod_session), pointer :: css   !  current session
     integer :: ounit
     integer :: nloc                 ! number of locations
-    type(mod_locPointer) :: loc(nloc)   !  location pointer
+    type(mod_locPointer) :: lp(nloc)   !  location pointer
     type(mod_file),pointer :: f ! stack item to process
     character*250 :: crc250
     integer :: irc
@@ -5331,7 +5508,7 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,' Making XML. locready=',css%locready
     if (bok) then
        !nloc=min(1,nloc) ! debug
-       call model_makeXML(css,ounit,nloc,loc,f,p,bok,crc250,irc)
+       call model_makeXML(css,ounit,nloc,lp,f,p,bok,crc250,irc)
        if (irc.ne.0) then
           bok=.false.
           call model_errorappend(crc250,myname)
@@ -5359,11 +5536,11 @@ CONTAINS
   !
   ! colocate fields together with locations and write xml to standard output
   !
-  subroutine model_makeXML(css,ounit,nloc,loc,newFile,p,bok,crc250,irc)
+  subroutine model_makeXML(css,ounit,nloc,lp,newFile,p,bok,crc250,irc)
     type(mod_session), pointer :: css ! current session
     integer :: ounit                  ! output unit
     integer :: nloc                   ! number of locations
-    type(mod_locPointer) :: loc(nloc) ! location pointer
+    type(mod_locPointer) :: lp(nloc) ! location pointer
     type(mod_file),pointer :: newFile
     type(mod_plan),pointer :: p
     logical :: bok ! was any data printed
@@ -5376,8 +5553,12 @@ CONTAINS
     character*50 :: sval50
     character*80 :: trg80
     integer :: lenv, lend, lens, lent, itrg
+    type(mod_location), pointer :: loc
+    type(mod_variable), pointer :: v
+    integer*8, parameter :: maxlen=2147483647
+    integer*8 :: dimlen
     integer, external :: length
-    if(mod_bdeb)write(*,*)myname,'Entering. locready=',css%locready,nloc
+    if(mod_bdeb)write(*,*)myname,' Entering. locready=',css%locready,nloc
     !
     ! initialise location positions
     !
@@ -5385,7 +5566,7 @@ CONTAINS
        !
        ! initialise location position
        !
-       call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+       call model_initLocPos(css,newFile,p,b,lp(ll)%ptr,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Error return from initLocPos.")
@@ -5438,28 +5619,27 @@ CONTAINS
           !
           if(mod_bdeb)write(*,*)myname,'I locready=',css%locready,nloc,b%nvar
           do ll=1,nloc
-             if (loc(ll)%ptr%bok) then
-                if (loc(ll)%ptr%search .eq. 0) then
-                   !
-                   ! search for batch-dimension values
-                   !
-                   call model_search(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+             loc => lp(ll)%ptr
+             if (loc%bok.and.loc%search .eq. 0) then
+                !
+                ! search for batch-dimension values
+                !
+                call model_search(css,newFile,p,b,loc,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from search.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
+                if (mod_bdeb) then
+                   call model_writeIgnoredLocXML(css,ounit,newFile,loc,p,crc250,irc)
                    if (irc.ne.0) then
                       call model_errorappend(crc250,myname)
-                      call model_errorappend(crc250," Error return from search.")
+                      call model_errorappend(crc250," Error return from writeSummaryXML.")
                       call model_errorappendi(crc250,irc)
                       call model_errorappend(crc250,"\n")
                       return
-                   end if
-                   if (mod_bdeb) then
-                      call model_writeIgnoredLocXML(css,ounit,newFile,loc(ll)%ptr,p,crc250,irc)
-                      if (irc.ne.0) then
-                         call model_errorappend(crc250,myname)
-                         call model_errorappend(crc250," Error return from writeSummaryXML.")
-                         call model_errorappendi(crc250,irc)
-                         call model_errorappend(crc250,"\n")
-                         return
-                      end if
                    end if
                 end if
              end if
@@ -5492,20 +5672,20 @@ CONTAINS
              !
              do ll=1,nloc
                 !
-                if (loc(ll)%ptr%bok) then
-                   call model_getTarget50(loc(ll)%ptr%sli_val(b%var2slc(ii)),lens,sval50)
+                if (lp(ll)%ptr%bok) then
+                   call model_getTarget50(lp(ll)%ptr%sli_val(b%var2slc(ii)),lens,sval50)
                    !
-                   call model_setLocXML(css,ounit,newFile,varid,lenv,var250,&
-                        & lent,trg80,lens,sval50,loc(ll)%ptr,p,bok,crc250,irc)
+                   call model_setLocValXML(css,ounit,newFile,varid,lenv,var250,&
+                        & lent,trg80,lens,sval50,lp(ll)%ptr,p,bok,crc250,irc)
                    if (irc.ne.0) then
                       call model_errorappend(crc250,myname)
-                      call model_errorappend(crc250," Error return from setLocXML.")
+                      call model_errorappend(crc250," Error return from setLocValXML.")
                       call model_errorappendi(crc250,irc)
                       call model_errorappend(crc250,"\n")
                       return
                    end if
                    !
-                   call model_setLocRpos(newfile,varid,loc(ll)%ptr)
+                   call model_setLocRpos(newfile,varid,lp(ll)%ptr)
                    !
                 end if
              end do
@@ -5532,66 +5712,122 @@ CONTAINS
        !
        VAR: do varid = 1, newFile%nvar
           if(mod_bdeb)write(*,*)myname,'Processed:',varid,p%proc(varid)
+          v => newFile%var(varid)%ptr
           if (p%proc(varid)) cycle VAR ! already processed
           var250=model_getvar250(newfile,varid)
           lenv=length(var250,250,10)
-          !
-          ! read variable into memory
-          !
-          call model_readVariable(css,newFile,varid,crc250,irc)
-          if (irc.ne.0) then
-             call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from readVariable.")
-             call model_errorappendi(crc250,irc)
-             call model_errorappend(crc250,"\n")
-             return
-          end if
-          !
-          itrg=model_getTargetIndex(css,newFile%var(varid)%ptr)
-          if (itrg.ne.0) then
-             trg80=css%trg80(itrg)
-             lent=css%trg_lent(itrg)
-          else
-             trg80=""
-             lent=0
-          end if
-          !
-          ! loop over locations
-          !
-          do ll=1,nloc
-             if (loc(ll)%ptr%bok) then
+          dimlen=model_varLen(v)
+          if (dimlen.gt.maxlen) then ! read variable in segments
+             do ll=1,nloc
+                loc=>lp(ll)%ptr
+                if (model_setLocGrid(v,loc,p)) then
+                   !
+                   ! read variable into memory
+                   !
+                   call model_readVariable(css,newFile,varid,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from readVariable.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                   !
+                   ! should match v%itrg
+                   itrg=model_getTargetIndex(css,v)
+                   if (itrg.ne.0) then
+                      trg80=css%trg80(itrg)
+                      lent=css%trg_lent(itrg)
+                   else
+                      trg80=""
+                      lent=0
+                   end if
+                   !
+                   ! make XML for variables at location
+                   !
+                   lens=0
+                   call model_setLocValXML(css,ounit,newFile,varid,lenv,var250,&
+                        & lent,trg80,lens,sval50,lp(ll)%ptr,p,bok,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from setLocValXML.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                end if
                 !
-                ! make XML for variables at location
+                ! clear variable from memory
                 !
-                lens=0
-                call model_setLocXML(css,ounit,newFile,varid,lenv,var250,&
-                     & lent,trg80,lens,sval50,loc(ll)%ptr,p,bok,crc250,irc)
+                call model_clearVariable(v,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
-                   call model_errorappend(crc250," Error return from setLocXML.")
+                   call model_errorappend(crc250," Error return from clearVariable.")
                    call model_errorappendi(crc250,irc)
                    call model_errorappend(crc250,"\n")
                    return
                 end if
+                !
+                ! end loop over locations
+                !
+             end do
+          else ! read variables once
+             !
+             ! read variable into memory
+             !
+             call model_readVariable(css,newFile,varid,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from readVariable.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
              end if
              !
-             ! end loop over locations
+             itrg=model_getTargetIndex(css,v)
+             if (itrg.ne.0) then
+                trg80=css%trg80(itrg)
+                lent=css%trg_lent(itrg)
+             else
+                trg80=""
+                lent=0
+             end if
              !
-          end do
-          !
-          ! clear variable from memory
-          !
-          call model_clearVariable(newFile%var(varid)%ptr,crc250,irc)
-          if (irc.ne.0) then
-             call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Error return from clearVariable.")
-             call model_errorappendi(crc250,irc)
-             call model_errorappend(crc250,"\n")
-             return
+             ! loop over locations
+             !
+             do ll=1,nloc
+                loc => lp(ll)%ptr
+                if (loc%bok) then
+                   !
+                   ! make XML for variables at location
+                   !
+                   lens=0
+                   call model_setLocValXML(css,ounit,newFile,varid,lenv,var250,&
+                        & lent,trg80,lens,sval50,loc,p,bok,crc250,irc)
+                   if (irc.ne.0) then
+                      call model_errorappend(crc250,myname)
+                      call model_errorappend(crc250," Error return from setLocValXML.")
+                      call model_errorappendi(crc250,irc)
+                      call model_errorappend(crc250,"\n")
+                      return
+                   end if
+                end if
+                !
+                ! end loop over locations
+                !
+             end do
+             !
+             ! clear variable from memory
+             !
+             call model_clearVariable(v,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from clearVariable.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end if
-          !
-          ! end loop over remaining variables
-          !
        end do VAR
        !
        ! stop xml output
@@ -5604,7 +5840,7 @@ CONTAINS
     ! if(mod_bdeb)write(*,*)myname,'L locready=',css%locready
     ! do ll=1,nloc
     !    ! clear location position
-    !    call model_initLocPos(css,newFile,p,b,loc(ll)%ptr,crc250,irc)
+    !    call model_initLocPos(css,newFile,p,b,lp(ll)%ptr,crc250,irc)
     !    if (irc.ne.0) then
     !       call model_errorappend(crc250,myname)
     !       call model_errorappend(crc250," Error return from clearLocPos.")
@@ -5613,7 +5849,7 @@ CONTAINS
     !       return
     !    end if
     ! end do
-    if(mod_bdeb)write(*,*)myname,'Done locready=',css%locready
+    if(mod_bdeb)write(*,*)myname,' Done locready=',css%locready
     return
   end subroutine model_makeXML
   !
@@ -5649,7 +5885,7 @@ CONTAINS
   !
   ! make XML for variables at location
   !
-  subroutine model_setLocXML(css,ounit,newFile,varid,lenv,&
+  subroutine model_setLocValXML(css,ounit,newFile,varid,lenv,&
                & var250,lent,trg80,lens,sval50,loc,p,bok,crc250,irc)
     type(mod_session), pointer :: css   ! current session
     integer :: ounit                  ! output unit
@@ -5666,7 +5902,7 @@ CONTAINS
     logical :: bok                      ! was any data printed?
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_setLocXML"
+    character*25 :: myname="model_setLocValXML"
     real :: val
     logical :: bout, binn
     integer ::lenb,lenp,lenl,len1
@@ -5749,18 +5985,17 @@ CONTAINS
     twgt=0.0D0
     tsum=0.0D0
     cnt=0
-    call model_resetPos(nout,out,loc%ndim,loc%pos,loc%istart)
+    call model_resetPos(nout,out,loc)
     bout=.false.
     do while (.not. bout)
        pinn=0   ! previous  dimension index
-       call model_resetPos(ninn,inn,loc%ndim,loc%pos,loc%istart)
+       call model_resetPos(ninn,inn,loc)
        ctot=0 ! total number of grid points
        cval=0 ! number of valid grid points
        binn=.false.
        do while (.not. binn)
           if(mod_bdeb)write(*,*)myname,"Calling getLocValue."
-          set=.true.
-          val = model_getLocValue(v,loc,set,crc250,irc)
+          set = model_getLocValue(v,loc,val,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250," Error return from getLocValue.")
@@ -5777,8 +6012,7 @@ CONTAINS
                      & var250(1:lenv)//pos250(1:lenp)//">"
                 first=.false.
              end if
-             wgt=model_getWeight(ninn,inn,loc%ndim,&
-               & loc%pos,loc%istart,loc%istop,loc%intpf) ! current weight
+             wgt=model_getWeight(ninn,inn,loc) ! current weight
              buff250=model_getGrid250(newFile,v,loc,val,wgt,crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
@@ -5797,7 +6031,7 @@ CONTAINS
              cval=cval+1
           end if
           !if(mod_bdeb)write(*,*) myname,'Weight:',twgt,wgt,val
-          cinn=model_incrementPos(ninn,inn,loc%ndim,loc%pos,loc%istart,loc%istop) ! current inn
+          cinn=model_incrementPos(ninn,inn,loc) ! current inn
           binn=(cnt.gt.250.or.(cinn.eq.0))
           if(mod_bdeb)write(*,'(X,A,A,I0,X,I0,X,L1,X,F5.2,X,F10.3)')myname,&
                & 'Count inner B: ',cinn,cnt,binn,wgt,tsum
@@ -5814,10 +6048,10 @@ CONTAINS
                 call model_errorappend(crc250,"\n")
                 return
              end if
-             call model_setOutput(css,tval,v%itrg,loc%iloc,crc250,irc)
+             call model_setOutVal(css,tval,v%itrg,loc%iloc,crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Error return from setOutput.")
+                call model_errorappend(crc250," Error return from setOutVal.")
                 call model_errorappendi(crc250,irc)
                 call model_errorappend(crc250,"\n")
                 return
@@ -5837,7 +6071,7 @@ CONTAINS
              write(ounit,'(5X,A)') buff250(1:lenb)
           end if
        end if
-       cout=model_incrementPos(nout,out,loc%ndim,loc%pos,loc%istart,loc%istop)
+       cout=model_incrementPos(nout,out,loc)
        bout=(cnt.gt.32.or.(cout.eq.0))
        if(mod_bdeb)write(*,*)myname,'Count outer:',cout,cnt,bout
     end do
@@ -5848,7 +6082,7 @@ CONTAINS
     if(allocated(inn)) deallocate(inn)
     if(allocated(ind)) deallocate(ind)
     return
-  end subroutine model_setLocXML
+  end subroutine model_setLocValXML
   !
   ! write location XML to file
   !
@@ -6053,14 +6287,14 @@ CONTAINS
     t80=trgname
     call chop0(t80,80)
     lent=length(t80,80,10)
-    if(mod_bdeb)write(*,*)myname,'Entering: ',t80(1:lent),irc
+    if(mod_bdeb)write(*,*)myname,' Entering: ',t80(1:lent),irc
     css%ind_trg=t80
     css%ind_lent=lent
     css%ind_var=varname
     call chop0(css%ind_var,80)
     css%ind_lenv=length(css%ind_var,80,10)
     css%ind_set=.true.
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    !if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_setindex
   !
@@ -6072,10 +6306,10 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_setIndex"
     integer,external :: length
-    if(mod_bdeb)write(*,*)myname,'Entering.',irc
+    if(mod_bdeb)write(*,*)myname,' Entering.',irc
     trg80=css%ind_trg
     var80=css%ind_var
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_getIndex
   !
@@ -6117,10 +6351,10 @@ CONTAINS
     real :: ind_minval,ind_maxval
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="setFileStackLimits"
+    character*22 :: myname="model_setFileStackLimits"
     integer :: irc2
     ! set limits
-    if (mod_bdeb)write(*,*)myname,'Entering:',ind_lval,ind_minval,ind_maxval
+    if (mod_bdeb)write(*,*)myname,' Entering:',ind_lval,ind_minval,ind_maxval
     call model_setIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
     ! make sure file stack is sorted
     if (mod_bdeb)write(*,*)myname,'Sorting stack.'
@@ -6146,7 +6380,7 @@ CONTAINS
        return
     end if
     css%currentFileSortIndex=0 ! reset index
-    if (mod_bdeb)write(*,*)myname,'Done.',irc
+    if (mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_setFileStackLimits
   !
@@ -6157,7 +6391,7 @@ CONTAINS
     logical :: ind_lval(2)
     real :: ind_minval,ind_maxval
     integer :: irc2
-    character*22 :: myname="setIndexLimitsRaw"
+    character*22 :: myname="model_setIndexLimitsRaw"
     css%ind_lval(1)=ind_lval(1)
     css%ind_lval(2)=ind_lval(2)
     css%ind_minval=ind_minval
@@ -6286,7 +6520,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
-    if(mod_bdeb)write(*,*)myname,'Opening file: ',newFile%fn250(1:newfile%lenf)
+    if(mod_bdeb)write(*,*)myname,'Opening modfile: ',newFile%fn250(1:newfile%lenf)
     ret = NF__OPEN(newFile%fn250(1:NEWFILE%LENF),nf_nowrite,&
          & chunksizehint,newFile%ncid)
     if (ret .ne. NF_NOERR) then
@@ -6729,24 +6963,37 @@ CONTAINS
        end if
        return
     end select
-    if(mod_bdeb)write(*,*)myname,'Done. ',v%type,v%len,allocated(v%fd)
+    if(mod_bdeb)write(*,*)myname,' Done. ',v%type,v%len,allocated(v%fd)
     return
   end subroutine model_readVariable
   !
   ! clear variable values from memory
   !
-  subroutine model_clearVariable(v,crc250,irc)
+  subroutine model_deleteVariable(v,crc250,irc)
     type(mod_variable),pointer :: v
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_clearVariable"
-    !if(mod_bdeb)write(*,*)myname,'Entering.',associated(v)
+    character*25 :: myname="model_deleteVariable"
+    !if(mod_bdeb)write(*,*)myname,' Entering.',associated(v)
     call model_deleteAttributes(v,crc250,irc)
     if (associated(v%att)) deallocate(v%att)
     if (allocated(v%ind)) deallocate(v%ind)
     if (allocated(v%istop)) deallocate(v%istop)
     if (allocated(v%istart)) deallocate(v%istart)
     if (allocated(v%istop)) deallocate(v%istop)
+    v%ndim=0
+    v%natt=0
+    call model_clearVariable(v,crc250,irc)
+    !if(mod_bdeb)write(*,*)myname,' Done.'
+    return
+  end subroutine model_deleteVariable
+  !
+  subroutine model_clearVariable(v,crc250,irc)
+    type(mod_variable),pointer :: v
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname="model_clearVariable"
+    !if(mod_bdeb)write(*,*)myname,' Entering.',associated(v)
     if (allocated(v%fc)) deallocate(v%fc)
     if (allocated(v%f1)) deallocate(v%f1)
     if (allocated(v%f2)) deallocate(v%f2)
@@ -6755,7 +7002,7 @@ CONTAINS
     if (allocated(v%fd)) deallocate(v%fd)
     v%ndim=0
     v%natt=0
-    !if(mod_bdeb)write(*,*)myname,'Done.'
+    !if(mod_bdeb)write(*,*)myname,' Done.'
     return
   end subroutine model_clearVariable
   !
@@ -6767,7 +7014,7 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_deleteAttributes"
     integer :: attid
-    !if(mod_bdeb)write(*,*)myname,'Entering.',associated(v)
+    !if(mod_bdeb)write(*,*)myname,' Entering.',associated(v)
     !if(mod_bdeb)write(*,*)myname,'Have.',v%natt,associated(v%att)
     do attid=1,v%natt
        if(mod_bdeb)write(*,*)myname,'Loop.',attid,v%natt,associated(v%att)
@@ -6783,7 +7030,7 @@ CONTAINS
           deallocate(v%att(attid)%ptr)
        end if
     end do
-    !if(mod_bdeb)write(*,*)myname,'Done.',irc
+    !if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_deleteAttributes
   !
@@ -6792,14 +7039,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="model_clearAttribute"
-    if(mod_bdeb)write(*,*)myname,'Entering.',associated(att)
+    if(mod_bdeb)write(*,*)myname,' Entering.',associated(att)
     if (allocated(att%ac)) deallocate(att%ac)
     if (allocated(att%a1)) deallocate(att%a1)
     if (allocated(att%a2)) deallocate(att%a2)
     if (allocated(att%a4)) deallocate(att%a4)
     if (allocated(att%ar)) deallocate(att%ar)
     if (allocated(att%ad)) deallocate(att%ad)
-    if(mod_bdeb)write(*,*)myname,'Done.',irc
+    if(mod_bdeb)write(*,*)myname,' Done.',irc
     return
   end subroutine model_clearAttribute
   !
@@ -6814,8 +7061,7 @@ CONTAINS
     character*25 :: myname="model_readSortVariable"
     integer :: iisort,jj,ii
     integer, external :: length
-    logical :: set
-    real :: vv
+    real :: val
     type(mod_variable),pointer :: v
     !
     ! load ind_var into memory
@@ -6858,10 +7104,10 @@ CONTAINS
           v=>newFile%var(iisort)%ptr
           newFile%nsort=0
           do ii=1,v%len
-             set=.true.
-             vv=model_getValue(v,jj,set,crc250,irc)
-             if (set) then
+             if (model_getValue(v,ii,val,crc250,irc)) then
                 newFile%nsort=newFile%nsort+1
+             else if (mod_bdeb) then
+                write(*,*)myname,'Invalid sort variable at:',ii,v%type,nf_double
              end if
           end do
           if (newFile%nsort.gt.0.and.newFile%nsort .lt.1000) then
@@ -6878,10 +7124,9 @@ CONTAINS
                 return
              end if
              do ii=1,v%len
-                set=.true.
-                newFile%sort(jj)=model_getValue(v,jj,set,crc250,irc)
-                if (set) then
+                if (model_getValue(v,ii,val,crc250,irc)) then
                    jj=jj+1
+                   newFile%sort(jj)=val
                    if (jj.eq.1) then
                       newFile%ind_start=newFile%sort(jj)
                       newFile%ind_stop=newFile%sort(jj)
@@ -6890,14 +7135,7 @@ CONTAINS
                       newFile%ind_stop=max(newFile%ind_stop,newFile%sort(jj))
                    end if
                    newFile%indsort(jj)=jj
-                   newFile%desc250(jj)=model_getdesc250(jj, &
-                        &     newFile%ndim,                 &
-                        &     newFile%dim80,               &
-                        &     newFile%var(iisort)%ptr%ndim,     &
-                        &     newFile%var(iisort)%ptr%ind,      &
-                        &     newFile%var(iisort)%ptr%istart,    &
-                        &     newFile%var(iisort)%ptr%istop,  &
-                        &     crc250,irc)
+                   newFile%desc250(jj)=model_getdesc250(jj,newFile,v,crc250,irc)
                 end if
              end do
              if(mod_bdeb)write(*,*)myname,' Sorting.'
@@ -6912,8 +7150,7 @@ CONTAINS
           else
              irc=453
              call model_errorappend(crc250,myname)
-             call model_errorappend(crc250," Invalid "//&
-               & trim(newFile%var(iisort)%ptr%var80)//" dimensions.")
+             call model_errorappend(crc250," Invalid "//v%var80(1:v%lenv)//" dimensions.")
              call model_errorappendi(crc250,newFile%nsort)
              call model_errorappend(crc250,"\n")
              call model_errorappendi(crc250,irc)
@@ -7029,48 +7266,5 @@ CONTAINS
        end if
     end do
   end subroutine findDelimiter
-
-  character*250 function model_pretty(var80,ndims,dim80,istart,istop)
-    character*80 :: var80
-    integer :: ndims
-    character*80 :: dim80(ndims)
-    integer :: istart(ndims)
-    integer :: istop(ndims)
-    integer, external :: length
-    integer :: lenv, lend, lenb, lenx
-    character*250 :: xuff250, yuff250,buff250
-    integer :: ii
-    buff250=""
-    lenb=0
-    do ii=1,ndims
-       lend=length(dim80(ii),80,10)
-       if(mod_bdeb)write(*,*) "model_pretty  dim80:",&
-               & dim80(ii)(1:lend),istart(ii),istop(ii)
-       if (istop(ii).gt.1) then
-          write(yuff250,*)istop(ii);call chop0(yuff250,250);lenx=length(yuff250,250,2)
-          write(xuff250,'(I8,"+",A)')istart(ii),yuff250(1:lenx);&
-               & call chop0(xuff250,250);lenx=length(xuff250,250,2)
-       else
-          write(xuff250,'(I8)')istart(ii);call chop0(xuff250,250);&
-               & lenx=length(xuff250,250,2)
-       end if
-       xuff250=dim80(ii)(1:lend)//"["//xuff250(1:lenx)//"]";&
-               & call chop0(xuff250,250);lenx=length(xuff250,250,2)
-       if(mod_bdeb)write(*,*)'Model_Pretty here:',xuff250(1:lenx)
-       if (lenb.eq.0) then
-          buff250=xuff250(1:lenx)
-       else
-          buff250=buff250(1:lenb)//","//xuff250(1:lenx)
-       end if
-       call chop0(buff250,250)
-       lenb=length(buff250,250,10)
-    end do
-    lenb=length(buff250,250,10)
-    if(mod_bdeb)write(*,*)'Model_Pretty there:',buff250(1:lenb)
-    lenv=length(var80,80,10)
-    xuff250=var80(1:lenv)//"("//buff250(1:lenb)//")";
-    call chop0(xuff250,250);
-    model_pretty=xuff250
-  end function model_pretty
   !
 end module model

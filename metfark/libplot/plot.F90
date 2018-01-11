@@ -176,7 +176,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(plot_session),pointer :: pss  !  new session
-    character*25 :: myname = "plot_openSession"
+    character*25 :: myname="plot_openSession"
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
        if (irc.ne.0) then
@@ -243,7 +243,7 @@ CONTAINS
     integer :: sid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "plot_getSession"
+    character*25 :: myname="plot_getSession"
     if (.not.associated(firstSession)) then
        irc=911
        call plot_errorappend(crc250,myname)
@@ -255,7 +255,7 @@ CONTAINS
     pss => firstSession%next
     do while ( .not.associated(pss,target=lastSession))
        if (pss%sid .eq. sid) then
-          if (plot_bdeb) write(*,*)myname,'Exiting with sid:',sid,irc
+          !if (plot_bdeb) write(*,*)myname,'Exiting with sid:',sid,irc
           return
        end if
        pss=>pss%next
@@ -274,7 +274,7 @@ CONTAINS
     type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "plot_closeSession"
+    character*25 :: myname="plot_closeSession"
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(pss)  .and. .not.associated(pss,target=lastSession)) then
        call plot_removeSession(pss,crc250,irc)
@@ -300,7 +300,7 @@ CONTAINS
     type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "plot_removeSession"
+    character*25 :: myname="plot_removeSession"
     pss%prev%next => pss%next
     pss%next%prev => pss%prev
     call plot_clearAttrStack(pss,crc250,irc)
@@ -328,7 +328,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer,external :: length
-    character*22 :: myname = "settype"
+    character*22 :: myname="plot_settype"
     pss%type250=type250
     pss%lenp=length(type250,250,10)
     return
@@ -340,7 +340,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer :: irc2
-    character*22 :: myname = "clearattrstack"
+    character*22 :: myname="plot_clearattrstack"
     type(plot_attribute), pointer :: cat,nat !  current attribute
     cat => pss%firstAttribute%next
     do while (.not.associated(cat,target=pss%lastAttribute))
@@ -376,7 +376,7 @@ CONTAINS
     character*250 :: val250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "pushattr"
+    character*22 :: myname="plot_pushattr"
     integer :: lenn,lenv
     integer, external :: length
     type(plot_attribute), pointer :: cat !  current attribute
@@ -444,7 +444,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: ftunit,length
-    character*22 :: myname = "openFile"
+    character*22 :: myname="plot_openFile"
     call chop0(tab250,250)
     lent=length(tab250,250,10)
     ounit=ftunit(irc)
@@ -475,7 +475,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: ftunit,length
-    character*22 :: myname = "openFileApp"
+    character*22 :: myname="plot_openFileApp"
     call chop0(tab250,250)
     lent=length(tab250,250,10)
     ounit=ftunit(irc)
@@ -505,7 +505,7 @@ CONTAINS
     integer :: lent
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "closeFile"
+    character*22 :: myname="plot_closeFile"
     close(unit=ounit,iostat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -532,7 +532,7 @@ CONTAINS
     integer :: lent
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="makecomments"
+    character*22 :: myname="plot_makecomments"
     integer, external :: length
     integer :: lenc,lene,lenn,lenl,leng
     type(plot_attribute), pointer :: attr => null()
@@ -584,6 +584,7 @@ CONTAINS
        lenn=length(name80,80,1)
        call chop0(leg250,250)
        lenl=length(leg250,250,1)
+       if (plot_bdeb) write(*,*)myname,"Inside loopSet '"//name80(1:lenn)//"'"
        write(ounit,'("#",X,A,":",A)',iostat=irc)name80(1:lenn),leg250(1:lenl)
     end do
     if (irc.ne.0) then
@@ -643,7 +644,7 @@ CONTAINS
     type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "clearsetstack"
+    character*22 :: myname="plot_clearsetstack"
     call date_and_time(VALUES=pss%values)
     return
   end subroutine plot_setTime
@@ -653,7 +654,7 @@ CONTAINS
     type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "strepfiles"
+    character*22 :: myname="plot_strepfiles"
     integer,parameter  :: nn = 6
     character*100 :: src100(nn) = (/'YY','MM','DD','HH','MI','SS'/)
     character*100 :: rep100(nn)
@@ -691,7 +692,7 @@ CONTAINS
     character*250 :: gra250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "strepfiles"
+    character*22 :: myname="plot_strepfiles"
     integer,parameter  :: nn = 6
     call plot_setTablefile(pss,tab250,crc250,irc)
     if (irc.ne.0) then
@@ -759,7 +760,7 @@ CONTAINS
     type(plot_session), pointer :: pss !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "clearsetstack"
+    character*22 :: myname="plot_clearsetstack"
     type(plot_set), pointer :: cset,nset !  current set
     cset => pss%firstSet%next
     do while (.not.associated(cset,target=pss%lastSet))
@@ -785,7 +786,7 @@ CONTAINS
     type(plot_set), pointer ::  set !  current set
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "allocateset"
+    character*22 :: myname="plot_allocateset"
     allocate(set,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -842,7 +843,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(plot_column), pointer :: col, ncol
-    character*22 :: myname ="clearcolumn"
+    character*22 :: myname="plot_clearcolumn"
     if(plot_bdeb)write(*,*)myname, 'Entering.',irc,&
          & associated(pss%firstColumn),associated(pss%lastColumn)
     col=>pss%firstColumn%next
@@ -857,7 +858,7 @@ CONTAINS
     pss%ncol=0
     !pss%firstColumn%next=>pss%lastColumn
     !pss%lastColumn%prev=>pss%firstColumn
-    if(plot_bdeb)write(*,*)myname, 'Done.',irc
+    !if(plot_bdeb)write(*,*)myname, 'Done.',irc
     return
   end subroutine plot_clearcolumn
   !
@@ -867,7 +868,7 @@ CONTAINS
     character*250 :: exp250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushcolumn"
+    character*22 :: myname="plot_pushcolumn"
     type(plot_column), pointer :: col
     integer, external :: length
     allocate(col,stat=irc)
@@ -897,7 +898,7 @@ CONTAINS
     integer :: irc
     type(plot_column), pointer :: col
     integer :: ii
-    character*22 :: myname ="makeColumn"
+    character*22 :: myname="plot_makeColumn"
     if (allocated(set%col80)) deallocate(set%col80)
     if (allocated(set%col_lenn)) deallocate(set%col_lenn)
     if (allocated(set%col_exp250)) deallocate(set%col_exp250)
@@ -941,7 +942,7 @@ CONTAINS
     character*250 leg250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pushset"
+    character*22 :: myname="plot_pushset"
     type(plot_set), pointer :: set !  current set
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
     call plot_allocateSet(set,crc250,irc)
@@ -980,7 +981,7 @@ CONTAINS
     set%next%prev => set
     pss%nset=pss%nset+1
     nullify(set)
-    if(plot_bdeb)write(*,*)myname,'Exiting.',irc
+    !if(plot_bdeb)write(*,*)myname,'Exiting.',irc
     return
   end subroutine plot_pushset
   !
@@ -998,7 +999,7 @@ CONTAINS
     character*250 :: leg250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="pullset"
+    character*22 :: myname="plot_pullset"
     type(plot_set), pointer :: set !  current set
     plot_pullset=.false. ! only true if all is ok
     set => pss%firstSet%next
@@ -1046,7 +1047,7 @@ CONTAINS
     character*250 :: leg250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="popset"
+    character*22 :: myname="plot_popset"
     type(plot_set), pointer :: set !  current set
     plot_popset=.false. ! only true if all is ok and irc==0
     set => pss%lastSet%prev
@@ -1097,7 +1098,9 @@ CONTAINS
     character*250 :: leg250
     character*250 :: crc250
     integer :: irc,ii
-    character*22 :: myname ="loopSet"
+    integer :: lenn
+    integer, external :: length
+    character*22 :: myname="plot_loopSet"
     plot_loopset=.false. ! only true if all is ok
     if (.not.associated(pss%currentSet)) then
        pss%currentSet =>  pss%firstSet%next 
@@ -1110,6 +1113,10 @@ CONTAINS
     else
        name80=pss%currentSet%name80
        leg250=pss%currentSet%leg250
+       if(plot_bdeb)then
+          lenn=length(pss%currentSet%name80,80,10)
+          write(*,*)myname,"Set '"//pss%currentSet%name80(1:lenn)//"'"
+       end if
        call plot_obsExport(pss%currentSet,oss,crc250,irc) ! set obs data
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
@@ -1167,7 +1174,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "clearobstrgstack"
+    character*22 :: myname="plot_clearobstrgstack"
     type(plot_obstrg), pointer :: ctrg,ntrg !  current target
     ctrg => set%firstObstrg%next
     do while (.not.associated(ctrg,target=set%lastObstrg))
@@ -1185,7 +1192,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "clearmodtrgstack"
+    character*22 :: myname="plot_clearmodtrgstack"
     type(plot_modtrg), pointer :: ctrg,ntrg !  current target
     ctrg => set%firstModtrg%next
     do while (.not.associated(ctrg,target=set%lastModtrg))
@@ -1203,7 +1210,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "clearmatchstack"
+    character*22 :: myname="plot_clearmatchstack"
     type(plot_match), pointer :: cmatch,nmatch !  current target
     cmatch => set%firstMatch%next
     do while (.not.associated(cmatch,target=set%lastMatch))
@@ -1224,7 +1231,7 @@ CONTAINS
     integer :: irc
     type(plot_default), pointer :: cDef !  the current default target
     type(plot_default), pointer :: nDef !  the next default target
-    character*25 :: myname = "plot_cleardefault"
+    character*25 :: myname="plot_cleardefault"
     if (plot_bdeb) write(*,*)myname,'Entering.',irc
     if (plot_bdeb) write(*,*)myname,'Association.',associated(set), associated(set%firstDef)
     cDef => set%firstDef%next
@@ -1287,7 +1294,7 @@ CONTAINS
     character*80 :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "pushobstrg"
+    character*22 :: myname="plot_pushobstrg"
     type(plot_obstrg), pointer :: trg !  current target
     allocate(trg,stat=irc)
     if (irc.ne.0) then
@@ -1317,7 +1324,7 @@ CONTAINS
     character*80 :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "pushmodtrg"
+    character*22 :: myname="plot_pushmodtrg"
     type(plot_modtrg), pointer :: trg !  current target
     allocate(trg,stat=irc)
     if (irc.ne.0) then
@@ -1345,7 +1352,7 @@ CONTAINS
     character*80 :: u80      ! upper
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "pushmatch"
+    character*22 :: myname="plot_pushmatch"
     type(plot_match), pointer :: trg !  current target
     allocate(trg,stat=irc)
     if (irc.ne.0) then
@@ -1374,7 +1381,7 @@ CONTAINS
     integer :: irc
     integer :: ii, irc2, lenv, lenn
     integer, external :: length
-    character*25 :: myname = "plot_addDefault"
+    character*25 :: myname="plot_addDefault"
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
     call plot_makeTargetList(set,crc250,irc)
     if (irc.ne.0) then
@@ -1436,7 +1443,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "plot_maketargetlist"
+    character*25 :: myname="plot_maketargetlist"
     type(plot_modtrg), pointer :: cTrg
     integer ii,lens,irc2
     integer, external :: length
@@ -1479,7 +1486,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(plot_default), pointer :: newDefault
-    character*25 :: myname = "plot_pushDefault"
+    character*25 :: myname="plot_pushDefault"
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
     if (.not.associated(set%firstDef)) then
        allocate(set%firstDef,set%lastDef, stat=irc)
@@ -1517,7 +1524,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="popobstrg"
+    character*22 :: myname="plot_popobstrg"
     type(plot_obstrg), pointer :: trg,ntrg !  current trg
     plot_popobstrg=.false. ! only true if all is ok
     trg => set%lastObstrg%prev
@@ -1545,7 +1552,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="popmodtrg"
+    character*22 :: myname="plot_popmodtrg"
     type(plot_modtrg), pointer :: trg,ntrg !  current trg
     plot_popmodtrg=.false. ! only true if all is ok
     trg => set%lastModtrg%prev
@@ -1571,7 +1578,7 @@ CONTAINS
     character*80  :: u80      ! upper
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="popmatch"
+    character*22 :: myname="plot_popmatch"
     type(plot_match), pointer :: trg,ntrg !  current trg
     plot_popmatch=.false. ! only true if all is ok
     trg => set%lastMatch%prev
@@ -1599,7 +1606,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopobstrg"
+    character*22 :: myname="plot_loopobstrg"
     plot_loopobstrg=.false. ! only true if all is ok
     if (.not.associated(set%cobstrg)) then
        set%cobstrg =>  set%firstObstrg%next 
@@ -1630,7 +1637,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopmodtrg"
+    character*22 :: myname="plot_loopmodtrg"
     plot_loopmodtrg=.false. ! only true if all is ok
     if (.not.associated(set%cmodtrg)) then
        set%cmodtrg =>  set%firstModtrg%next 
@@ -1655,7 +1662,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopdefault"
+    character*22 :: myname="plot_loopdefault"
     plot_loopdefault=.false. ! only true if all is ok
     if (.not.associated(set%cDef)) then
        set%cDef =>  set%firstDef%next 
@@ -1679,7 +1686,7 @@ CONTAINS
     character*80  :: var80      ! variable
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopdefitem"
+    character*22 :: myname="plot_loopdefitem"
     plot_loopdefaultitem=.false. ! only true if all is ok
     if (.not.associated(set%cdef)) then
        plot_loopdefaultitem=.false.
@@ -1710,7 +1717,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopmatch"
+    character*22 :: myname="plot_loopmatch"
     plot_loopmatch=.false. ! only true if all is ok
     if (.not.associated(set%cmatch)) then
        set%cmatch =>  set%firstMatch%next 
@@ -1763,7 +1770,7 @@ CONTAINS
     integer :: irc
     character*80 :: trg80,descr80,min80,max80
     character*250 :: pos250,info250
-    character*22 :: myname ="obsImport"
+    character*22 :: myname="plot_obsImport"
     call observation_getTablePath(oss,set%tablepath,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1823,7 +1830,9 @@ CONTAINS
     integer :: irc
     character*80 :: trg80,descr80,min80,max80
     character*250 :: pos250,info250
-    character*22 :: myname ="obsExport"
+    integer :: lenn
+    integer, external :: length
+    character*22 :: myname="plot_obsExport"
     call observation_setTablePath(oss,set%tablepath,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1856,6 +1865,10 @@ CONTAINS
        return
     end if
     do while (plot_loopObstrg(set,trg80,pos250,descr80,info250,min80,max80,crc250,irc))
+       if (plot_bdeb) then
+          lenn=length(trg80,80,10)
+          write(*,*)myname,"Inside loopObsTrg '"//trg80(1:lenn)//"'"
+       end if
        call observation_pushtarget(oss,trg80,pos250,descr80,info250,min80,max80,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
@@ -1906,7 +1919,7 @@ CONTAINS
     character*80  :: v80       ! variable
     character*80  :: l80      ! min value
     character*80  :: u80      ! max value
-    character*22 :: myname ="modImport"
+    character*22 :: myname="plot_modImport"
     if (plot_bdeb) write(*,*)myname,'Entering.',irc
     call model_getIndex(mss,set%ind_trg80,set%ind_mod80,crc250,irc)
     if (irc.ne.0) then
@@ -1952,7 +1965,9 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*80 :: n80,v80,l80,u80
-    character*22 :: myname ="modExport"
+    integer :: lenn
+    integer, external :: length
+    character*22 :: myname="plot_modExport"
     call model_setIndex(mss,set%ind_trg80,set%ind_mod80,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1973,6 +1988,10 @@ CONTAINS
        return
     end if
     do while (plot_loopModTrg(set,n80,v80,l80,u80,crc250,irc))
+       if (plot_bdeb) then
+          lenn=length(n80,80,10)
+          write(*,*)myname,"Inside loopModTrg '"//n80(1:lenn)//"'"
+       end if
        call model_pushTarget(mss,n80,v80,l80,u80,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
@@ -2006,8 +2025,8 @@ CONTAINS
     character*80 :: n80,v80,l80,u80
     character*250 :: e250
     integer, external :: length
-    integer :: leno
-    character*22 :: myname ="colImport"
+    integer :: leno,lenn
+    character*22 :: myname="plot_colImport"
     call colocation_getmodcache(css,set%mod250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2032,6 +2051,10 @@ CONTAINS
     end if
     do while (colocation_loopDefault(css,crc250,irc))
        do while (colocation_loopDefaultItem(css,n80,v80,crc250,irc))
+          if (plot_bdeb) then
+             lenn=length(n80,80,10)
+             write(*,*)myname,"Inside loopDeafult '"//n80(1:lenn)//"'"
+          end if
           call plot_addDefault(set,n80,v80,crc250,irc)
           if (irc.ne.0) then
              call plot_errorappend(crc250,myname)
@@ -2065,7 +2088,10 @@ CONTAINS
     end if
     if (plot_bdeb) write(*,*)myname,'Starting match loop.',irc
     do while (colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc))
-       if (plot_bdeb) write(*,*)myname,'Inside loop.',irc
+       if (plot_bdeb) then
+          lenn=length(n80,80,10)
+          write(*,*)myname,"Inside loopMatch '"//n80(1:lenn)//"'"
+       end if
        call plot_pushMatch(set,n80,e250,l80,u80,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
@@ -2092,7 +2118,9 @@ CONTAINS
     integer :: irc
     character*80 :: n80,v80,l80,u80
     character*250 :: e250
-    character*22 :: myname ="colExport"
+    integer :: lenn
+    integer, external :: length
+    character*22 :: myname="plot_colExport"
     call colocation_clearDefaultStack(css,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2101,6 +2129,10 @@ CONTAINS
     end if
     do while (plot_loopDefault(set,crc250,irc))
        do while (plot_loopDefaultItem(set,n80,v80,crc250,irc))
+          if (plot_bdeb) then
+             lenn=length(n80,80,10)
+             write(*,*)myname,"Inside loopDeafult '"//n80(1:lenn)//"'"
+          end if
           call colocation_addDefault(css,n80,v80,crc250,irc)
           if (irc.ne.0) then
              call plot_errorappend(crc250,myname)
@@ -2134,6 +2166,10 @@ CONTAINS
        return
     end if
     do while (plot_loopMatch(set,n80,e250,l80,u80,crc250,irc))
+       if (plot_bdeb) then
+          lenn=length(n80,80,10)
+          write(*,*)myname,"Inside loopMatch '"//n80(1:lenn)//"'"
+       end if
        call colocation_pushMatch(css,n80,e250,l80,u80,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
@@ -2173,7 +2209,7 @@ CONTAINS
     character*250 :: fill250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="maketable"
+    character*22 :: myname="plot_maketable"
     integer :: ounit
     character*250 :: leg250
     character*80 :: name80
@@ -2214,6 +2250,10 @@ CONTAINS
        return
     end if
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
+       if (plot_bdeb) then
+          lenn=length(name80,80,10)
+          write(*,*)myname,"Inside loopSet '"//name80(1:lenn)//"'"
+       end if
        ! append table file
        call plot_openFileApp(pss,ounit,tab250,lent,crc250,irc)
        if (irc.ne.0) then

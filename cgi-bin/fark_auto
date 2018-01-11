@@ -2,5 +2,9 @@
 #
 # Note: if "test" is defined, it is always true (regardless of value)!
 #
-./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc_syno30d.cfg'
+#./fark_auto.pl '?root=auto.cfg&password=fark&type=model&file=meps%2Fmember0.cfg'
+#./fark_auto.pl '?root=auto.cfg&password=fark&type=obs&file=starc%2Fsyno20180102.cfg'
+
+
+./fark_auto.pl '?root=auto.cfg&password=fark&type=plot&file=starc_syno20180102.cfg'
 

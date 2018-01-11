@@ -109,7 +109,7 @@ CONTAINS
     type(col_session),pointer :: css  !  new session
     character*250 :: crc250
     integer :: irc
-    character*26 :: myname = "colocation_openSession"
+    character*26 :: myname="colocation_openSession"
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
        if (irc.ne.0) then
@@ -169,7 +169,7 @@ CONTAINS
     integer :: sid
     character*250 :: crc250
     integer :: irc
-    character*26 :: myname = "colocation_getSession"
+    character*26 :: myname="colocation_getSession"
     if (.not.associated(firstSession)) then
        irc=911
        call colocation_errorappend(crc250,myname)
@@ -181,6 +181,7 @@ CONTAINS
     css => firstSession%next
     do while ( .not.associated(css,target=lastSession))
        if (css%sid .eq. sid) then
+          !if (col_bdeb) write(*,*)myname,'Exiting with sid:',sid,irc
           return
        end if
        css=>css%next
@@ -199,7 +200,7 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_closeSession"
+    character*25 :: myname="colocation_closeSession"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        call colocation_removeSession(css,crc250,irc)
@@ -226,7 +227,7 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_removeSession"
+    character*25 :: myname="colocation_removeSession"
     type(col_default), pointer :: cdef, ndef
     type(col_match), pointer :: currmatch, nextmatch
     integer :: ii
@@ -293,7 +294,7 @@ CONTAINS
     type(mod_session), pointer :: mss !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_importTargets"
+    character*25 :: myname="colocation_importTargets"
     integer :: ii
     if(associated(css%trg80)) deallocate(css%trg80)
     if(associated(css%trg_lent)) deallocate(css%trg_lent)
@@ -327,7 +328,7 @@ CONTAINS
     integer :: irc
     type(col_default), pointer :: currentDefault !  the current default target
     type(col_default), pointer :: nextDef !  the next default target
-    character*25 :: myname = "colocation_cleardefaultstack"
+    character*25 :: myname="colocation_cleardefaultstack"
     currentDefault => css%firstDef%next
     do while (.not.associated(currentDefault,target=css%lastDef))
        nextDef => currentDefault%next
@@ -351,7 +352,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(col_default), pointer :: newDefault
-    character*25 :: myname = "colocation_pushDefault"
+    character*25 :: myname="colocation_pushDefault"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (.not.associated(css%firstDef)) then
        allocate(css%firstDef,css%lastDef, stat=irc)
@@ -387,7 +388,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopDefault"
+    character*22 :: myname="colocation_loopDefault"
     colocation_loopdefault=.false. ! only true if all is ok...
     if (.not.associated(css%cdef)) then
        css%cdef =>  css%firstDef%next 
@@ -410,7 +411,7 @@ CONTAINS
     character*80  :: v80       ! variable
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopdefitem"
+    character*22 :: myname="colocation_loopdefitem"
     colocation_loopdefaultitem=.false. ! only true if all is ok...
     if (css%cdef%cii.eq.0) then
        css%cdef%cii = 1
@@ -439,7 +440,7 @@ CONTAINS
     integer :: irc
     integer :: ii, irc2, lenv, lenn
     integer, external :: length
-    character*25 :: myname = "colocation_addDefault"
+    character*25 :: myname="colocation_addDefault"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (css%ctrg.eq.0) then
        irc=147
@@ -506,7 +507,7 @@ CONTAINS
     real, allocatable :: var(:)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_getdefault"
+    character*25 :: myname="colocation_getdefault"
     integer :: ii
     integer, external :: length
     if (nvar.ne.css%ctrg.and.allocated(var)) deallocate(var)
@@ -542,7 +543,7 @@ CONTAINS
     type(col_default), pointer :: def
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    character*25 :: myname = "colocation_deleteDef"
+    character*25 :: myname="colocation_deleteDef"
     if (associated(def)) then
        css%ndef = css%ndef - 1
        def%next%prev => def%prev
@@ -563,7 +564,7 @@ CONTAINS
     type(col_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "colocation_defaultCount "
+    character*22 :: myname="colocation_defaultCount "
     colocation_defaultCount=css%ndef
     return
   end function colocation_defaultCount
@@ -581,7 +582,7 @@ CONTAINS
     integer :: irc
     type(col_match), pointer :: curmatch => null() !  current match
     type(col_match), pointer :: nextmatch => null() !  next match session
-    character*28 :: myname = "colocation_clearmatchstack"
+    character*28 :: myname="colocation_clearmatchstack"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     curmatch => css%firstMatch%next
     do while (.not.associated(curmatch,target=css%lastMatch))
@@ -629,7 +630,7 @@ CONTAINS
     type(col_match), pointer :: match
     integer :: ii, irc2, lenv, lenn,lene
     integer, external :: length
-    character*25 :: myname = "colocation_makeMatchList"
+    character*25 :: myname="colocation_makeMatchList"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (mss%ctrg.eq.0) then
        if (col_bdeb) write(*,*)myname,'No model targets defined:',mss%ctrg
@@ -767,7 +768,7 @@ CONTAINS
     character*80 :: u80      ! upper
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "colocation_pushmatch"
+    character*22 :: myname="colocation_pushmatch"
     type(col_match), pointer :: match !  current target
     integer :: lenn,lene
     integer,external :: length
@@ -804,7 +805,7 @@ CONTAINS
     character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopMatch"
+    character*22 :: myname="colocation_loopMatch"
     colocation_loopmatch=.false. ! only true if all is ok...
     if (.not.associated(css%currentMatch)) then
        css%currentMatch =>  css%firstMatch%next 
@@ -833,7 +834,7 @@ CONTAINS
     character*80 :: u80
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="loopmatchlist"
+    character*22 :: myname="colocation_loopmatchlist"
     if (col_bdeb) write(*,*)myname,'Entering.',irc
     colocation_loopmatchlist=.false. ! only true if all is ok...
     if (.not.associated(css)) return ! no data
@@ -865,7 +866,7 @@ CONTAINS
     type(col_match), pointer :: match
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    character*25 :: myname = "colocation_deleteMatch"
+    character*25 :: myname="colocation_deleteMatch"
     integer :: ii
     if (associated(match)) then
        css%nmatch = css%nmatch - 1
@@ -883,7 +884,7 @@ CONTAINS
     type(col_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "colocation_matchCount "
+    character*22 :: myname="colocation_matchCount "
     colocation_matchCount=css%nMatch
     return
   end function colocation_matchCount
@@ -891,13 +892,14 @@ CONTAINS
   ! compile match
   !
   subroutine colocation_compileMatch(css,oss,crc250,irc)
+    use observations
     use parse
     implicit none
     type(col_session), pointer :: css !  current session
     type(obs_session), pointer :: oss !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_compileMatch"
+    character*25 :: myname="colocation_compileMatch"
     integer :: lene
     integer :: ii,jj ! match number
     if(col_bdeb)write(*,*)myname,'Entering.',size(oss%trg80),css%cmatch
@@ -927,7 +929,7 @@ CONTAINS
              call colocation_errorappend(crc250,"\n")
              return
           end if
-          call parse_used(css%mat_psp(ii)%ptr,oss%trg_req,crc250,irc)
+          call parse_used(css%mat_psp(ii)%ptr,oss%trg_req)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
              call colocation_errorappend(crc250," Error return from used.")
@@ -957,11 +959,12 @@ CONTAINS
     real, allocatable :: val(:)    ! values
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_evalMatch"
+    character*25 :: myname="colocation_evalMatch"
     integer :: ii                     ! match number
     type(col_match), pointer :: match
     if (css%cmatch.ne.0) then
        do ii=1,css%cmatch
+          if (col_bdeb)write(*,*)myname,' Local:',val
           css%mat_val(ii)=parse_evalf(css%mat_psp(ii)%ptr,val)
        end do
     else
@@ -981,7 +984,7 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "colocation_removeMatchList"
+    character*25 :: myname="colocation_removeMatchList"
     integer :: ii                     ! match number
     type(col_match), pointer :: match
     do ii=1,css%cmatch
@@ -1017,10 +1020,10 @@ CONTAINS
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="setobscache"
+    character*22 :: myname="colocation_setobscache"
     INTEGER                         :: nvar = 0
     !
-    if(col_bdeb)write(*,*)myname,'Entering.',irc
+    if(col_bdeb)write(*,*)myname,' Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%obs250=path250
     end if
@@ -1033,12 +1036,17 @@ CONTAINS
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="getobscache"
+    character*22 :: myname="colocation_getobscache"
     INTEGER                         :: nvar = 0
+    integer :: lenp
+    integer, external :: length
     !
-    if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        path250=css%obs250
+       if(col_bdeb) then
+          lenp=length(path250,250,10)
+          write(*,*)myname,"Path: '"//path250(1:lenp)//"'"
+       end if
     end if
     !
   end subroutine colocation_getobscache
@@ -1049,7 +1057,7 @@ CONTAINS
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="setmodcache"
+    character*22 :: myname="colocation_setmodcache"
     INTEGER                         :: nvar = 0
     !
     if(col_bdeb)write(*,*)myname,'Entering.',irc
@@ -1065,7 +1073,7 @@ CONTAINS
     character*250 :: path250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="getmodcache"
+    character*22 :: myname="colocation_getmodcache"
     INTEGER                         :: nvar = 0
     !
     if(col_bdeb)write(*,*)myname,'Entering.',irc
@@ -1085,7 +1093,7 @@ CONTAINS
     character*250 :: exp250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="expression"
+    character*22 :: myname="colocation_expression"
     INTEGER                         :: nvar = 0
     CHARACTER (LEN=80), allocatable :: var(:)
     REAL(rn),           allocatable :: val(:)
@@ -1107,6 +1115,7 @@ CONTAINS
     call parse_parsef (pss, exp250(1:lene), var,crc250,irc)        ! parse and bytecompile ith function string 
     if(irc.ne.0) return
     if (col_bdeb) write(*,*) myname,'Eval.', val
+    if (col_bdeb)write(*,*)myname,' Local:',val
     res = parse_evalf (pss, val)                 ! interprete bytecode representation of ith function
     write(exp250,*) res
     call chop0(exp250,250)
@@ -1144,7 +1153,7 @@ CONTAINS
     character*250 :: fill250
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="maketable"
+    character*22 :: myname="colocation_maketable"
     !
     integer :: mloc,mtrg,oloc,otrg
     integer :: tmod,emod,dmod,tobs,ii,jj,nfunc
@@ -1166,7 +1175,7 @@ CONTAINS
     logical :: bbok,first
     character*50 :: s2
     integer :: len2,lenf
-    logical :: fill, fillx
+    logical :: fill, fillx,bdeb
     !
     call chop0(fill250,250)
     lenf=length(fill250,250,10)
@@ -1300,6 +1309,12 @@ CONTAINS
        call colocation_errorappend(crc250,"model_compileFilter")
        return
     end if
+    ! flag used observation targets
+    call  model_getObsReq(mss,oss%ntrg,oss%trg_req,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"model_getObsReq")
+       return
+    end if
     ! compile obs filter
     call observation_compileFilter(oss,crc250,irc)
     if (irc.ne.0) then
@@ -1417,7 +1432,12 @@ CONTAINS
        ! loop over model data, using model/obs start/end limits
        OBSFILE : do ! need to enter loop if (tobs.eq.0)
           if (tobs.ne.0) then ! we have observation targets available
+             if (col_bdeb) then
+                bdeb=obs_bdeb
+                obs_bdeb=.true.
+             end if
              bok=observation_loopFileStack(oss,crc250,irc)
+             if (col_bdeb) obs_bdeb=bdeb
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"observation_loopFileStack")
                 return
@@ -1521,7 +1541,7 @@ CONTAINS
                 call  model_setTargetDVal(mss,css%currentDef%cdef,&
                      & css%currentDef%vset,css%currentDef%val,crc250,irc)
                 if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_setTargetVal")
+                   call colocation_errorappend(crc250,"model_setTargetDVal")
                    return
                 end if
                 ! make new location from observation
@@ -1603,8 +1623,16 @@ CONTAINS
                          write(ounit,"(X,A)") s2(1:len2)
                       end if
                    end do
-                   if(col_bdeb.and.locid.lt.100)write(*,'(2(X,A),100(X,F0.1))')&
-                        & myname,'Val:',mss%mpo_val
+                   if(col_bdeb.and.locid.lt.100)then
+                      write(*,'(2(X,A),100(X,F0.1))')&
+                           & myname,'MPO:',mss%mpo_val
+                      write(*,'(2(X,A),100(X,L1))')&
+                           & myname,'mpo:',mss%mpo_vok
+                      write(*,'(2(X,A),100(X,F0.1))')&
+                           & myname,'VAL:',val
+                      write(*,'(2(X,A),100(X,L1))')&
+                           & myname,'val:',vok
+                   end if
                 end if
              end do OBSERVATION
           end if
@@ -1655,7 +1683,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: length
-    character*22 :: myname = "setXmlFile"
+    character*22 :: myname="colocation_setXmlFile"
     css%xml250=xml250
     css%lenx=length(xml250,250,10)
     if(col_bdeb)write(*,*)myname,' Path: ',css%xml250(1:css%lenx)
@@ -1667,7 +1695,7 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "strepfiles"
+    character*22 :: myname="colocation_strepfiles"
     integer,parameter  :: nn = 6
     character*100 :: src100(nn) = (/'YY','MM','DD','HH','MI','SS'/)
     character*100 :: rep100(nn)
@@ -1707,7 +1735,7 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "clearsetstack"
+    character*22 :: myname="colocation_clearsetstack"
     call date_and_time(VALUES=css%values)
     return
   end subroutine colocation_setTime
@@ -1769,7 +1797,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: length
-    character*22 :: myname = "getXmlFile"
+    character*22 :: myname="colocation_getXmlFile"
     call colocation_strepfiles(css,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"colocation_strepfiles")
@@ -1795,7 +1823,7 @@ CONTAINS
     integer :: irc
     integer, external :: length,ftunit
     integer :: lenc,lene
-    character*26 :: myname = "colocation_makeXML"
+    character*26 :: myname="colocation_makeXML"
     integer :: tmod,emod,dmod,tobs,ii,jj,nfunc
     logical :: bobsind
     integer :: locid,locstart,ounit,lenx
@@ -1807,7 +1835,7 @@ CONTAINS
     real :: mod_maxval = 0.0D0
     real :: obs_minval = 0.0D0
     real :: obs_maxval = 0.0D0
-    logical :: mod_lval(2),obs_lval(2),bok,bbok,first,lok
+    logical :: mod_lval(2),obs_lval(2),bok,bbok,first,lok,bdeb
     integer :: lenf
     logical :: fill, fillx
     !
@@ -2067,7 +2095,12 @@ CONTAINS
        ! loop over model data, using model/obs start/end limits
        OBSFILE : do ! need to enter loop if (tobs.eq.0)
           if (tobs.ne.0) then ! we have observation targets available
+             if (col_bdeb) then
+                bdeb=obs_bdeb
+                obs_bdeb=.true.
+             end if
              bok=observation_loopFileStack(oss,crc250,irc)
+             if (col_bdeb) obs_bdeb=bdeb
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"observation_loopFileStack")
                 return
@@ -2108,7 +2141,7 @@ CONTAINS
              locstart=locid
              ! loop over obs data, using model start/end limits
              LOCATION : do
-                if(col_bdeb)write(*,*)myname,'Slice observation file.'
+                !if(col_bdeb)write(*,*)myname,'Slice observation file.'
                 ! read next observation into static BUFR memory and set oss%trg_val
                 call observation_sliceCurrentFile(oss,bok,crc250,irc)
                 if (irc.ne.0) then
@@ -2148,7 +2181,7 @@ CONTAINS
 
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb)write(*,*)myname,'Push location.',locid
+                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location.',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -2179,7 +2212,7 @@ CONTAINS
                 call  model_setTargetDVal(mss,css%currentDef%cdef,&
                      & css%currentDef%vset,css%currentDef%val,crc250,irc)
                 if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_setTargetVal")
+                   call colocation_errorappend(crc250,"model_setTargetDVal")
                    return
                 end if
                 ! make new location from observation
@@ -2226,7 +2259,7 @@ CONTAINS
                    return
                 end if
                 if (.not.bok) then
-                   if(col_bdeb)write(*,*)myname,'No more observations to process.'
+                   if(col_bdeb)write(*,*)myname,'NO MORE OBSERVATIONS TO PROCESS.'
                    exit OBSERVATION
                 end if
                 !
@@ -2699,22 +2732,29 @@ CONTAINS
     character*50 :: s2
     integer :: len2
     integer, external :: length
-    integer :: jj
-    write(s2,'(F0.10)') val; call chop0(s2,50); len2=length(s2,50,10) ! ignore last digit...
-    if (len2.gt.1) then
-       OUTER: do JJ=1,len2
-          if (s2(JJ:JJ).eq.".") then
-             INNER: do while (len2.gt.JJ.and.&
-               & (s2(len2:len2).eq."0".or.s2(len2:len2).eq."."))
-                len2=len2-1
-             end do INNER
-             exit OUTER
+    integer :: jj,irc
+    write(s2,'(F0.10)',iostat=irc) val; 
+    call chop0(s2,50); 
+    len2=length(s2,50,10) ! ignore last digit...
+    if (irc.ne.0) then
+       s2="NA"
+       len2=2
+    else
+       if (len2.gt.1) then
+          OUTER: do JJ=1,len2
+             if (s2(JJ:JJ).eq.".") then
+                INNER: do while (len2.gt.JJ.and.&
+                     & (s2(len2:len2).eq."0".or.s2(len2:len2).eq."."))
+                   len2=len2-1
+                end do INNER
+                exit OUTER
+             end if
+          end do OUTER
+          if (len2.eq.1.and.s2(1:1).eq.".") then
+             s2="0"
+          else if (s2(len2:len2).eq.".") then
+             len2=len2-1
           end if
-       end do OUTER
-       if (len2.eq.1.and.s2(1:1).eq.".") then
-          s2="0"
-       else if (s2(len2:len2).eq.".") then
-          len2=len2-1
        end if
     end if
     return

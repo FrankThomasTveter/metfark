@@ -102,6 +102,7 @@ module observations
      integer :: cobs = 0 ! number of allocated observations
      real, allocatable :: trg_val(:,:)   ! target values
      logical, allocatable :: trg_set(:)  ! did observation pass message check?
+     real, allocatable :: trg_res(:)     ! filter values
   end type obs_message
   !
   ! BUFR FILE STACK
@@ -226,9 +227,9 @@ module observations
      character*250                   :: ind_exp250=""         ! index target expression
      integer                         :: ind_lene              ! length of target expression
      real                            :: ind_val=0.0D0         ! index value (=trg_val(ntrg))
-     logical                         :: ind_eset = .false.    ! is index value set
+     logical                         :: ind_eset = .false.    ! is index expression set
      type(parse_session), pointer    :: ind_pe => null()      ! index expression
-     logical                         :: ind_tset = .false.
+     logical                         :: ind_tset = .false.    ! is index tranformation set
      type(parse_session), pointer    :: ind_pt => null()      ! index transformation
      !
      ! TARGET
@@ -256,8 +257,6 @@ module observations
      real, allocatable               :: trg_maxval(:)
      integer, allocatable            :: trg_ook(:)
      integer, allocatable            :: trg_orm(:)
-     CHARACTER (LEN=80), allocatable :: trg_var(:)      ! target variable names
-     integer, allocatable            :: trg_lenv(:)      ! target variable name length
 !     REAL(rn),           allocatable :: trg_val(:)      ! target variable values
      logical,allocatable             :: trg_req(:)      ! is target required?
      logical,allocatable             :: trg_vok(:)      ! is target valid?
@@ -373,7 +372,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(obs_session),pointer :: css !  new session
-    character*22 :: myname = "observation_opensession"
+    character*22 :: myname="observation_opensession"
     !write(*,*)myname,'Entering.'
     if (.not.associated(firstSession)) then
        allocate(firstSession, lastSession,stat=irc)
@@ -486,8 +485,8 @@ CONTAINS
     integer :: sid
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_getSession"
-    if(obs_bdeb)write(*,*)myname,' Entering.',irc,sid
+    character*22 :: myname="observation_getSession"
+    !if(obs_bdeb)write(*,*)myname,' Entering.',irc,sid
     if (.not.associated(firstSession)) then
        irc=911
        call observation_errorappend(crc250,myname)
@@ -499,7 +498,7 @@ CONTAINS
     css => firstSession%next
     do while ( .not.associated(css,target=lastSession))
        if (css%sid .eq. sid) then
-          if(obs_bdeb)write(*,*)myname,' Done.',irc,sid
+          !if (obs_bdeb) write(*,*)myname,'Exiting with sid:',sid,irc
           return
        end if
        css=>css%next
@@ -519,7 +518,7 @@ CONTAINS
     integer :: irc
     type(obs_session), pointer :: css !  current session
     integer :: ii
-    character*22 :: myname = "observation_closeSession"
+    character*22 :: myname="observation_closeSession"
     if(obs_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        !
@@ -580,7 +579,9 @@ CONTAINS
        if (allocated(css%int_val)) deallocate(css%int_val)
        ! remove any message data...
        if (associated(css%msg)) then
-          if(allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
+          if (allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
+          if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
+          if (allocated(css%msg%trg_res)) deallocate(css%msg%trg_res)
           deallocate(css%msg)
        end if
        ! deallocate observation filter...
@@ -620,7 +621,7 @@ CONTAINS
     integer, external :: length,ftunit
     integer :: lenp,unitr
     character*250 :: buff250, str250
-    character*22 :: myname = "observation_makeCache"
+    character*22 :: myname="observation_makeCache"
     !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -702,7 +703,7 @@ CONTAINS
     integer, external :: length
     integer :: lenp,lenf,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
-    character*22 :: myname = "observation_loadCache"
+    character*22 :: myname="observation_loadCache"
     !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -726,7 +727,7 @@ CONTAINS
        return
     end if
     ! open cache file
-    if(obs_bdeb)write(*,*)myname," Opening:'"//path250(1:lenp)//"'"
+    if(obs_bdeb)write(*,*)myname," Opening obscache: '"//path250(1:lenp)//"'"
     open ( unit=unitr, status="old", form="formatted", &
          &        access="sequential", &
          &        iostat=irc, file=path250(1:lenp) )
@@ -775,6 +776,11 @@ CONTAINS
        newFile%prev%next => newFile
        newFile%next%prev => newFile
        css%currentFile=>newFile
+       !
+       do jj=1,10
+          newFile%ook(jj)=0
+          newFile%orm(jj)=0
+       end do
        !
        read(unitr,'(A)',iostat=irc) buff250
        if (irc.ne.0) then
@@ -895,7 +901,7 @@ CONTAINS
     integer :: irc
     integer, external :: length
     integer :: lens
-    character*22 :: myname = "observation_stackclear"
+    character*22 :: myname="observation_stackclear"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     ! mark as prepared
     css%stackReady=.false.
@@ -943,7 +949,7 @@ CONTAINS
     integer, external :: length
     integer :: lenb
     character*250 :: buff250
-    character*22 :: myname = "observation_setTablePath"
+    character*22 :: myname="observation_setTablePath"
     buff250=path250
     call chop0(buff250,250)
     lenb=length(buff250,250,10)
@@ -957,7 +963,7 @@ CONTAINS
     end if
     css%tablepath=buff250
     call chop0(css%tablepath,250)
-    if(obs_bdeb)write(*,*)myname,' Done. "'//buff250(1:lenb)//'"'
+    !if(obs_bdeb)write(*,*)myname,' Done. "'//buff250(1:lenb)//'"'
   end subroutine observation_setTablePath
   !
   ! set table c file name
@@ -971,7 +977,7 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    character*22 :: myname = "observation_setTableC"
+    character*22 :: myname="observation_setTableC"
     ctableInit=.false.
     c250=path250
     call chop0(c250,250)
@@ -990,7 +996,7 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    character*22 :: myname = "observation_setBufrType"
+    character*22 :: myname="observation_setBufrType"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     css%category=category
     css%subCategory=subCategory
@@ -1008,7 +1014,7 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lens
-    character*22 :: myname = "observation_getBufrType"
+    character*22 :: myname="observation_getBufrType"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     category=css%category
     subCategory=css%subCategory
@@ -1023,7 +1029,7 @@ CONTAINS
     integer :: irc  ! error return code (0=ok)
     integer :: irc2
     type(obs_file), pointer :: currentFile,nextFile
-    character*22 :: myname = "observation_removeFiles "
+    character*22 :: myname="observation_removeFiles "
     currentFile => css%firstFile%next
     do while (.not.associated(currentFile,target=css%lastFile))
        nextFile => currentFile%next
@@ -1061,7 +1067,7 @@ CONTAINS
     integer, external :: length
     integer :: lenc,leni,lenv,lens,lenp,lend
     logical :: bbok
-    character*22 :: myname = "observation_stackpush"
+    character*22 :: myname="observation_stackpush"
     if(obs_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1091,6 +1097,12 @@ CONTAINS
        call chop0(newFile%fn250,250)
        newFile%lenf=length(newFile%fn250,250,20)
        newFile%tablepath=css%tablepath
+       !
+       do jj=1,10
+          newFile%ook(jj)=0
+          newFile%orm(jj)=0
+       end do
+       !
        if (obs_bdeb) call observation_printStack(css,crc250,irc)
        css%currentFile=>newFile
     end if
@@ -1135,7 +1147,7 @@ CONTAINS
     type(obs_file), pointer :: currentFile => null()
     type(obs_file), pointer :: prevFile => null()
     integer :: irc2
-    character*22 :: myname = "observation_stackpop"
+    character*22 :: myname="observation_stackpop"
     logical :: bdone
     integer, external :: length
     integer :: lenp
@@ -1175,7 +1187,7 @@ CONTAINS
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     integer :: ii,jj
-    character*22 :: myname = "observation_stackpeeklen"
+    character*22 :: myname="observation_stackpeeklen"
     maxrep=1
     currentFile => css%lastFile%prev
     ! report file-name
@@ -1205,7 +1217,7 @@ CONTAINS
     type(obs_file), pointer :: currentFile => null()
     integer :: ii,jj
     character*80 :: varname
-    character*22 :: myname = "observation_stackpeek"
+    character*22 :: myname="observation_stackpeek"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     currentFile => css%lastFile%prev
     ! report file-name
@@ -1231,7 +1243,7 @@ CONTAINS
     integer :: irc
     type(obs_mainCategory), pointer :: cat
     type(obs_subCategory), pointer :: sub
-    character*22 :: myname = "observation_getFileReportLen"
+    character*22 :: myname="observation_getFileReportLen"
     maxrep=2
     if (currentFile%time_lim) then
        maxrep=maxrep+2
@@ -1270,7 +1282,7 @@ CONTAINS
     type(obs_mainCategory), pointer :: cat
     type(obs_subCategory), pointer :: sub
     logical :: first
-    character*22 :: myname = "observation_getFileReport"
+    character*22 :: myname="observation_getFileReport"
     ! file name
     call chop0(currentFile%fn250,250)
     lenm=length(currentFile%fn250,250,20)
@@ -1356,7 +1368,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_targetinit"
+    character*22 :: myname="observation_targetinit"
     css%reportsReady=.false. ! we must redo report generation
     ! initialise chain
     if (.not.associated(css%firsttarget)) then
@@ -1382,7 +1394,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_clearTargetStack"
+    character*22 :: myname="observation_clearTargetStack"
     integer :: ii, lens
     integer, external :: length
     if(obs_bdeb)write(*,*)myname,' Entering.'
@@ -1425,8 +1437,8 @@ CONTAINS
     real:: sec
     integer :: lenc,lenp,lend,lens,lene
     integer, external :: length
-    character*22 :: myname = "observation_pushTarget"
-    if(obs_bdeb)write(*,*)myname,' Entering "'//trg(1:len(trg))//'" "'//pos(1:len(pos))//'"'
+    character*22 :: myname="observation_pushTarget"
+    if(obs_bdeb)write(*,*)myname,' Adding: "'//trg(1:len_trim(trg))//'" "'//pos(1:len_trim(pos))//'"'
     if (len(trg).eq.0) then
        irc=983
        call observation_errorappend(crc250,myname)
@@ -1480,7 +1492,7 @@ CONTAINS
     else
        newTarget%ind=0
     end if
-    if(obs_bdeb)write(*,*)myname,' Done.',trg
+    !if(obs_bdeb)write(*,*)myname,' Done.',trg
     return
   end subroutine observation_pushTarget
   !
@@ -1498,7 +1510,7 @@ CONTAINS
     character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="looptarget"
+    character*22 :: myname="observation_looptarget"
     observation_looptarget=.false. ! only true if all is ok...
     if (.not.associated(css%ctarget)) then
        css%ctarget =>  css%firstTarget%next 
@@ -1526,7 +1538,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_targetCount "
+    character*22 :: myname="observation_targetCount "
     observation_targetCount=css%ntarget
     return
   end function observation_targetCount
@@ -1535,7 +1547,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_trgCount "
+    character*22 :: myname="observation_trgCount "
     observation_trgCount=css%ntrg
     return
   end function observation_trgCount
@@ -1546,7 +1558,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_locationCount "
+    character*22 :: myname="observation_locationCount "
     observation_locationCount=css%nloc
     return
   end function observation_locationCount
@@ -1559,7 +1571,7 @@ CONTAINS
     integer :: offset
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_getTrg80"
+    character*25 :: myname="observation_getTrg80"
     integer ii
     do ii=1,css%ntrg
        var80(ii+offset)=css%trg80(ii)
@@ -1576,7 +1588,7 @@ CONTAINS
     integer :: offset
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_getVal"
+    character*25 :: myname="observation_getVal"
     integer ii
     do ii=1,css%ntrg
        val(ii+offset)=css%locdata(iloc)%ptr%trg_val(ii)
@@ -1590,7 +1602,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_hasValidIndex "
+    character*22 :: myname="observation_hasValidIndex "
     observation_hasValidIndex=css%ind_eset
   end function observation_hasValidIndex
   !
@@ -1600,7 +1612,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_printStack "
+    character*22 :: myname="observation_printStack "
     type(obs_target), pointer :: currenttarget => null()
     integer :: lent,lenp,lend,lens,lene,ii
     integer, external :: length
@@ -1636,7 +1648,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_makeTargetList "
+    character*22 :: myname="observation_makeTargetList "
     type(obs_target), pointer :: currenttarget => null()
     integer :: lent,lenp,lend,ii
     integer, external :: length
@@ -1665,8 +1677,6 @@ CONTAINS
        if (allocated(css%trg_maxval)) deallocate(css%trg_maxval)
        if (allocated(css%trg_ook)) deallocate(css%trg_ook)
        if (allocated(css%trg_orm)) deallocate(css%trg_orm)
-       if (allocated(css%trg_var)) deallocate(css%trg_var)
-       if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
        if (allocated(css%trg_req)) deallocate(css%trg_req)
        if (allocated(css%trg_vok)) deallocate(css%trg_vok)
        if (allocated(css%trg_val)) deallocate(css%trg_val)
@@ -1678,7 +1688,6 @@ CONTAINS
             & css%trg_descr(css%ntrg),css%trg_lval(2,css%ntrg),&
             & css%trg_minval(css%ntrg),css%trg_maxval(css%ntrg),&
             & css%trg_ook(css%ntrg),css%trg_orm(css%ntrg),&
-            & css%trg_var(css%ntrg),css%trg_lenv(css%ntrg),&
             & css%trg_req(css%ntrg),css%trg_vok(css%ntrg), &
             & css%trg_val(css%ntrg),css%trg_ptr(css%ntrg),stat=irc)
        if (irc.ne.0) then
@@ -1717,6 +1726,8 @@ CONTAINS
           lend=length(currenttarget%descr80,80,10)
           css%trg80(ii)=currenttarget%trg80(1:lent)
           css%trg_lent(ii)=lent
+          css%trg_ook(ii)=0
+          css%trg_orm(ii)=0
           css%trg_req(ii)=.false.           ! is target required?
           css%trg_type(ii)=currenttarget%type
           if (lend.eq.0.and.lenp.eq.0) then ! this is a delayed variable
@@ -1819,7 +1830,7 @@ CONTAINS
     integer :: ii,jj
     type(obs_target), pointer :: currenttarget
     type(parse_session),pointer :: plim => null()  ! parse_session pointer must be se
-    character*22 :: myname = "observation_setTargetLimits "
+    character*22 :: myname="observation_setTargetLimits "
     integer :: ind(css%ntrg),inc(0:css%ntrg)
     call parse_open(plim,crc250,irc)
     if (irc.ne.0) then
@@ -1855,6 +1866,7 @@ CONTAINS
                 return
              end if
              css%trg_req(ii)=.true.
+             if (obs_bdeb)write(*,*)myname,' Local:',val
              css%trg_minval(ii)=parse_evalf(plim,val)
              css%trg_lval(1,ii)=.true.
           else
@@ -1878,6 +1890,7 @@ CONTAINS
                 return
              end if
              css%trg_req(ii)=.true.
+             if (obs_bdeb)write(*,*)myname,' Local:',val
              css%trg_maxval(ii)=parse_evalf(plim,val)
              css%trg_lval(2,ii)=.true.
           else
@@ -1927,7 +1940,7 @@ CONTAINS
     integer :: irc  ! error return code (0=ok)
     type(obs_target), pointer :: currenttarget => null()
     type(obs_target), pointer :: nexntarget => null()
-    character*22 :: myname = "observation_removeTarget "
+    character*22 :: myname="observation_removeTarget "
     if(obs_bdeb)write(*,*)myname,' Entering.'
     currenttarget => css%firsttarget%next
     do while (.not.associated(currenttarget,target=css%lasttarget))
@@ -1961,8 +1974,6 @@ CONTAINS
     if (allocated(css%trg_maxval)) deallocate(css%trg_maxval)
     if (allocated(css%trg_ook)) deallocate(css%trg_ook)
     if (allocated(css%trg_orm)) deallocate(css%trg_orm)
-    if (allocated(css%trg_var)) deallocate(css%trg_var)
-    if (allocated(css%trg_lenv)) deallocate(css%trg_lenv)
     if (allocated(css%trg_req)) deallocate(css%trg_req)
     if (allocated(css%trg_vok)) deallocate(css%trg_vok)
     if (allocated(css%trg_val)) deallocate(css%trg_val)
@@ -1984,7 +1995,7 @@ CONTAINS
     logical:: bok
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_checkTarget"
+    character*22 :: myname="observation_checkTarget"
     integer :: seq, ii
     if(obs_bdeb)write(*,*)myname,' Entering.'
     if (css%ntarget .eq. 0) then ! accept all reports if there is no target...
@@ -2052,7 +2063,7 @@ CONTAINS
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     integer :: ii
-    character*22 :: myname = "observation_sortFiles"
+    character*22 :: myname="observation_sortFiles"
     !
     ! make array of files
     if(obs_bdeb)write(*,*)myname,' Entering.'
@@ -2081,42 +2092,39 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_getNextFile"
+    character*22 :: myname="observation_loopFileStack"
     logical :: bdone,found
+    if (obs_bdeb)write(*,*)myname,' Entering:',css%sortLimitsOk,css%currentFileSortIndex,&
+         & css%leftFileSortIndex,css%rightFileSortIndex
     found=.false.
     bdone=(.not. css%sortLimitsOk)
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
-       css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
-       css%int_val(2)=css%currentFileIndex ! observation file id
-       css%int_val(3)=1
-       css%int_val(4)=1
-       css%int_val(5)=1
-       css%currentFile => css%fileStack(css%currentFileIndex)%ptr
-       if ((css%currentFileIndex.eq.css%fileStackInd(css%rightFileSortIndex,1))) then ! last iteration
-          css%currentFileSortIndex=0 ! reset index
+       if (css%currentFileSortIndex.gt.css%rightFileSortIndex) then
+          css%currentFileSortIndex=0
+          css%currentFileIndex=0
+          nullify(css%currentFile)
           bdone=.true.
-       end if
-       ! check if inside limits
-       if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
-            & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then 
-          found=.true.
-          bdone=.true.
-          if (obs_bdeb) write(*,*)myname,' Found:',css%sortLimitsOk,&
-               & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+       else
+          css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
+          css%currentFile => css%fileStack(css%currentFileIndex)%ptr
+          ! check if inside limits
+          if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
+               & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then 
+             found=.true.
+             bdone=.true.
+             if (obs_bdeb) write(*,*)myname,' Found:',&
+                  & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+          end if
        end if
     end do
-    if (found) then
-       observation_loopFileStack=.true.
-    else
-       css%currentFileIndex=0
-       css%int_val(2)=css%currentFileIndex ! observation file id
-       css%int_val(3)=1
-       css%int_val(4)=1
-       css%int_val(5)=1
-       nullify(css%currentFile)
-       observation_loopFileStack=.false.
-    end if
+    css%int_val(2)=css%currentFileIndex ! observation file id
+    css%int_val(3)=1
+    css%int_val(4)=1
+    css%int_val(5)=1
+    observation_loopFileStack=found
+    if (obs_bdeb)write(*,*)myname,' Done:',found,css%currentFileSortIndex,&
+         & associated(css%currentFile)
     return
   end function observation_loopFileStack
   !
@@ -2129,8 +2137,9 @@ CONTAINS
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     integer :: ii,jj,kk
-    character*22 :: myname = "observation_sortStack"
+    character*22 :: myname="observation_sortStack"
     real :: buff
+    logical :: luff
     !
     ! make array of files
     if(obs_bdeb)write(*,*)myname,' Entering.'
@@ -2160,21 +2169,27 @@ CONTAINS
           if (currentFile%ind_lim) then ! requested observations present?
              css%fileStackInd(ii,1)=ii
              css%fileStackInd(ii,2)=ii
+             luff=css%trg_vok(css%ntrg)
              buff=css%trg_val(css%ntrg)
+             css%trg_vok(css%ntrg)=.true.
              css%trg_val(css%ntrg)=currentFile%ind_start
              if (obs_bdeb) then
-                write(*,*)myname,'Eval:',css%ntrg,css%trg_val(css%ntrg),"'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
+                write(*,*)myname,' Eval:',css%ntrg,css%trg_val(css%ntrg),&
+                     & "'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
                 do jj=1,css%ntrg
                    write(*,'(X,A,A,I0,A,F0.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
                 end do
              end if
              if (css%ind_tset) then
+                if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
                 css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val)
              else
                 css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
              end if
+             css%trg_vok(css%ntrg)=.true.
              css%trg_val(css%ntrg)=currentFile%ind_stop
              if (css%ind_tset) then
+                if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
                 css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val)
              else
                 css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
@@ -2182,6 +2197,7 @@ CONTAINS
              if (obs_bdeb)write(*,*)myname,'Eval:',ii,css%fileStackSort(ii,1),css%fileStackSort(ii,2),&
                   & currentFile%ind_start,currentFile%ind_stop
              css%trg_val(css%ntrg)=buff
+             css%trg_vok(css%ntrg)=luff
           else
              if (obs_bdeb)then
                 write(*,*)myname,"Missing index limits in '"//&
@@ -2222,7 +2238,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_stackfirst"
+    character*22 :: myname="observation_stackfirst"
     css%currentFileSortIndex=0
     css%currentFileIndex=0
     css%int_val(2)=css%currentFileIndex ! observation file id
@@ -2236,7 +2252,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_findStackLimits"
+    character*22 :: myname="observation_findStackLimits"
     integer :: leftmin,rightmin,leftmax,rightmax
     ! leftFileSortIndex refers to fileStackSort(*,2)
     ! rightFileSortIndex refers to fileStackSort(*,2)
@@ -2276,7 +2292,7 @@ CONTAINS
     css%int_val(3)=1
     css%int_val(4)=1
     css%int_val(5)=1
-    if (obs_bdeb)write(*,*)myname,'Done.', css%sortLimitsOk,&
+    if (obs_bdeb)write(*,*)myname,' Done.', css%sortLimitsOk,&
          & css%leftFileSortIndex, css%rightFileSortIndex,css%nFileIndexes
     return
   end subroutine observation_findStackLimits
@@ -2288,16 +2304,20 @@ CONTAINS
     type(parse_session), pointer :: pit
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_setTransformation"
+    character*22 :: myname="observation_setTransformation"
     if (obs_bdeb)write(*,*)myname," Transformation:'"//pit%funcStr100(1:pit%lenf)//"'"
     css%ind_pt => pit
     css%ind_tset=associated(css%ind_pt)
     if (css%ind_eset .and. css%ind_tset .and. css%ind_lval(1)) then
+       css%trg_vok(css%ntrg)=.true.
        css%trg_val(css%ntrg)=css%ind_minval
+       if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
        css%ind_minval=parse_evalf(css%ind_pt,css%trg_val)
     end if
     if (css%ind_eset .and. css%ind_tset .and. css%ind_lval(2)) then
+       css%trg_vok(css%ntrg)=.true.
        css%trg_val(css%ntrg)=css%ind_maxval
+       if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
        css%ind_maxval=parse_evalf(css%ind_pt,css%trg_val)
     end if
     return
@@ -2325,7 +2345,7 @@ CONTAINS
     type(obs_file), pointer :: currentFile => null()
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
-    character*22 :: myname = "observation_setIndex"
+    character*22 :: myname="observation_setIndex"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     css%ind_trg80=trg80
     css%ind_exp250=exp250
@@ -2362,7 +2382,7 @@ CONTAINS
     integer :: lens, lene
     integer, external :: length
     integer :: irc2
-    character*22 :: myname = "observation_setIndexLimits"
+    character*22 :: myname="observation_setIndexLimits"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     call chop0(s25,25)
     lens=length(s25,25,10)
@@ -2402,7 +2422,7 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer, external :: length
     integer :: lenl
-    character*22 :: myname = "observation_ignoreLabel"
+    character*22 :: myname="observation_ignoreLabel"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     call chop0(lab250,250)
     lenl=length(lab250,250,10)
@@ -2507,7 +2527,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_locinit"
+    character*25 :: myname="observation_locinit"
     ! initialise chain
     if (.not.associated(css%firstLoc)) then
        allocate(css%firstLoc,css%lastLoc, stat=irc)
@@ -2532,7 +2552,7 @@ CONTAINS
     integer :: irc
     type(obs_location), pointer :: currentLoc => null()
     type(obs_location), pointer :: locNext => null()
-    character*25 :: myname = "observation_locclear"
+    character*25 :: myname="observation_locclear"
     integer :: ii, lens
     integer, external :: length
     if(obs_bdeb)write(*,*)myname,' Entering.'
@@ -2576,7 +2596,7 @@ CONTAINS
     type(obs_location), pointer :: loc
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    character*25 :: myname = "observation_deleteLoc"
+    character*25 :: myname="observation_deleteLoc"
     if (associated(loc)) then
        css%nloc = css%nloc - 1
        loc%next%prev => loc%prev
@@ -2602,7 +2622,7 @@ CONTAINS
     real:: sec
     integer :: lenc
     integer, external :: length
-    character*25 :: myname = "observation_locpushTarget"
+    character*25 :: myname="observation_locpushTarget"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     ! initialise location stack
     if (css%nloc.eq.0) then
@@ -2665,7 +2685,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     type(obs_location), pointer :: currentLoc => null()
-    character*25 :: myname = "observation_makeLocList"
+    character*25 :: myname="observation_makeLocList"
     integer :: ii
     if (associated(css%firstLoc).and..not.css%locready.and.css%nloc.gt.0) then
        if (allocated(css%locdata)) deallocate(css%locdata)
@@ -2704,9 +2724,8 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     integer :: cnt
-    character*22 :: myname = "observation_sliceCurrentFile"
+    character*22 :: myname="observation_sliceCurrentFile"
     if(obs_bdeb)write(*,*)myname,' Entering.',bok
-    if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     ! get next observation from file
     if (.not.css%stackReady) then
        call observation_sortStack(css,crc250,irc)
@@ -2728,6 +2747,7 @@ CONTAINS
        css%currentFileSortIndex=1
        css%stackReady = .true.
     end if
+    if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     cnt=0
     ! loop until we have valid message or EOF
     LOOP : do
@@ -2781,7 +2801,7 @@ CONTAINS
     logical :: bok           ! successful get (not EOF)
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_getMsgObs"
+    character*22 :: myname="observation_getMsgObs"
     type(obs_message), pointer :: newmsg => null()
     integer :: cnt, ii, jj
     logical :: bbok
@@ -2825,16 +2845,20 @@ CONTAINS
                    newmsg%cobs=2*(css%msg%nobs)
                    newmsg%ctrg=max(css%msg%ctrg,css%ntrg)
                    allocate(newmsg%trg_val(newmsg%ctrg,newmsg%cobs),&
-                        & newmsg%trg_set(newmsg%cobs),stat=irc)
-                   if (allocated(css%msg%trg_val).and.allocated(css%msg%trg_set)) then
+                        & newmsg%trg_set(newmsg%cobs),newmsg%trg_res(newmsg%cobs),&
+                        & stat=irc)
+                   if (allocated(css%msg%trg_val).and.allocated(css%msg%trg_set)&
+                        & .and.allocated(css%msg%trg_res)) then
                       do jj=1,css%msg%nobs-1
                          do ii=1,css%msg%ctrg
                             newmsg%trg_val(ii,jj)=css%msg%trg_val(ii,jj)
                          end do
                          newmsg%trg_set(jj)=css%msg%trg_set(jj)
+                         newmsg%trg_res(jj)=0.0D0
                       end do
                       if (allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
                       if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
+                      if (allocated(css%msg%trg_res)) deallocate(css%msg%trg_res)
                       if (associated(css%msg)) deallocate(css%msg,stat=irc)
                    end if
                    css%msg => newmsg
@@ -2881,16 +2905,21 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_checkMsgObs"
+    character*22 :: myname="observation_checkMsgObs"
     integer :: ii
-    real :: val
     logical :: bok
-    real :: res(css%msg%nobs)
     ! loop over observations
     if (css%flt_set) then ! check if we have an observation filter...
        ! should probably reset the parser here if msg-functions are implemented...
+       if (obs_bdeb)then
+          write(*,*)myname,'Evaluating filter:',associated(css%psf),&
+               & css%msg%ctrg,css%msg%cobs,&
+               & size(css%msg%trg_val),size(css%msg%trg_set),size(css%msg%trg_res),&
+               & allocated(css%msg%trg_val),allocated(css%msg%trg_set),&
+               & allocated(css%msg%trg_res)
+       end if
        call parse_evala(css%psf,css%msg%ctrg,css%msg%cobs,css%msg%nobs, &
-            & css%msg%trg_val,css%msg%trg_set,res,crc250,irc)
+            & css%msg%trg_val,css%msg%trg_set,css%msg%trg_res,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from evala.")
@@ -2901,10 +2930,8 @@ CONTAINS
        do ii=1,css%msg%nobs
           if (css%msg%trg_set(ii)) then
              ! evaluate filter
-             if (obs_bdeb)write(*,*)myname,'Evaluating filter:',ii,associated(css%psf),&
-                  & allocated(css%msg%trg_val)
-             bok=(nint(res(ii)).ne.0) ! NB bok is local, reject obs using trg_set->.false.
-             if (obs_bdeb)write(*,*)myname,'Returned:',val,bok
+             bok=(nint(css%msg%trg_res(ii)).ne.0) ! NB bok is local, reject obs using trg_set->.false.
+             if (obs_bdeb)write(*,*)myname,'Returned:',css%msg%trg_res(ii),bok
              if (bok) then
                 css%currentFile%ook(5)=css%currentFile%ook(5)+1
              else
@@ -2924,7 +2951,7 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_popMsgObs"
+    character*22 :: myname="observation_popMsgObs"
     logical :: bok
     integer :: ii
     bok=(css%msg%vobs.gt.0)
@@ -2946,6 +2973,7 @@ CONTAINS
              do ii=1,css%ntarget
                 select case (css%trg_type(ii))
                 case (parse_internal)
+                   if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
                    css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
                    if (obs_bdeb)write(*,*)myname,' Internal:',&
                         & ii,css%trg_val(ii)
@@ -2983,14 +3011,13 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer, external :: length
-    character*22 :: myname ="setfilter"
-    if(obs_bdeb)write(*,*)myname,'Entering.',irc
+    character*22 :: myname="observation_setfilter"
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%flt250=trim(flt)
        call chop0(css%flt250,250)
        css%lenf=length(css%flt250,250,10)
+       if(obs_bdeb)write(*,*)myname,"Filter:'"//css%flt250(1:css%lenf)//"'",irc
     end if
-    if(obs_bdeb)write(*,*)myname,'Exiting.',irc
     return
   end subroutine observation_setfilter
   !
@@ -2999,7 +3026,8 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="obs_compileFilter"
+    integer :: jj
+    character*22 :: myname="observation_ompileFilter"
     if (css%lenf.ne.0) then
        call parse_open(css%psf,crc250,irc)
        if (irc.ne.0) then
@@ -3007,15 +3035,15 @@ CONTAINS
           call observation_errorappend(crc250,"Error return from 'parse_open'.")
           return
        end if
-       if(obs_bdeb)write(*,*)myname,"Parsing: '"//css%flt250(1:css%lenf)//"'"
-       call parse_parsef(css%psf,css%flt250(1:css%lenf),css%trg_var,crc250,irc)
+       if(obs_bdeb)write(*,*)myname,"Parsing filter: '"//css%flt250(1:css%lenf)//"'",size(css%trg80)
+       call parse_parsef(css%psf,css%flt250(1:css%lenf),css%trg80,crc250,irc)
        if (irc.ne.0) then
           if(obs_bdeb)then
              write(*,*)myname,"Unable to parse:'"//css%flt250(1:css%lenf)//"'"
-             !                write(*,*)myname,'nvar:',css%ntrg
-             !                do jj=1,css%ntrg
-             !                   write(*,*) myname,'var:',jj,css%trg_var(jj)(1:css%trg_lenv(jj))
-             !                end do
+             write(*,*)myname,' nvar:',css%ntrg
+             do jj=1,css%ntrg
+                write(*,*) myname,' var:',jj,css%trg80(jj)(1:css%trg_lent(jj))
+             end do
           end if
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from parsef.")
@@ -3036,12 +3064,12 @@ CONTAINS
     character*(*) :: flt
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname ="getfilter"
-    if(obs_bdeb)write(*,*)myname,'Entering.',irc
+    character*22 :: myname="observation_getfilter"
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        flt=css%flt250(1:css%lenf)
+       if(obs_bdeb)write(*,*)myname,"Filter:'"//css%flt250(1:css%lenf)//"'",irc
     end if
-    if(obs_bdeb)write(*,*)myname,'Exiting.',irc
+    return
   end subroutine observation_getfilter
   !
   !###############################################################################
@@ -3079,7 +3107,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     type(obs_report), pointer :: newReport
-    character*22 :: myname = "observation_createReport"
+    character*22 :: myname="observation_createReport"
     allocate(newReport,stat=irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
@@ -3110,7 +3138,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     type(obs_reportItem), pointer :: newItem
-    character*22 :: myname = "observation_addReportItem"
+    character*22 :: myname="observation_addReportItem"
     !write(*,*)myname,' Entering.',irc,buff250(1:10)
     allocate(newItem,stat=irc)
     if (irc.ne.0) then
@@ -3136,7 +3164,7 @@ CONTAINS
     logical :: bok           ! was get successful?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_autoMessage"
+    character*22 :: myname="observation_autoMessage"
     !
     ! check if file is open, if not open it
     !
@@ -3248,7 +3276,7 @@ CONTAINS
     real :: rlon1,rlat1,rlon2,rlat2
     integer :: iktype,idd,id
     CHARACTER*9 :: CIDENT
-    character*22 :: myname = "observation_getReportLen"
+    character*22 :: myname="observation_getReportLen"
     maxrep=0
     if (isubset > nsubset) then
        bok=.false.
@@ -3311,7 +3339,7 @@ CONTAINS
     logical :: bbok           ! was get successful?
     integer :: seq
     real :: val
-    character*22 :: myname = "observation_getReport"
+    character*22 :: myname="observation_getReport"
     nrep=0
     if (isubset > nsubset) then
        bok=.false.
@@ -3737,7 +3765,7 @@ CONTAINS
     logical :: bok
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname = "observation_scanFile"
+    character*22 :: myname="observation_scanFile"
     integer :: cnt
     logical :: bbok
     if(obs_bdeb)write(*,*)myname,' Entering.',irc
@@ -3745,7 +3773,6 @@ CONTAINS
     ! open file
     !
     call observation_openFile(css,bok,crc250,irc)
-    !write(*,*)myname,'Open:',css%currentFile%fn250(1:css%currentFile%lenf),irc,bok
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," Error return from observation_openFile.")
@@ -3817,7 +3844,7 @@ CONTAINS
     logical :: bok           ! is everything ok?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_checkObs"
+    character*22 :: myname="observation_checkObs"
     integer :: yy,mm,dd,hh,mi,cnt
     real :: sec, j2000
     if (observation_eval(css,bok,crc250,irc)) then
@@ -3851,9 +3878,9 @@ CONTAINS
              end if
           end if
           sec=0.0D0
-          if(obs_bdeb)write(*,'(X,A,A,A,5(A,I0))') myname," File '",&
-               & css%currentFile%fn250(1:css%currentFile%lenf),"'",&
-               & yy,"/",mm,"/",dd," ",hh,":",mi
+          if(obs_bdeb)write(*,'(X,A,X,A,I4.4,4(A,I2.2),A)') myname,"Time: ",&
+               & yy,"/",mm,"/",dd," ",hh,":",mi,"  => '"//&
+               & css%currentFile%fn250(1:css%currentFile%lenf)//"'"
           call jd2000(j2000,yy,mm,dd,hh,mi,sec)
           !read file and get start/end indexs...
           if (css%currentFile%time_lim) then
@@ -3869,7 +3896,7 @@ CONTAINS
        else
           css%currentfile%orm(2)=css%currentfile%orm(2)+1 ! evaluation failed
        end if
-       if(obs_bdeb)write(*,*)myname,' Expressions:',css%ind_eset,css%ind_val,&
+       if(obs_bdeb)write(*,*)myname,' Index limits:',css%ind_eset,css%ind_val,&
             & css%currentFile%ind_lim,css%currentFile%ind_start,css%currentFile%ind_stop,bok
        !
        ! check against index limits
@@ -3941,7 +3968,7 @@ CONTAINS
     integer,external :: length
     character*250 :: fn250
     character*3 :: mode
-    character*22 :: myname = "observation_openFile"
+    character*22 :: myname="observation_openFile"
     integer :: ii
     !
     !     MISSING VALUE INDICATOR
@@ -3950,9 +3977,9 @@ CONTAINS
     NVIND=2147483647
     css%currentfile%NSUBSET=0
     css%currentFile%NMESSAGE=0
-    if(obs_bdeb)write(*,*)myname,'Opening file: ',css%currentfile%fn250(1:css%currentfile%lenf)
+    if(obs_bdeb)write(*,*)myname,'Opening obsfile: ',css%currentfile%fn250(1:css%currentfile%lenf)
     CALL PBOPEN(UNIT,css%currentfile%fn250(1:css%currentfile%lenf),'R',irc)
-    !write(*,*)myname,'Opened file: ',css%currentfile%fn250(1:css%currentfile%lenf)
+    !if(obs_bdeb)write(*,*)myname,'Opened file: ',css%currentfile%fn250(1:css%currentfile%lenf)
     if (irc.ne.0) then
        if(obs_bdeb)write(*,*)myname,'Unable to open file.',irc
        call observation_errorappend(crc250,myname)
@@ -3998,7 +4025,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     integer :: ii, jj
-    character*22 :: myname = "observation_readMessage"
+    character*22 :: myname="observation_readMessage"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     css%dyn_pos=0               ! reset dynamic position search index
     css%dyn_cnt=0               ! reset dynamic position search index
@@ -4143,7 +4170,7 @@ CONTAINS
     type(obs_session), pointer :: css
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_closeFile"
+    character*22 :: myname="observation_closeFile"
     !
     CALL PBCLOSE(unit,irc)
     if (irc.ne.0) then
@@ -4203,7 +4230,7 @@ CONTAINS
     type(obs_mainCategory),pointer :: currentCat
     type(obs_subCategory),pointer :: currentSub
     integer ii,irc
-    character*22 :: myname = "observation_storeCat"
+    character*22 :: myname="observation_storeCat"
     currentCat=> currentFile%firstCategory%next
     do while (.not.associated(currentCat,target=currentFile%lastCategory)) 
        if (currentCat%category .eq. cat) then
@@ -4300,7 +4327,7 @@ CONTAINS
     character*4 :: csec
     integer, external :: length
     integer :: lenp,lenc
-    character*22 :: myname = "observation_gettime"
+    character*22 :: myname="observation_gettime"
     call dj2000(j2000,yy,mm,dd,hh,mi,sec)
     write(csec,'(F4.1)') sec
     call chop0(csec,4)
@@ -4318,7 +4345,7 @@ CONTAINS
     real :: j2000
     integer, external :: length
     integer :: lenp,lent
-    character*22 :: myname = "observation_getj2000"
+    character*22 :: myname="observation_getj2000"
     integer :: yy,mm,dd,hh,mi
     real :: sec
     ! first try to read as formatted time
@@ -4639,7 +4666,7 @@ CONTAINS
     integer :: lent,lenv,pos,line
     integer, external :: length
     logical :: bdone
-    character*22 :: myname ="observation_initCodeTable"
+    character*22 :: myname="observation_initCodeTable"
     call chop0(c250,250)
     lent=length(c250,250,10)
     if (lent.ne.0) then
@@ -4741,7 +4768,7 @@ CONTAINS
     character*250 :: buff250
     integer :: lenc, lenb
     integer, external :: length
-    character*22 :: myname ="observation_errorappend"
+    character*22 :: myname="observation_errorappend"
     call chop0(crc250,250)
     lenc=length(crc250,250,10)
     lenb=len(trim(string))
@@ -4759,7 +4786,7 @@ CONTAINS
     character*250 :: buff250
     integer :: lenc, lenb
     integer, external :: length
-    character*22 :: myname ="observation_errorappendi"
+    character*22 :: myname="observation_errorappendi"
     call chop0(crc250,250)
     lenc=length(crc250,250,10)
     write(buff250,'(I12)')inum
@@ -4782,7 +4809,7 @@ CONTAINS
     integer :: lenv, lend, lenb, lenx
     character*250 :: xuff250, yuff250,buff250
     integer :: ii
-    character*22 :: myname = "observation_pretty"
+    character*22 :: myname="observation_pretty"
     buff250=""
     lenb=0
     do ii=1,ndims
@@ -4818,7 +4845,7 @@ CONTAINS
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250         ! error message string
     integer :: irc                  ! error return code (0=ok)
-    character*22 :: myname = "observation_compile"
+    character*22 :: myname="observation_compile"
     integer :: ii,jj
     type(obs_target), pointer :: currenttarget => null()
     if(obs_bdeb)write(*,*)myname,' Entering.',obs_bdeb
@@ -4830,17 +4857,6 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(obs_bdeb)write(*,*)myname,' Done making target list.',irc,css%ntarget,css%ntrg
-    do ii=1,css%ntarget
-       css%trg_var(ii)=css%trg80(ii)(1:css%trg_lent(ii))
-       css%trg_lenv(ii)=css%trg_lent(ii)
-    end do
-    if(obs_bdeb)write(*,*)myname,' Assigned index?',css%ind_eset
-    if (css%ind_eset) then
-       ii=css%ntrg
-       css%trg_var(ii)=css%ind_trg80(1:css%ind_lent)
-       css%trg_lenv(ii)=css%ind_lent
-    end if
     if(obs_bdeb)write(*,*)myname,' Parsing.',css%ind_eset
     if (css%ind_eset) then
        call parse_open(css%ind_pe,crc250,irc)
@@ -4849,7 +4865,7 @@ CONTAINS
           call observation_errorappend(crc250,"Error return from 'parse_open'.")
           return
        end if
-       call parse_parsef(css%ind_pe,css%ind_exp250(1:css%ind_lene),css%trg_var,crc250,irc)
+       call parse_parsef(css%ind_pe,css%ind_exp250(1:css%ind_lene),css%trg80,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from parsef.")
@@ -4883,6 +4899,8 @@ CONTAINS
                         & css%dyn_var(jj)(1:css%dyn_lenv(jj))//"'"
                 end do
              end if
+             if (obs_bdeb)write(*,*)myname,' Dynamic var:',ii,&
+                  & (" "//css%dyn_var(jj)(1:css%dyn_lenv(jj)),jj=1,size(css%dyn_var))
              call parse_parsef(css%trg_psp(ii)%ptr,&
                   & css%trg_pos250(ii)(1:css%trg_lenp(ii)),&
                   & css%dyn_var,crc250,irc)
@@ -4908,10 +4926,10 @@ CONTAINS
     logical :: bok           ! is everything ok?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_eval"
+    character*22 :: myname="observation_eval"
     integer :: ii,dyn_pos,ipos
     logical :: bbok
-    if(obs_bdeb) write(*,*)myname,'Entering.',css%int_val
+    if(obs_bdeb) write(*,*)myname,' Entering.',css%int_val
     !if(obs_bdeb) write(*,*)myname,'Position.',ntarget,css%dyn_pos,css%dyn_cnt,css%dyn_max
     !
     ! get next position
@@ -4926,7 +4944,6 @@ CONTAINS
        if (css%dyn_cnt.eq.0.or.css%dyn_cnt.ge.css%dyn_max) then ! read next observation
           if (obs_bdeb)write(*,*)myname,' Assigning:',css%ntarget,ktdexl
           css%dyn_cnt=1
-          if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
           do ii=1,css%ntarget
              select case (css%trg_type(ii))
              case (parse_delay) ! delayed processing
@@ -4938,7 +4955,7 @@ CONTAINS
                    css%trg_req(ii)=(values(ipos).ne.rvind)
                    if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                       write(css%currentfile%hint80(2),'(A," (",I0,"), value=undefined")')&
-                           & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos
+                           & css%trg80(ii)(1:css%trg_lent(ii)),ii,dyn_pos
                       bok=.false. ! missing target value
                    end if
                    if (obs_bdeb)write(*,*)myname,' Found:',ii,css%trg_seq(ii),css%trg_descr(ii)
@@ -4951,10 +4968,11 @@ CONTAINS
                 css%trg_vok(ii)=(values(ipos).ne.rvind)
                 if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                    write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
-                        & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+                        & css%trg80(ii)(1:css%trg_lent(ii)),ii,css%trg_seq(ii)
                    bok=.false. ! missing target value
                 end if
              case (parse_internal)
+                if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
                 css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
                 if (obs_bdeb)write(*,*)myname,' Internal:',ii,css%trg_val(ii)
              case (parse_variable)
@@ -4966,7 +4984,7 @@ CONTAINS
                    css%trg_vok(ii)=(values(ipos).ne.rvind)
                    if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                       write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
-                           & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+                           & css%trg80(ii)(1:css%trg_lent(ii)),ii,css%trg_seq(ii)
                       bok=.false. ! missing target value
                    end if
                    if (obs_bdeb)write(*,*)myname,' Found:',css%trg_seq(ii),css%trg_descr(ii)
@@ -4974,13 +4992,14 @@ CONTAINS
                    bbok=.false.
                 end if
              case (parse_expression)
+                if (obs_bdeb)write(*,*)myname,' Dynamic val:',ii,css%dyn_val
                 dyn_pos=nint(parse_evalf(css%trg_psp(ii)%ptr,css%dyn_val))
                 if (dyn_pos.ge.1.and.dyn_pos.le.ktdexl) then ! out of bounds...
                    css%trg_seq(ii)=dyn_pos
                    if (css%trg_descr(ii).ne.ktdexp(dyn_pos)) then
                       write(css%currentfile%hint80(2),&
                            & '(A," (",I0,"), DESCR(",I0,")=",I0," expected ",I0)')&
-                           & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos,&
+                           & css%trg80(ii)(1:css%trg_lent(ii)),ii,dyn_pos,&
                            & ktdexp(dyn_pos),css%trg_descr(ii)
                       bok=.false.
                    else
@@ -4989,14 +5008,14 @@ CONTAINS
                       css%trg_vok(ii)=(values(ipos).ne.rvind)
                       if (.not.css%trg_vok(ii).and.css%trg_req(ii)) then
                          write(css%currentfile%hint80(2),'(A," (",I0,"), value undefined at:",I0)')&
-                              & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,css%trg_seq(ii)
+                              & css%trg80(ii)(1:css%trg_lent(ii)),ii,css%trg_seq(ii)
 
                          bok=.false. ! missing target value
                       end if
                    end if
                 else
                    write(css%currentfile%hint80(2),'(A," (",I0,"), out of bounds at:",I0)')&
-                        & css%trg_var(ii)(1:css%trg_lenv(ii)),ii,dyn_pos
+                        & css%trg80(ii)(1:css%trg_lent(ii)),ii,dyn_pos
                    bok=.false. ! reject observation...
                 end if
              end select
@@ -5008,12 +5027,14 @@ CONTAINS
              end if
           end do
           if (bok.and.css%ind_eset) then
-             if(obs_bdeb)write(*,*)myname,"Calling parse_evalf.",&
+             if(obs_bdeb)write(*,*)myname,"Calling parse_evals.",&
                   & associated(css%ind_pe),allocated(css%trg_val),css%dyn_pos
-             css%trg_val(css%ntrg)=parse_evalf(css%ind_pe,css%trg_val)
+             call parse_evals(css%ind_pe,css%trg_val,css%trg_vok,&
+                  & css%trg_val(css%ntrg),css%trg_vok(css%ntrg))
           end if
           if (bok.and.css%ind_tset) then
-             css%trg_val(css%ntrg)=parse_evalf(css%ind_pt,css%trg_val)
+             call parse_evals(css%ind_pt,css%trg_val,css%trg_vok,&
+                  & css%trg_val(css%ntrg),css%trg_vok(css%ntrg))
           end if
           if (bok) then
              css%ind_val=css%trg_val(css%ntrg)
@@ -5053,7 +5074,7 @@ CONTAINS
     type(obs_session), pointer :: css
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_pulltargets"
+    character*22 :: myname="observation_pulltargets"
     integer :: ii,jj,kk
     jj=css%dyn_cnt
     do ii=css%ndup,1,-1
@@ -5091,12 +5112,13 @@ CONTAINS
     logical :: bok           ! is everything ok?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_checkDescr"
+    character*22 :: myname="observation_checkDescr"
     integer :: ii
     logical bok1,bok2
-    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget
+    if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget,css%category,ksec1(6),css%subcategory,ksec1(7)
     bok=.true.
     if (css%category .eq. ksec1(6) .and.css%subcategory .eq. ksec1(7)) then
+       if(obs_bdeb) write(*,*)myname,'Here.'
        css%currentfile%mok(5)=css%currentfile%mok(5)+1 ! other BUFRtype/subtype
        if (css%ntarget== 0) then ! no targets to evaluate
           return
@@ -5104,6 +5126,7 @@ CONTAINS
           bok1=.true.
           bok2=.true.
           do ii=1,css%ntarget
+             if(obs_bdeb) write(*,*)myname,'There.',ii
              select case (css%trg_type(ii))
              case (parse_empty)
              case (parse_constant)
@@ -5154,7 +5177,7 @@ CONTAINS
     type(obs_session), pointer :: css
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
-    character*22 :: myname = "observation_terminate"
+    character*22 :: myname="observation_terminate"
     if (css%ind_eset) then
        call parse_close(css%ind_pe,crc250,irc)
        if (irc.ne.0) then
@@ -5171,7 +5194,7 @@ CONTAINS
     integer :: ounit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_fileStartXml"
+    character*25 :: myname="observation_fileStartXml"
     if (associated(css%currentFile)) then
        write(ounit,'(2X,A)')"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
     else
@@ -5186,7 +5209,7 @@ CONTAINS
     integer :: locid
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_writexml"
+    character*25 :: myname="observation_writexml"
     character*250 :: buff250
     character*50 :: s1, s2, s3, s4
     integer :: ii,jj
@@ -5588,7 +5611,7 @@ CONTAINS
     integer :: ounit
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname = "observation_fileStopXml"
+    character*25 :: myname="observation_fileStopXml"
     integer :: ii
     integer :: len1,len2,len3,len4
     integer, external :: length

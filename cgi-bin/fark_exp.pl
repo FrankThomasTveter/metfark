@@ -15,11 +15,15 @@ use Data::Dumper;
 #but you need this: sudo apt-get install libcapture-tiny-perl
 use Capture::Tiny 'capture';
 #
-fark::debug(5);  # debug parse
-#
 my $ref=CGI->new();
 my $param= $ref->{param};
 my $parser = XML::LibXML->new();
+#
+my $debug=0;
+if (defined $param->{debug}[0]) {
+    $debug=1;
+}
+fark::debug(5);  # debug parse
 #
 $XML::LibXML::skipXMLDeclaration = 1;
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
@@ -30,20 +34,25 @@ my ($node) = $doc->findnodes("expression/result");
 my $res="";
 my $log="";
 my ($stdout,$stderr,$irc)=("","",0);
-eval {
-    ($stdout,$stderr,$irc)=capture {
+if ($debug) {
+    my $fark=fark->open();
+    print "Processing '".($param->{exp}[0]//"")."'\n";
+    $res=$fark->expression($param->{exp}[0]//"");
+    $fark->close();
+} else {
+    farkdir::termval { 
 	my $fark=fark->open();
 	print "Processing '".($param->{exp}[0]//"")."'\n";
 	$res=$fark->expression($param->{exp}[0]//"");
 	$fark->close();
-    };
+    } "Error while running.";
 };
 my $mret=$@;if ($mret || $irc) {farkdir::term("fark_exp.pl $stderr $mret");}
 #print "Output: $stdout\n\n $stderr\n";
 #
 $node->setAttribute("value",$res);
 #
-if (defined $param->{debug}[0]) {
+if ($debug) {
     print "$stdout\n\n$stderr\n";
 }
 # report xml-structure
