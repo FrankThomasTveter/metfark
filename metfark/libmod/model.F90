@@ -513,7 +513,7 @@ CONTAINS
     end if
     !
     ! remove location arrays
-    call model_clearLoc(css,crc250,irc)
+    call model_clearLocList(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Error return from clearLoc.")
@@ -700,14 +700,12 @@ CONTAINS
   !
   ! remove item from model stack
   !
-  subroutine model_deleteFile (css,df, crc250,irc)
+  subroutine model_deleteFile (css,df,crc250,irc)
     type(mod_session), pointer :: css !  current session
     type(mod_file), pointer :: df
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
     character*25 :: myname="model_deleteFile"
-    integer :: irc2
-    integer :: ii
     !if(mod_bdeb)write(*,*)myname,'Entering.'
     if (associated(df)) then
        css%nFileIndexes = css%nFileIndexes - 1
@@ -715,8 +713,33 @@ CONTAINS
        css%stackReady=.false.
        df%next%prev => df%prev
        df%prev%next => df%next
-       nullify(df%prev)
-       nullify(df%next)
+       css%currentfile => df
+       call model_clearCurrentFile(css,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from clearCurrentFile.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    !if(mod_bdeb)write(*,*)myname,' Done.'
+    return
+  end subroutine model_deleteFile
+  !
+  ! delete file contents
+  !
+  subroutine model_clearCurrentFile (css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc  ! error return code (0=ok)
+    character*25 :: myname="model_clearCurrentFile"
+    type(mod_file), pointer :: df
+    integer :: irc2
+    integer :: ii
+    !if(mod_bdeb)write(*,*)myname,'Entering.'
+    df => css%currentFile
+    if (associated(df)) then
        if (allocated(df%sort)) deallocate(df%sort,stat=irc2)
        if (allocated(df%indsort)) deallocate(df%indsort,stat=irc2)
        if (allocated(df%desc250)) deallocate(df%desc250,stat=irc2)
@@ -741,11 +764,10 @@ CONTAINS
           if (associated(df%var(ii)%ptr)) deallocate(df%var(ii)%ptr)
        end do
        if (associated(df%var)) deallocate(df%var,stat=irc2)
-       deallocate(df)
     end if
     !if(mod_bdeb)write(*,*)myname,' Done.'
     return
-  end subroutine model_deleteFile
+  end subroutine model_clearCurrentFile
   !
   ! Add model-file (grib/netcdf) to the MODEL STACK
   !
@@ -1874,13 +1896,13 @@ CONTAINS
  !
  ! set observation target names
  !
- subroutine model_setObsVar(css,nn,var,crc250,irc)
+ subroutine model_setObsTrg(css,nn,var,crc250,irc)
     type(mod_session), pointer :: css !  current session
     integer :: nn
     character*80 :: var(nn)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_setObsVar"
+    character*25 :: myname="model_setObsTrg"
     integer, external :: length
     integer :: ii
     if (css%cobs.ne.nn) then
@@ -1907,14 +1929,14 @@ CONTAINS
        css%obs_req(ii)=.false.
     end do
     return
-  end subroutine model_setObsVar
+  end subroutine model_setObsTrg
  subroutine model_getObsReq(css,nn,req,crc250,irc)
     type(mod_session), pointer :: css !  current session
     integer :: nn
     logical :: req(nn)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_setObsVar"
+    character*25 :: myname="model_setObsReq"
     integer, external :: length
     integer :: ii
     do ii=1,min(nn,css%cobs)
@@ -2240,11 +2262,11 @@ CONTAINS
   !###############################################################################
   ! initialise the MODEL location
   !
-  subroutine model_locinit(css,crc250,irc)
+  subroutine model_initLocStack(css,crc250,irc)
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_locinit"
+    character*25 :: myname="model_initLocStack"
     ! initialise chain
     if (.not.associated(css%firstLoc)) then
        allocate(css%firstLoc,css%lastLoc, stat=irc)
@@ -2260,7 +2282,7 @@ CONTAINS
        css%locReady=.false.
        if(mod_bdeb)write(*,*)myname,' WARNING: locready=F'
     end if
-  end subroutine model_locinit
+  end subroutine model_initLocStack
   !
   ! clear the MODEL POS
   !
@@ -2310,13 +2332,13 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,' Done.',css%csli
   end subroutine model_sliceVariables
   !
-  subroutine model_sliceIndex(css,nslice,ind,crc250,irc)
+  subroutine model_setSliceIndex(css,nslice,ind,crc250,irc)
     type(mod_session), pointer :: css !  current session
     integer :: nslice
     integer :: ind(nslice)
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_sliceIndex"
+    character*25 :: myname="model_setSliceIndex"
     integer :: ii
     if(mod_bdeb)write(*,*)myname,' Entering.'
     ! store slice variables/dimensions
@@ -2341,7 +2363,7 @@ CONTAINS
             & "'"//css%trg_v80(ind(ii))(1:css%trg_lenv(ind(ii)))//"'"
     end do
     if(mod_bdeb)write(*,*)myname,' Done.',css%csli
-  end subroutine model_sliceIndex
+  end subroutine model_setSliceIndex
   !
   ! Use marked target variables as slice variables
   subroutine model_sliceTrgVal(css,crc250,irc)
@@ -2395,17 +2417,17 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,' Done.',css%csli
   end subroutine model_sliceTrgVal
   !
-  subroutine model_locclear(css,crc250,irc)
+  subroutine model_clearLocStack(css,crc250,irc)
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
     type(mod_location), pointer :: currentLoc => null()
     type(mod_location), pointer :: locNext => null()
-    character*25 :: myname="model_locclear"
+    character*25 :: myname="model_clearLocStack"
     integer :: ii, lens
     integer, external :: length
     if(mod_bdeb)write(*,*)myname,' Entering.'
-    call model_locinit(css,crc250,irc)
+    call model_initLocStack(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Error return from locinit.")
@@ -2436,7 +2458,7 @@ CONTAINS
        return
     end if
     if(mod_bdeb)write(*,*)myname,' Done.'
-  end subroutine model_locclear
+  end subroutine model_clearLocStack
   !
   ! Add a "location", specified by slice variables...
   !
@@ -2479,7 +2501,7 @@ CONTAINS
        css%locoffset=locid-1
     end if
     !
-    call model_locinit(css,crc250,irc)
+    call model_initLocStack(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Error return from locinit.")
@@ -2553,7 +2575,7 @@ CONTAINS
        css%locoffset=locid-1
     end if
     !
-    call model_locinit(css,crc250,irc)
+    call model_initLocStack(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Error return from locinit.")
@@ -3617,12 +3639,12 @@ CONTAINS
     return
   end subroutine model_initLocPos
   !
-  subroutine model_clearLoc(css,crc250,irc)
+  subroutine model_clearLocList(css,crc250,irc)
     type(mod_session), pointer :: css   ! current session
     type(mod_location),pointer :: loc   ! location
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_clearLoc"
+    character*25 :: myname="model_clearLocList"
     integer :: ii
     logical :: changed
     if (allocated(css%locData)) then
@@ -3639,7 +3661,7 @@ CONTAINS
     css%locReady=.false.
     css%nloc=0
     return
-  end subroutine model_clearLoc
+  end subroutine model_clearLocList
   !
   subroutine model_search(css,newFile,p,b,loc,crc250,irc)
     type(mod_session), pointer :: css   ! current session

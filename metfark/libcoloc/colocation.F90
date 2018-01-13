@@ -1135,7 +1135,7 @@ CONTAINS
   ! colocate data and write to table file
   !
   subroutine colocation_makeTable(css,mss,oss,ounit,name80,&
-       & ncol,col80,exp250,leg250,test,fill250,crc250,irc)
+       & ncol,col80,colexp250,leg250,test,fill250,crc250,irc)
     use model
     use observations
     use parse
@@ -1147,7 +1147,7 @@ CONTAINS
     character*80 :: name80
     integer :: ncol
     character*80, allocatable :: col80(:)
-    character*250, allocatable :: exp250(:)
+    character*250, allocatable :: colexp250(:)
     character*250 :: leg250
     integer :: test
     character*250 :: fill250
@@ -1186,7 +1186,7 @@ CONTAINS
     !
     lena=length(name80,80,10)
     bok=.true.
-    if(col_bdeb)write(*,*)myname,'Entering.',ounit,ncol,size(col80),size(exp250)
+    if(col_bdeb)write(*,*)myname,'Entering.',ounit,ncol,size(col80),size(colexp250)
     ! check what we should colocated
     tmod=model_targetCount(mss,crc250,irc)
     if (irc.ne.0) then
@@ -1262,15 +1262,15 @@ CONTAINS
           return
        end if
     end if
-    ! set slice model variables
-    call model_sliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
+    ! Indicate which model targets should be sliced (match obs targets)
+    call model_setSliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
     if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_sliceIndex")
+       call colocation_errorappend(crc250,"model_setSliceIndex")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Compile expressions.',emod,associated(css)
+    if(col_bdeb)write(*,*)myname,'Compile match expressions.',emod,associated(css)
     if (associated(css)) then
-       ! compile match-experssions
+       ! compile observation match-experssions
        call colocation_compileMatch(css,oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_compileMatch")
@@ -1298,12 +1298,12 @@ CONTAINS
        return
     end if
     ! set observation target names
-    call  model_setObsVar(mss,oss%ntrg,oss%trg80,crc250,irc)
+    call  model_setObsTrg(mss,oss%ntrg,oss%trg80,crc250,irc)
     if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_setObsVar")
+       call colocation_errorappend(crc250,"model_setObsTrg")
        return
     end if
-    ! compile model filter (called after model_setFilter and model_setObsVar)
+    ! compile model filter (called after model_setFilter and model_setObsTrg)
     call model_compileFilter(mss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_compileFilter")
@@ -1315,20 +1315,21 @@ CONTAINS
        call colocation_errorappend(crc250,"model_getObsReq")
        return
     end if
+    if(col_bdeb)write(*,*)myname,'Compiling obs filter.',ncol,size(col80),size(colexp250)
     ! compile obs filter
     call observation_compileFilter(oss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"obs_compileFilter")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Compiling.',ncol,size(col80),size(exp250)
+    if(col_bdeb)write(*,*)myname,'Compiling colmn expr.',ncol,size(col80),size(colexp250)
     ! compile column expressions
-    call model_compileExpr(mss,ncol,exp250,crc250,irc)
+    call model_compileExpr(mss,ncol,colexp250,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_compileExpr")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Analyse limits.',ncol,size(col80),size(exp250)
+    if(col_bdeb)write(*,*)myname,'Analyse limits.',mss%ind_lval,oss%ind_lval
     ! get overall max/min limits...
     if (mss%ind_lval(1).and.oss%ind_lval(1)) then
        mod_minval=max(mss%ind_minval,oss%ind_minval)
@@ -1364,8 +1365,8 @@ CONTAINS
     end if
     !
     if(col_bdeb)write(*,*)myname,'Entering model file loop.',mod_lval,mod_minval,mod_maxval,obs_lval,obs_minval,obs_maxval
-    locid=0 ! observation count (= identification)
     MODFILE: do ! need to enter loop if (tmod.eq.0)
+       locid=0 ! observation count (= identification)
        if (tmod.ne.0) then ! we have model targets specified
           ! loop over data
           bok= model_loopFileStack(mss,crc250,irc)
@@ -1453,10 +1454,10 @@ CONTAINS
           end if
           if (tobs.ne.0.and.tmod.ne.0) then ! we have observation targets available
              ! initialise the location list
-             if(col_bdeb)write(*,*)myname,'Clear model locations.'
-             call model_locclear(mss,crc250,irc)
+             if(col_bdeb)write(*,*)myname,'Clear model location stack.'
+             call model_clearLocStack(mss,crc250,irc)
              if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_locclear")
+                call colocation_errorappend(crc250,"model_clearLocStack")
                 return
              end if
              ! call model_sliceTarget(mss,crc250,irc)
@@ -1522,9 +1523,9 @@ CONTAINS
              if(col_bdeb)write(*,*)myname,'Clearing loc stack.',mss%ctrg,associated(mss%trg_v80)
 
              ! initialise the location list
-             call model_locclear(mss,crc250,irc)
+             call model_clearLocStack(mss,crc250,irc)
              if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_locclear")
+                call colocation_errorappend(crc250,"model_clearLocStack")
                 return
              end if
              ! call model_sliceTarget(mss,crc250,irc)
@@ -1637,10 +1638,36 @@ CONTAINS
              end do OBSERVATION
           end if
           ! end obs data loop
+          ! do not delete obs-file contents since obs-file...
+          ! ...contents must be available for other model files.
           if (tobs.eq.0.or.test.ne.0) then
              exit OBSFILE
           end if
        end do OBSFILE
+       ! remove location stack
+       call model_clearLocStack(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_clearLocStack")
+          return
+       end if
+       ! remove location lists
+       call model_clearLocList(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," Error return from clearLoc.")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
+       ! remove current model file contents
+       call model_clearCurrentFile(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," Error return from clearLoc.")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
        ! end model loop
        if (tmod.eq.0.or.test.ne.0)  then
           exit MODFILE
@@ -1650,15 +1677,6 @@ CONTAINS
     call colocation_removeMatchList(css,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"closeMatch")
-       return
-    end if
-    ! remove location arrays
-    call model_clearLoc(mss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," Error return from clearLoc.")
-       call colocation_errorappendi(crc250,irc)
-       call colocation_errorappend(crc250,"\n")
        return
     end if
     !
@@ -1921,15 +1939,15 @@ CONTAINS
           return
        end if
     end if
-    ! set slice model variables
-    call model_sliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
+    ! Indicate which model targets should be sliced (match obs targets)
+    call model_setSliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
     if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_sliceIndex")
+       call colocation_errorappend(crc250,"model_setSliceIndex")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Compile expressions.',emod,associated(css)
+    if(col_bdeb)write(*,*)myname,'Compile match expressions.',emod,associated(css)
     if (associated(css)) then
-       ! compile match-experssions
+       ! compile observation match-experssions
        call colocation_compileMatch(css,oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_compileMatch")
@@ -1957,12 +1975,12 @@ CONTAINS
        return
     end if
     ! set observation target names
-    call  model_setObsVar(mss,oss%ntrg,oss%trg80,crc250,irc)
+    call  model_setObsTrg(mss,oss%ntrg,oss%trg80,crc250,irc)
     if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_setObsVar")
+       call colocation_errorappend(crc250,"model_setObsTrg")
        return
     end if
-    ! compile model filter (called after model_setFilter and model_setObsVar)
+    ! compile model filter (called after model_setFilter and model_setObsTrg)
     call model_compileFilter(mss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_compileFilter")
@@ -2028,8 +2046,8 @@ CONTAINS
     write(ounit,'("<colocation>")',iostat=irc2)
     !
     if(col_bdeb)write(*,*)myname,'Entering model file loop.',mod_lval,mod_minval,mod_maxval,obs_lval,obs_minval,obs_maxval
-    locid=0 ! observation count (= identification)
     MODFILE: do ! need to enter loop if (tmod.eq.0)
+       locid=0 ! observation count (= identification)
        if (tmod.ne.0) then ! we have model targets specified
           ! loop over data
           bok= model_loopFileStack(mss,crc250,irc)
@@ -2125,9 +2143,9 @@ CONTAINS
           if (tobs.ne.0.and.tmod.ne.0) then ! we have observation targets available
              ! initialise the location list
              if(col_bdeb)write(*,*)myname,'Clear model locations.'
-             call model_locclear(mss,crc250,irc)
+             call model_clearLocStack(mss,crc250,irc)
              if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_locclear")
+                call colocation_errorappend(crc250,"model_clearLocStack")
                 return
              end if
              ! call model_sliceTarget(mss,crc250,irc)
@@ -2191,11 +2209,10 @@ CONTAINS
           else if (tmod.ne.0) then ! use model default values
 
              if(col_bdeb)write(*,*)myname,'Clearing loc stack.',mss%ctrg,associated(mss%trg_v80)
-
              ! initialise the location list
-             call model_locclear(mss,crc250,irc)
+             call model_clearLocStack(mss,crc250,irc)
              if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_locclear")
+                call colocation_errorappend(crc250,"model_clearLocStack")
                 return
              end if
              ! call model_sliceTarget(mss,crc250,irc)
@@ -2296,7 +2313,30 @@ CONTAINS
              exit OBSFILE
           end if
        end do OBSFILE
-
+       ! remove location stack
+       call model_clearLocStack(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_clearLocStack")
+          return
+       end if
+       ! remove location lists
+       call model_clearLocList(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," Error return from clearLoc.")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
+       ! remove current model file contents
+       call model_clearCurrentFile(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," Error return from clearLoc.")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
        ! end model loop
        if (tmod.ne.0.or.test.ne.0)  then
           ! write file stop xml-tag
@@ -2327,15 +2367,6 @@ CONTAINS
     write(ounit,'("</colocation>")',iostat=irc2)
     close (unit=ounit,iostat=irc)
     if (irc.ne.0) irc=0 ! oh well...
-    ! remove location arrays
-    call model_clearLoc(mss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," Error return from clearLoc.")
-       call colocation_errorappendi(crc250,irc)
-       call colocation_errorappend(crc250,"\n")
-       return
-    end if
     !
     if (fill) then
        call colocation_fill(fill250,lenf,crc250,irc)

@@ -314,7 +314,7 @@ CONTAINS
     integer,dimension(8) :: values    
     integer :: ii, imax,nargs
     character*22 :: myname ="parse_evalf"
-    character*500 :: str500
+    character*250 :: str250
     integer :: lens
     integer, external :: length
     logical :: above,below,found
@@ -742,12 +742,16 @@ CONTAINS
           end if
        END SELECT
        if(parse_bdeb)then
-          write(str500,'(100(X,F0.2))') &
-               & (css%Stack(II),II=1,min(SP,100))
-          call chop0(str500,500)
-          lens=length(str500,500,10)
+          if (sp.ne.0) then
+             write(str250,'(100(X,F0.2))') &
+                  & (css%Stack(II),II=1,min(SP,100))
+          else
+             STR250=""
+          end if
+          call chop0(str250,250)
+          lens=length(str250,250,10)
           write(*,'(X,A,5X,A)') myname,&
-               & "Stack=["//str500(1:LENS)//"]"
+               & "stack=["//str250(1:LENS)//"]"
        end if
     END DO
     EvalErrType = 0
@@ -775,11 +779,14 @@ CONTAINS
     REAL(rn),                PARAMETER :: zero = 0._rn
     integer :: ii, nargs
     character*22 :: myname ="parse_evals"
-    character*500 :: str500
+    character*250 :: str250
     integer :: lens
     integer, external :: length
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
+         & size(val),size(set),&
+         & allocated(val),allocated(set)
     if(parse_bdeb)write(*,*)myname,"Entering"
     ret=.true.
     DP = 1
@@ -1197,12 +1204,16 @@ CONTAINS
           end if
        END SELECT
        if(parse_bdeb)then
-          write(str500,'(100(X,F0.2))') &
-               & (css%Stack(II),II=1,min(SP,100))
-          call chop0(str500,500)
-          lens=length(str500,500,10)
+          if (sp.ne.0) then
+             write(str250,'(100(X,F0.2))') &
+                  & (css%Stack(II),II=1,min(SP,100))
+          else
+             STR250=""
+          end if
+          call chop0(str250,250)
+          lens=length(str250,250,10)
           write(*,'(X,A,5X,A)') myname,&
-               & "Stack=["//str500(1:LENS)//"]"
+               & "Stack=["//str250(1:LENS)//"]"
        end if
     END DO
     EvalErrType = 0
@@ -1234,13 +1245,14 @@ CONTAINS
     integer :: ii, jj, nargs, imax,imin,iclo
     real :: vmax,vmin,vclo,v
     logical :: above, below, found
-    character*50 :: str500
+    character*250 :: str250
     integer :: lens
     integer, external :: length
     character*12 :: myname ="parse_evala"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(parse_bdeb)write(*,*)myname,"Entering",css%ByteCodeSize,ctrg,npos,cpos,&
-         & size(val),size(set),size(res),allocated(val),allocated(set),allocated(res)
+    if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
+         & ctrg, cpos, npos, size(val),size(set),size(res),&
+         & allocated(val),allocated(set),allocated(res)
     if (css%npos.lt.npos) then
        css%npos=npos
        IF (ASSOCIATED(css%Stacka)) DEALLOCATE ( css%Stacka, stat=irc)
@@ -1973,12 +1985,16 @@ CONTAINS
           end if
        END SELECT
        if(parse_bdeb)then
-          write(str500,'(100(X,F0.2))') &
-               & (css%Stacka(II,1),II=1,min(SP,100))
-          call chop0(str500,500)
-          lens=length(str500,500,10)
-          write(*,'(X,A,5X,A,2(X,I0),100(X,F0.2))') myname,&
-               & "Stack=["//str500(1:LENS)//"]",AP,nargs
+          if (sp.ne.0) then
+             write(str250,'(100(X,F0.2))') &
+                  & (css%Stacka(II,1),II=1,min(SP,10))
+          else
+             STR250=""
+          end if
+          call chop0(str250,250)
+          lens=length(str250,250,10)
+          write(*,'(X,A,5X,A,2(X,I0))') myname,&
+               & "STACK=["//str250(1:LENS)//"]",AP,nargs
        end if
     END DO
     if(parse_bdeb)write(*,*)myname,'Loop done.',npos,allocated(set)
@@ -2973,6 +2989,26 @@ CONTAINS
     end if
     if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
   end subroutine parse_errorappendi
+  subroutine parse_errorappendr(crc250,rnum)
+    implicit none
+    character*250 :: crc250
+    real :: rnum
+    character*250 :: buff250
+    integer :: lenc, lenb
+    integer, external :: length
+    character*22 :: myname ="parse_errorappendi"
+    call chop0(crc250,250)
+    lenc=length(crc250,250,10)
+    write(buff250,'(F0.2)')rnum
+    call chop0(buff250,250)
+    lenb=length(buff250,250,1)
+    if (lenc.eq.0) then
+       crc250=buff250(1:lenb)
+    else
+       crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
+    end if
+    if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
+  end subroutine parse_errorappendr
   !
   character*20 function parse_code20(code,nargs)
     integer code,nargs,ii

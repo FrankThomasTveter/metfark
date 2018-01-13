@@ -6,7 +6,7 @@
 #
 #       ANY CHANGES MADE HERE WILL BE LOST!
 #
-#   MakeMaker ARGV: ()
+#   MakeMaker ARGV: (q[INSTALLDIRS=vendor], q[INSTALLVENDORARCH=/usr/lib/perl5/], q[VENDORARCHEXP=/usr/lib/perl5/])
 #
 
 #   MakeMaker Parameters:
@@ -50,7 +50,7 @@ RANLIB = :
 SITELIBEXP = /usr/local/share/perl/5.18.2
 SITEARCHEXP = /usr/local/lib/perl/5.18.2
 SO = so
-VENDORARCHEXP = /usr/lib/perl5
+VENDORARCHEXP = /usr/lib/perl5/
 VENDORLIBEXP = /usr/share/perl5
 
 
@@ -75,7 +75,7 @@ INST_MAN1DIR = blib/man1
 INST_MAN3DIR = blib/man3
 MAN1EXT = 1p
 MAN3EXT = 3pm
-INSTALLDIRS = site
+INSTALLDIRS = vendor
 DESTDIR = 
 PREFIX = /usr
 PERLPREFIX = $(PREFIX)
@@ -91,7 +91,7 @@ INSTALLARCHLIB = $(PERLPREFIX)/lib/perl/5.18
 DESTINSTALLARCHLIB = $(DESTDIR)$(INSTALLARCHLIB)
 INSTALLSITEARCH = $(SITEPREFIX)/lib/perl/5.18.2
 DESTINSTALLSITEARCH = $(DESTDIR)$(INSTALLSITEARCH)
-INSTALLVENDORARCH = $(VENDORPREFIX)/lib/perl5
+INSTALLVENDORARCH = /usr/lib/perl5/
 DESTINSTALLVENDORARCH = $(DESTDIR)$(INSTALLVENDORARCH)
 INSTALLBIN = $(PERLPREFIX)/bin
 DESTINSTALLBIN = $(DESTDIR)$(INSTALLBIN)
@@ -216,56 +216,56 @@ TO_INST_PM = check.pl \
 	lib/xmlparse.mod \
 	t.pl
 
-PM_TO_BLIB = lib/farkdata.pm \
-	blib/lib/farkdata.pm \
-	lib/read_xml_primitives.mod \
-	blib/lib/read_xml_primitives.mod \
-	fark.pl \
-	$(INST_LIB)/fark.pl \
-	t.pl \
-	$(INST_LIB)/t.pl \
-	lib/libmodel.a \
-	blib/lib/libmodel.a \
-	check.pl \
-	$(INST_LIB)/check.pl \
-	lib/libsort.a \
-	blib/lib/libsort.a \
-	lib/observations.mod \
-	blib/lib/observations.mod \
-	fark2.pl \
-	$(INST_LIB)/fark2.pl \
-	lib/fark.pm \
+PM_TO_BLIB = lib/fark.pm \
 	blib/lib/fark.pm \
-	lib/libplot.a \
-	blib/lib/libplot.a \
-	lib/libbufr.a \
-	blib/lib/libbufr.a \
-	lib/libparse.a \
-	blib/lib/libparse.a \
 	lib/plot.mod \
 	blib/lib/plot.mod \
-	lib/model.mod \
-	blib/lib/model.mod \
-	lib/farkdir.pm \
-	blib/lib/farkdir.pm \
-	lib/libobs.a \
-	blib/lib/libobs.a \
-	lib/colocation.mod \
-	blib/lib/colocation.mod \
 	farkobs.pl \
 	$(INST_LIB)/farkobs.pl \
-	lib/libbufrc.a \
-	blib/lib/libbufrc.a \
-	lib/parse.mod \
-	blib/lib/parse.mod \
 	lib/libgenc.a \
 	blib/lib/libgenc.a \
-	lib/xmlparse.mod \
-	blib/lib/xmlparse.mod \
+	fark.pl \
+	$(INST_LIB)/fark.pl \
+	lib/libbufrc.a \
+	blib/lib/libbufrc.a \
+	lib/model.mod \
+	blib/lib/model.mod \
 	lib/libcoloc.a \
 	blib/lib/libcoloc.a \
+	lib/farkdata.pm \
+	blib/lib/farkdata.pm \
+	fark2.pl \
+	$(INST_LIB)/fark2.pl \
+	lib/parse.mod \
+	blib/lib/parse.mod \
+	lib/libparse.a \
+	blib/lib/libparse.a \
+	t.pl \
+	$(INST_LIB)/t.pl \
+	lib/libplot.a \
+	blib/lib/libplot.a \
+	lib/colocation.mod \
+	blib/lib/colocation.mod \
+	lib/libbufr.a \
+	blib/lib/libbufr.a \
+	lib/libobs.a \
+	blib/lib/libobs.a \
+	lib/farkdir.pm \
+	blib/lib/farkdir.pm \
+	lib/read_xml_primitives.mod \
+	blib/lib/read_xml_primitives.mod \
+	lib/libmodel.a \
+	blib/lib/libmodel.a \
+	lib/libsort.a \
+	blib/lib/libsort.a \
+	lib/xmlparse.mod \
+	blib/lib/xmlparse.mod \
 	lib/sort.mod \
-	blib/lib/sort.mod
+	blib/lib/sort.mod \
+	check.pl \
+	$(INST_LIB)/check.pl \
+	lib/observations.mod \
+	blib/lib/observations.mod
 
 
 # --- MakeMaker platform_constants section:
@@ -615,22 +615,22 @@ clean_subdirs :
 
 clean :: clean_subdirs
 	- $(RM_F) \
-	  *perl.core core.[0-9][0-9] \
-	  core.[0-9] $(BASEEXT).x \
-	  lib$(BASEEXT).def core.[0-9][0-9][0-9][0-9][0-9] \
-	  $(MAKE_APERL_FILE) MYMETA.json \
-	  MYMETA.yml blibdirs.ts \
-	  mon.out perl$(EXE_EXT) \
-	  core.*perl.*.? $(INST_ARCHAUTODIR)/extralibs.ld \
-	  core.[0-9][0-9][0-9] tmon.out \
-	  *$(OBJ_EXT) $(BASEEXT).exp \
-	  perl $(INST_ARCHAUTODIR)/extralibs.all \
-	  core.[0-9][0-9][0-9][0-9] perlmain.c \
-	  pm_to_blib fark.c \
 	  so_locations core \
-	  *$(LIB_EXT) pm_to_blib.ts \
-	  $(BASEEXT).def perl.exe \
-	  $(BOOTSTRAP) $(BASEEXT).bso 
+	  $(BASEEXT).exp *perl.core \
+	  MYMETA.json mon.out \
+	  core.[0-9][0-9][0-9][0-9][0-9] core.[0-9][0-9][0-9] \
+	  core.*perl.*.? core.[0-9][0-9] \
+	  $(BASEEXT).bso perl.exe \
+	  $(BASEEXT).def blibdirs.ts \
+	  fark.c $(BASEEXT).x \
+	  pm_to_blib perl$(EXE_EXT) \
+	  perlmain.c *$(LIB_EXT) \
+	  core.[0-9][0-9][0-9][0-9] MYMETA.yml \
+	  *$(OBJ_EXT) $(INST_ARCHAUTODIR)/extralibs.all \
+	  core.[0-9] lib$(BASEEXT).def \
+	  $(INST_ARCHAUTODIR)/extralibs.ld pm_to_blib.ts \
+	  $(MAKE_APERL_FILE) tmon.out \
+	  $(BOOTSTRAP) perl 
 	- $(RM_RF) \
 	  blib 
 	- $(MV) $(FIRST_MAKEFILE) $(MAKEFILE_OLD) $(DEV_NULL)
@@ -645,8 +645,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(MAKEFILE_OLD) $(OBJECT) \
-	  $(FIRST_MAKEFILE) 
+	  $(OBJECT) $(FIRST_MAKEFILE) \
+	  $(MAKEFILE_OLD) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 
@@ -791,7 +791,7 @@ distdir : create_distdir distmeta
 
 # --- MakeMaker dist_test section:
 disttest : distdir
-	cd $(DISTVNAME) && $(ABSPERLRUN) Makefile.PL 
+	cd $(DISTVNAME) && $(ABSPERLRUN) Makefile.PL "INSTALLDIRS=vendor" "INSTALLVENDORARCH=/usr/lib/perl5/" "VENDORARCHEXP=/usr/lib/perl5/"
 	cd $(DISTVNAME) && $(MAKE) $(PASTHRU)
 	cd $(DISTVNAME) && $(MAKE) test $(PASTHRU)
 
@@ -1012,7 +1012,7 @@ $(FIRST_MAKEFILE) : Makefile.PL $(CONFIGDEP)
 	-$(NOECHO) $(RM_F) $(MAKEFILE_OLD)
 	-$(NOECHO) $(MV)   $(FIRST_MAKEFILE) $(MAKEFILE_OLD)
 	- $(MAKE) $(USEMAKEFILE) $(MAKEFILE_OLD) clean $(DEV_NULL)
-	$(PERLRUN) Makefile.PL 
+	$(PERLRUN) Makefile.PL "INSTALLDIRS=vendor" "INSTALLVENDORARCH=/usr/lib/perl5/" "VENDORARCHEXP=/usr/lib/perl5/"
 	$(NOECHO) $(ECHO) "==> Your Makefile has been rebuilt. <=="
 	$(NOECHO) $(ECHO) "==> Please rerun the $(MAKE) command.  <=="
 	$(FALSE)
@@ -1033,7 +1033,10 @@ $(MAKE_APERL_FILE) : $(FIRST_MAKEFILE) pm_to_blib
 	$(NOECHO) $(PERLRUNINST) \
 		Makefile.PL DIR= \
 		MAKEFILE=$(MAKE_APERL_FILE) LINKTYPE=static \
-		MAKEAPERL=1 NORECURS=1 CCCDLFLAGS=
+		MAKEAPERL=1 NORECURS=1 CCCDLFLAGS= \
+		INSTALLDIRS=vendor \
+		INSTALLVENDORARCH=/usr/lib/perl5/ \
+		VENDORARCHEXP=/usr/lib/perl5/
 
 
 # --- MakeMaker test section:
@@ -1085,31 +1088,31 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  lib/farkdata.pm blib/lib/farkdata.pm \
-	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
-	  fark.pl $(INST_LIB)/fark.pl \
-	  t.pl $(INST_LIB)/t.pl \
-	  lib/libmodel.a blib/lib/libmodel.a \
-	  check.pl $(INST_LIB)/check.pl \
-	  lib/libsort.a blib/lib/libsort.a \
-	  lib/observations.mod blib/lib/observations.mod \
-	  fark2.pl $(INST_LIB)/fark2.pl \
 	  lib/fark.pm blib/lib/fark.pm \
-	  lib/libplot.a blib/lib/libplot.a \
-	  lib/libbufr.a blib/lib/libbufr.a \
-	  lib/libparse.a blib/lib/libparse.a \
 	  lib/plot.mod blib/lib/plot.mod \
-	  lib/model.mod blib/lib/model.mod \
-	  lib/farkdir.pm blib/lib/farkdir.pm \
-	  lib/libobs.a blib/lib/libobs.a \
-	  lib/colocation.mod blib/lib/colocation.mod \
 	  farkobs.pl $(INST_LIB)/farkobs.pl \
-	  lib/libbufrc.a blib/lib/libbufrc.a \
-	  lib/parse.mod blib/lib/parse.mod \
 	  lib/libgenc.a blib/lib/libgenc.a \
-	  lib/xmlparse.mod blib/lib/xmlparse.mod \
+	  fark.pl $(INST_LIB)/fark.pl \
+	  lib/libbufrc.a blib/lib/libbufrc.a \
+	  lib/model.mod blib/lib/model.mod \
 	  lib/libcoloc.a blib/lib/libcoloc.a \
-	  lib/sort.mod blib/lib/sort.mod 
+	  lib/farkdata.pm blib/lib/farkdata.pm \
+	  fark2.pl $(INST_LIB)/fark2.pl \
+	  lib/parse.mod blib/lib/parse.mod \
+	  lib/libparse.a blib/lib/libparse.a \
+	  t.pl $(INST_LIB)/t.pl \
+	  lib/libplot.a blib/lib/libplot.a \
+	  lib/colocation.mod blib/lib/colocation.mod \
+	  lib/libbufr.a blib/lib/libbufr.a \
+	  lib/libobs.a blib/lib/libobs.a \
+	  lib/farkdir.pm blib/lib/farkdir.pm \
+	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
+	  lib/libmodel.a blib/lib/libmodel.a \
+	  lib/libsort.a blib/lib/libsort.a \
+	  lib/xmlparse.mod blib/lib/xmlparse.mod \
+	  lib/sort.mod blib/lib/sort.mod \
+	  check.pl $(INST_LIB)/check.pl \
+	  lib/observations.mod blib/lib/observations.mod 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 

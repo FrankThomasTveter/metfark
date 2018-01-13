@@ -60,32 +60,32 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 			     "/metfark/bufrtables/"      => "ro" }, 
 		  output => {"/lustre/storeA/project/nwp/fark/output/"     => "rw",
 			     "/metfark/output/"          => "rw" }, 
-		  script      => {"/lustre/storeA/project/nwp/fark/splus/" => "rw" }, # splus scripts
+		  script      => {"/metfark/config/splus/" => "rw" }, # splus scripts
 		  model       => {"/metfark/config/mod/"     => "rw" }, # model config files
 		  model_old   => {"/metfark/config/old/mod/" => "rw" }, # model old config files
 		  model_use   => {"/metfark/config/use/mod/" => "rw" }, # model use files
 		  model_fill  => {"/metfark/config/fill/mod/" => "rw" }, # model use files
 		  model_cache => {"/metfark/config/index/mod/" => "rw" }, # model cache/index files
 		  model_reg   => {"/metfark/config/reg/mod/" => "rw" }, # model register files
-		  model_log   => {"/lustre/storeA/project/nwp/fark/log/mod/" => "rw" }, # model log files
+		  model_log   => {"/metfark/config/log/mod/" => "rw" }, # model log files
 		  obs       => {"/metfark/config/obs/"       => "rw" },
 		  obs_use   => {"/metfark/config/use/obs/"   => "rw" },
 		  obs_fill  => {"/metfark/config/fill/obs/"   => "rw" },
 		  obs_cache => {"/metfark/config/index/obs/"   => "rw" },
 		  obs_reg   => {"/metfark/config/reg/obs/"   => "rw" },
 		  obs_old   => {"/metfark/config/old/obs/"   => "rw" },
-		  obs_log   => {"/lustre/storeA/project/nwp/fark/log/obs/"   => "rw" },
+		  obs_log   => {"/metfark/config/log/obs/"   => "rw" },
 		  coloc       => {"/metfark/config/coloc/"   => "rw" },
 		  coloc_use   => {"/metfark/config/use/coloc/"   => "rw" },
 		  coloc_fill  => {"/metfark/config/fill/coloc/"   => "rw" },
 		  coloc_reg   => {"/metfark/config/reg/coloc/"   => "rw" },
 		  coloc_old   => {"/metfark/config/old/coloc/"   => "rw" },
-		  coloc_log   => {"/lustre/storeA/project/nwp/fark/log/coloc/"   => "rw" },
+		  coloc_log   => {"//metfark/config/log/coloc/"   => "rw" },
 		  plot =>      {"/metfark/config/plot/"    => "rw" },
 		  plot_old =>  {"/metfark/config/old/plot/"    => "rw" },
 		  plot_use =>  {"/metfark/config/use/plot/"    => "rw" },
 		  plot_fill => {"/metfark/config/fill/plot/"    => "rw" },
-		  plot_log =>  {"/lustre/storeA/project/nwp/fark/log/plot/"    => "rw" },
+		  plot_log =>  {"/metfark/config/log/plot/"    => "rw" },
 		  auto  => {"/metfark/config/auto/"    => "rw" },       # auto config files
 		  url  =>  {"/metfark/config/url/"     => "rw" },       # url config files (not used?)
 		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
@@ -183,10 +183,14 @@ sub makeRoot {
 
 sub getRootDir {
     my $cls = shift;
+    #print "getRootDir entering '$cls'\n"
     my @dirs=keys %{$farkdirs{$cls}};
     if (@dirs) {
+	#print "getRootDir Dir '".$dirs[0]."'\n"
 	if (! -d $dirs[0]) { 
+	    #print "getRootDir Makepath '".$dirs[0]."'\n"
 	    if (makePath($dirs[0])) {
+		#print "getRootDir Chmod '".$dirs[0]."'\n"
 		chmod 0777, $dirs[0];
 		return $dirs[0]; # success
 	    } else {
@@ -196,6 +200,7 @@ sub getRootDir {
 	    return $dirs[0];
 	}
     } else {
+	#print "getRootDir No dirs.\n"
 	$_="Undefined dir-class $cls";
 	return; # failure
     };
