@@ -630,9 +630,14 @@ function plot_insertAttributeRow(item,cat,attr,value,val) {
     var row = document.createElement("TR");
     var td,inp,div;
     var radio=val instanceof Array; // should we have radio button?
+    var dup=(attr.substr(0,1) === "_");
     // make attr column  ***************************
     td=document.createElement("TD");
-    td.innerHTML=attr;
+    if (dup) {
+	td.innerHTML=attr.substr(1);
+    } else {
+	td.innerHTML=attr;
+    }
     row.appendChild(td);
     // make attribute value column  ***************************
     var itemId="plotAttribute"+attr;
@@ -643,7 +648,6 @@ function plot_insertAttributeRow(item,cat,attr,value,val) {
     inp.setAttribute("type","text");
     inp.setAttribute("value",value);
     inp.setAttribute("style","width:100%");
-    var dup=(attr.substr(0,1) === "_");
     if (dup) {
 	inp.setAttribute("onblur","plot_setAttribute('"+attr+"',this.value);plot_setCat('"+cat+"');plot_show();");
     } else {
