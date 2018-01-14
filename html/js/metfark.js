@@ -2232,6 +2232,19 @@ function isInArray(value, array) {
   return array.indexOf(value) > -1;
 }
 
+function arrayUp(array,ii) {
+    if (ii<array.length && ii>0) {
+	var buff = array[ii];
+	array[ii]=array[ii-1];
+    	array[ii-1]=buff;
+    } else if (ii == 0) {
+	var buff = array[ii];
+	array[ii]=array[array.length-1];
+    	array[array.length-1]=buff;
+    };
+}
+
+
 Array.prototype.extend = function (other_array) {
     /* you should include a test to check whether other_array really is an array */
     other_array.forEach(function(v) {this.push(v)}, this);    

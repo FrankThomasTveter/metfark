@@ -346,7 +346,7 @@ function coloc_showModelTargetTable() {
 		};
 	    }
 	    console.log("*** Target:",target,targets[target]["variable"],color,variables[target]);
-	    coloc_insertModelTargetRow(tail,target,targets[target]["variable"],color,
+	    coloc_insertModelTargetRow(tail,target,ii,targets[target]["variable"],color,
 				       targets[target]["min"],targets[target]["max"]);
 	}
     };
@@ -431,7 +431,7 @@ function coloc_insertModelTargetIndexRow(item,target,variable,color,min,max) {
     return row;
 }
 // create auto table row
-function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
+function coloc_insertModelTargetRow(item,target,ii,variable,color,min,max) {
     var row = document.createElement("TR");
     var file = coloc_getModelConfigFile();
     console.log("coloc: Adding model target row for :",file,target,variable);
@@ -464,6 +464,15 @@ function coloc_insertModelTargetRow(item,target,variable,color,min,max) {
     // make select-variable column
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("align","center");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","coloc_modelUp('"+ii+"');coloc_show();");
+    //btn.setAttribute("style","width:100%");
+    //var t=document.createTextNode("--");
+    //btn.appendChild(t);
+    btn.innerHTML="&uarr;";
+    //btn.setAttribute("align","center");
+    td.appendChild(btn);
     row.appendChild(td);
     // make minimum column
     td=document.createElement("TD");
@@ -737,7 +746,7 @@ function coloc_showObsTargetTable() {
 	} else {
 	    color="black";
 	}
-	coloc_insertObsTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],color,
+	coloc_insertObsTargetRow(tail,target,ii,targets[target]["pos"],targets[target]["descr"],color,
 				 targets[target]["info"],targets[target]["min"],targets[target]["max"]);
     }
 };
@@ -850,7 +859,7 @@ function coloc_insertOTargetRow(item,target,pos,descr,color,info) {
     return row;
 }
 // create auto table row
-function coloc_insertObsTargetRow(item,target,pos,descr,color,info,min,max) {
+function coloc_insertObsTargetRow(item,target,ii,pos,descr,color,info,min,max) {
     var row = document.createElement("TR");
     var td, inp;
     // make "-" column  ***************************
@@ -880,6 +889,15 @@ function coloc_insertObsTargetRow(item,target,pos,descr,color,info,min,max) {
     // make select-subtype column  ***************************
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("align","center");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","coloc_obsUp('"+ii+"');coloc_show();");
+    //btn.setAttribute("style","width:100%");
+    //var t=document.createTextNode("--");
+    //btn.appendChild(t);
+    btn.innerHTML="&uarr;";
+    //btn.setAttribute("align","center");
+    td.appendChild(btn);
     row.appendChild(td);
     // make pos column  ***************************
     td=document.createElement("TD");
@@ -1559,3 +1577,24 @@ function coloc_removeByValue(arr) {
     }
     return arr;
 };
+
+
+function coloc_modelUp(ii) {
+    var file=coloc_getConfigFile()
+    if (coloc_config[file] !== undefined && 
+	coloc_config[file]["modelConfigFile"] !== undefined && 
+	coloc_config[file]["modelConfigFile"]["targeto"] !== undefined) {
+	var targeto=coloc_config[file]["modelConfigFile"]["targeto"];
+	arrayUp(targeto,ii);
+    }
+}
+
+function coloc_obsUp(ii) {
+    var file=coloc_getConfigFile()
+    if (coloc_config[file] !== undefined && 
+	coloc_config[file]["obsConfigFile"] !== undefined && 
+	coloc_config[file]["obsConfigFile"]["targeto"] !== undefined) {
+	var targeto=coloc_config[file]["obsConfigFile"]["targeto"];
+	arrayUp(targeto,ii);
+    }
+}

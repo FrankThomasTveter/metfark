@@ -242,16 +242,18 @@ function obs_setIndexTargetTable(file) {
 		color="red";
 	    };
 	};
-	obs_insertIndexTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],color,
+	obs_insertIndexTargetRow(tail,target,ii,
+				 targets[target]["pos"],
+				 targets[target]["descr"],color,
 				 targets[target]["info"]);
     }
 }
-function obs_insertIndexTargetRow(item,target,pos,descr,color,info) {
+function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     var row = document.createElement("TR");
     var td,inp;
     // make "-" column
     td=document.createElement("TD");
-    td.setAttribute("style","min-width:30px;width:30px");
+    td.setAttribute("style","min-width:25px;width:25px");
     td.setAttribute("align","center");
     var btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","obs_removeTarget('"+target+"')");
@@ -279,6 +281,15 @@ function obs_insertIndexTargetRow(item,target,pos,descr,color,info) {
     // make select-pos column  ***************************
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("align","center");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","obs_targetUp('"+ii+"');obs_show();");
+    //btn.setAttribute("style","width:100%");
+    //var t=document.createTextNode("--");
+    //btn.appendChild(t);
+    btn.innerHTML="&uarr;";
+    //btn.setAttribute("align","center");
+    td.appendChild(btn);
     row.appendChild(td);
     // make descr column  ***************************
     td=document.createElement("TD");
@@ -440,3 +451,12 @@ function obs_removeByValue(arr) {
     }
     return arr;
 };
+
+function obs_targetUp(ii) {
+    var file=obs_getConfigFile();
+    if (obs_config[file] !== undefined && 
+	obs_config[file]["targeto"] !== undefined) {
+	var targeto = obs_config[file]["targeto"];
+	arrayUp(targeto,ii);
+    }
+}

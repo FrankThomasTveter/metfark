@@ -26,7 +26,7 @@ my $autoDir=  farkdir::getRootDir("auto")  || farkdir::term("Invalid root direct
 #
 my $colocUseDir= farkdir::getRootDir("coloc_use") || farkdir::term("Invalid root directory (coloc_use)");
 my $plotUseDir=  farkdir::getRootDir("plot_use")  || farkdir::term("Invalid root directory (plot_use)");
-my $lockDir=    farkdir::getRootDir("lock")      || farkdir::term("Invalid root directory (lock)");
+my $lockDir=    farkdir::getRootDir("lock")       || farkdir::term("Invalid root directory (lock)");
 my $scriptDir=   farkdir::getRootDir("script")    || farkdir::term("Invalid root directory (script)");
 #
 #
@@ -245,7 +245,7 @@ sub updateTime {
 		    my $lastFill=0;
 		    if (-f $clsFillFile) {
 			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($clsUseFile);
+			    $mtime,$ctime,$blksize,$blocks) = stat($clsFillFile);
 			$lastFill=$atime;
 		    };
 		    if ($lastFill >= $lastStart) {

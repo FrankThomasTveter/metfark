@@ -498,6 +498,30 @@ sub termval (&@) {
 	return $log;
     }
 }
+sub ignval (&@) {
+    use Capture::Tiny 'capture_merged';
+    my $code = shift; # reference to block to be executed
+    my $msg = shift;
+    my $log = shift;
+    my ($merged,$irc)=capture_merged {
+	eval {
+	    &{$code}; # execute block
+	};
+	if ($@) {return "termval Error:: $@\n";}
+    };
+    if (defined $log) {	# save to logfile
+	if (open(my $fh, '>', $log)) {
+	    print $fh $merged;
+	    print $fh $irc;
+	    close $fh;
+	};
+    }
+    if ($irc) {
+	return "$msg ($irc)";
+    } else {
+	return $log;
+    }
+}
 
 #
 # my $ret = &term ("System error...");

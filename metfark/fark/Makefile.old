@@ -216,56 +216,56 @@ TO_INST_PM = check.pl \
 	lib/xmlparse.mod \
 	t.pl
 
-PM_TO_BLIB = t.pl \
-	$(INST_LIB)/t.pl \
-	lib/read_xml_primitives.mod \
+PM_TO_BLIB = lib/read_xml_primitives.mod \
 	blib/lib/read_xml_primitives.mod \
-	lib/parse.mod \
-	blib/lib/parse.mod \
-	lib/libobs.a \
-	blib/lib/libobs.a \
-	fark.pl \
-	$(INST_LIB)/fark.pl \
-	lib/observations.mod \
-	blib/lib/observations.mod \
-	lib/libcoloc.a \
-	blib/lib/libcoloc.a \
-	lib/farkdir.pm \
-	blib/lib/farkdir.pm \
 	lib/libbufrc.a \
 	blib/lib/libbufrc.a \
-	lib/libmodel.a \
-	blib/lib/libmodel.a \
 	lib/farkdata.pm \
 	blib/lib/farkdata.pm \
+	lib/farkdir.pm \
+	blib/lib/farkdir.pm \
+	lib/parse.mod \
+	blib/lib/parse.mod \
+	fark.pl \
+	$(INST_LIB)/fark.pl \
+	lib/fark.pm \
+	blib/lib/fark.pm \
+	t.pl \
+	$(INST_LIB)/t.pl \
+	farkobs.pl \
+	$(INST_LIB)/farkobs.pl \
+	lib/xmlparse.mod \
+	blib/lib/xmlparse.mod \
 	lib/model.mod \
 	blib/lib/model.mod \
+	lib/observations.mod \
+	blib/lib/observations.mod \
+	lib/colocation.mod \
+	blib/lib/colocation.mod \
+	fark2.pl \
+	$(INST_LIB)/fark2.pl \
+	check.pl \
+	$(INST_LIB)/check.pl \
+	lib/libplot.a \
+	blib/lib/libplot.a \
 	lib/libparse.a \
 	blib/lib/libparse.a \
 	lib/libgenc.a \
 	blib/lib/libgenc.a \
-	check.pl \
-	$(INST_LIB)/check.pl \
-	farkobs.pl \
-	$(INST_LIB)/farkobs.pl \
-	lib/fark.pm \
-	blib/lib/fark.pm \
-	lib/colocation.mod \
-	blib/lib/colocation.mod \
-	lib/libsort.a \
-	blib/lib/libsort.a \
 	lib/sort.mod \
 	blib/lib/sort.mod \
-	fark2.pl \
-	$(INST_LIB)/fark2.pl \
-	lib/libplot.a \
-	blib/lib/libplot.a \
+	lib/libcoloc.a \
+	blib/lib/libcoloc.a \
 	lib/plot.mod \
 	blib/lib/plot.mod \
-	lib/xmlparse.mod \
-	blib/lib/xmlparse.mod \
+	lib/libmodel.a \
+	blib/lib/libmodel.a \
+	lib/libsort.a \
+	blib/lib/libsort.a \
 	lib/libbufr.a \
-	blib/lib/libbufr.a
+	blib/lib/libbufr.a \
+	lib/libobs.a \
+	blib/lib/libobs.a
 
 
 # --- MakeMaker platform_constants section:
@@ -582,13 +582,13 @@ POD2MAN = $(POD2MAN_EXE)
 
 
 manifypods : pure_all  \
-	lib/farkdata.pm \
 	lib/farkdir.pm \
-	lib/fark.pm
+	lib/fark.pm \
+	lib/farkdata.pm
 	$(NOECHO) $(POD2MAN) --section=$(MAN3EXT) --perm_rw=$(PERM_RW) \
-	  lib/farkdata.pm $(INST_MAN3DIR)/farkdata.$(MAN3EXT) \
 	  lib/farkdir.pm $(INST_MAN3DIR)/farkdir.$(MAN3EXT) \
-	  lib/fark.pm $(INST_MAN3DIR)/fark.$(MAN3EXT) 
+	  lib/fark.pm $(INST_MAN3DIR)/fark.$(MAN3EXT) \
+	  lib/farkdata.pm $(INST_MAN3DIR)/farkdata.$(MAN3EXT) 
 
 
 
@@ -615,22 +615,22 @@ clean_subdirs :
 
 clean :: clean_subdirs
 	- $(RM_F) \
-	  $(INST_ARCHAUTODIR)/extralibs.ld $(BASEEXT).bso \
-	  *$(LIB_EXT) $(INST_ARCHAUTODIR)/extralibs.all \
-	  mon.out tmon.out \
-	  core.[0-9][0-9][0-9] core.*perl.*.? \
-	  $(BASEEXT).x $(BASEEXT).def \
-	  MYMETA.yml core.[0-9] \
-	  fark.c $(BASEEXT).exp \
-	  so_locations lib$(BASEEXT).def \
-	  $(BOOTSTRAP) core.[0-9][0-9][0-9][0-9][0-9] \
-	  *perl.core MYMETA.json \
-	  pm_to_blib *$(OBJ_EXT) \
-	  core.[0-9][0-9] perlmain.c \
-	  perl perl.exe \
-	  pm_to_blib.ts core.[0-9][0-9][0-9][0-9] \
-	  $(MAKE_APERL_FILE) blibdirs.ts \
-	  perl$(EXE_EXT) core 
+	  perlmain.c core.*perl.*.? \
+	  core $(BASEEXT).bso \
+	  core.[0-9][0-9][0-9][0-9] $(INST_ARCHAUTODIR)/extralibs.ld \
+	  MYMETA.yml so_locations \
+	  core.[0-9][0-9][0-9] fark.c \
+	  *$(OBJ_EXT) $(BASEEXT).exp \
+	  perl.exe $(MAKE_APERL_FILE) \
+	  $(BASEEXT).x core.[0-9][0-9][0-9][0-9][0-9] \
+	  perl core.[0-9][0-9] \
+	  lib$(BASEEXT).def $(BOOTSTRAP) \
+	  blibdirs.ts pm_to_blib.ts \
+	  $(INST_ARCHAUTODIR)/extralibs.all $(BASEEXT).def \
+	  *perl.core core.[0-9] \
+	  *$(LIB_EXT) mon.out \
+	  perl$(EXE_EXT) MYMETA.json \
+	  pm_to_blib tmon.out 
 	- $(RM_RF) \
 	  blib 
 	- $(MV) $(FIRST_MAKEFILE) $(MAKEFILE_OLD) $(DEV_NULL)
@@ -645,7 +645,7 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(FIRST_MAKEFILE) $(OBJECT) \
+	  $(OBJECT) $(FIRST_MAKEFILE) \
 	  $(MAKEFILE_OLD) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
@@ -1085,31 +1085,31 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  t.pl $(INST_LIB)/t.pl \
 	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
-	  lib/parse.mod blib/lib/parse.mod \
-	  lib/libobs.a blib/lib/libobs.a \
-	  fark.pl $(INST_LIB)/fark.pl \
-	  lib/observations.mod blib/lib/observations.mod \
-	  lib/libcoloc.a blib/lib/libcoloc.a \
-	  lib/farkdir.pm blib/lib/farkdir.pm \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
-	  lib/libmodel.a blib/lib/libmodel.a \
 	  lib/farkdata.pm blib/lib/farkdata.pm \
+	  lib/farkdir.pm blib/lib/farkdir.pm \
+	  lib/parse.mod blib/lib/parse.mod \
+	  fark.pl $(INST_LIB)/fark.pl \
+	  lib/fark.pm blib/lib/fark.pm \
+	  t.pl $(INST_LIB)/t.pl \
+	  farkobs.pl $(INST_LIB)/farkobs.pl \
+	  lib/xmlparse.mod blib/lib/xmlparse.mod \
 	  lib/model.mod blib/lib/model.mod \
+	  lib/observations.mod blib/lib/observations.mod \
+	  lib/colocation.mod blib/lib/colocation.mod \
+	  fark2.pl $(INST_LIB)/fark2.pl \
+	  check.pl $(INST_LIB)/check.pl \
+	  lib/libplot.a blib/lib/libplot.a \
 	  lib/libparse.a blib/lib/libparse.a \
 	  lib/libgenc.a blib/lib/libgenc.a \
-	  check.pl $(INST_LIB)/check.pl \
-	  farkobs.pl $(INST_LIB)/farkobs.pl \
-	  lib/fark.pm blib/lib/fark.pm \
-	  lib/colocation.mod blib/lib/colocation.mod \
-	  lib/libsort.a blib/lib/libsort.a \
 	  lib/sort.mod blib/lib/sort.mod \
-	  fark2.pl $(INST_LIB)/fark2.pl \
-	  lib/libplot.a blib/lib/libplot.a \
+	  lib/libcoloc.a blib/lib/libcoloc.a \
 	  lib/plot.mod blib/lib/plot.mod \
-	  lib/xmlparse.mod blib/lib/xmlparse.mod \
-	  lib/libbufr.a blib/lib/libbufr.a 
+	  lib/libmodel.a blib/lib/libmodel.a \
+	  lib/libsort.a blib/lib/libsort.a \
+	  lib/libbufr.a blib/lib/libbufr.a \
+	  lib/libobs.a blib/lib/libobs.a 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 
