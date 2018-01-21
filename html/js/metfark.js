@@ -1149,8 +1149,8 @@ function showDropdown(target, arg = "") {
 			var dimname=dim;
 			var dimv=model_config[mfile]["dimensions"][dim];
 			if (dimv !=  null) {
-			    addChildButton(item,"DUPLICATE (1:"+dimname+"="+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
-					   "showValue('colocObsInfo','DUPLICATE (1:"+dimname+"="+dimv+")');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');");
+			    addChildButton(item,"Duplicate (1:"+dimname+"="+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
+					   "showValue('colocObsInfo','Duplicate (1:"+dimname+"="+dimv+")');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');");
 			}
 		    }
 		}
@@ -1839,7 +1839,7 @@ function dataToObs(data) {
 			var descr=seq[pp].getAttribute("descr");
 			var pinfo=seq[pp].getAttribute("info");
 			var unit=seq[pp].getAttribute("unit");
-			var val1=seq[pp].getAttribute("val1");
+			var val1=seq[pp].getAttribute("val1")||"NA";
 			obs_config[path]["bufr"][bufrType][subType][pos]={descr:descr,info:pinfo,unit:unit,val1:val1};
 		    }
 		} else {

@@ -133,7 +133,9 @@ sub loadCls {
 					  $node->setAttribute("root",      $root);
 					  $node->setAttribute("location",  $loc);
 					  if(defined $node->getAttribute("filterDir")){
-					      if (! -d $node->getAttribute("filterDir")) {
+					      if (-d $node->getAttribute("filterDir")) {
+						  $node->setAttribute("filterDirStat","");
+					      }  else {
 						  $node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
 					      }
 					  }
