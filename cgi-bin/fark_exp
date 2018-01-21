@@ -5,5 +5,5 @@
 #
 #   10*isabove(1,-2,3*isabove(4,5))+6
 #
-./fark_exp.pl '?exp=10*isabove(1%2C-2%2C3*isabove(4%2C5))%2B6;debug=1'
+./fark_exp.pl '?exp=1;debug=1'
 #

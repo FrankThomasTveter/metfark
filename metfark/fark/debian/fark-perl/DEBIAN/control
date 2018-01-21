@@ -2,7 +2,7 @@ Package: fark-perl
 Version: 0.13-1
 Architecture: amd64
 Maintainer: root <frank.tveter@met.no>
-Installed-Size: 6590
+Installed-Size: 6691
 Depends: perl (>= 5.18.2-2ubuntu1.3), perlapi-5.18.2, libc6 (>= 2.14), libgfortran3 (>= 4.6), libnetcdff5
 Section: perl
 Priority: optional

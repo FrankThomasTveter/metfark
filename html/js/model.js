@@ -249,6 +249,9 @@ function model_rmfile(path) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
 		  alert("Unable to rmfile: "+path+"\n"+msg);
+	      } else {
+		  delete model_config[path];
+		  if (model_file == path) {model_file="default.cfg";}
 	      };
 	      documentLog.innerHTML="";}
 				}

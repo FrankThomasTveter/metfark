@@ -521,7 +521,7 @@ xs_clearModelTargetStack(int sid);
       free(crc250);
 
 #
-#  "clearModelDefaultStack" clears the default stack
+#  "clearDefaultStack" clears the default stack
 #   Return array:
 #      (integer) error return code (0=ok).
 #      (string)  error return message

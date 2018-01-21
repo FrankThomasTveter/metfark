@@ -121,51 +121,53 @@ sub loadCls {
 	    while (my $child = readdir(DIR)) {
 		next if (substr($child,0,1) eq ".");
 		my $cpath=$fpath . $child;
-		#print "Child: $cpath\n";
-		if (-f $cpath) {
-		    my $cpriv=$priv;
-		    if (! -z $cpath) {# used for debugging
-			my $mod = $parser->parse_file($cpath);
-			my ($node)=$mod->findnodes($cls."/".$cls."_config");
-			# remove passwords...
-			if ( $node ) {$node->removeAttribute("password");
-				      $node->setAttribute("root",      $root);
-				      $node->setAttribute("location",  $loc);
-				      if(defined $node->getAttribute("filterDir")){
-					  if (! -d $node->getAttribute("filterDir")) {
-					      $node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+		farkdir::termval {
+		    #print "Child: $cpath\n";
+		    if (-f $cpath) {
+			my $cpriv=$priv;
+			if (! -z $cpath) {# used for debugging
+			    my $mod = $parser->parse_file($cpath);
+			    my ($node)=$mod->findnodes($cls."/".$cls."_config");
+			    # remove passwords...
+			    if ( $node ) {$node->removeAttribute("password");
+					  $node->setAttribute("root",      $root);
+					  $node->setAttribute("location",  $loc);
+					  if(defined $node->getAttribute("filterDir")){
+					      if (! -d $node->getAttribute("filterDir")) {
+						  $node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+					      }
 					  }
-				      }
-				      #print "**********Ref: " . ref($node) . "\n";
-				      #print "*******Dumper: " . Dumper($node);
-				      $parent->addChild( $node );
+					  #print "**********Ref: " . ref($node) . "\n";
+					  #print "*******Dumper: " . Dumper($node);
+					  $parent->addChild( $node );
+			    };
+			} else {
+			    $cpriv="empty";
 			};
-		    } else {
-			$cpriv="empty";
-		    };
-		    {
-			#print "Added file: $root $loc $child $cpriv\n";
-			my $node = $doc->createElement("File");
+			{
+			    #print "Added file: $root $loc $child $cpriv\n";
+			    my $node = $doc->createElement("File");
+			    $node->setAttribute("class",     $cls);
+			    $node->setAttribute("root",      $root);
+			    $node->setAttribute("location",  $loc);
+			    $node->setAttribute("file",      $child);
+			    $node->setAttribute("status",    $cpriv);
+			    $parent->addChild( $node );
+			};
+		    } elsif (-d $cpath) {
+			#print "Added subdir: $root $loc $child $priv\n";
+			# add directory to list
+			my $node = $doc->createElement("Dir");
 			$node->setAttribute("class",     $cls);
 			$node->setAttribute("root",      $root);
 			$node->setAttribute("location",  $loc);
-			$node->setAttribute("file",      $child);
-			$node->setAttribute("status",    $cpriv);
+			$node->setAttribute("dir",      $child);
+			$node->setAttribute("status",    $priv);
 			$parent->addChild( $node );
-		    };
-		} elsif (-d $cpath) {
-		    #print "Added subdir: $root $loc $child $priv\n";
-		    # add directory to list
-		    my $node = $doc->createElement("Dir");
-		    $node->setAttribute("class",     $cls);
-		    $node->setAttribute("root",      $root);
-		    $node->setAttribute("location",  $loc);
-		    $node->setAttribute("dir",      $child);
-		    $node->setAttribute("status",    $priv);
-		    $parent->addChild( $node );
-		} else {
-		    # ignored
-		}
+		    } else {
+			# ignored
+		    }
+		} "Unable to process: $cpath";
 	    }
 	    closedir(DIR);
 	}
@@ -190,20 +192,22 @@ sub loadAuto {
 	# load obs data
 	my $parser = XML::LibXML->new();
 	#$parser->expand_entities( 0 ); # leave entities alone
-	if (-f $path) {
-	    my $auto = $parser->parse_file($path);
-	    my ($node)=$auto->findnodes("auto/auto_config");
-	    if ( $node ) {
-		$node->removeAttribute("password"); # remove passwords
-		&updateTime($node,"model");
-		&updateTime($node,"obs");
-		&updateTime($node,"coloc");
-		&updateTime($node,"plot");
-	    }
-	    $parent->addChild( $node );
-	} else {
-	    farkdir::term("Invalid file: $path");
-	};
+	farkdir::termval {
+	    if (-f $path) {
+		my $auto = $parser->parse_file($path);
+		my ($node)=$auto->findnodes("auto/auto_config");
+		if ( $node ) {
+		    $node->removeAttribute("password"); # remove passwords
+		    &updateTime($node,"model");
+		    &updateTime($node,"obs");
+		    &updateTime($node,"coloc");
+		    &updateTime($node,"plot");
+		}
+		$parent->addChild( $node );
+	    } else {
+		farkdir::term("Invalid file: $path");
+	    };
+	} "Unable to process: $path";
     } else {
 	farkdir::term("Invalid directory ($fpath,$priv)");
     };

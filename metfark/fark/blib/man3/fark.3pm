@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2018-01-13" "perl v5.18.2" "User Contributed Perl Documentation"
+.TH fark 3pm "2018-01-20" "perl v5.18.2" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -368,7 +368,7 @@ Arguments:
 \&\f(CW$fark\fR\->pushModelTarget(\*(L"modeltime\*(R",\*(L"time\*(R","\*(L",\*(R"");
 .SS "clearDefaultStack"
 .IX Subsection "clearDefaultStack"
-clearDefaultStack \-  clears the model default stack. If the model default is used, only models with valid defaults are visible to the system.
+clearDefaultStack \-  clears the default stack. If the model default is used, only models with valid defaults are visible to the system.
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
@@ -390,14 +390,14 @@ Arguments:
 .IX Subsection "EXAMPLE"
 .PP
 \&\f(CW$fark\fR\->addDefault(\*(L"modeltime\*(R",\*(L"12220.0\*(R");
-.SS "pushModelDefault"
-.IX Subsection "pushModelDefault"
-pushModelDefault \- pushes the \*(L"added\*(R" default values to the stack.
+.SS "pushDefault"
+.IX Subsection "pushDefault"
+pushDefault \- pushes the \*(L"added\*(R" default values to the stack.
 .PP
 \s-1EXAMPLE\s0
 .IX Subsection "EXAMPLE"
 .PP
-\&\f(CW$fark\fR\->\fIpushModelDefault()\fR;
+\&\f(CW$fark\fR\->\fIpushDefault()\fR;
 .SH "OBSERVATION FUNCTIONS"
 .IX Header "OBSERVATION FUNCTIONS"
 .SS "setObservationTablePath"

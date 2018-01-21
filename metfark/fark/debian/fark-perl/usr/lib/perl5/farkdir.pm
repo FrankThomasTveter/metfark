@@ -91,6 +91,8 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
     );
 
+our $debug=1;
+
 # returns dir and name components of path
 # my ($dir,$name) = splitName($path);
 sub splitName {
@@ -397,20 +399,27 @@ sub FindFiles{
 	my $path=$root . $name;
         if (-d $path){
 	    my $ref=stat($path);
-	    my $ctime=($ref->ctime);
-	    my $mtime=($ref->mtime);
-	    my $age=($t-$mtime)/86400;
-	    my $cge=($t-$ctime)/86400; # inode change time...
+	    my $fmin=($ref->ctime);
+	    my $fmax=($ref->mtime);
+	    # get times from file name...
+	    my %patt=findPattern($path);
+	    foreach my $k (keys %patt) {
+		$fmin=$patt{$k}[1];
+		$fmax=$patt{$k}[2];
+		print "Resetting: '$path' '$k' '$fmin' '$fmax'\n";
+	    };
+	    my $mge=($t-$fmax)/86400;
+	    my $cge=($t-$fmin)/86400; # inode change time...
 	    my $ok=1;
 	    if ($min || $max) {
 #		if ($min && $cge < $min) {$ok=0;}; # if directory has moved , this will fail
-		if ($max && $age > $max) {$ok=0;};
+		if ($max && $mge > $max) {$ok=0;};
 	    };
 	    if ($ok) {
 		push (@dirs, $name);
-		#print "Directory: created=$cge, modified=$age  '$path' '$min' '$max' $t $ctime $mtime $ok\n";
+		print "Directory: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";
 	    } else {
-		#print "Skipping: created=$cge, modified=$age  '$path' '$min' '$max' $t $ctime $mtime $ok\n";
+		print "Skipping: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";
 	    }
         } elsif (-f $path ) {
 	    if ($name  =~ m/$pattern/) {
@@ -498,6 +507,30 @@ sub termval (&@) {
 	return $log;
     }
 }
+sub ignval (&@) {
+    use Capture::Tiny 'capture_merged';
+    my $code = shift; # reference to block to be executed
+    my $msg = shift;
+    my $log = shift;
+    my ($merged,$irc)=capture_merged {
+	eval {
+	    &{$code}; # execute block
+	};
+	if ($@) {return "termval Error:: $@\n";}
+    };
+    if (defined $log) {	# save to logfile
+	if (open(my $fh, '>', $log)) {
+	    print $fh $merged;
+	    print $fh $irc;
+	    close $fh;
+	};
+    }
+    if ($irc) {
+	return "$msg ($irc)";
+    } else {
+	return $log;
+    }
+}
 
 #
 # my $ret = &term ("System error...");
@@ -549,5 +582,386 @@ sub dtg {
     $s=$s . $tsec . "s";
     return $s;
 }
+
+# find YYYY MM DD pattern in file/directory names
+# usage: my %patterns = farkdir::findPattern(@files);
+# return: %patterns{"fileYYYYMMDD"}=["file\d\d\d\d\d\d\d\d",tmin,tmax]
+#
+
+sub findPattern {
+    use strict;
+    my @files= @_;
+    my %patterns;
+    # divide into groups with same character settings
+    my %ptree;
+    my $uri = URI::Encode->new( { encode_reserved => 0 } );
+    foreach my $name (@files) {
+	my $p = $name;
+	$p =~ s/\d/\\d/g;
+	if (! defined $ptree{$p}) {$ptree{$p}=();};
+	push (@{$ptree{$p}},$name);
+    }
+    foreach my $p (keys %ptree) {
+	my %lim=();
+	my %pptree;
+	my $len =@{$ptree{$p}};
+	#print "Found '$p'\n";
+	my $m=$p;
+	$m =~ s/\\d/@/g;    # replace "digit" with "@"
+	my $lenm=length($m);
+	# loop over number-groups...
+	GROUP: while ($m =~ m/(@+)/g) { # identify before-group-after
+	    my $p1=substr($m,0,$-[0]);
+	    my $p2=$1; # group
+	    my $p3=substr($m,$+[0],$lenm-$+[0]);
+	    my $offset=$-[0];
+	    #print "Match '$p1' '$p2' '$p3'\n"; next GROUP;
+	    $p1 =~ s/@/\\d/g;
+	    $p2 =~ s/@/\\d/g;
+	    $p3 =~ s/@/\\d/g;
+	    my $pp="$p1($p2)$p3";
+	    #print "   found sub-pattern: '$pp' '$p'\n";
+	    if (! defined $pptree{$p})      {$pptree{$p}={};};
+	    if (! defined $pptree{$p}{$pp}) {$pptree{$p}{$pp}=();};
+	    # loop over all instances
+	    foreach my $name (@{$ptree{$p}}) {
+		#print "Found: '$name'\n";
+		if ($name =~ m/$pp/) { # instances with number group
+		    my $cc=$1; # number group
+		    #print "Found item: '$pp' '$cc'\n";
+		    # loop over characters in number group...
+		    my $pos=0;
+		    # check 4-digits
+		    &findLimits($cc,4,$offset,\%lim);
+		    &findLimits($cc,3,$offset,\%lim);
+		    &findLimits($cc,2,$offset,\%lim);
+		    &findLimits($cc,1,$offset,\%lim);
+		}
+	    }	
+	}
+	# best estimates
+	my $byyyy;
+	my $bmm;
+	my $bdd;
+	my $bhh;
+	my $bmi;
+	# find 4-digit year
+	my $cyyyy = &getCandidates($lim{4},0,$lenm-3,1900,2100,"YYYY"); # year candidates
+	my $cmm =   &getCandidates($lim{2},0,$lenm-1,0,12,"MM");        # month  candidates
+	my $cdd =   &getCandidates($lim{2},0,$lenm-1,1,31,"DD");        # day candidates
+	my $chh =   &getCandidates($lim{2},0,$lenm-1,0,24,"HH");        # hour candidates
+	my $cmi =   &getCandidates($lim{2},0,$lenm-1,0,60,"MI");        # minutes candidates
+	my $ccc =   &getCandidates($lim{2},0,$lenm-1,0,24,"CC");        # cycle candidates
+	my $cll =   &getCandidates($lim{3},0,$lenm-1,0,300,"LL");       # lead time candidates
+	my $cnn =   &getCandidates($lim{1},0,$lenm-1,0,9,"N");       # lead time candidates
+	my $s=$m;
+	$s  =~ s/@/ /g; # replace "digit" with " ", "string    "
+	my $w=$s;
+        $w  =~ s/\S/@/g; # only show number as "@", "      @@@@"
+	#print "Making patterns for '$p2'\n";
+	my ($patt,$order) = &showPattern($s,$w,$cnn,$cyyyy,$cmm,$cdd,$chh,$cmi,$ccc,$cll);
+	$m =~ s/@/\\d/g;
+	if ($m ne $patt) {
+	    my $tmin=0;
+	    my $tmax=0;
+	    # loop over files, find max/min times
+	    foreach my $name (@{$ptree{$p}}) {
+		#print "Found: '$name'\n";
+		my ($fmin,$fmax)=getPatternTime($name,$order);
+		if (! $tmin || $tmin > $fmin) {
+		    $tmin=$fmin;
+		}
+		if (! $tmax || $tmax > $fmax) {
+		    $tmax=$fmax;
+		}
+	    };
+	    $patterns{$uri->encode($patt)} = [$uri->encode($m),$tmin,$tmax];
+	};
+    }
+    return %patterns;
+}
+#
+# usage findlimits ( $string, $group_length, $global_start, $limit_output);
+# returns %{$limit_output}{$group_length}($start_pos)(min,max,mod);
+sub findLimits {
+    use strict;
+    my ($cc,$dlen,$offset,$lim)=@_;
+    if (! defined $lim->{$dlen}){ $lim->{$dlen}=();};
+    my $clen=length($cc);
+    for (my $ii=0;$ii < $clen-$dlen+1;$ii++) {
+	my $ss=substr $cc,$ii,$dlen;
+	if (! defined $lim->{$dlen}[$ii+$offset]){
+	    $lim->{$dlen}[$ii+$offset]=[$ss+0,$ss+0,$dlen,$ss+0];
+	} else {
+	    $lim->{$dlen}[$ii+$offset][0]=min($lim->{$dlen}[$ii+$offset][0],$ss+0);
+	    $lim->{$dlen}[$ii+$offset][1]=max($lim->{$dlen}[$ii+$offset][1],$ss+0);
+	    $lim->{$dlen}[$ii+$offset][3]=mod($lim->{$dlen}[$ii+$offset][3],$ss+0);
+	};
+    }
+}    
+#
+# returns reference to array with possible candidates:
+#  ( pos_start, pos_stop, label, score, steplen, min_value, max_value )
+#
+#
+sub getCandidates {
+    use strict;
+    my ($lim,$istart,$istop,$rmin,$rmax,$label)= @_;
+    #print "Looking for candidates $rmin, $rmax\n";
+    my @ret=();
+    foreach my $ii (@{$lim}) {
+	my $min=$lim->[$ii][0];
+	my $max=$lim->[$ii][1];
+	my $dlen=$lim->[$ii][2];
+	my $delta=$lim->[$ii][3];
+	#if (defined $min) { print " Range $ii, $min, $max, $dlen\n";};
+	if (defined $min && $min >= $rmin && $max <= $rmax) {
+	    my $ratio=0;
+	    if ($rmax>$rmin) {
+		$ratio=($max-$min)/($rmax-$rmin);
+	    };
+	    #print "   found candidate at $ii\n";
+	    my $score=(2 - 6*$ratio + 8*$ratio*$ratio)*$dlen;
+	    my $step=(($delta-1)/max(1,$rmax))*$dlen*8;
+	    #print "   found candidate $score, $step, $delta, $rmax\n";
+	    my @res = ($ii,$ii+$dlen-1,$score,$step,$min,$max);
+	    push (@ret,\@res);
+	}
+    }
+    return [$label,\@ret];
+}
+
+sub showPattern {
+    use strict;
+    my ($s,$w,$cnn,@candidateTypes)= @_;
+    if ($debug) {print "showPattern Entering with '$s' '$w'\n";};
+    my $bdone=0;
+    my %order={}; # order of the different labels
+    while (!$bdone) {   # loop while changed
+	# find candidate with highest score...
+	my $maxss=0;
+	my $maxns;
+	my $maxnb;
+	my $maxistart;
+	my $maxistop;
+	my $maxlabel;
+	#print "Bdone loop '$s' '$w'\n";
+	foreach my $candidates (@candidateTypes) {  # loop over types
+	    my $label=$candidates->[0];
+	    #print "  Type loop '$s' '$w'\n";
+	    foreach my $candidate (@{$candidates->[1]}) { # loop over candidates
+		my $istart=$candidate->[0];
+		if (defined $istart) {
+		    my $istop=$candidate->[1];
+		    my $score=$candidate->[2];
+		    my $delta=$candidate->[3];
+		    my $min=$candidate->[4];
+		    my $max=$candidate->[5];
+		    #print "    Candidate loop '$s' '$w' '$label' $score $delta\n";
+		    if (my ($ns,$nb)=&addPattern($s,$w,$istart,$istop,$label)) { # check if pattern is possible
+			my $ss=&getScore($ns,$nb,$score);
+			#if ($label eq "CC") {
+			#    $ss=$ss+$delta;
+			#};
+			if ($ss > $maxss) { # store candidate with highest score
+			    $maxns=$ns;
+			    $maxnb=$nb;
+			    $maxss=$ss;
+			    $maxistart=$istart;
+			    $maxistop=$istop;
+			    $maxlabel=$label;
+			};
+		    } else {
+			$candidate=[];
+		    };
+		};
+	    };
+	}   # end candidate loop
+	# use candidate with highest score (if any)...
+	if ($maxss) {
+	    $s=$maxns;
+	    $w=$maxnb;
+	    $maxss=floor($maxss*100)/100;
+	    $order{$maxlabel}=[$maxistart,$maxistop-$maxistart+1];
+	    if ($debug) {print "######## '$s' $maxss ### WINNER ###\n";}
+	} else {
+	    $bdone=1;
+	}
+    }; # end change loop
+    # replace any remaining characters with their original substring...
+    my $label=$cnn->[0];
+    foreach my $candidate (@{$cnn->[1]}) { # loop over candidates
+	my $istart=$candidate->[0];
+	if (defined $istart) {
+	    my $istop=$candidate->[1];
+	    my $min=$candidate->[4];
+	    my $max=$candidate->[5];
+	    if ($min == $max) {$label="$min"};
+	    #print "    Candidate loop '$s' '$w' '$label' $score $delta\n";
+	    if (my ($ns,$nb)=&addPattern($s,$w,$istart,$istop,$label)) { # check if pattern is possible
+		$s=$ns;
+		$w=$nb;
+	    };
+	};
+    };
+    #print "showPattern Exiting\n";
+    return ($s, \%order);
+}
+#
+# Get max/min time based on name...
+# usage: my ($tmin,$tmax)=getPatternTime($name,$order);
+#
+sub getPatternTime {
+    use strict;
+    use Time::Local;
+    my ($name,$order) =@_;
+    my $yy=&getPatternNumber("YYYY",$name,$order);
+    my $mm=&getPatternNumber("MM",$name,$order);
+    my $dd=&getPatternNumber("DD",$name,$order);
+    my $hh=&getPatternNumber("HH",$name,$order);
+    my $yymax;
+    my $yymin;
+    if (defined $yy) {
+	$yymax=$yy;
+	$yymin=$yy;
+    } else {
+	$yymin=1970;
+	$yymax=2036;
+    };
+    my $mmmax;
+    my $mmmin;
+    if (defined $mm) {
+	$mmmax=$mm;
+	$mmmin=$mm;
+    } else {
+	$mmmin=1;
+	$mmmax=12;
+    };
+    my $ddmax;
+    my $ddmin;
+    if (defined $dd) {
+	$ddmax=$dd;
+	$ddmin=$dd;
+    } else {
+	$ddmin=1;
+	$ddmax=31;
+    };
+    my $hhmax;
+    my $hhmin;
+    if (defined $hh) {
+	$hhmax=$hh;
+	$hhmin=$hh;
+    } else {
+	$hhmin=0;
+	$hhmax=24;
+    };
+    my $tmin=timelocal(0,0,$hhmin,$ddmin,$mmmin-1,$yymin);
+    my $tmax=timelocal(60,60,$hhmax,$ddmax,$mmmax-1,$yymax);
+    return ($tmin,$tmax);
+}
+#
+# get number at location used for $label...
+#
+sub getPatternNumber {
+    my ($label,$name,$order) = @_;
+    my $ret;
+    if (defined $order->{$label}) {
+	$ret=(substr($name,$order->{$label}[0],$order->{$label}[1]) +0);;
+    }
+    return $ret;
+}
+
+#
+# replace string with label
+#
+sub addPattern {
+    use strict;
+    my ($s,$w,$istart,$istop,$label) = @_;
+    #print "addPattern $s $istart $istop\n";
+    my $ss=substr($s,$istart,$istop-$istart+1)//"";
+    if (&blank($ss)) { # blank
+	my $len=length($s);
+	my $s1=substr($s,0,max(0,$istart))//"";
+	my $s2=substr($s,$istop+1,$len-$istop)//"";
+	my $w1=substr($w,0,max(0,$istart))//"";
+	my $w2=substr($w,$istop+1,$len-$istop)//"";
+	my $patt = $s1 . $label . $s2;
+	my $watt = $w1 . $label . $w2;
+	#print "****'$s'->'$s1'+'$label'+'$s2' $istart $istop $len ".length($patt)."\n";
+	#print "addPattern '$s' -> '$patt'\n";
+	return ($patt,$watt);
+    } else {
+	return;
+    }
+}
+
+sub getScore {
+    my ($s,$w,$score)=@_;
+    # adjacent
+    if ($debug) {my $s2=floor($score*100)/100;
+		 print "getScore '$s' $s2";}
+    if ($w =~ m/^@*HH@*$/) {$score+=5;};
+    while ($w =~ m/YYYY@*MM/g) {$score+=3;};
+    while ($w =~ m/YYYY@*MM@*DD/g) {$score+=3;};
+    while ($w =~ m/MM@*DD/g) {$score+=3;};
+    while ($w =~ m/DD@*HH/g) {$score+=2;};
+    while ($w =~ m/HH@*MI/g) {$score+=2;};
+    #
+    if ($debug) {my $s2=floor($score*100)/100;
+		 print " -> $s2\n";}
+    return $score;
+}
+
+sub blank {
+    use strict;
+    my $s = shift;
+    if (defined $s) {
+	if ($s =~ m/\S/) {
+	    return 0;
+	} else {
+	    return 1;
+	}
+    } else {
+	return 1;
+    }
+}
+sub min {
+    use strict;
+    my ($min, @vars) = @_;
+    for (@vars) {
+	if (defined $min) {
+	    $min = $_ if $_ < $min;
+	} else {
+	    $min = $_;
+	}
+    }
+    return $min;
+}
+sub max {
+    use strict;
+    my ($max, @vars) = @_;
+    for (@vars) {
+        $max = $_ if $_ > $max;
+    }
+    return $max;
+}
+#
+# Largest common space between values...  (i.e.   1000, 1010, 1020... -> 10)
+#
+sub mod {
+    use strict;
+    my ($mod, @vars) = @_;
+    for (@vars) {
+	my $nd=$mod;
+	if ($mod > 0) {
+	    while ($nd > 0 && $_%$nd!=0 && $mod%$nd !=0) { $nd--; }
+	    $mod=$nd;
+	} else {
+	    $mod=$_+0;
+	}
+    }
+    return $mod;
+}
+
 
 1;

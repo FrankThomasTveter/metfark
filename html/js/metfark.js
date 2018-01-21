@@ -273,6 +273,13 @@ function addChildButton(item,text,onclick,cls) {
     item.appendChild(btn);
     item.appendChild(br);
 };
+function addTargetButton( item, target, trg, cls) {
+    if (typeof cls !== 'undefined') {
+	addChildButton(item,trg,"addValue('"+target+"','"+trg+"');",cls);
+    } else {
+	addChildButton(item,trg,"addValue('"+target+"','"+trg+"');");
+    }
+}
 function addFunctionButtons( item, target) {
     addChildButton(item,"sec1970(,,,,,)","addValue('"+target+"','sec1970(,,,,,)');");
     addChildButton(item,"julian(,,,,,)","addValue('"+target+"','julian(,,,,,)');");
@@ -324,61 +331,68 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent model-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		addChildButton(item,"<up>","model_setConfigFile('"+dd+"');");
-	    }
-	    if (args.length == 1) {
-		//console.log("Arg ret:",ret);
-		if (root["type"] == "dir" && root["loc"] != "") {
-		    addChildButton(item,"<rmdir>","model_rmdir('"+args[0]+"');");
-		} else if (root["type"] == "file") {
-		    addChildButton(item,"<rmfile>","model_rmfile('"+args[0]+"');");
-		} else if (root["type"] == "unknown") {
-		    if (looksLikeFile(args[0])) {
-			addChildButton(item,"<mkfile>","model_mkfile('"+args[0]+"');model_show();");
-		    } else {
-			addChildButton(item,"<mkdir>","model_mkdir('"+args[0]+"');");
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
+		} else {
+		    var file="";
+		};
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    addChildButton(item,"<up>","model_setConfigFile('"+dd+"');");
+		}
+		if (args.length == 1) {
+		    //console.log("Arg ret:",ret);
+		    if (root["type"] == "dir" && root["loc"] != "") {
+			addChildButton(item,"<rmdir>","model_rmdir('"+args[0]+"');");
+		    } else if (root["type"] == "file") {
+			addChildButton(item,"<rmfile>","model_rmfile('"+args[0]+"');");
+		    } else if (root["type"] == "unknown") {
+			if (looksLikeFile(args[0])) {
+			    addChildButton(item,"<mkfile>","model_mkfile('"+args[0]+"');model_show();");
+			} else {
+			    addChildButton(item,"<mkdir>","model_mkdir('"+args[0]+"');");
+			}
 		    }
-		}
-	    } else if (args.length == 2) {
-		if (root["type"] == "dir") {
-		    addChildButton(item,"<cpdir>","model_cpdir('"+args[0]+"','"+args[1]+"');");
-		} else if (root["type"] == "file") {
-		    addChildButton(item,"<cpfile>","model_cpfile('"+args[0]+"','"+args[1]+"');model_setConfigFile('"+args[2]+"');model_show();");
-		} else if (root["type"] == "unknown") {
-		}
-	    };
-	    //for (var model in model_config) {
+		} else if (args.length == 2) {
+		    if (root["type"] == "dir") {
+			addChildButton(item,"<cpdir>","model_cpdir('"+args[0]+"','"+args[1]+"');");
+		    } else if (root["type"] == "file") {
+			addChildButton(item,"<cpfile>","model_cpfile('"+args[0]+"','"+args[1]+"');model_setConfigFile('"+args[2]+"');model_show();");
+		    } else if (root["type"] == "unknown") {
+		    }
+		};
+		//for (var model in model_config) {
 		//console.log("Adding config button: ",model);
 		//addChildButton(item,model,"model_setConfigFile('"+model+"');model_show();");
-	    //}
-	    // add directories...
-	    for (var ii=1;ii<dirs.length;ii++) {
-		var dir=dirs[ii];
-		if (root["loc"] == "" || root["loc"] == ".") {
-		    var dd = dir;
-		} else {
-		    var dd = root["loc"]+dir;
-		};
-		//if (dd.substr(dd.length-1) == "/" || dd == "") {
-		  //  dd=dd + file;
 		//}
-		console.log("Adding dir button: ",dd);
-		addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();");
-	    }
+		// add directories...
+		for (var ii=1;ii<dirs.length;ii++) {
+		    var dir=dirs[ii];
+		    if (root["loc"] == "" || root["loc"] == ".") {
+			var dd = dir;
+		    } else {
+			var dd = root["loc"]+dir;
+		    };
+		    //if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //  dd=dd + file;
+		    //}
+		    console.log("Adding dir button: ",dd);
+		    addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();");
+		}
+	    };
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'modelFilterDir') { //***********************************
@@ -432,7 +446,7 @@ function showDropdown(target, arg = "") {
 			      var dd = getFile(fils[ii].getAttribute("path"));
 			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
-				  console.log("Adding file button: ",dd);
+				  console.log("Adding file button: ",dd,":",size,":");
 				  addChildButton(item,size+" "+dd,"model_setArray('filterFile','"+dd+"');model_show();");
 			      };
 			  };
@@ -501,60 +515,67 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent obs-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    // add directories...
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		addChildButton(item,"<up>","obs_setConfigFile('"+dd+"');");
-	    }
-	    if (args.length == 1) {
-		//console.log("Arg ret:",ret);
-		if (root["type"] == "dir" && root["loc"] != "") {
-		    addChildButton(item,"<rmdir>","obs_rmdir('"+args[0]+"');");
-		} else if (root["type"] == "file") {
-		    addChildButton(item,"<rmfile>","obs_rmfile('"+args[0]+"');");
-		} else if (root["type"] == "unknown") {
-		    if (looksLikeFile(args[0])) {
-			addChildButton(item,"<mkfile>","obs_mkfile('"+args[0]+"');obs_show();");
-		    } else {
-			addChildButton(item,"<mkdir>","obs_mkdir('"+args[0]+"');");
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
+		} else {
+		    var file="";
+		};
+		// add directories...
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    addChildButton(item,"<up>","obs_setConfigFile('"+dd+"');");
+		}
+		if (args.length == 1) {
+		    //console.log("Arg ret:",ret);
+		    if (root["type"] == "dir" && root["loc"] != "") {
+			addChildButton(item,"<rmdir>","obs_rmdir('"+args[0]+"');");
+		    } else if (root["type"] == "file") {
+			addChildButton(item,"<rmfile>","obs_rmfile('"+args[0]+"');");
+		    } else if (root["type"] == "unknown") {
+			if (looksLikeFile(args[0])) {
+			    addChildButton(item,"<mkfile>","obs_mkfile('"+args[0]+"');obs_show();");
+			} else {
+			    addChildButton(item,"<mkdir>","obs_mkdir('"+args[0]+"');");
+			}
 		    }
-		}
-	    } else if (args.length == 2) {
-		if (root["type"] == "dir") {
-		    addChildButton(item,"<cpdir>","obs_cpdir('"+args[0]+"','"+args[1]+"');");
-		} else if (root["type"] == "file") {
-		    addChildButton(item,"<cpfile>","obs_cpfile('"+args[0]+"','"+args[1]+"');obs_setConfigFile('"+args[2]+"');obs_show();");
-		} else if (root["type"] == "unknown") {
-		}
-	    };
-	    //for (var obs in obs_config) {
+		} else if (args.length == 2) {
+		    if (root["type"] == "dir") {
+			addChildButton(item,"<cpdir>","obs_cpdir('"+args[0]+"','"+args[1]+"');");
+		    } else if (root["type"] == "file") {
+			addChildButton(item,"<cpfile>","obs_cpfile('"+args[0]+"','"+args[1]+"');obs_setConfigFile('"+args[2]+"');obs_show();");
+		    } else if (root["type"] == "unknown") {
+		    }
+		};
+		//for (var obs in obs_config) {
 		//console.log("Adding config button: ",obs);
 		//addChildButton(item,obs,"obs_setConfigFile('"+obs+"');obs_show();");
-	    //}
-	    for (var ii=1;ii<dirs.length;ii++) {
-		var dir=dirs[ii];
-		if (root["loc"] == "" || root["loc"] == ".") {
-		    var dd = dir;
-		} else {
-		    var dd = root["loc"]+dir;
-		};
-		//if (dd.substr(dd.length-1) == "/" || dd == "") {
-		    //dd=dd + file;
 		//}
-		console.log("Adding dir button: ",dd);
-		addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();");
+		for (var ii=1;ii<dirs.length;ii++) {
+		    var dir=dirs[ii];
+		    if (root["loc"] == "" || root["loc"] == ".") {
+			var dd = dir;
+		    } else {
+			var dd = root["loc"]+dir;
+		    };
+		    //if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //dd=dd + file;
+		    //}
+		    console.log("Adding dir button: ",dd);
+		    addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();");
+		}
 	    }
 	    documentLog.innerHTML="";
 	});
@@ -796,11 +817,16 @@ function showDropdown(target, arg = "") {
 	    for (var pos in bufr) {
 		if (pos !== "info" && pos !== "cnt")  {
 		    var descr=bufr[pos]["descr"];
-		    var info=bufr[pos]["info"];
-		    if (descr == "31001") {
-			addChildButton(item,pos+" : "+descr+" "+info,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","shaded");
+		    var info=" "+bufr[pos]["info"];
+		    if (bufr[pos]["val1"] !== undefined && bufr[pos]["val1"] != "NA") {
+			var value="    ~ "+bufr[pos]["val1"];
 		    } else {
-			addChildButton(item,pos+" : "+descr+" "+info,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');");
+			var value="";
+		    };
+		    if (descr == "31001") {
+			addChildButton(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","shaded");
+		    } else {
+			addChildButton(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');");
 		    }
 		}
 	    }
@@ -821,68 +847,75 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    // add directories...
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		console.log("Adding <up> button: '"+dd+"'");
-		//addChildButton(item,"<up>","coloc_setConfigFile('"+dd+"');coloc_show();");
-		addChildButton(item,"<up>","coloc_setConfigFile2('"+dd+"');");
-	    }
-	    if (args.length == 1) {
-		//console.log("Arg ret:",ret);
-		if (root["type"] == "dir" && root["loc"] != "") {
-		    console.log("Adding <rmdir> button: ",args[0]);
-		    addChildButton(item,"<rmdir>","coloc_rmdir('"+args[0]+"');");
-		} else if (root["type"] == "file") {
-		    console.log("Adding <rmfile> button: ",args[0]);
-		    addChildButton(item,"<rmfile>","coloc_rmfile('"+args[0]+"');");
-		} else if (root["type"] == "unknown") {
-		    if (looksLikeFile(args[0])) {
-			console.log("Adding <mkfile> button: ",args[0]);
-			addChildButton(item,"<mkfile>","coloc_mkfile('"+args[0]+"');coloc_show();");
-		    } else {
-			console.log("Adding <mkdir> button: ",args[0]);
-			addChildButton(item,"<mkdir>","coloc_mkdir('"+args[0]+"');");
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
+		} else {
+		    var file="";
+		};
+		// add directories...
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    console.log("Adding <up> button: '"+dd+"'");
+		    //addChildButton(item,"<up>","coloc_setConfigFile('"+dd+"');coloc_show();");
+		    addChildButton(item,"<up>","coloc_setConfigFile2('"+dd+"');");
+		}
+		if (args.length == 1) {
+		    //console.log("Arg ret:",ret);
+		    if (root["type"] == "dir" && root["loc"] != "") {
+			console.log("Adding <rmdir> button: ",args[0]);
+			addChildButton(item,"<rmdir>","coloc_rmdir('"+args[0]+"');");
+		    } else if (root["type"] == "file") {
+			console.log("Adding <rmfile> button: ",args[0]);
+			addChildButton(item,"<rmfile>","coloc_rmfile('"+args[0]+"');");
+		    } else if (root["type"] == "unknown") {
+			if (looksLikeFile(args[0])) {
+			    console.log("Adding <mkfile> button: ",args[0]);
+			    addChildButton(item,"<mkfile>","coloc_mkfile('"+args[0]+"');coloc_show();");
+			} else {
+			    console.log("Adding <mkdir> button: ",args[0]);
+			    addChildButton(item,"<mkdir>","coloc_mkdir('"+args[0]+"');");
+			}
 		    }
-		}
-	    } else if (args.length == 2) {
-		if (root["type"] == "dir") {
-		    console.log("Adding <cpdir> button: ",args[0],args[1]);
-		    addChildButton(item,"<cpdir>","coloc_cpdir('"+args[0]+"','"+args[1]+"');");
-		} else if (root["type"] == "file") {
-		    console.log("Adding <cpfile> button: ",args[0],args[1]);
-		    addChildButton(item,"<cpfile>","coloc_cpfile('"+args[0]+"','"+args[1]+"');coloc_setConfigFile('"+args[2]+"');coloc_show();");
-		} else if (root["type"] == "unknown") {
-		}
-	    };
-	    //for (var coloc in coloc_config) {
+		} else if (args.length == 2) {
+		    if (root["type"] == "dir") {
+			console.log("Adding <cpdir> button: ",args[0],args[1]);
+			addChildButton(item,"<cpdir>","coloc_cpdir('"+args[0]+"','"+args[1]+"');");
+		    } else if (root["type"] == "file") {
+			console.log("Adding <cpfile> button: ",args[0],args[1]);
+			addChildButton(item,"<cpfile>","coloc_cpfile('"+args[0]+"','"+args[1]+"');coloc_setConfigFile('"+args[2]+"');coloc_show();");
+		    } else if (root["type"] == "unknown") {
+		    }
+		};
+		//for (var coloc in coloc_config) {
 		//console.log("Adding config button: ",coloc);
 		//addChildButton(item,coloc,"coloc_setConfigFile('"+coloc+"');coloc_show();");
-	    //}
-	    for (var ii=1;ii<dirs.length;ii++) {
-		var dir=dirs[ii];
-		if (root["loc"] == "" || root["loc"] == ".") {
-		    var dd = dir;
-		} else {
-		    var dd = root["loc"]+dir;
-		};
-		//if (dd.substr(dd.length-1) == "/" || dd == "") {
-		  //  dd=dd + file;
 		//}
-		console.log("Adding button: ",dd);
-		addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();");
+		for (var ii=1;ii<dirs.length;ii++) {
+		    var dir=dirs[ii];
+		    if (root["loc"] == "" || root["loc"] == ".") {
+			var dd = dir;
+		    } else {
+			var dd = root["loc"]+dir;
+		    };
+		    //if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //  dd=dd + file;
+		    //}
+		    console.log("Adding button: ",dd);
+		    addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();");
+		}
 	    }
 	    documentLog.innerHTML="";
 	});
@@ -900,41 +933,48 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent model-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    //console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    // add directories...
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		console.log("Adding up button: ",dd);
-		addChildButton(item,"<up>","coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_show();");
-	    }
-	    for (var ii=1;ii<dirs.length;ii++) {
-		var dir=dirs[ii];
-		if (root["loc"] == "" || root["loc"] == ".") {
-		    var dd = dir;
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		//console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
 		} else {
-		    var dd = root["loc"]+dir;
+		    var file="";
 		};
-		// if (dd.substr(dd.length-1) == "/" || dd == "") {
-		//     dd=dd + file;
+		// add directories...
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    console.log("Adding up button: ",dd);
+		    addChildButton(item,"<up>","coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_show();");
+		}
+		for (var ii=1;ii<dirs.length;ii++) {
+		    var dir=dirs[ii];
+		    if (root["loc"] == "" || root["loc"] == ".") {
+			var dd = dir;
+		    } else {
+			var dd = root["loc"]+dir;
+		    };
+		    // if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //     dd=dd + file;
+		    // }
+		    console.log("Adding dir button: ",dd);
+		    addChildButton(item,dd,"coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_updateModelData('"+dd+"');coloc_show();");
+		}
+		// for (var model in model_config) {
+		// 	addChildButton(item,model,"coloc_setConfig('modelConfigFile','file','"+model+"');coloc_show();");
 		// }
-		console.log("Adding dir button: ",dd);
-		addChildButton(item,dd,"coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_updateModelData('"+dd+"');coloc_show();");
+		addChildButton(item,"<none>","coloc_setConfig('modelConfigFile','file','');coloc_show();");
 	    }
-	    // for (var model in model_config) {
-	    // 	addChildButton(item,model,"coloc_setConfig('modelConfigFile','file','"+model+"');coloc_show();");
-	    // }
-	    addChildButton(item,"<none>","coloc_setConfig('modelConfigFile','file','');coloc_show();");
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'colocModelTargetVariable') { //***********************************
@@ -958,41 +998,48 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent obs-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    //console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    // add directories...
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		console.log("Adding up button: ",dd);
-		addChildButton(item,"<up>","coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_show();");
-	    }
-	    for (var ii=1;ii<dirs.length;ii++) {
-		var dir=dirs[ii];
-		if (root["loc"] == "" || root["loc"] == ".") {
-		    var dd = dir;
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		//console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
 		} else {
-		    var dd = root["loc"]+dir;
+		    var file="";
 		};
-		// if (dd.substr(dd.length-1) == "/" || dd == "") {
-		//     dd=dd + file;
+		// add directories...
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    console.log("Adding up button: ",dd);
+		    addChildButton(item,"<up>","coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_show();");
+		}
+		for (var ii=1;ii<dirs.length;ii++) {
+		    var dir=dirs[ii];
+		    if (root["loc"] == "" || root["loc"] == ".") {
+			var dd = dir;
+		    } else {
+			var dd = root["loc"]+dir;
+		    };
+		    // if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //     dd=dd + file;
+		    // }
+		    console.log("Adding dir button: ",dd);
+		    addChildButton(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();");
+		}
+		// for (var obs in obs_config) {
+		// 	addChildButton(item,obs,"coloc_setConfig('obsConfigFile','file','"+obs+"');coloc_show();");
 		// }
-		console.log("Adding dir button: ",dd);
-		addChildButton(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();");
+		addChildButton(item,"<none>","coloc_setConfig('obsConfigFile','file','');coloc_show();");
 	    }
-	    // for (var obs in obs_config) {
-	    // 	addChildButton(item,obs,"coloc_setConfig('obsConfigFile','file','"+obs+"');coloc_show();");
-	    // }
-	    addChildButton(item,"<none>","coloc_setConfig('obsConfigFile','file','');coloc_show();");
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'colocXML') { //***********************************
@@ -1003,50 +1050,57 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
-		  addWildcardButtons(item,target);
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
-		      console.log("Error:"+path+"  "+msg);
-		      //alert("Unable to list: "+path+"\n"+msg);
+		      alert("Unable to list: "+arg+"\n"+msg);
 		  } else {
-		      var ls=data.getElementsByTagName("ls");
-		      if (ls.length > 0) {
-			  var root=ls[0].getAttribute("root");
-			  var loc=ls[0].getAttribute("location");
-			  var pdirs=getSubDirs(cls,root,loc,"");
-			  var parent=pdirs[0];
-			  console.log("Found parent: ",root,loc,parent);
-			  if (parent != null) {
-			      var dd=root+parent;
-			      addChildButton(item,"<up>",
-					     "coloc_setArray('xml','"+dd+"');coloc_show();");
-			  };
-			  var dirs=ls[0].getElementsByTagName("dir");
-			  console.log("Found dir entries: ",dirs.length);
-			  for (var ii=0; ii< dirs.length; ii++) {
-			      var dd = dirs[ii].getAttribute("path");
-			      console.log("Adding dir button: ",dd);
-			      addChildButton(item,dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
-			  };
-			  var patts=ls[0].getElementsByTagName("pattern");
-			  console.log("Found file entries: ",patts.length);
-			  for (var ii=0; ii< patts.length; ii++) {
-			      var rr = getFile(patts[ii].getAttribute("regexp"));
-			      var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,rr);
-				  addChildButton(item,dd,"coloc_setArray('xml','"+rr+"');coloc_show();",'shaded');
+		      addWildcardButtons(item,target);
+		      var errors=data.getElementsByTagName("error");
+		      if (errors.length > 0 ) {
+			  var msg=(errors[0].getAttribute("message")||"");
+			  console.log("Error:"+path+"  "+msg);
+			  //alert("Unable to list: "+path+"\n"+msg);
+		      } else {
+			  var ls=data.getElementsByTagName("ls");
+			  if (ls.length > 0) {
+			      var root=ls[0].getAttribute("root");
+			      var loc=ls[0].getAttribute("location");
+			      var pdirs=getSubDirs(cls,root,loc,"");
+			      var parent=pdirs[0];
+			      console.log("Found parent: ",root,loc,parent);
+			      if (parent != null) {
+				  var dd=root+parent;
+				  addChildButton(item,"<up>",
+						 "coloc_setArray('xml','"+dd+"');coloc_show();");
 			      };
-			  };
-			  var fils=ls[0].getElementsByTagName("file");
-			  console.log("Found file entries: ",fils.length);
-			  for (var ii=0; ii< fils.length; ii++) {
-			      var dd = fils[ii].getAttribute("path");
-			      var size = fils[ii].getAttribute("size")
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,ii);
-				  addChildButton(item,size+" "+dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
+			      var dirs=ls[0].getElementsByTagName("dir");
+			      console.log("Found dir entries: ",dirs.length);
+			      for (var ii=0; ii< dirs.length; ii++) {
+				  var dd = dirs[ii].getAttribute("path");
+				  console.log("Adding dir button: ",dd);
+				  addChildButton(item,dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
+			      };
+			      var patts=ls[0].getElementsByTagName("pattern");
+			      console.log("Found file entries: ",patts.length);
+			      for (var ii=0; ii< patts.length; ii++) {
+				  var rr = getFile(patts[ii].getAttribute("regexp"));
+				  var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				  if (dd !== '') {
+				      console.log("Adding file button: ",dd,rr);
+				      addChildButton(item,dd,"coloc_setArray('xml','"+rr+"');coloc_show();",'shaded');
+				  };
+			      };
+			      var fils=ls[0].getElementsByTagName("file");
+			      console.log("Found file entries: ",fils.length);
+			      for (var ii=0; ii< fils.length; ii++) {
+				  var dd = fils[ii].getAttribute("path");
+				  var size = fils[ii].getAttribute("size")
+				  if (dd !== '') {
+				      console.log("Adding file button: ",dd,ii);
+				      addChildButton(item,size+" "+dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
+				  };
 			      };
 			  };
 		      };
@@ -1070,11 +1124,16 @@ function showDropdown(target, arg = "") {
 		for (var pos in bufr) {
 		    if (pos !== "info" && pos !== "cnt")  {
 			var descr=bufr[pos]["descr"];
-			var info=bufr[pos]["info"];
-			if (descr == "31001") {
-			    addChildButton(item,pos+" : "+descr+" "+info,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');","shaded");
+			var info=" "+bufr[pos]["info"];
+			if (bufr[pos]["val1"] !== undefined && bufr[pos]["val1"] != "NA") {
+			    var value="    ~ "+bufr[pos]["val1"];
 			} else {
-			    addChildButton(item,pos+" : "+descr+" "+info,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');");
+			    var value="";
+			};
+			if (descr == "31001") {
+			    addChildButton(item,pos+" : "+descr + info + value,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');","shaded");
+			} else {
+			    addChildButton(item,pos+" : "+descr + info + value,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');");
 			}
 		    }
 		}
@@ -1138,12 +1197,16 @@ function showDropdown(target, arg = "") {
 	var mfile = coloc_getModelConfigFile();
 	var ofile = coloc_getObsConfigFile();
 	removeChildren(item);
-	if ( coloc_config[file] !== undefined &&
-	     obs_config[ofile] !== undefined
+	if ( obs_config[ofile] !== undefined
 	   ) {
-	    // add obs-targets from obs-file, including index XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	    for (var t in obs_config[ofile]["targets"]) {
+		addTargetButton(item,target,t);
+	    }
+	    addTargetButton(item,target,obs_config[ofile]["indexTarget"],"shaded");
+	};
+	if ( coloc_config[file] !== undefined ) {
 	    for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
-		addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+		addTargetButton(item,target,t);
 	    }
 	};
 	addLogicalButtons(item,target);
@@ -1152,78 +1215,97 @@ function showDropdown(target, arg = "") {
 	var file = coloc_getConfigFile();
 	var mfile = coloc_getModelConfigFile();
 	var ofile = coloc_getObsConfigFile();
+	var mod=(mfile !== "");
+	var obs=(ofile !== "");
 	removeChildren(item);
-	if ( coloc_config[file] !== undefined &&
-	     model_config[mfile] !== undefined &&
-	     obs_config[ofile] !== undefined
-	   ) {
-	    // add obs-targets from obs-file, including index XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	    for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
-		addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+	if(mod) {
+	    if ( model_config[mfile] !== undefined ) {
+		addTargetButton(item,target,model_config[mfile]["indexTarget"],"shaded");
 	    }
-	    // add model index XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	    for (var t in coloc_config[file]["modelConfigFile"]["targets"]) {
-		addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+	    if ( coloc_config[file] !== undefined ) {
+		for (var t in coloc_config[file]["modelConfigFile"]["targets"]) {
+		    addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+		}
 	    }
 	}
+	if (obs) {
+	    if ( obs_config[ofile] !== undefined) {
+		for (var t in obs_config[ofile]["targets"]) {
+		    addTargetButton(item,target,t);
+		}
+		addTargetButton(item,target,obs_config[ofile]["indexTarget"],"shaded");
+	    };
+	    if ( coloc_config[file] !== undefined ) {
+		for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
+		    addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+		}
+	    };
+	};
 	addLogicalButtons(item,target);
 	addFunctionButtons(item,target);
     } else if (target === 'plotConfigFile') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent plot-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"plot",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    // add directories...
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		console.log("Adding up button: ",dd);
-		addChildButton(item,"<up>","plot_setConfigFile('"+dd+"');");
-	    }
-	    if (args.length == 1) {
-		//console.log("Arg ret:",ret);
-		if (root["type"] == "dir" && root["loc"] != "") {
-		    addChildButton(item,"<rmdir>","plot_rmdir('"+args[0]+"');");
-		} else if (root["type"] == "file") {
-		    addChildButton(item,"<rmfile>","plot_rmfile('"+args[0]+"');");
-		} else if (root["type"] == "unknown") {
-		    if (looksLikeFile(args[0])) {
-			addChildButton(item,"<mkfile>","plot_mkfile('"+args[0]+"');plot_show();");
-		    } else {
-			addChildButton(item,"<mkdir>","plot_mkdir('"+args[0]+"');");
-		    }
-		}
-	    } else if (args.length == 2) {
-		if (root["type"] == "dir") {
-		    addChildButton(item,"<cpdir>","plot_cpdir('"+args[0]+"','"+args[1]+"');");
-		} else if (root["type"] == "file") {
-		    addChildButton(item,"<cpfile>","plot_cpfile('"+args[0]+"','"+args[1]+"');plot_setConfigFile('"+args[2]+"');");
-		} else if (root["type"] == "unknown") {
-		}
-	    };
-	    for (var ii=1;ii<dirs.length;ii++) {
-		var dir=dirs[ii];
-		if (root["loc"] == "" || root["loc"] == ".") {
-		    var dd = dir;
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
 		} else {
-		    var dd = root["loc"]+dir;
+		    var file="";
 		};
-		//if (dd.substr(dd.length-1) == "/" || dd == "") {
-		  //  dd=dd + file;
-		//}
-		console.log("Adding dir button: ",dd);
-		addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();");
-	    }
+		// add directories...
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    console.log("Adding up button: ",dd);
+		    addChildButton(item,"<up>","plot_setConfigFile('"+dd+"');");
+		}
+		if (args.length == 1) {
+		    //console.log("Arg ret:",ret);
+		    if (root["type"] == "dir" && root["loc"] != "") {
+			addChildButton(item,"<rmdir>","plot_rmdir('"+args[0]+"');");
+		    } else if (root["type"] == "file") {
+			addChildButton(item,"<rmfile>","plot_rmfile('"+args[0]+"');");
+		    } else if (root["type"] == "unknown") {
+			if (looksLikeFile(args[0])) {
+			    addChildButton(item,"<mkfile>","plot_mkfile('"+args[0]+"');plot_show();");
+			} else {
+			    addChildButton(item,"<mkdir>","plot_mkdir('"+args[0]+"');");
+			}
+		    }
+		} else if (args.length == 2) {
+		    if (root["type"] == "dir") {
+			addChildButton(item,"<cpdir>","plot_cpdir('"+args[0]+"','"+args[1]+"');");
+		    } else if (root["type"] == "file") {
+			addChildButton(item,"<cpfile>","plot_cpfile('"+args[0]+"','"+args[1]+"');plot_setConfigFile('"+args[2]+"');");
+		    } else if (root["type"] == "unknown") {
+		    }
+		};
+		for (var ii=1;ii<dirs.length;ii++) {
+		    var dir=dirs[ii];
+		    if (root["loc"] == "" || root["loc"] == ".") {
+			var dd = dir;
+		    } else {
+			var dd = root["loc"]+dir;
+		    };
+		    //if (dd.substr(dd.length-1) == "/" || dd == "") {
+		    //  dd=dd + file;
+		    //}
+		    console.log("Adding dir button: ",dd);
+		    addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();");
+		}
+	    };
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'plotCat') { //***********************************
@@ -1248,50 +1330,57 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
-		  addWildcardButtons(item,target);
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
-		      console.log("Error:"+path+"  "+msg);
-		      //alert("Unable to list: "+path+"\n"+msg);
+		      alert("Unable to list: "+arg+"\n"+msg);
 		  } else {
-		      var ls=data.getElementsByTagName("ls");
-		      if (ls.length > 0) {
-			  var root=ls[0].getAttribute("root");
-			  var loc=ls[0].getAttribute("location");
-			  var pdirs=getSubDirs(cls,root,loc,"");
-			  var parent=pdirs[0];
-			  console.log("Found parent: ",root,loc,parent);
-			  if (parent != null) {
-			      var dd=root+parent;
-			      addChildButton(item,"<up>",
-					     "plot_setArray('table','"+dd+"');plot_show();");
-			  };
-			  var dirs=ls[0].getElementsByTagName("dir");
-			  console.log("Found dir entries: ",dirs.length);
-			  for (var ii=0; ii< dirs.length; ii++) {
-			      var dd = dirs[ii].getAttribute("path");
-			      console.log("Adding dir button: ",dd);
-			      addChildButton(item,dd,"plot_setArray('table','"+dd+"');plot_show();");
-			  };
-			  var patts=ls[0].getElementsByTagName("pattern");
-			  console.log("Found file entries: ",patts.length);
-			  for (var ii=0; ii< patts.length; ii++) {
-			      var rr = getFile(patts[ii].getAttribute("regexp"));
-			      var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,rr);
-				  addChildButton(item,dd,"plot_setArray('table','"+rr+"');plot_show();",'shaded');
+		      addWildcardButtons(item,target);
+		      var errors=data.getElementsByTagName("error");
+		      if (errors.length > 0 ) {
+			  var msg=(errors[0].getAttribute("message")||"");
+			  console.log("Error:"+path+"  "+msg);
+			  //alert("Unable to list: "+path+"\n"+msg);
+		      } else {
+			  var ls=data.getElementsByTagName("ls");
+			  if (ls.length > 0) {
+			      var root=ls[0].getAttribute("root");
+			      var loc=ls[0].getAttribute("location");
+			      var pdirs=getSubDirs(cls,root,loc,"");
+			      var parent=pdirs[0];
+			      console.log("Found parent: ",root,loc,parent);
+			      if (parent != null) {
+				  var dd=root+parent;
+				  addChildButton(item,"<up>",
+						 "plot_setArray('table','"+dd+"');plot_show();");
 			      };
-			  };
-			  var fils=ls[0].getElementsByTagName("file");
-			  console.log("Found file entries: ",fils.length);
-			  for (var ii=0; ii< fils.length; ii++) {
-			      var dd = fils[ii].getAttribute("path");
-			      var size = fils[ii].getAttribute("size")
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,ii);
-				  addChildButton(item,size+" "+dd,"plot_setArray('table','"+dd+"');plot_show();");
+			      var dirs=ls[0].getElementsByTagName("dir");
+			      console.log("Found dir entries: ",dirs.length);
+			      for (var ii=0; ii< dirs.length; ii++) {
+				  var dd = dirs[ii].getAttribute("path");
+				  console.log("Adding dir button: ",dd);
+				  addChildButton(item,dd,"plot_setArray('table','"+dd+"');plot_show();");
+			      };
+			      var patts=ls[0].getElementsByTagName("pattern");
+			      console.log("Found file entries: ",patts.length);
+			      for (var ii=0; ii< patts.length; ii++) {
+				  var rr = getFile(patts[ii].getAttribute("regexp"));
+				  var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				  if (dd !== '') {
+				      console.log("Adding file button: ",dd,rr);
+				      addChildButton(item,dd,"plot_setArray('table','"+rr+"');plot_show();",'shaded');
+				  };
+			      };
+			      var fils=ls[0].getElementsByTagName("file");
+			      console.log("Found file entries: ",fils.length);
+			      for (var ii=0; ii< fils.length; ii++) {
+				  var dd = fils[ii].getAttribute("path");
+				  var size = fils[ii].getAttribute("size")
+				  if (dd !== '') {
+				      console.log("Adding file button: ",dd,ii);
+				      addChildButton(item,size+" "+dd,"plot_setArray('table','"+dd+"');plot_show();");
+				  };
 			      };
 			  };
 		      };
@@ -1306,50 +1395,57 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
-		  addWildcardButtons(item,target);
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
-		      console.log("Error:"+path+"  "+msg);
-		      //alert("Unable to list: "+path+"\n"+msg);
+		      alert("Unable to list: "+arg+"\n"+msg);
 		  } else {
-		      var ls=data.getElementsByTagName("ls");
-		      if (ls.length > 0) {
-			  var root=ls[0].getAttribute("root");
-			  var loc=ls[0].getAttribute("location");
-			  var pdirs=getSubDirs(cls,root,loc,"");
-			  var parent=pdirs[0];
-			  console.log("Found parent: ",root,loc,parent);
-			  if (parent != null) {
-			      var dd=root+parent;
-			      addChildButton(item,"<up>",
-					     "plot_setArray('graphics','"+dd+"');plot_show();");
-			  };
-			  var dirs=ls[0].getElementsByTagName("dir");
-			  console.log("Found dir entries: ",dirs.length);
-			  for (var ii=0; ii< dirs.length; ii++) {
-			      var dd = dirs[ii].getAttribute("path");
-			      console.log("Adding dir button: ",dd);
-			      addChildButton(item,dd,"plot_setArray('graphics','"+dd+"');plot_show();");
-			  };
-			  var patts=ls[0].getElementsByTagName("pattern");
-			  console.log("Found file entries: ",patts.length);
-			  for (var ii=0; ii< patts.length; ii++) {
-			      var rr = getFile(patts[ii].getAttribute("regexp"));
-			      var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,rr);
-				  addChildButton(item,dd,"plot_setArray('graphics','"+rr+"');plot_show();",'shaded');
+		      addWildcardButtons(item,target);
+		      var errors=data.getElementsByTagName("error");
+		      if (errors.length > 0 ) {
+			  var msg=(errors[0].getAttribute("message")||"");
+			  console.log("Error:"+path+"  "+msg);
+			  //alert("Unable to list: "+path+"\n"+msg);
+		      } else {
+			  var ls=data.getElementsByTagName("ls");
+			  if (ls.length > 0) {
+			      var root=ls[0].getAttribute("root");
+			      var loc=ls[0].getAttribute("location");
+			      var pdirs=getSubDirs(cls,root,loc,"");
+			      var parent=pdirs[0];
+			      console.log("Found parent: ",root,loc,parent);
+			      if (parent != null) {
+				  var dd=root+parent;
+				  addChildButton(item,"<up>",
+						 "plot_setArray('graphics','"+dd+"');plot_show();");
 			      };
-			  };
-			  var fils=ls[0].getElementsByTagName("file");
-			  console.log("Found file entries: ",fils.length);
-			  for (var ii=0; ii< fils.length; ii++) {
-			      var dd = fils[ii].getAttribute("path");
-			      var size = fils[ii].getAttribute("size")
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,ii);
-				  addChildButton(item,size+" "+dd,"plot_setArray('graphics','"+dd+"');plot_show();");
+			      var dirs=ls[0].getElementsByTagName("dir");
+			      console.log("Found dir entries: ",dirs.length);
+			      for (var ii=0; ii< dirs.length; ii++) {
+				  var dd = dirs[ii].getAttribute("path");
+				  console.log("Adding dir button: ",dd);
+				  addChildButton(item,dd,"plot_setArray('graphics','"+dd+"');plot_show();");
+			      };
+			      var patts=ls[0].getElementsByTagName("pattern");
+			      console.log("Found file entries: ",patts.length);
+			      for (var ii=0; ii< patts.length; ii++) {
+				  var rr = getFile(patts[ii].getAttribute("regexp"));
+				  var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				  if (dd !== '') {
+				      console.log("Adding file button: ",dd,rr);
+				      addChildButton(item,dd,"plot_setArray('graphics','"+rr+"');plot_show();",'shaded');
+				  };
+			      };
+			      var fils=ls[0].getElementsByTagName("file");
+			      console.log("Found file entries: ",fils.length);
+			      for (var ii=0; ii< fils.length; ii++) {
+				  var dd = fils[ii].getAttribute("path");
+				  var size = fils[ii].getAttribute("size")
+				  if (dd !== '') {
+				      console.log("Adding file button: ",dd,ii);
+				      addChildButton(item,size+" "+dd,"plot_setArray('graphics','"+dd+"');plot_show();");
+				  };
 			      };
 			  };
 		      };
@@ -1378,46 +1474,53 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
-	    var root=ret[0]||{};
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    if (args.length >0 && looksLikeFile(args[0])) {
-		var file=getFile(args[0]);
+	    var errors=data.getElementsByTagName("error");
+	    if (errors.length > 0 ) {
+		console.log("Error:",data);
+		var msg=(errors[0].getAttribute("message")||"");
+		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
-		var file="";
-	    };
-	    // add directories...
-	    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-	    console.log("Found entries: ",dirs.length-1,root);
-	    var parent=dirs[0];
-	    if (parent != null) {
-		var dd=parent;
-		console.log("Adding up: ",dd);
-		addChildButton(item,"<up>","showValue('plotColoc','"+dd+"');");
-	    } else {
-		console.log("Adding clear: ",dd);
-		addChildButton(item,"<up>","showValue('plotColoc','');");
-	    }
-	    if (dirs.length > 0) {
-		for (var ii=1;ii<dirs.length;ii++) {
-		    var dir=dirs[ii];
-		    if (root["loc"] == "" || root["loc"] == ".") {
-			var dd = dir;
-		    } else {
-			var dd = root["loc"]+dir;
-		    };
-		    if (dd !== null && dd !== undefined) {
-			//if (dd.substr(dd.length-1) == "/" || dd == "") {
+		var ret=dataToArray(data,status,documentLog);
+		var root=ret[0]||{};
+		console.log("Updating dropdown for ",target);
+		removeChildren(item);
+		if (args.length >0 && looksLikeFile(args[0])) {
+		    var file=getFile(args[0]);
+		} else {
+		    var file="";
+		};
+		// add directories...
+		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		console.log("Found entries: ",dirs.length-1,root);
+		var parent=dirs[0];
+		if (parent != null) {
+		    var dd=parent;
+		    console.log("Adding up: ",dd);
+		    addChildButton(item,"<up>","showValue('plotColoc','"+dd+"');");
+		} else {
+		    console.log("Adding clear: ",dd);
+		    addChildButton(item,"<up>","showValue('plotColoc','');");
+		}
+		if (dirs.length > 0) {
+		    for (var ii=1;ii<dirs.length;ii++) {
+			var dir=dirs[ii];
+			if (root["loc"] == "" || root["loc"] == ".") {
+			    var dd = dir;
+			} else {
+			    var dd = root["loc"]+dir;
+			};
+			if (dd !== null && dd !== undefined) {
+			    //if (dd.substr(dd.length-1) == "/" || dd == "") {
 			    //dd=dd + file;
-			//}
-			console.log("Adding dir button: ",dd,ii);
-// colocation file 'dd' must be 'loaded' if it is selected....!!!
-			addChildButton(item,dd,"showValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');");
+			    //}
+			    console.log("Adding dir button: ",dd,ii);
+			    // colocation file 'dd' must be 'loaded' if it is selected....!!!
+			    addChildButton(item,dd,"showValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');");
+			}
 		    }
 		}
-	    }
-	    console.log("There: ",dirs);
+		console.log("There: ",dirs);
+	    };
 	    documentLog.innerHTML="";
 	});
     } else if (target.substr(0,14) === 'plotExpression') { //***********************************
@@ -1426,32 +1529,38 @@ function showDropdown(target, arg = "") {
 	var cfile=plot_getColocConfigFile();
 	var mfile=plot_getModelConfigFile();
 	var ofile=plot_getObsConfigFile();
-	// model index
-	if (model_config[mfile]!== undefined) {
-	    var indexTarget=model_config[mfile]["indexTarget"];
-	    addChildButton(item,indexTarget,"addValue('"+target+"','"+indexTarget+"');");
-	};
-	// list model trgs in coloc_config
- 	if (coloc_config[cfile] !== undefined) {
-	    var trgs=coloc_config[cfile]["modelConfigFile"]["targets"];
-	    for (var trg in trgs) {
-		addChildButton(item,trg,"addValue('"+target+"','"+trg+"');");
+	var mod=(mfile !== "");
+	var obs=(ofile !== "");
+        // model index
+	if (mod) {
+	    if (model_config[mfile]!== undefined) {
+		var indexTarget=model_config[mfile]["indexTarget"];
+		addTargetButton(item,target,indexTarget,"shaded");
+	    };
+	    // list model trgs in coloc_config
+ 	    if (coloc_config[cfile] !== undefined) {
+		var trgs=coloc_config[cfile]["modelConfigFile"]["targets"];
+		for (var trg in trgs) {
+		    addTargetButton(item,target,trg);
+		};
 	    };
 	};
 	// list obs trgs in obs_config
-	if (obs_config[ofile] !== undefined) {
-	    var trgs=obs_config[ofile]["targets"];
-	    for (var trg in trgs) {
-		addChildButton(item,trg,"addValue('"+target+"','"+trg+"');");
-	    };
-	    trg = obs_config[ofile]["indexTarget"];
-	    addChildButton(item,trg,"addValue('"+target+"','"+trg+"');");
-	}
-	// list obs trgs in coloc_config
- 	if (coloc_config[cfile] !== undefined) {
-	    var trgs=coloc_config[cfile]["obsConfigFile"]["targets"];
-	    for (var trg in trgs) {
-		addChildButton(item,trg,"addValue('"+target+"','"+trg+"');");
+	if (obs) {
+	    if (obs_config[ofile] !== undefined) {
+		var trgs=obs_config[ofile]["targets"];
+		for (var trg in trgs) {
+		    addTargetButton(item,target,trg);
+		};
+		trg = obs_config[ofile]["indexTarget"];
+		addTargetButton(item,target,trg,"shaded");
+	    }
+	    // list obs trgs in coloc_config
+ 	    if (coloc_config[cfile] !== undefined) {
+		var trgs=coloc_config[cfile]["obsConfigFile"]["targets"];
+		for (var trg in trgs) {
+		    addTargetButton(item,target,trg);
+		};
 	    };
 	};
 	addFunctionButtons(item,target);
@@ -1485,52 +1594,59 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:type,arg:args},function(data, status){
-	    var ret=dataToArray(data,status,documentLog);
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
-		alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
-	    } else if (ret[0] !== undefined) {
-		var root=ret[0]||{};
-		console.log("Updating dropdown for ",target);
-		removeChildren(item);
-		if (args.length >0 && looksLikeFile(args[0])) {
-		    var file=getFile(args[0]);
-		} else {
-		    var file="";
-		};
-		// add directories...
-		var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
-		console.log("Found entries: ",dirs.length-1,root);
-		var parent=dirs[0];
-		if (parent != null) {
-		    var dd=parent;
-		    console.log("Adding up: ",dd);
-		    addChildButton(item,"<up>","showValue('autoConfigFile','"+dd+"');");
-		} else {
-		    console.log("Adding clear: ",dd);
-		    addChildButton(item,"<up>","showValue('autoConfigFile','');");
-		}
-		if (dirs.length > 0) {
-		    for (var ii=1;ii<dirs.length;ii++) {
-			var dir=dirs[ii];
-			if (root["loc"] == "" || root["loc"] == ".") {
-			    var dd = dir;
-			} else {
-			    var dd = root["loc"]+dir;
-			};
-			if (dd !== null && dd !== undefined) {
-			    //if (dd.substr(dd.length-1) == "/" || dd == "") {
+		alert("Unable to list: "+arg+"\n"+msg);
+	    } else {
+		var ret=dataToArray(data,status,documentLog);
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    var msg=(errors[0].getAttribute("message")||"");
+		    alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
+		} else if (ret[0] !== undefined) {
+		    var root=ret[0]||{};
+		    console.log("Updating dropdown for ",target);
+		    removeChildren(item);
+		    if (args.length >0 && looksLikeFile(args[0])) {
+			var file=getFile(args[0]);
+		    } else {
+			var file="";
+		    };
+		    // add directories...
+		    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		    console.log("Found entries: ",dirs.length-1,root);
+		    var parent=dirs[0];
+		    if (parent != null) {
+			var dd=parent;
+			console.log("Adding up: ",dd);
+			addChildButton(item,"<up>","showValue('autoConfigFile','"+dd+"');");
+		    } else {
+			console.log("Adding clear: ",dd);
+			addChildButton(item,"<up>","showValue('autoConfigFile','');");
+		    }
+		    if (dirs.length > 0) {
+			for (var ii=1;ii<dirs.length;ii++) {
+			    var dir=dirs[ii];
+			    if (root["loc"] == "" || root["loc"] == ".") {
+				var dd = dir;
+			    } else {
+				var dd = root["loc"]+dir;
+			    };
+			    if (dd !== null && dd !== undefined) {
+				//if (dd.substr(dd.length-1) == "/" || dd == "") {
 				//dd=dd + file;
-			    //}
-			    console.log("Adding dir button: ",dd,ii);
-			    addChildButton(item,dd,"showValue('autoConfigFile','"+dd+"');");
+				//}
+				console.log("Adding dir button: ",dd,ii);
+				addChildButton(item,dd,"showValue('autoConfigFile','"+dd+"');");
+			    }
 			}
 		    }
+		} else {
+		    console.log("Undefined root.");
 		}
-	    } else {
-		console.log("Undefined root.");
-	    }
+	    };
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'autoCron') { //***********************************
@@ -1634,7 +1750,7 @@ function dataToModel(data) {
 	    model_config[path]["dimensions"]={};
 	    for (var jj = 0; jj < dims.length; jj++) {
 		var name=dims[jj].getAttribute("name");
-		var dimv=dims[jj].getAttribute("value")||"";
+		var dimv=dims[jj].getAttribute("size")||"";
 		model_config[path]["dimensions"][name]=dimv;
 	    }
 	} else if (model_config[path]["dimensions"] === undefined) {
@@ -1722,7 +1838,9 @@ function dataToObs(data) {
 			var pos=seq[pp].getAttribute("pos");
 			var descr=seq[pp].getAttribute("descr");
 			var pinfo=seq[pp].getAttribute("info");
-			obs_config[path]["bufr"][bufrType][subType][pos]={descr:descr,info:pinfo};
+			var unit=seq[pp].getAttribute("unit");
+			var val1=seq[pp].getAttribute("val1");
+			obs_config[path]["bufr"][bufrType][subType][pos]={descr:descr,info:pinfo,unit:unit,val1:val1};
 		    }
 		} else {
 		    obs_config[path]["bufr"][bufrType]["info"]=info;

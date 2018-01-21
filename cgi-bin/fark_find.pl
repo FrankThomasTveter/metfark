@@ -26,8 +26,8 @@ use Capture::Tiny 'capture_merged';
 # 2 = model
 # 5 = parser
 #
-my $debug=1;
-fark::debug($debug);
+my $debug=0;
+#fark::debug($debug);
 #
 #
 my $ref=CGI->new();
@@ -98,7 +98,7 @@ sub findModel {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
-	my $log=farkdir::termval {
+    	farkdir::termval {
 	    my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
 	    if (@files) {
 		$node->setAttribute("password",        $password//"");
@@ -131,7 +131,7 @@ sub findModel {
 	    } else {
 		return "No files found.";
 	    }
-	} "Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax";
+	} "Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax",0; #ignore output
 	# report xml-structure
 	print $doc->toString . "\n";
     } else {
@@ -262,8 +262,8 @@ sub processModelFile {
 		my $parent = XML::LibXML::Element->new( 'dimension' );
 		$parent->setAttribute("name",$name//"");
 		if (defined $data->{file}->{dimension}->{$index}->{$name}->{"size"}) {
-		    my $value = $data->{file}->{dimension}->{$index}->{$name}->{"size"}+0;
-		    $parent->setAttribute("value",$value//"");
+		    my $size = $data->{file}->{dimension}->{$index}->{$name}->{"size"}+0;
+		    $parent->setAttribute("size",$size//"");
 		}
 		$node->addChild( $parent );
 	    }
@@ -552,13 +552,19 @@ sub processObsFile {
 			my $seqno=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{seqno};
 			my $name=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{name};
 			my $unit=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{unit};
+			my $val1=$data->{file}->{type}->{$type}->{subtype}->{$subtype}->{val1};
+
 			if (defined $seqno) {
 			    foreach my $pos (sort {$a<=>$b} keys %{$seqno}) {
 				if ($pos < 250) {
+				    print "### VALUE: '$pos'->'".($val1->{$pos}//"")."'\n";
+			
 				    my $posNode = XML::LibXML::Element->new( 'seq' );
 				    $posNode->setAttribute("pos",$pos//"");
 				    $posNode->setAttribute("descr",$seqno->{$pos}//"");
 				    $posNode->setAttribute("info",$name->{$pos}//"");
+				    $posNode->setAttribute("unit",$unit->{$pos}//"");
+				    $posNode->setAttribute("val1",$val1->{$pos}//"");
 				    $parent->addChild( $posNode );
 				}
 			    }

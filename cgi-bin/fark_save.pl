@@ -46,111 +46,113 @@ sub saveModel {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    my ($dir, $file) = farkdir::splitName($ifile);
-    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $fpath=$root . $loc;
-    if (-d  $fpath && $priv eq "rw") {
-	my $path=$fpath . $file;
-	# check password
-	my $parser = XML::LibXML->new();
-	my $doc;
-	my $node;
-	if (-d $path) {
-	    farkdir::term("Unable to save file: '$path'");
-	} elsif (-e $path) {
-	    $doc = $parser->parse_file($path);
-	    if ( ($node)=$doc->findnodes("model/model_config")) {
-		my $pass=($node->getAttribute("password")||"");
-		if ($pass ne $password) {
-		    farkdir::term("Invalid password for file: ".$path);
-		}
+    farkdir::termval {
+	my ($dir, $file) = farkdir::splitName($ifile);
+	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
+	my $fpath=$root . $loc;
+	if (-d  $fpath && $priv eq "rw") {
+	    my $path=$fpath . $file;
+	    # check password
+	    my $parser = XML::LibXML->new();
+	    my $doc;
+	    my $node;
+	    if (-d $path) {
+		farkdir::term("Unable to save file: '$path'");
+	    } elsif (-e $path) {
+		$doc = $parser->parse_file($path);
+		if ( ($node)=$doc->findnodes("model/model_config")) {
+		    my $pass=($node->getAttribute("password")||"");
+		    if ($pass ne $password) {
+			farkdir::term("Invalid password for file: ".$path);
+		    }
+		} else {
+		    my $parent=$doc->createElement("model");
+		    $node=$parent->createElement("model_config");
+		};
 	    } else {
-		my $parent=$doc->createElement("model");
-		$node=$parent->createElement("model_config");
+		$doc = $parser->parse_string("<model><model_config/></model>");
+		($node) = $doc->findnodes("model/model_config");
+	    }
+	    $node->setAttribute("path",         $loc . $file);
+	    $node->setAttribute("root",         $root);
+	    $node->setAttribute("location",     $loc);
+	    $node->setAttribute("status",       $priv);
+	    $node->setAttribute("password",     $password);
+	    $node->setAttribute("file",         $file);
+	    $node->setAttribute("filterDir",    $filterDir);
+	    $node->setAttribute("filterDirMin", $filterDirMin);
+	    $node->setAttribute("filterDirMax", $filterDirMax);
+	    $node->setAttribute("filterFile",   $filterFile);
+	    $node->setAttribute("hits",         $hits);
+	    $node->setAttribute("indexTarget",  $indexTarget);
+	    $node->setAttribute("indexVariable",$indexVariable);
+	    if(defined $node->getAttribute("filterDir")){
+		if (! -d $node->getAttribute("filterDir")) {
+		    $node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+		}
+	    }
+	    my @oldNodes=$node->findnodes("stack");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
 	    };
-	} else {
-	    $doc = $parser->parse_string("<model><model_config/></model>");
-	    ($node) = $doc->findnodes("model/model_config");
-	}
-	$node->setAttribute("path",         $loc . $file);
-	$node->setAttribute("root",         $root);
-	$node->setAttribute("location",     $loc);
-	$node->setAttribute("status",       $priv);
-	$node->setAttribute("password",     $password);
-	$node->setAttribute("file",         $file);
-	$node->setAttribute("filterDir",    $filterDir);
-	$node->setAttribute("filterDirMin", $filterDirMin);
-	$node->setAttribute("filterDirMax", $filterDirMax);
-	$node->setAttribute("filterFile",   $filterFile);
-	$node->setAttribute("hits",         $hits);
-	$node->setAttribute("indexTarget",  $indexTarget);
-	$node->setAttribute("indexVariable",$indexVariable);
-	if(defined $node->getAttribute("filterDir")){
-	    if (! -d $node->getAttribute("filterDir")) {
-		$node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
-	    }
-	}
-	my @oldNodes=$node->findnodes("stack");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	};
-	my @sfiles = split (/\|/, $stack,-1);
-	if (@sfiles) { 
-	    foreach my $sfile (@sfiles) {
-		my $parent = XML::LibXML::Element->new( 'stack' );
-		$parent->setAttribute("name",$sfile);
-		$node->addChild( $parent );
-		$node->setAttribute("stack",           $sfile);
-	    }
-	}
-	@oldNodes=$node->findnodes('variable');
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	};
-	my @lines = split (/\|/, $variables,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		my @items = split (/\~/, $line,-1);
-		my $name=$items[0];
-		my $dims=$items[1] // "";
-		if ($name) {
-		    my $parent = XML::LibXML::Element->new( 'variable' );
-		    $parent->setAttribute("name",$name);
-		    $parent->setAttribute("dims",$dims);
+	    my @sfiles = split (/\|/, $stack,-1);
+	    if (@sfiles) { 
+		foreach my $sfile (@sfiles) {
+		    my $parent = XML::LibXML::Element->new( 'stack' );
+		    $parent->setAttribute("name",$sfile);
 		    $node->addChild( $parent );
+		    $node->setAttribute("stack",           $sfile);
 		}
 	    }
-	}
-	@oldNodes=$node->findnodes('dimension');
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	};
-	@lines = split (/\|/, $dimensions,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		my @items = split (/\~/, $line,-1);
-		my $name=$items[0];
-		my $dimv=$items[1] // "";
-		if ($name) {
-		    my $parent = XML::LibXML::Element->new( 'dimension' );
-		    $parent->setAttribute("name",$name);
-		    $parent->setAttribute("value",$dimv);
-		    $node->addChild( $parent );
+	    @oldNodes=$node->findnodes('variable');
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    };
+	    my @lines = split (/\|/, $variables,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    my @items = split (/\~/, $line,-1);
+		    my $name=$items[0];
+		    my $dims=$items[1] // "";
+		    if ($name) {
+			my $parent = XML::LibXML::Element->new( 'variable' );
+			$parent->setAttribute("name",$name);
+			$parent->setAttribute("dims",$dims);
+			$node->addChild( $parent );
+		    }
 		}
 	    }
-	}
-	# save XML to file
-	if (open(my $fh, '>', $path)) {
-	    print $fh $doc->toString;
-	    close $fh;
-	    chmod 0666, $path;
+	    @oldNodes=$node->findnodes('dimension');
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    };
+	    @lines = split (/\|/, $dimensions,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    my @items = split (/\~/, $line,-1);
+		    my $name=$items[0];
+		    my $dimv=$items[1] // "";
+		    if ($name) {
+			my $parent = XML::LibXML::Element->new( 'dimension' );
+			$parent->setAttribute("name",$name);
+			$parent->setAttribute("size",$dimv);
+			$node->addChild( $parent );
+		    }
+		}
+	    }
+	    # save XML to file
+	    if (open(my $fh, '>', $path)) {
+		print $fh $doc->toString;
+		close $fh;
+		chmod 0666, $path;
+	    } else {
+		farkdir::term("Unable to open: '".$path."'");
+	    }
+	    print "<save message='success'/>\n";
 	} else {
-	    farkdir::term("Unable to open: '".$path."'");
+	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-	print "<save message='success'/>\n";
-    } else {
-	farkdir::term("Permission denied: '".$fpath."'");
-    }
+    } "Unable to save $ifile\n";
 }
 sub saveObs {
     my $param = shift;
@@ -171,107 +173,109 @@ sub saveObs {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    my ($dir, $file) = farkdir::splitName($ifile);
-    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $fpath=$root . $loc;
-    if (-d  $fpath && $priv eq "rw") {
-	my $path=$fpath . $file;
-	# check password
-	my $parser = XML::LibXML->new();
-	my $doc;
-	my $node;
-	if (-d $path) {
-	    farkdir::term("Unable to save file: '$path'");
-	} elsif (-e $path) {
-	    $doc = $parser->parse_file($path);
-	    if ( ($node)=$doc->findnodes("obs/obs_config")) {
-		my $pass=($node->getAttribute("password")||"");
-		if ($pass ne $password) {
-		    farkdir::term("Invalid password for file: ".$file);
-		}
-	    } else {
-		my $parent=$doc->createElement("obs");
-		$node=$parent->createElement("obs_config");
-	    };
-	} else {
-	    $doc = $parser->parse_string("<obs><obs_config/></obs>");
-	    ($node) = $doc->findnodes("obs/obs_config");
-	}
-	$node->setAttribute("path",        $loc . $file);
-	$node->setAttribute("root",        $root);
-	$node->setAttribute("location",    $loc);
-	$node->setAttribute("status",      $priv);
-	$node->setAttribute("password",    $password);
-	$node->setAttribute("file",        $file);
-	$node->setAttribute("filterDir",   $filterDir);
-	$node->setAttribute("filterDirMin",$filterDirMin);
-	$node->setAttribute("filterDirMax",$filterDirMax);
-	$node->setAttribute("filterFile",  $filterFile);
-	$node->setAttribute("tablePath",   $table);
-	$node->setAttribute("bufrType",    $bufrType);
-	$node->setAttribute("subType",     $subType);
-	$node->setAttribute("typeInfo",    $typeInfo);
-	$node->setAttribute("indexTarget", $indexTarget);
-	$node->setAttribute("indexExp",    $indexExp);
-	if(defined $node->getAttribute("filterDir")){
-	    if (! -d $node->getAttribute("filterDir")) {
-		$node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
-	    }
-	}
-	my @oldNodes=$node->findnodes("stack");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	};
-	my @sfiles = split (/\|/, $stack,-1);
-	if (@sfiles) { 
-	    foreach my $sfile (@sfiles) {
-		my $parent = XML::LibXML::Element->new( 'stack' );
-		$parent->setAttribute("name",$sfile);
-		$node->addChild( $parent );
-		$node->setAttribute("stack",           $sfile);
-	    }
-	}
-	# remove target nodes...
-	@oldNodes=$node->findnodes("target");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	if ($obsTargets) {
-	    my $wrote = 0;
-	    my @lines = split (/\|/, $obsTargets,-1);
-	    if (@lines) { 
-		foreach my $line (@lines) {
-		    #print "Obstargets: $line\n";
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 3) {
-			$wrote++;
-			my $parent = XML::LibXML::Element->new( 'target' );
-			$parent->setAttribute("name",$items[0]);
-			$parent->setAttribute("pos",$items[1]);
-			$parent->setAttribute("descr",$items[2]);
-			$parent->setAttribute("info",$items[3]);
-			$node->addChild( $parent );
+    farkdir::termval {
+	my ($dir, $file) = farkdir::splitName($ifile);
+	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
+	my $fpath=$root . $loc;
+	if (-d  $fpath && $priv eq "rw") {
+	    my $path=$fpath . $file;
+	    # check password
+	    my $parser = XML::LibXML->new();
+	    my $doc;
+	    my $node;
+	    if (-d $path) {
+		farkdir::term("Unable to save file: '$path'");
+	    } elsif (-e $path) {
+		$doc = $parser->parse_file($path);
+		if ( ($node)=$doc->findnodes("obs/obs_config")) {
+		    my $pass=($node->getAttribute("password")||"");
+		    if ($pass ne $password) {
+			farkdir::term("Invalid password for file: ".$file);
 		    }
-		}
-	    } 
-	    if ($wrote == 0) {
-		my $parent = XML::LibXML::Element->new( 'target' );
-		$node->addChild( $parent );
+		} else {
+		    my $parent=$doc->createElement("obs");
+		    $node=$parent->createElement("obs_config");
+		};
+	    } else {
+		$doc = $parser->parse_string("<obs><obs_config/></obs>");
+		($node) = $doc->findnodes("obs/obs_config");
 	    }
-	};
-	# save XML to file
-	if (open(my $fh, '>', $path)) {
-	    print $fh $doc->toString;
-	    close $fh; 
-	    chmod 0666, $path;
+	    $node->setAttribute("path",        $loc . $file);
+	    $node->setAttribute("root",        $root);
+	    $node->setAttribute("location",    $loc);
+	    $node->setAttribute("status",      $priv);
+	    $node->setAttribute("password",    $password);
+	    $node->setAttribute("file",        $file);
+	    $node->setAttribute("filterDir",   $filterDir);
+	    $node->setAttribute("filterDirMin",$filterDirMin);
+	    $node->setAttribute("filterDirMax",$filterDirMax);
+	    $node->setAttribute("filterFile",  $filterFile);
+	    $node->setAttribute("tablePath",   $table);
+	    $node->setAttribute("bufrType",    $bufrType);
+	    $node->setAttribute("subType",     $subType);
+	    $node->setAttribute("typeInfo",    $typeInfo);
+	    $node->setAttribute("indexTarget", $indexTarget);
+	    $node->setAttribute("indexExp",    $indexExp);
+	    if(defined $node->getAttribute("filterDir")){
+		if (! -d $node->getAttribute("filterDir")) {
+		    $node->setAttribute("filterDirStat",$node->getAttribute("filterDir"));
+		}
+	    }
+	    my @oldNodes=$node->findnodes("stack");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    };
+	    my @sfiles = split (/\|/, $stack,-1);
+	    if (@sfiles) { 
+		foreach my $sfile (@sfiles) {
+		    my $parent = XML::LibXML::Element->new( 'stack' );
+		    $parent->setAttribute("name",$sfile);
+		    $node->addChild( $parent );
+		    $node->setAttribute("stack",           $sfile);
+		}
+	    }
+	    # remove target nodes...
+	    @oldNodes=$node->findnodes("target");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    if ($obsTargets) {
+		my $wrote = 0;
+		my @lines = split (/\|/, $obsTargets,-1);
+		if (@lines) { 
+		    foreach my $line (@lines) {
+			#print "Obstargets: $line\n";
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 3) {
+			    $wrote++;
+			    my $parent = XML::LibXML::Element->new( 'target' );
+			    $parent->setAttribute("name",$items[0]);
+			    $parent->setAttribute("pos",$items[1]);
+			    $parent->setAttribute("descr",$items[2]);
+			    $parent->setAttribute("info",$items[3]);
+			    $node->addChild( $parent );
+			}
+		    }
+		} 
+		if ($wrote == 0) {
+		    my $parent = XML::LibXML::Element->new( 'target' );
+		    $node->addChild( $parent );
+		}
+	    };
+	    # save XML to file
+	    if (open(my $fh, '>', $path)) {
+		print $fh $doc->toString;
+		close $fh; 
+		chmod 0666, $path;
+	    } else {
+		farkdir::term("Unable to open:".$path);
+	    }
+	    print "<save message='success'/>\n";
 	} else {
-	    farkdir::term("Unable to open:".$path);
+	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-	print "<save message='success'/>\n";
-    } else {
-	farkdir::term("Permission denied: '".$fpath."'");
-    }
+    } "Unable to save $ifile\n";
 }
 sub saveColoc {
     my $param = shift;
@@ -295,155 +299,157 @@ sub saveColoc {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    my ($dir, $file) = farkdir::splitName($ifile);
-    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $fpath=$root . $loc;
-    if (-d  $fpath && $priv eq "rw") {
-	my $path=$fpath . $file;
-	# check password
-	my $parser = XML::LibXML->new();
-	my $doc;
-	my $node;
-	if (-d $path) {
-	    farkdir::term("Unable to save file: '$path'");
-	} elsif (-e $path) {
-	    $doc = $parser->parse_file($path);
-	    if ( ($node)=$doc->findnodes("coloc/coloc_config")) {
-		my $pass=($node->getAttribute("password")||"");
-		if ($pass ne $password) {
-		    farkdir::term("Invalid password for file: ".$path);
-		}
+    farkdir::termval {
+	my ($dir, $file) = farkdir::splitName($ifile);
+	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
+	my $fpath=$root . $loc;
+	if (-d  $fpath && $priv eq "rw") {
+	    my $path=$fpath . $file;
+	    # check password
+	    my $parser = XML::LibXML->new();
+	    my $doc;
+	    my $node;
+	    if (-d $path) {
+		farkdir::term("Unable to save file: '$path'");
+	    } elsif (-e $path) {
+		$doc = $parser->parse_file($path);
+		if ( ($node)=$doc->findnodes("coloc/coloc_config")) {
+		    my $pass=($node->getAttribute("password")||"");
+		    if ($pass ne $password) {
+			farkdir::term("Invalid password for file: ".$path);
+		    }
+		} else {
+		    my $parent=$doc->createElement("coloc");
+		    $node=$parent->createElement("coloc_config");
+		};
 	    } else {
-		my $parent=$doc->createElement("coloc");
-		$node=$parent->createElement("coloc_config");
-	    };
-	} else {
-	    $doc = $parser->parse_string("<coloc><coloc_config/></coloc>");
-	    ($node) = $doc->findnodes("coloc/coloc_config");
-	}
-	$node->setAttribute("path",        $loc . $file);
-	$node->setAttribute("root",        $root);
-	$node->setAttribute("location",    $loc);
-	$node->setAttribute("status",      $priv);
-	$node->setAttribute("password",    $password);
-	$node->setAttribute("file",        $file);
-	$node->setAttribute("host",        $host);
-	$node->setAttribute("xml",         $xml);
-	$node->setAttribute("filter",      $filter);
-	$node->setAttribute("modelFile",   $modelFile);
-	$node->setAttribute("modelStart",  $modelStart);
-	$node->setAttribute("modelStop",   $modelStop);
-	$node->setAttribute("indexExp",    $indexExp);
-	$node->setAttribute("obsFile",     $obsFile);
-	$node->setAttribute("obsFilter",   $obsFilter);
-	$node->setAttribute("obsStart",    $obsStart);
-	$node->setAttribute("obsStop",     $obsStop);
-	# remove model nodes...
-	my @oldNodes=$node->findnodes("modelTarget");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	my @lines = split (/\|/, $modelTargets,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 3) {
-			my $parent = XML::LibXML::Element->new( 'modelTarget' );
-			$parent->setAttribute("name",$items[0]);
-			$parent->setAttribute("variable",$items[1]);
-			$parent->setAttribute("min",$items[2]);
-			$parent->setAttribute("max",$items[3]);
-			$node->addChild( $parent );
+		$doc = $parser->parse_string("<coloc><coloc_config/></coloc>");
+		($node) = $doc->findnodes("coloc/coloc_config");
+	    }
+	    $node->setAttribute("path",        $loc . $file);
+	    $node->setAttribute("root",        $root);
+	    $node->setAttribute("location",    $loc);
+	    $node->setAttribute("status",      $priv);
+	    $node->setAttribute("password",    $password);
+	    $node->setAttribute("file",        $file);
+	    $node->setAttribute("host",        $host);
+	    $node->setAttribute("xml",         $xml);
+	    $node->setAttribute("filter",      $filter);
+	    $node->setAttribute("modelFile",   $modelFile);
+	    $node->setAttribute("modelStart",  $modelStart);
+	    $node->setAttribute("modelStop",   $modelStop);
+	    $node->setAttribute("indexExp",    $indexExp);
+	    $node->setAttribute("obsFile",     $obsFile);
+	    $node->setAttribute("obsFilter",   $obsFilter);
+	    $node->setAttribute("obsStart",    $obsStart);
+	    $node->setAttribute("obsStop",     $obsStop);
+	    # remove model nodes...
+	    my @oldNodes=$node->findnodes("modelTarget");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    my @lines = split (/\|/, $modelTargets,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 3) {
+			    my $parent = XML::LibXML::Element->new( 'modelTarget' );
+			    $parent->setAttribute("name",$items[0]);
+			    $parent->setAttribute("variable",$items[1]);
+			    $parent->setAttribute("min",$items[2]);
+			    $parent->setAttribute("max",$items[3]);
+			    $node->addChild( $parent );
+			}
 		    }
 		}
 	    }
-	}
-	# remove model nodes...
-	@oldNodes=$node->findnodes("modelDefault");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	};
-	my @defs = split (/\[/, $modelDefault,-1);
-	if (@defs) { 
-	    foreach my $def (@defs) {
-		@lines = split (/\|/, $def,-1);
-		if (@lines) { 
-		    my $default = XML::LibXML::Element->new( 'modelDefault' );
-		    $node->addChild( $default );
-		    foreach my $line (@lines) {
-			if ($line ne "") {
-			    my @items=split (/\~/, $line,-1);
-			    my $len=$#items;
-			    if ($len == 0) {
-				$default->setAttribute("info",$items[0]);
-			    } elsif ($len == 1) {
-				my $parent = XML::LibXML::Element->new( 'def' );
-				$parent->setAttribute("name",$items[0]);
-				$parent->setAttribute("value",$items[1]);
-				$default->addChild( $parent );
+	    # remove model nodes...
+	    @oldNodes=$node->findnodes("modelDefault");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    };
+	    my @defs = split (/\[/, $modelDefault,-1);
+	    if (@defs) { 
+		foreach my $def (@defs) {
+		    @lines = split (/\|/, $def,-1);
+		    if (@lines) { 
+			my $default = XML::LibXML::Element->new( 'modelDefault' );
+			$node->addChild( $default );
+			foreach my $line (@lines) {
+			    if ($line ne "") {
+				my @items=split (/\~/, $line,-1);
+				my $len=$#items;
+				if ($len == 0) {
+				    $default->setAttribute("info",$items[0]);
+				} elsif ($len == 1) {
+				    my $parent = XML::LibXML::Element->new( 'def' );
+				    $parent->setAttribute("name",$items[0]);
+				    $parent->setAttribute("value",$items[1]);
+				    $default->addChild( $parent );
+				}
 			    }
 			}
 		    }
 		}
 	    }
-	}
-	# remove obs nodes...
-	@oldNodes=$node->findnodes("obsTarget");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	@lines = split (/\|/, $obsTargets,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 5) {
-			my $parent = XML::LibXML::Element->new( 'obsTarget' );
-			$parent->setAttribute("name",$items[0]);
-			$parent->setAttribute("pos",$items[1]);
-			$parent->setAttribute("descr",$items[2]);
-			$parent->setAttribute("info",$items[3]);
-			$parent->setAttribute("min",$items[4]);
-			$parent->setAttribute("max",$items[5]);
-			$node->addChild( $parent );
+	    # remove obs nodes...
+	    @oldNodes=$node->findnodes("obsTarget");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    @lines = split (/\|/, $obsTargets,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 5) {
+			    my $parent = XML::LibXML::Element->new( 'obsTarget' );
+			    $parent->setAttribute("name",$items[0]);
+			    $parent->setAttribute("pos",$items[1]);
+			    $parent->setAttribute("descr",$items[2]);
+			    $parent->setAttribute("info",$items[3]);
+			    $parent->setAttribute("min",$items[4]);
+			    $parent->setAttribute("max",$items[5]);
+			    $node->addChild( $parent );
+			}
 		    }
 		}
 	    }
-	}
-	@oldNodes=$node->findnodes("matchRules");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	@lines = split (/\|/, $matchRules,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 1) {
-			my $parent = XML::LibXML::Element->new( 'matchRules' );
-			$parent->setAttribute("name",$items[0]);
-			$parent->setAttribute("expression",$items[1]);
-			$node->addChild( $parent );
+	    @oldNodes=$node->findnodes("matchRules");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    @lines = split (/\|/, $matchRules,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 1) {
+			    my $parent = XML::LibXML::Element->new( 'matchRules' );
+			    $parent->setAttribute("name",$items[0]);
+			    $parent->setAttribute("expression",$items[1]);
+			    $node->addChild( $parent );
+			}
 		    }
 		}
 	    }
-	}
-	# save XML to file
-	if (open(my $fh, '>', $path)) {
-	    print $fh $doc->toString;
-	    close $fh;
-	    chmod 0666, $path;
+	    # save XML to file
+	    if (open(my $fh, '>', $path)) {
+		print $fh $doc->toString;
+		close $fh;
+		chmod 0666, $path;
+	    } else {
+		farkdir::term("Unable to open:".$path);
+	    }
+	    print "<save message='success'/>\n";
 	} else {
-	    farkdir::term("Unable to open:".$path);
+	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-	print "<save message='success'/>\n";
-    } else {
-	farkdir::term("Permission denied: '".$fpath."'");
-    }
+    } "Unable to save $ifile\n";
 }
 sub savePlot {
     my $param = shift;
@@ -458,123 +464,125 @@ sub savePlot {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    my ($dir, $file) = farkdir::splitName($ifile);
-    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $fpath=$root . $loc;
-    #print "Started with '$root' '$loc' '$priv'\n";
-    if (-d  $fpath && $priv eq "rw") {
-	my $path=$fpath . $file;
-	# check password
-	my $parser = XML::LibXML->new();
-	my $doc;
-	my $node;
-	#print "Parsing '$path'\n";
-	if (-d $path) {
-	    farkdir::term("Unable to save file: '$path'");
-	} elsif (-e $path) {
-	    $doc = $parser->parse_file($path);
-	    if ( ($node)=$doc->findnodes("plot/plot_config")) {
-		my $pass=($node->getAttribute("password")||"");
-		if ($pass ne $password) {
-		    farkdir::term("Invalid password for file: ".$path);
-		}
+    farkdir::termval {
+	my ($dir, $file) = farkdir::splitName($ifile);
+	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
+	my $fpath=$root . $loc;
+	#print "Started with '$root' '$loc' '$priv'\n";
+	if (-d  $fpath && $priv eq "rw") {
+	    my $path=$fpath . $file;
+	    # check password
+	    my $parser = XML::LibXML->new();
+	    my $doc;
+	    my $node;
+	    #print "Parsing '$path'\n";
+	    if (-d $path) {
+		farkdir::term("Unable to save file: '$path'");
+	    } elsif (-e $path) {
+		$doc = $parser->parse_file($path);
+		if ( ($node)=$doc->findnodes("plot/plot_config")) {
+		    my $pass=($node->getAttribute("password")||"");
+		    if ($pass ne $password) {
+			farkdir::term("Invalid password for file: ".$path);
+		    }
+		} else {
+		    my $parent=$doc->createElement("plot");
+		    $node=$parent->createElement("plot_config");
+		};
 	    } else {
-		my $parent=$doc->createElement("plot");
-		$node=$parent->createElement("plot_config");
-	    };
-	} else {
-	    $doc = $parser->parse_string("<plot><plot_config/></plot>");
-	    ($node) = $doc->findnodes("plot/plot_config");
-	}
-	$node->setAttribute("path",        $loc . $file);
-	$node->setAttribute("root",        $root);
-	$node->setAttribute("location",    $loc);
-	$node->setAttribute("status",      $priv);
-	$node->setAttribute("password",    $password);
-	$node->setAttribute("file",        $file);
-	$node->setAttribute("table",       $table);
-	$node->setAttribute("graphics",    $graphics);
-	$node->setAttribute("cat",         $cat);
-	#print "Processing\n";
-	# remove target nodes...
-	my @oldNodes=$node->findnodes("column");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	if ($plotCols) {
-	    #print "Plottargets: $plotCols\n";
-	    my @cols=split (/\~/, $plotCols,-1);
-	    foreach my $col (@cols) {
-		#print "Col:$col   @cols\n";
-		my $child = XML::LibXML::Element->new( 'column' );
-		$child->setAttribute("name",$col);
-		$node->addChild( $child );
+		$doc = $parser->parse_string("<plot><plot_config/></plot>");
+		($node) = $doc->findnodes("plot/plot_config");
 	    }
-	}
-	# remove target nodes...
-	@oldNodes=$node->findnodes("set");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	if ($plotSets) {
-	    my @lines = split (/\|/, $plotSets,-1);
-	    if (@lines) { 
-		#print "Looping '$plotSets'\n";
-		foreach my $line (@lines) {
-		    #print "Plottargets: $line\n";
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    #print "   Loop: '$line' $len\n";
-		    if ($len >2) {
-			my $parent = XML::LibXML::Element->new( 'set' );
-			$parent->setAttribute("name",$items[0]);
-			$parent->setAttribute("coloc",$items[1]);
-			$parent->setAttribute("legend",$items[2]);
-			my $ii=3;
-			while ($ii < $len) {
-			    my $child = XML::LibXML::Element->new( 'column' );
-			    $child->setAttribute("value",$items[$ii]);
-			    $parent->addChild( $child );
-			    $ii++;
+	    $node->setAttribute("path",        $loc . $file);
+	    $node->setAttribute("root",        $root);
+	    $node->setAttribute("location",    $loc);
+	    $node->setAttribute("status",      $priv);
+	    $node->setAttribute("password",    $password);
+	    $node->setAttribute("file",        $file);
+	    $node->setAttribute("table",       $table);
+	    $node->setAttribute("graphics",    $graphics);
+	    $node->setAttribute("cat",         $cat);
+	    #print "Processing\n";
+	    # remove target nodes...
+	    my @oldNodes=$node->findnodes("column");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    if ($plotCols) {
+		#print "Plottargets: $plotCols\n";
+		my @cols=split (/\~/, $plotCols,-1);
+		foreach my $col (@cols) {
+		    #print "Col:$col   @cols\n";
+		    my $child = XML::LibXML::Element->new( 'column' );
+		    $child->setAttribute("name",$col);
+		    $node->addChild( $child );
+		}
+	    }
+	    # remove target nodes...
+	    @oldNodes=$node->findnodes("set");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    if ($plotSets) {
+		my @lines = split (/\|/, $plotSets,-1);
+		if (@lines) { 
+		    #print "Looping '$plotSets'\n";
+		    foreach my $line (@lines) {
+			#print "Plottargets: $line\n";
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			#print "   Loop: '$line' $len\n";
+			if ($len >2) {
+			    my $parent = XML::LibXML::Element->new( 'set' );
+			    $parent->setAttribute("name",$items[0]);
+			    $parent->setAttribute("coloc",$items[1]);
+			    $parent->setAttribute("legend",$items[2]);
+			    my $ii=3;
+			    while ($ii < $len) {
+				my $child = XML::LibXML::Element->new( 'column' );
+				$child->setAttribute("value",$items[$ii]);
+				$parent->addChild( $child );
+				$ii++;
+			    }
+			    $node->addChild( $parent );
 			}
-			$node->addChild( $parent );
 		    }
 		}
+	    };
+	    @oldNodes=$node->findnodes("attribute");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
 	    }
-	};
-	@oldNodes=$node->findnodes("attribute");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	if ($plotAttrs) {
-	    my @lines = split (/\|/, $plotAttrs,-1);
-	    if (@lines) { 
-		#print "Looping '$plotAttrs'\n";
-		foreach my $line (@lines) {
-		    #print "Plotattrs: $line\n";
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 1) {
-			my $parent = XML::LibXML::Element->new( 'attribute' );
-			$parent->setAttribute("name",$items[0]);
-			$parent->setAttribute("value",$items[1]);
-			$node->addChild( $parent );
+	    if ($plotAttrs) {
+		my @lines = split (/\|/, $plotAttrs,-1);
+		if (@lines) { 
+		    #print "Looping '$plotAttrs'\n";
+		    foreach my $line (@lines) {
+			#print "Plotattrs: $line\n";
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 1) {
+			    my $parent = XML::LibXML::Element->new( 'attribute' );
+			    $parent->setAttribute("name",$items[0]);
+			    $parent->setAttribute("value",$items[1]);
+			    $node->addChild( $parent );
+			}
 		    }
 		}
+	    };
+	    # save XML to file
+	    if (open(my $fh, '>', $path)) {
+		print $fh $doc->toString;
+		close $fh; 
+		chmod 0666, $path;
+	    } else {
+		farkdir::term("Unable to open:".$path);
 	    }
-	};
-	# save XML to file
-	if (open(my $fh, '>', $path)) {
-	    print $fh $doc->toString;
-	    close $fh; 
-	    chmod 0666, $path;
+	    print "<save message='success'/>\n";
 	} else {
-	    farkdir::term("Unable to open:".$path);
+	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-	print "<save message='success'/>\n";
-    } else {
-	farkdir::term("Permission denied: '".$fpath."'");
-    }
+    } "Unable to save $ifile\n";
 }
 
 sub saveAuto {
@@ -587,137 +595,139 @@ sub saveAuto {
     my $plotFiles=($param->{plotFiles}[0] // "");
     if (! defined ($param->{root}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{root}->[0]||"";
-    my ($dir, $file) = farkdir::splitName($ifile);
-    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $fpath=$root . $loc;
-    if (-d  $fpath && $priv eq "rw") {
-	my $path=$fpath . $file;
-	# check password
-	my $parser = XML::LibXML->new();
-	my $doc;
-	my $node;
-	if (-d $path) {
-	    farkdir::term("Unable to save file: '$path'");
-	} elsif (-e $path) {
-	    $doc = $parser->parse_file($path);
-	    if ( ($node)=$doc->findnodes("auto/auto_config")) {
-		my $pass=($node->getAttribute("password")||"");
-		if ($pass ne $password) {
-		    farkdir::term("Invalid password for file: ".$path);
-		}
+    farkdir::termval {
+	my ($dir, $file) = farkdir::splitName($ifile);
+	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
+	my $fpath=$root . $loc;
+	if (-d  $fpath && $priv eq "rw") {
+	    my $path=$fpath . $file;
+	    # check password
+	    my $parser = XML::LibXML->new();
+	    my $doc;
+	    my $node;
+	    if (-d $path) {
+		farkdir::term("Unable to save file: '$path'");
+	    } elsif (-e $path) {
+		$doc = $parser->parse_file($path);
+		if ( ($node)=$doc->findnodes("auto/auto_config")) {
+		    my $pass=($node->getAttribute("password")||"");
+		    if ($pass ne $password) {
+			farkdir::term("Invalid password for file: ".$path);
+		    }
+		} else {
+		    my $parent=$doc->createElement("auto");
+		    $node=$parent->createElement("auto_config");
+		};
 	    } else {
-		my $parent=$doc->createElement("auto");
-		$node=$parent->createElement("auto_config");
-	    };
+		$doc = $parser->parse_string("<auto><auto_config/></auto>");
+		($node) = $doc->findnodes("auto/auto_config");
+	    }
+	    $node->setAttribute("path",        $loc . $file);
+	    $node->setAttribute("root",        $root);
+	    $node->setAttribute("location",    $loc);
+	    $node->setAttribute("status",      $priv);
+	    $node->setAttribute("password",    $password);
+	    $node->setAttribute("file",        $file);
+	    # remove model nodes...
+	    my @oldNodes=$node->findnodes("model");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    # make list of new nodes
+	    my @lines = split (/\|/, $modelFiles,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 3) {
+			    my $parent = XML::LibXML::Element->new( 'model' );
+			    $parent->setAttribute("file",$items[0]);
+			    $parent->setAttribute("last",$items[1]);
+			    $parent->setAttribute("info",$items[2]);
+			    $parent->setAttribute("auto",$items[3]);
+			    $node->addChild( $parent );
+			}
+		    }
+		}
+	    }
+	    # remove obs nodes...
+	    @oldNodes=$node->findnodes("obs");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    @lines = split (/\|/, $obsFiles,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 3) {
+			    my $parent = XML::LibXML::Element->new( 'obs' );
+			    $parent->setAttribute("file",$items[0]);
+			    $parent->setAttribute("last",$items[1]);
+			    $parent->setAttribute("info",$items[2]);
+			    $parent->setAttribute("auto",$items[3]);
+			    $node->addChild( $parent );
+			}
+		    }
+		}
+	    }
+	    # remove plot nodes...
+	    @oldNodes=$node->findnodes("coloc");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    @lines = split (/\|/, $colocFiles,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 3) {
+			    my $parent = XML::LibXML::Element->new( 'coloc' );
+			    $parent->setAttribute("file",$items[0]);
+			    $parent->setAttribute("last",$items[1]);
+			    $parent->setAttribute("info",$items[2]);
+			    $parent->setAttribute("auto",$items[3]);
+			    $node->addChild( $parent );
+			}
+		    }
+		}
+	    }
+	    # remove plot nodes...
+	    @oldNodes=$node->findnodes("plot");
+	    foreach my $oldNode (@oldNodes) {
+		$node->removeChild($oldNode);
+	    }
+	    @lines = split (/\|/, $plotFiles,-1);
+	    if (@lines) { 
+		foreach my $line (@lines) {
+		    if ($line ne "") {
+			my @items=split (/\~/, $line,-1);
+			my $len=$#items;
+			if ($len == 3) {
+			    my $parent = XML::LibXML::Element->new( 'plot' );
+			    $parent->setAttribute("file",$items[0]);
+			    $parent->setAttribute("last",$items[1]);
+			    $parent->setAttribute("info",$items[2]);
+			    $parent->setAttribute("auto",$items[3]);
+			    $node->addChild( $parent );
+			}
+		    }
+		}
+	    }
+	    # save XML to file
+	    if (open(my $fh, '>', $path)) {
+		print $fh $doc->toString;
+		close $fh;
+		chmod 0666, $path;
+	    } else {
+		farkdir::term("Unable to open:".$path);
+	    }
+	    print "<save message='success'/>\n";
 	} else {
-	    $doc = $parser->parse_string("<auto><auto_config/></auto>");
-	    ($node) = $doc->findnodes("auto/auto_config");
+	    farkdir::term("Permission denied: '".$fpath."' $priv");
 	}
-	$node->setAttribute("path",        $loc . $file);
-	$node->setAttribute("root",        $root);
-	$node->setAttribute("location",    $loc);
-	$node->setAttribute("status",      $priv);
-	$node->setAttribute("password",    $password);
-	$node->setAttribute("file",        $file);
-	# remove model nodes...
-	my @oldNodes=$node->findnodes("model");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	# make list of new nodes
-	my @lines = split (/\|/, $modelFiles,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 3) {
-			my $parent = XML::LibXML::Element->new( 'model' );
-			$parent->setAttribute("file",$items[0]);
-			$parent->setAttribute("last",$items[1]);
-			$parent->setAttribute("info",$items[2]);
-			$parent->setAttribute("auto",$items[3]);
-			$node->addChild( $parent );
-		    }
-		}
-	    }
-	}
-	# remove obs nodes...
-	@oldNodes=$node->findnodes("obs");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	@lines = split (/\|/, $obsFiles,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 3) {
-			my $parent = XML::LibXML::Element->new( 'obs' );
-			$parent->setAttribute("file",$items[0]);
-			$parent->setAttribute("last",$items[1]);
-			$parent->setAttribute("info",$items[2]);
-			$parent->setAttribute("auto",$items[3]);
-			$node->addChild( $parent );
-		    }
-		}
-	    }
-	}
-	# remove plot nodes...
-	@oldNodes=$node->findnodes("coloc");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	@lines = split (/\|/, $colocFiles,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 3) {
-			my $parent = XML::LibXML::Element->new( 'coloc' );
-			$parent->setAttribute("file",$items[0]);
-			$parent->setAttribute("last",$items[1]);
-			$parent->setAttribute("info",$items[2]);
-			$parent->setAttribute("auto",$items[3]);
-			$node->addChild( $parent );
-		    }
-		}
-	    }
-	}
-	# remove plot nodes...
-	@oldNodes=$node->findnodes("plot");
-	foreach my $oldNode (@oldNodes) {
-	    $node->removeChild($oldNode);
-	}
-	@lines = split (/\|/, $plotFiles,-1);
-	if (@lines) { 
-	    foreach my $line (@lines) {
-		if ($line ne "") {
-		    my @items=split (/\~/, $line,-1);
-		    my $len=$#items;
-		    if ($len == 3) {
-			my $parent = XML::LibXML::Element->new( 'plot' );
-			$parent->setAttribute("file",$items[0]);
-			$parent->setAttribute("last",$items[1]);
-			$parent->setAttribute("info",$items[2]);
-			$parent->setAttribute("auto",$items[3]);
-			$node->addChild( $parent );
-		    }
-		}
-	    }
-	}
-	# save XML to file
-	if (open(my $fh, '>', $path)) {
-	    print $fh $doc->toString;
-	    close $fh;
-	    chmod 0666, $path;
-	} else {
-	    farkdir::term("Unable to open:".$path);
-	}
-	print "<save message='success'/>\n";
-    } else {
-	farkdir::term("Permission denied: '".$fpath."' $priv");
-    }
+    } "Unable to save $ifile\n";
 }

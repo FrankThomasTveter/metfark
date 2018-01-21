@@ -77,6 +77,7 @@ module observations
      integer, allocatable :: ktdexp(:)
      character*64, allocatable :: cnames(:)
      character*24, allocatable :: cunits(:)
+     real, allocatable :: values(:)
      type(obs_subCategory), pointer :: prev
      type(obs_subCategory), pointer :: next
   end type obs_subCategory
@@ -145,7 +146,6 @@ module observations
      character*250 :: info250   ! information
      character*80 :: min80      ! min value
      character*80 :: max80      ! max value
-     type(parse_session), pointer :: pss => null()
      type(obs_target), pointer :: prev => null()   ! linked list
      type(obs_target), pointer :: next => null()   ! linked list
   end type obs_target
@@ -310,6 +310,7 @@ module observations
      logical :: ignval=.false.
      logical :: ignsec=.false.
      logical :: ignarr=.false.
+     logical :: igncat=.false.
      !
      type(parse_session), pointer :: psf => null()
      logical ::  flt_set=.false.
@@ -552,6 +553,16 @@ CONTAINS
           end do
           deallocate(css%filestack)
        end if
+       !
+       do ii=1,css%ntrg
+          call parse_close(css%trg_psp(ii)%ptr,crc250,irc)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250,"Error return from 'parse_close'.")
+             return
+          end if
+       end do
+          
        if (allocated(css%filestacksort)) deallocate(css%filestacksort)
        if (allocated(css%filestackind)) deallocate(css%filestackind)
        call observation_removeFiles(css,crc250,irc)
@@ -589,10 +600,29 @@ CONTAINS
           call parse_close(css%psf,crc250,irc)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from 'parse_open'.")
+             call observation_errorappend(crc250,"Error return from 'parse_close'.")
              return
           end if
        end if
+       !
+       if (allocated(css%trg80)) deallocate(css%trg80)
+       if (allocated(css%trg_lent)) deallocate(css%trg_lent)
+       if (allocated(css%trg_pos250)) deallocate(css%trg_pos250)
+       if (allocated(css%trg_lenp)) deallocate(css%trg_lenp)
+       if (allocated(css%trg_type)) deallocate(css%trg_type)
+       if (allocated(css%trg_seq)) deallocate(css%trg_seq)
+       if (allocated(css%trg_ind)) deallocate(css%trg_ind)
+       if (associated(css%trg_psp)) deallocate(css%trg_psp)
+       if (allocated(css%trg_descr)) deallocate(css%trg_descr)
+       if (allocated(css%trg_lval)) deallocate(css%trg_lval)
+       if (allocated(css%trg_minval)) deallocate(css%trg_minval)
+       if (allocated(css%trg_maxval)) deallocate(css%trg_maxval)
+       if (allocated(css%trg_ook)) deallocate(css%trg_ook)
+       if (allocated(css%trg_orm)) deallocate(css%trg_orm)
+       if (allocated(css%trg_req)) deallocate(css%trg_req)
+       if (allocated(css%trg_vok)) deallocate(css%trg_vok)
+       if (allocated(css%trg_val)) deallocate(css%trg_val)
+       if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
        ! 
        css%prev%next => css%next
        css%next%prev => css%prev
@@ -1257,7 +1287,7 @@ CONTAINS
        sub => cat%firstSubCategory%next
        do while (.not.associated(sub,target=cat%lastSubCategory))
           maxrep=maxrep+3
-          maxrep=maxrep+3*sub%ktdexl
+          maxrep=maxrep+4*sub%ktdexl
           sub => sub%next
        end do
        cat => cat%next
@@ -1274,9 +1304,9 @@ CONTAINS
     character*250 :: rep250(maxrep)
     character*250 :: crc250
     integer :: irc
-    character*50 :: s1, s2, s3
+    character*50 :: s1, s2, s3, s4
     integer, external :: length
-    integer :: len1,len2,len3,lenm,lenv,lena,lenr,lend,lens
+    integer :: len1,len2,len3,len4,lenm,lenv,lena,lenr,lend,lens
     integer :: ii,jj
     character*80 :: varname
     type(obs_mainCategory), pointer :: cat
@@ -1342,6 +1372,15 @@ CONTAINS
              nrep=min(nrep+1,maxrep)
              write(rep250(nrep),'("file",A,"type",A,I0,A,"subtype",A,I0,A,"unit",A,I0,A,A)') sep,sep,&
                   & cat%category, sep,sep, sub%subcategory, sep,sep, ii,sep,sub%cunits(ii)
+             nrep=min(nrep+1,maxrep)
+             if (sub%values(ii).eq.rvind) then
+                s4="NA"
+                len4=2
+             else
+                call observation_wash(sub%values(ii),s4,len4)
+             end if
+             write(rep250(nrep),'("file",A,"type",A,I0,A,"subtype",A,I0,A,"val1",A,I0,A,A)') sep,sep,&
+                  & cat%category, sep,sep, sub%subcategory, sep,sep, ii,sep,s4(1:len4)
           end do
           sub => sub%next
        end do
@@ -1910,7 +1949,7 @@ CONTAINS
     call parse_close(plim,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       call observation_errorappend(crc250,"Error return from 'parse_close'.")
        return
     end if
     if (allocated(css%dup_ind)) deallocate(css%dup_ind)
@@ -2718,13 +2757,13 @@ CONTAINS
   !
   ! put next BUFR-message in memory
   !
-  subroutine observation_sliceCurrentFile(css,bok,crc250,irc)
+  subroutine observation_getNextLoc(css,bok,crc250,irc)
     type(obs_session), pointer :: css !  current session
     logical :: bok           ! was get successful?
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     integer :: cnt
-    character*22 :: myname="observation_sliceCurrentFile"
+    character*22 :: myname="observation_getNextLoc"
     if(obs_bdeb)write(*,*)myname,' Entering.',bok
     ! get next observation from file
     if (.not.css%stackReady) then
@@ -2792,7 +2831,7 @@ CONTAINS
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
     return
-  end subroutine observation_sliceCurrentFile
+  end subroutine observation_getNextLoc
   !
   ! put valid observations from message into the location chain
   !
@@ -2975,6 +3014,7 @@ CONTAINS
                 case (parse_internal)
                    if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
                    css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
+                   css%trg_vok(ii)=.true.
                    if (obs_bdeb)write(*,*)myname,' Internal:',&
                         & ii,css%trg_val(ii)
                 end select
@@ -4130,7 +4170,7 @@ CONTAINS
        end if
        ! store category:
        if(obs_bdeb)write(*,*)myname,'Found BUFR cat:',KSEC1( 6),KSEC1( 7)
-       call observation_storeCat(css%currentFile,KSEC1( 6),KSEC1( 7))
+       if (.not.css%igncat) call observation_storeCat(css%currentFile,KSEC1( 6),KSEC1( 7))
        ! CALL BUUKEY(KSEC1,KSEC2,KEY,KSUP,IRC)
        ! if (irc.ne.0) then
        !    write(*,*)myname,'Unable to decode message keys.',irc
@@ -4194,6 +4234,12 @@ CONTAINS
 
 
   !######################################################
+  subroutine observation_ignoreCat(css)
+    type(obs_session), pointer :: css
+    css%igncat=.true.
+    !write(*,*) 'observation_clearCat Done.'
+  end subroutine observation_ignoreCat
+  !
   subroutine observation_clearCat(currentFile)
     type(obs_file), pointer :: currentFile
     type(obs_mainCategory),pointer :: currentCat, nextCat
@@ -4209,6 +4255,7 @@ CONTAINS
              if (allocated(currentSub%ktdexp)) deallocate(currentSub%ktdexp)
              if (allocated(currentSub%cnames)) deallocate(currentSub%cnames)
              if (allocated(currentSub%cunits)) deallocate(currentSub%cunits)
+             if (allocated(currentSub%values)) deallocate(currentSub%values)
              deallocate(currentSub)
              currentSub=>nextSub
           end do
@@ -4257,7 +4304,7 @@ CONTAINS
           ! store data sequence
           currentSub%ktdexl=KTDEXL
           allocate(currentSub%ktdexp(currentSub%ktdexl),currentSub%cnames(currentSub%ktdexl),&
-               & currentSub%cunits(currentSub%ktdexl),stat=irc)
+               & currentSub%cunits(currentSub%ktdexl),currentSub%values(currentSub%ktdexl),stat=irc)
           if (irc.ne.0) then
              currentSub%ktdexl=0
              write(*,*) myname,"Unable to allocate 'sub-sequence'."
@@ -4270,6 +4317,7 @@ CONTAINS
              currentSub%ktdexp(ii)=ktdexp(ii)
              currentSub%cnames(ii)=cnames(ii)
              currentSub%cunits(ii)=cunits(ii)
+             currentSub%values(ii)=values(ii)
           end do
           return
        else
@@ -4300,7 +4348,7 @@ CONTAINS
     ! store data sequence
     currentSub%ktdexl=KTDEXL
     allocate(currentSub%ktdexp(currentSub%ktdexl),currentSub%cnames(currentSub%ktdexl),&
-         & currentSub%cunits(currentSub%ktdexl),stat=irc)
+         & currentSub%cunits(currentSub%ktdexl),currentSub%values(currentSub%ktdexl),stat=irc)
     if (irc.ne.0) then
        currentSub%ktdexl=0
        write(*,*) myname,"Unable to allocate 'sub-sequence'."
@@ -4313,6 +4361,7 @@ CONTAINS
        currentSub%ktdexp(ii)=ktdexp(ii)
        currentSub%cnames(ii)=cnames(ii)
        currentSub%cunits(ii)=cunits(ii)
+       currentSub%values(ii)=values(ii)
     end do
     return
   end subroutine observation_storeCat
@@ -4974,6 +5023,7 @@ CONTAINS
              case (parse_internal)
                 if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
                 css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
+                css%trg_vok(ii)=.true.
                 if (obs_bdeb)write(*,*)myname,' Internal:',ii,css%trg_val(ii)
              case (parse_variable)
                 if (observation_getPos(css,css%trg_descr(ii))) then ! find next descr

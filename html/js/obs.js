@@ -408,6 +408,9 @@ function obs_rmfile(path) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
 		  alert("Unable to rmfile: "+path+"\n"+msg);
+	      } else {
+		  delete obs_config[path];
+		  if (obs_file == path) {obs_file="default.cfg";}
 	      };
 	      documentLog.innerHTML="";}
 				}

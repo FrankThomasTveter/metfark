@@ -638,7 +638,7 @@ sub pushModelTarget {
 
 =head2 clearDefaultStack 
 
-clearDefaultStack -  clears the model default stack. If the model default is used, only models with valid defaults are visible to the system.
+clearDefaultStack -  clears the default stack. If the model default is used, only models with valid defaults are visible to the system.
 
 =head4 EXAMPLE
 
@@ -681,19 +681,19 @@ sub addDefault {
 }
 
 
-=head2 pushModelDefault 
+=head2 pushDefault 
 
-pushModelDefault - pushes the "added" default values to the stack.
+pushDefault - pushes the "added" default values to the stack.
 
 =head4 EXAMPLE
 
-$fark->pushModelDefault();
+$fark->pushDefault();
 
 =cut
 
-sub pushModelDefault {
+sub pushDefault {
     my ($self)=@_;
-    my ($ret,$msg) = xs_pushModelDefault($self->{OID});
+    my ($ret,$msg) = xs_pushDefault($self->{CID});
     if ($ret != 0) {die $msg;}
     return;
 }
@@ -1157,7 +1157,7 @@ $fark->pushObservationTarget("yy","10","4001","year","","");
 
 sub pushObservationTarget {
     my ($self,$name,$pos,$descr,$info,$min,$max)=@_;
-    my ($ret,$msg) = xs_pushObsTarget($self->{OID},$name,$pos,$descr,$info,$min,$max);
+    my ($ret,$msg) = xs_pushObsTarget($self->{OID},$name,$pos//"",$descr//"",$info//"",$min//"",$max//"");
     if ($ret != 0) {die $msg;}
     return;
 }

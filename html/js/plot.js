@@ -735,6 +735,9 @@ function plot_rmfile(path) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
 		  alert("Unable to rmfile: "+path+"\n"+msg);
+	      } else {
+		  delete plot_config[path];
+		  if (plot_file == path) {plot_file="default.cfg";}
 	      };
 	      documentLog.innerHTML="";}
 				}

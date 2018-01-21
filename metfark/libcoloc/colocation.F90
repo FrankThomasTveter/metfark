@@ -9,15 +9,28 @@ module colocation
   ! default values for the model targets
   !
   type :: col_default
-     integer :: cDef = 0
-     integer :: cii = 0
-     character*80, pointer :: v80(:)   ! value
-     integer, pointer :: vlen(:)       ! value length
-     real, pointer :: val(:)   ! value
-     logical, pointer :: vset(:)       ! is value set?
+     character*80 :: n80   ! name
+     integer :: lenn       ! name length
+     character*80 :: v80   ! value
+     integer :: lenv       ! value length
+     real :: val           ! value
      type(col_default), pointer :: prev => null()   ! linked list
      type(col_default), pointer :: next => null()   ! linked list
   end type col_default
+  !
+  type :: col_location
+     integer :: cTrg = 0
+     integer :: cii = 0
+     character*80, pointer :: v80(:)  => null()      ! value string
+     integer, pointer      :: vlen(:) => null()      ! value length
+     real, pointer         :: val(:)  => null()      ! value
+     logical, pointer      :: vset(:) => null()      ! is value set?
+     type(col_default), pointer  :: cDef => null()    ! linked list start
+     type(col_default), pointer  :: firstDef => null()! linked list start
+     type(col_default), pointer  :: lastDef => null() ! linked list end
+     type(col_location), pointer :: prev => null()    ! linked list
+     type(col_location), pointer :: next => null()    ! linked list
+  end type col_location
   !
   ! match rules for model targets and observation targets
   !
@@ -36,7 +49,9 @@ module colocation
   type :: col_session
      integer       :: sid            ! session id...
      character*250 :: obs250=""      ! observation cache file
+     integer ::  leno = 0
      character*250 :: mod250=""      ! model cache file
+     integer ::  lenm = 0
      character*250 :: xml250 =""     ! xml output file...
      integer :: lenx =0
      !
@@ -44,13 +59,14 @@ module colocation
      integer :: ctrg = 0 ! targets                  ! number of targets allocated
      character*80, pointer :: trg80(:) => null()    ! list of target names
      integer, pointer      :: trg_lent(:) => null() ! list of target name length
+     integer, pointer      :: trg_def(:) => null()  ! is target set by default?
      !
-     ! default
-     type(col_default), pointer :: firstDef => null()   ! linked list start
-     type(col_default), pointer :: lastDef => null()    ! linked list end
-     type(col_default), pointer :: currentDef => null() ! current default input variable
-     type(col_default), pointer :: cDef => null()       ! current default loop variable
-     integer :: ndef=0                                  ! number of items in target-chain
+     ! default locations
+     type(col_location), pointer :: firstLoc => null()   ! linked list start
+     type(col_location), pointer :: lastLoc => null()    ! linked list end
+     type(col_location), pointer :: currentLoc => null() ! current location input variable
+     type(col_location), pointer :: cLoc => null()       ! current location loop variable
+     integer :: nLoc=0                                  ! number of items in target-chain
      !
      ! match rules
      type(col_match), pointer :: firstMatch => null()   ! linked list start
@@ -130,16 +146,16 @@ CONTAINS
        return
     end if
     !
-    allocate(css%firstDef,css%lastDef, stat=irc) ! 
+    allocate(css%firstLoc,css%lastLoc, stat=irc) ! 
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
        call colocation_errorappend(crc250,"Unable to allocate &
-            & 'css%firstDef/css%lastDef'.")
+            & 'css%firstLoc/css%lastLoc'.")
        call colocation_errorappend(crc250,"\n")
        return
     end if
-    css%firstDef%next => css%lastDef
-    css%lastDef%prev => css%firstDef
+    css%firstLoc%next => css%lastLoc
+    css%lastLoc%prev => css%firstLoc
     !
     allocate(css%firstMatch,css%lastMatch, stat=irc) ! 
     if (irc.ne.0) then
@@ -228,18 +244,18 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="colocation_removeSession"
-    type(col_default), pointer :: cdef, ndef
+    type(col_location), pointer :: cLoc, nLoc
     type(col_match), pointer :: currmatch, nextmatch
     integer :: ii
     !
     if(col_bdeb)write(*,*)myname,'Removing default stack.'
     ! remove default stack
-    nullify(css%currentDef)
-    if (associated(css%firstDef)) then
-       cdef => css%firstDef%next
-       do while (.not.associated(cdef,target=css%lastDef))
-          ndef => cdef%next
-          call colocation_deleteDef(css,cdef,crc250,irc)
+    nullify(css%currentLoc)
+    if (associated(css%firstLoc)) then
+       cLoc => css%firstLoc%next
+       do while (.not.associated(cLoc,target=css%lastLoc))
+          nLoc => cLoc%next
+          call colocation_deleteDef(css,cLoc,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
              call colocation_errorappend(crc250," Error return from deleteDef.")
@@ -247,9 +263,11 @@ CONTAINS
              call colocation_errorappend(crc250,"\n")
              return
           end if
-          cdef  => ndef
+          deallocate(cLoc)
+          cLoc  => nLoc
        end do
-       deallocate(css%firstDef,css%lastDef)
+       if (associated(css%firstLoc)) deallocate(css%firstLoc)
+       if (associated(css%lastLoc)) deallocate(css%lastLoc)
     end if
     !
     if(col_bdeb)write(*,*)myname,'Removing match stack.'
@@ -299,6 +317,7 @@ CONTAINS
     if(associated(css%trg80)) deallocate(css%trg80)
     if(associated(css%trg_lent)) deallocate(css%trg_lent)
     css%ctrg=mss%ctrg
+    if(mod_bdeb)write(*,*) myname,'Targets:',css%ctrg
     if (css%ctrg.ne.0) then
        allocate(css%trg80(css%ctrg), css%trg_lent(css%ctrg),stat=irc)
        if (irc.ne.0) then
@@ -307,9 +326,9 @@ CONTAINS
           call colocation_errorappend(crc250,"\n")
           return
        end if
-!       if(mod_bdeb)write(*,*) myname,'Model targets:',mss%trg80
        do ii=1,mss%ctrg
           css%trg80(ii)=mss%trg80(ii)
+          css%trg_lent(ii)=mss%trg_lent(ii)
        end do
     end if
     return
@@ -326,22 +345,38 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(col_default), pointer :: currentDefault !  the current default target
-    type(col_default), pointer :: nextDef !  the next default target
+    type(col_location), pointer :: currentLoc !  the current default target
+    type(col_location), pointer :: nextDef !  the next default target
     character*25 :: myname="colocation_cleardefaultstack"
-    currentDefault => css%firstDef%next
-    do while (.not.associated(currentDefault,target=css%lastDef))
-       nextDef => currentDefault%next
-       currentDefault%prev%next =>  currentDefault%next
-       currentDefault%next%prev =>  currentDefault%prev
-       if (associated(currentDefault%vset)) deallocate(currentDefault%vset)
-       if (associated(currentDefault%v80)) deallocate(currentDefault%v80)
-       if (associated(currentDefault%vlen)) deallocate(currentDefault%vlen)
-       if (associated(currentDefault%val)) deallocate(currentDefault%val)
-       deallocate(currentDefault,stat=irc)
-       css%ndef=css%ndef-1
-       currentDefault => nextDef
-    end do
+    if(col_bdeb)write(*,*)myname,' Entering.',irc,associated(css%firstLoc)
+    if (associated(css%firstLoc)) then
+       currentLoc => css%firstLoc%next
+       do while (.not.associated(currentLoc,target=css%lastLoc))
+          nextDef => currentLoc%next
+          currentLoc%prev%next =>  currentLoc%next
+          currentLoc%next%prev =>  currentLoc%prev
+          if (associated(currentLoc%vset)) deallocate(currentLoc%vset)
+          if (associated(currentLoc%v80)) deallocate(currentLoc%v80)
+          if (associated(currentLoc%vlen)) deallocate(currentLoc%vlen)
+          if (associated(currentLoc%val)) deallocate(currentLoc%val)
+          deallocate(currentLoc,stat=irc)
+          css%nLoc=css%nLoc-1
+          currentLoc => nextDef 
+      end do
+    else
+       allocate(css%firstLoc,css%lastLoc, stat=irc) ! 
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250,"Unable to allocate &
+               & 'css%firstLoc/css%lastLoc'.")
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
+       css%firstLoc%next => css%lastLoc
+       css%lastLoc%prev => css%firstLoc
+    end if
+    if(col_bdeb)write(*,*)myname,' Done.',irc
+    return
   end subroutine colocation_cleardefaultstack
   !
   ! push default values to the stack
@@ -351,83 +386,88 @@ CONTAINS
     type(col_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
-    type(col_default), pointer :: newDefault
+    type(col_location), pointer :: newLoc
     character*25 :: myname="colocation_pushDefault"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
-    if (.not.associated(css%firstDef)) then
-       allocate(css%firstDef,css%lastDef, stat=irc)
+    if (.not.associated(css%firstLoc)) then
+       allocate(css%firstLoc,css%lastLoc, stat=irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
           call colocation_errorappend(crc250,"Unable to allocate 'firstDef/lastDef'.")
           call colocation_errorappend(crc250,"\n")
           return
        end if
-       css%firstDef%next => css%lastDef
-       css%lastDef%prev => css%firstDef
-       css%ndef=0
+       css%firstLoc%next => css%lastLoc
+       css%lastLoc%prev => css%firstLoc
+       css%nLoc=0
     end if
-    if (associated(css%currentDef)) then
-       newDefault => css%currentDef
-       css%ndef=css%ndef+1
-       newDefault%prev => css%lastDef%prev
-       newDefault%next => css%lastDef
-       newDefault%prev%next => newDefault
-       newDefault%next%prev => newDefault
-       nullify(css%currentDef)
+    if (associated(css%currentLoc)) then
+       nullify(css%currentLoc)    ! signal for new location next time
     end if
     if(col_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine colocation_pushDefault
   !
-  logical function colocation_loopDefault(css,crc250,irc)
+  logical function colocation_loopLocation(css,crc250,irc)
+    implicit none
+    type(col_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="colocation_loopLocation"
+    if(col_bdeb) write(*,*)myname,' Entering.',associated(css%cLoc)
+    colocation_loopLocation=.false. ! only true if all is ok...
+    if (.not.associated(css%cLoc)) then
+       css%cLoc =>  css%firstLoc%next 
+    else
+       if (associated(css%cloc,target=css%cLoc%next)) then
+          if(col_bdeb) write(*,*)myname,' System error:Self-linking found.'
+          irc=998
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250,"System error: Self-linking found.")
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
+       css%cLoc =>  css%cLoc%next
+    end if
+    if (associated(css%cLoc,target=css%lastLoc)) then
+       nullify(css%cLoc)
+       if(col_bdeb) write(*,*)myname,' Last location.'
+       colocation_loopLocation=.false.
+    else
+       colocation_loopLocation=.true.
+    end if
+    if(col_bdeb) write(*,*)myname,' Done.',colocation_loopLocation
+    return
+  end function colocation_loopLocation
+  !
+  logical function colocation_loopDefault(css,n80,v80,crc250,irc)
     implicit none
     type(col_session), pointer :: css !  current session
     character*80  :: n80       ! target name
     character*80  :: v80       ! variable
-    character*80  :: l80      ! min value
-    character*80  :: u80      ! max value
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_loopDefault"
-    colocation_loopdefault=.false. ! only true if all is ok...
-    if (.not.associated(css%cdef)) then
-       css%cdef =>  css%firstDef%next 
+    if(col_bdeb)write(*,*)myname,' Entering.',associated(css%cLoc%cDef)
+    colocation_loopDefault=.false. ! only true if all is ok...
+    if (.not.associated(css%cLoc%cDef)) then
+       css%cLoc%cDef =>  css%cLoc%firstDef%next 
     else
-       css%cdef =>  css%cdef%next
+       css%cLoc%cDef =>  css%cLoc%cDef%next
     end if
-    if (associated(css%cdef,css%lastDef)) then
-       nullify(css%cdef)
-       colocation_loopdefault=.false.
+    if (associated(css%cLoc%cDef,target=css%cLoc%lastDef)) then
+       nullify(css%cLoc%cDef)
+       if(col_bdeb) write(*,*)myname,' Last location.'
+       colocation_loopDefault=.false.
     else
-       colocation_loopdefault=.true.
+       n80=css%cLoc%cDef%n80
+       v80=css%cLoc%cDef%v80
+       if(col_bdeb) write(*,*)myname," Default:'"//css%cLoc%cDef%n80(1:css%cLoc%cDef%lenn)//"'"
+       colocation_loopDefault=.true.
     end if
+    if(col_bdeb) write(*,*)myname,' Done.',colocation_loopDefault
     return
-  end function colocation_loopdefault
-  !
-  logical function colocation_loopdefaultItem(css,n80,v80,crc250,irc)
-    implicit none
-    type(col_session), pointer :: css !  current session
-    character*80  :: n80       ! target name
-    character*80  :: v80       ! variable
-    character*250 :: crc250
-    integer :: irc
-    character*22 :: myname="colocation_loopdefitem"
-    colocation_loopdefaultitem=.false. ! only true if all is ok...
-    if (css%cdef%cii.eq.0) then
-       css%cdef%cii = 1
-    else
-       css%cdef%cii = css%cdef%cii + 1
-    end if
-    if (css%cdef%cii.gt.css%cdef%cDef) then
-       css%cdef%cii = 0
-       colocation_loopdefaultitem=.false.
-    else
-       n80=css%trg80(css%cdef%cii)
-       v80=css%cdef%v80(css%cdef%cii)
-       colocation_loopdefaultitem=.true.
-    end if
-    return
-  end function colocation_loopdefaultItem
+  end function colocation_loopDefault
   !
   ! add default element
   !
@@ -439,61 +479,42 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     integer :: ii, irc2, lenv, lenn
+    type(col_default),pointer :: newdef
     integer, external :: length
     character*25 :: myname="colocation_addDefault"
-    if(col_bdeb)write(*,*)myname,'Entering.',irc
-    if (css%ctrg.eq.0) then
-       irc=147
+    if(col_bdeb)write(*,*)myname,'Entering.',associated(css%currentLoc),irc
+    allocate(newdef,stat=irc)
+    if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," No targets defined!")
-       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"Unable to allocate 'newdef'.")
        call colocation_errorappend(crc250,"\n")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Here.',associated(css%currentDef)
-    if (.not.associated(css%currentDef)) then
-       allocate(css%currentDef, stat=irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Unable to allocate 'firstItm/lastItm'.")
-          call colocation_errorappend(crc250,"\n")
-          return
-       end if
-       css%currentDef%cDef=css%ctrg
-       allocate(css%currentDef%vset(css%currentDef%cDef), css%currentDef%v80(css%currentDef%cDef), &
-            & css%currentDef%vlen(css%currentDef%cDef),  css%currentDef%val(css%currentDef%cDef), stat=irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Unable to allocate 'session: current Default'.")
-          call colocation_errorappend(crc250,"\n")
-          return
-       end if
+    newdef%n80=n80
+    call chop0(newdef%n80,80)
+    newdef%lenn=length(newdef%n80,80,10)
+    newdef%v80=v80
+    call chop0(newdef%v80,80)
+    newdef%lenv=length(newdef%v80,80,10)
+    if(col_bdeb)write(*,*)myname," Assigning: '"//newdef%n80(1:newdef%lenn)//&
+         & "' -> '"//newdef%v80(1:newdef%lenv)//"'"
+    if (.not.associated(css%currentLoc)) then
+       if(col_bdeb)write(*,*)myname,'New Default.'
+       allocate(css%currentLoc, stat=irc)
+       css%currentLoc%next => css%lastLoc
+       css%currentLoc%prev => css%lastLoc%prev
+       css%currentLoc%next%prev => css%currentLoc
+       css%currentLoc%prev%next => css%currentLoc
+       allocate(css%currentLoc%firstDef,css%currentLoc%lastDef, stat=irc) ! 
+       css%currentLoc%firstDef%next => css%currentLoc%lastDef
+       css%currentLoc%lastDef%prev => css%currentLoc%firstDef
+       css%nLoc=css%nLoc+1
     end if
-    call chop0(n80,80)
-    lenn=length(n80,80,10)
-    if(col_bdeb)write(*,*)myname,'Looking for target:',n80(1:lenn)
-    ii=1
-    SEEK:do while (ii.le.css%ctrg)
-       if (css%trg80(ii)(1:css%trg_lent(ii)).eq.n80(1:lenn)) exit SEEK
-       ii=ii+1
-    end do SEEK
-    if (ii.le.css%ctrg) then
-       css%currentDef%vset(ii)=.true.
-       call chop0(v80,80)
-       lenv=length(v80,80,10)
-       css%currentDef%v80(ii)=v80 ! value
-       css%currentDef%vlen(ii)=lenv
-       read(v80(1:lenv),*,iostat=irc2) css%currentDef%val(ii)
-    else
-       irc=220
-       ! write(*,*)myname,'Targets:',css%ctrg,css%ctrg
-       ! do ii=1,css%ctrg
-       !    write(*,*)myname,'Target:',ii,css%trg80(ii)(1:css%trg_lent(ii))
-       ! end do
-       call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250,"Model target not found:"//n80(1:lenn))
-       return
-    end if
+    if(col_bdeb)write(*,*)myname,'Adding default.'
+    newdef%next => css%currentLoc%lastDef
+    newdef%prev => css%currentLoc%lastDef%prev
+    css%currentLoc%lastDef%prev%next => newdef
+    css%currentLoc%lastDef%prev => newdef
     if(col_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine colocation_addDefault
@@ -520,15 +541,15 @@ CONTAINS
           return
        end if
     end if
-    if (.not.associated(css%currentDef)) then
-       css%currentDef => css%firstDef%next
+    if (.not.associated(css%currentLoc)) then
+       css%currentLoc => css%firstLoc%next
     end if
-    if (.not.associated(css%currentDef,target=css%lastDef)) then
+    if (.not.associated(css%currentLoc,target=css%lastLoc)) then
        nvar=css%ctrg
        do ii=1,css%ctrg
-          var(ii)=css%currentDef%val(ii)
+          var(ii)=css%currentLoc%val(ii)
        end do
-       css%currentDef => css%currentDef%next
+       css%currentLoc => css%currentLoc%next
     else
        nvar=0
     end if
@@ -537,23 +558,34 @@ CONTAINS
   !
   ! delete default from stack
   !
-  subroutine colocation_deleteDef (css,def, crc250,irc)
+  subroutine colocation_deleteDef (css,cLoc, crc250,irc)
     implicit none
     type(col_session), pointer :: css !  current session
-    type(col_default), pointer :: def
+    type(col_location), pointer :: cLoc
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
     character*25 :: myname="colocation_deleteDef"
-    if (associated(def)) then
-       css%ndef = css%ndef - 1
-       def%next%prev => def%prev
-       def%prev%next => def%next
-       if (associated(def%vset)) deallocate(def%vset)
-       if (associated(def%v80)) deallocate(def%v80)
-       if (associated(def%vlen)) deallocate(def%vlen)
-       if (associated(def%val)) deallocate(def%val)
-       deallocate(def)
+    type(col_default), pointer :: cdef,ndef
+    if(col_bdeb)write(*,*)myname,' Entering.',associated(cLoc)
+    if (associated(cLoc)) then
+       cdef=>cLoc%firstdef%next
+       do while (.not.associated(cdef,target=cLoc%lastDef))
+          ndef=>cdef%next
+          deallocate(cdef)
+          cdef=>ndef
+       end do
+       if (associated(cLoc%firstdef)) deallocate(cLoc%firstdef)
+       if (associated(cLoc%lastdef)) deallocate(cLoc%lastdef)
+       css%nLoc = css%nLoc - 1
+       if (associated(cLoc%vset)) deallocate(cLoc%vset)
+       if (associated(cLoc%v80)) deallocate(cLoc%v80)
+       if (associated(cLoc%vlen)) deallocate(cLoc%vlen)
+       if (associated(cLoc%val)) deallocate(cLoc%val)
+       !cLoc%next%prev => cLoc%prev
+       !cLoc%prev%next => cLoc%next
+       !deallocate(cLoc)
     end if
+    if(col_bdeb)write(*,*)myname,' Done.',associated(cLoc)
     return
   end subroutine colocation_deleteDef
   !
@@ -565,7 +597,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_defaultCount "
-    colocation_defaultCount=css%ndef
+    colocation_defaultCount=css%nLoc
     return
   end function colocation_defaultCount
   !
@@ -630,6 +662,9 @@ CONTAINS
     type(col_match), pointer :: match
     integer :: ii, irc2, lenv, lenn,lene
     integer, external :: length
+    type(col_default), pointer :: cdef
+    type(col_location), pointer :: cloc
+    logical :: first
     character*25 :: myname="colocation_makeMatchList"
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (mss%ctrg.eq.0) then
@@ -641,7 +676,109 @@ CONTAINS
        call colocation_errorappend(crc250,"\n")
        return
     end if
+    !
+    ! process defaults. If default is set, match is also re-set
+    !
+    first=.true.
+    cLoc=>css%firstLoc%next
+    do while (.not.associated(cLoc,target=css%lastLoc))
+       if (css%ctrg.eq.0) then
+          irc=147
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250," No targets defined!")
+          call colocation_errorappendi(crc250,irc)
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
+       cLoc%cTrg=css%ctrg
+       if(col_bdeb)write(*,*)myname,'Allocating location-list:',cLoc%cTrg
+       allocate(cLoc%vset(cLoc%cTrg), cLoc%v80(cLoc%cTrg), &
+            & cLoc%vlen(cLoc%cTrg),  cLoc%val(cLoc%cTrg), stat=irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250,"Unable to allocate 'session: current Default'.")
+          call colocation_errorappend(crc250,"\n")
+          return
+       end if
+       if (first) then ! use match from defaults
+          call colocation_clearmatchstack(css,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from clearMatchStack")
+             call colocation_errorappend(crc250,"\n")
+             return
+          end if
+          e250=""
+          l80=""
+          u80=""
+          call chop0(e250,250)
+          call chop0(l80,80)
+          call chop0(u80,80)
+       end if
+       do ii=1,css%cTrg
+          cLoc%vset(ii)=.false.
+          cLoc%val(ii)=0.0D0
+       end do
+       cdef=>cLoc%firstDef%next
+       do while (.not.associated(cdef,target=cLoc%lastDef))
+          call chop0(cdef%n80,80)
+          cdef%lenn=length(cdef%n80,80,10)
+          ii=1
+          LOOPD:do while (ii.le.css%ctrg)
+             if (css%trg80(ii)(1:css%trg_lent(ii)).eq.cdef%n80(1:cdef%lenn)) exit LOOPD
+             ii=ii+1
+          end do LOOPD
+          if (ii.le.css%ctrg) then
+             if(col_bdeb)write(*,*)myname,'Found target:',ii,', slice=',cdef%n80(1:cdef%lenn)
+             cLoc%vset(ii)=.true.
+             call chop0(cdef%v80,80)
+             cdef%lenv=length(cdef%v80,80,10)
+             cLoc%v80(ii)=cdef%v80 ! value
+             cLoc%vlen(ii)=cdef%lenv
+             read(cdef%v80(1:cdef%lenv),*,iostat=irc2) cLoc%val(ii)
+             if (first) then ! Use match from defaults
+                call  colocation_pushmatch(css,cdef%n80,e250,l80,u80,crc250,irc)
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,myname)
+                   call colocation_errorappend(crc250,"Error return from pushMatch")
+                   call colocation_errorappend(crc250,"\n")
+                   return
+                end if
+             end if
+          else
+             irc=220
+             if(col_bdeb)then
+                write(*,*)myname," Missing Match: ",ii,"'"//cdef%n80(1:cdef%lenn)//"'",cdef%lenn
+                write(*,*)myname,' Targets:',cLoc%cTrg,css%ctrg
+                do ii=1,css%ctrg
+                   write(*,*)myname,' Target:',ii,&
+                        & "'"//css%trg80(ii)(1:css%trg_lent(ii))//"'",css%trg_lent(ii)
+                end do
+             end if
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Model target not found:"//n80(1:lenn))
+             return
+          end if
+          cdef=>cdef%next
+       end do
+       first=.false.
+       if(col_bdeb)write(*,*)myname,'Allocated location-list:',&
+            & cLoc%cTrg,(cLoc%val(ii),ii=1,cLoc%cTrg),(cLoc%vset(ii),ii=1,cLoc%cTrg)
+       cLoc=>cLoc%next
+    end do
+    !
+    ! sanity check
+    !
+    if (col_bdeb) then
+       cLoc=>css%firstLoc%next
+       do while (.not.associated(cLoc,target=css%lastLoc))
+          if(col_bdeb)write(*,*)myname,'Location targets:',cLoc%cTrg,size(cLoc%vset)
+          cLoc=>cLoc%next
+       end do
+    end if
+    !
     ! clean up
+    !
     if (css%cMatch .ne.  0) then
        do ii=1,css%cMatch
           call parse_close(css%mat_psp(ii)%ptr,crc250,irc)
@@ -661,38 +798,47 @@ CONTAINS
        css%cMatch = 0
     end if
     ! allocate match-list if we have target-list
+    if (col_bdeb) write(*,*)myname," Looping over matches: ",css%nmatch,mss%ctrg
     if (mss%ctrg .ne.  0) then
        css%cMatch=0
        do while (colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc))
           ! find index in model target array
           lenn=length(n80,80,10)
-          lene=length(e250,250,10)
-          if (lenn.ne.0.and.lene.ne.0) then
+          if (col_bdeb) write(*,*)myname," Matching: '"//n80(1:lenn)//"'",lenn,mss%ctrg
+          if (lenn.ne.0) then
              ii=1
-             SEEK:do while (ii.le.mss%ctrg)
-                if (mss%trg80(ii)(1:mss%trg_lent(ii)).eq.n80(1:lenn)) exit SEEK
+             LOOPM:do while (ii.le.mss%ctrg)
+                if (mss%trg80(ii)(1:mss%trg_lent(ii)).eq.n80(1:lenn)) exit LOOPM
                 ii=ii+1
-             end do SEEK
+             end do LOOPM
           else
              ii=css%ctrg+1
           end if
           if (ii.le.css%ctrg) then
              css%currentMatch%itrg=ii
              css%cMatch=css%cMatch+1
+             if (col_bdeb) write(*,*)myname," Found match: '"//n80(1:lenn)//"'",lenn,ii
           else
+             if (col_bdeb) then
+                write(*,*)myname," No match:    '"//n80(1:lenn)//"'",lenn,ii
+                do ii=1,mss%ctrg
+                   write(*,*)myname,' Target:',ii,&
+                        & "'"//mss%trg80(ii)(1:mss%trg_lent(ii))//"'",mss%trg_lent(ii)
+                end do
+             end if
              css%currentMatch%itrg=0
           end if
        end do
        if (col_bdeb) write(*,*)myname,'Allocating Match-lists: ',css%cMatch
-       allocate(css%mat_n80(css%cMatch), &
-            & css%mat_lenn(css%cMatch), &
-            & css%mat_e250(css%cMatch), &
-            & css%mat_lene(css%cMatch), &
-            & css%mat_2trg(css%cMatch), &
-            & css%mat_l80(css%cMatch),  &
-            & css%mat_u80(css%cMatch), &
-            & css%mat_val(css%cMatch), &
-            & css%mat_psp(css%cMatch), stat=irc)
+       allocate(css%mat_n80(max(1,css%cMatch)), &
+            & css%mat_lenn(max(1,css%cMatch)), &
+            & css%mat_e250(max(1,css%cMatch)), &
+            & css%mat_lene(max(1,css%cMatch)), &
+            & css%mat_2trg(max(1,css%cMatch)), &
+            & css%mat_l80(max(1,css%cMatch)),  &
+            & css%mat_u80(max(1,css%cMatch)), &
+            & css%mat_val(max(1,css%cMatch)), &
+            & css%mat_psp(max(1,css%cMatch)), stat=irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
           call colocation_errorappend(crc250,"Unable to allocate 'session:Match'.")
@@ -732,7 +878,7 @@ CONTAINS
              end if
           else
              irc=221
-             write(*,*)myname,'Targets:',css%ctrg,css%ctrg
+             write(*,*)myname,'Targets:',css%ctrg
              do ii=1,css%ctrg
                 write(*,*)myname,'Target:',ii,css%trg80(ii)(1:css%trg_lent(ii))
              end do
@@ -774,7 +920,7 @@ CONTAINS
     integer,external :: length
     lenn=length(n80,80,10)
     lene=length(e250,250,10)
-    if (lenn.ne.0.and.lene.ne.0) then
+    if (lenn.ne.0) then
        allocate(match,stat=irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
@@ -806,13 +952,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_loopMatch"
+    if (col_bdeb) write(*,*)myname," Entering.",associated(css%currentMatch),css%nMatch
     colocation_loopmatch=.false. ! only true if all is ok...
     if (.not.associated(css%currentMatch)) then
        css%currentMatch =>  css%firstMatch%next 
     else
        css%currentMatch =>  css%currentMatch%next
     end if
-    if (associated(css%currentMatch,css%lastMatch)) then
+    if (associated(css%currentMatch,target=css%lastMatch)) then
        nullify(css%currentMatch)
        colocation_loopMatch=.false.
     else
@@ -822,6 +969,7 @@ CONTAINS
        u80=css%currentMatch%u80
        colocation_loopmatch=.true.
     end if
+    if (col_bdeb) write(*,*)myname," Done.",associated(css%currentMatch),colocation_loopmatch
     return
   end function colocation_loopMatch
   !
@@ -1021,11 +1169,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_setobscache"
+    integer, external :: length
     INTEGER                         :: nvar = 0
     !
     if(col_bdeb)write(*,*)myname,' Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%obs250=path250
+       call chop0(css%obs250,250)
+       css%leno=length(css%obs250,250,10)
     end if
     !
   end subroutine colocation_setobscache
@@ -1043,12 +1194,9 @@ CONTAINS
     !
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        path250=css%obs250
-       if(col_bdeb) then
-          lenp=length(path250,250,10)
-          write(*,*)myname,"Path: '"//path250(1:lenp)//"'"
-       end if
+       if(col_bdeb) write(*,*)myname," Path: '"//css%obs250(1:css%leno)//"'"
     end if
-    !
+    return
   end subroutine colocation_getobscache
   !
   subroutine colocation_setmodcache(css,path250,crc250,irc)
@@ -1058,11 +1206,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_setmodcache"
+    integer, external :: length
     INTEGER                         :: nvar = 0
     !
     if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%mod250=path250
+       call chop0(css%mod250,250)
+       css%lenm=length(css%mod250,250,10)
     end if
     !
   end subroutine colocation_setmodcache
@@ -1165,6 +1316,7 @@ CONTAINS
     integer :: irc2
     real:: val(ncol)            ! internal column values
     logical:: vok(ncol)            ! internal column values
+    type(col_location),pointer :: cloc
     !
     integer :: mod_cnt=0
     integer :: obs_cnt=0
@@ -1172,7 +1324,7 @@ CONTAINS
     real :: mod_maxval = 0.0D0
     real :: obs_minval = 0.0D0
     real :: obs_maxval = 0.0D0
-    logical :: bbok,first
+    logical :: bbok
     character*50 :: s2
     integer :: len2,lenf
     logical :: fill, fillx,bdeb
@@ -1183,10 +1335,11 @@ CONTAINS
     fill=.false.
     !
     irc=0
+    bok=.true.
     !
     lena=length(name80,80,10)
-    bok=.true.
     if(col_bdeb)write(*,*)myname,'Entering.',ounit,ncol,size(col80),size(colexp250)
+    !
     ! check what we should colocated
     tmod=model_targetCount(mss,crc250,irc)
     if (irc.ne.0) then
@@ -1236,91 +1389,95 @@ CONTAINS
           return
        end if
     end if
+    !
+    call observation_ignoreCat(oss) ! dont count number of obs per BUFR type/subtype
+    !
     ! make expression lists
     ! count expressions (match-expressions + obs-index-expression)
     ! make lists
     if(col_bdeb)write(*,*)myname,'Make model target list.'
-    call model_makeTargetList(mss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_makeTargetList")
-       return
+    if (tmod.ne.0) then
+       call model_makeTargetList(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_makeTargetList")
+          return
+       end if
     end if
-    call observation_makeTargetList(oss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"observation_makeTargetList")
-       return
+    if (tobs.ne.0) then
+       call observation_makeTargetList(oss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"observation_makeTargetList")
+          return
+       end if
     end if
     call colocation_importTargets(css,mss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"colocation_importTargets")
        return
     end if
-    if (tobs.ne.0.and.tmod.ne.0) then
-       call colocation_makeMatchList(css,mss,crc250,irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,"colocation_makeMatchList")
-          return
-       end if
+    call colocation_makeMatchList(css,mss,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"colocation_makeMatchList")
+       return
     end if
+    if(col_bdeb)write(*,*) myname,'Set model slices.',css%cmatch
     ! Indicate which model targets should be sliced (match obs targets)
     call model_setSliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_setSliceIndex")
        return
     end if
-    if(col_bdeb)write(*,*)myname,'Compile match expressions.',emod,associated(css)
-    if (associated(css)) then
+    mod_lval(1)=.false. ! are model limits available?
+    mod_lval(2)=.false. ! are model limits available?
+    if (tobs.ne.0) then
+       if(col_bdeb)write(*,*)myname,'Compile match expressions.',emod,associated(css)
        ! compile observation match-experssions
        call colocation_compileMatch(css,oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_compileMatch")
           return
        end if
-    else
-       irc=123
-       call colocation_errorappend(crc250,"No matchs available")
-       return
+       ! convert obs start/end limits (time) to model start/end limits if possible
+       if(col_bdeb)write(*,*)myname,'Setting limits.',mss%ind_lval,mss%ind_minval,&
+            & mss%ind_maxval,oss%ind_lval(2),oss%ind_minval,oss%ind_maxval
+       !
+       ! set observation transformation...
+       ! ...the first match expression is always the index-transformation...
+       call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
+          return
+       end if
+       ! set observation target names
+       call  model_setObsTrg(mss,oss%ntrg,oss%trg80,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_setObsTrg")
+          return
+       end if
     end if
-   ! convert obs start/end limits (time) to model start/end limits if possible
-    if(col_bdeb)write(*,*)myname,'Setting limits.',mss%ind_lval,mss%ind_minval,&
-         & mss%ind_maxval,oss%ind_lval(2),oss%ind_minval,oss%ind_maxval
-    !
-    ! get absolute model and obs limits
-    !
-    mod_lval(1)=.false. ! are model limits available?
-    mod_lval(2)=.false. ! are model limits available?
-    ! set observation transformation...
-    ! ...the first match expression is always the index-transformation...
-    call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
-       return
+    if (tmod.ne.0)then
+       ! compile model filter (called after model_setFilter and model_setObsTrg)
+       call model_compileFilter(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_compileFilter")
+          return
+       end if
+       ! flag used observation targets
+       call  model_getObsReq(mss,oss%ntrg,oss%trg_req,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_getObsReq")
+          return
+       end if
     end if
-    ! set observation target names
-    call  model_setObsTrg(mss,oss%ntrg,oss%trg80,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_setObsTrg")
-       return
-    end if
-    ! compile model filter (called after model_setFilter and model_setObsTrg)
-    call model_compileFilter(mss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_compileFilter")
-       return
-    end if
-    ! flag used observation targets
-    call  model_getObsReq(mss,oss%ntrg,oss%trg_req,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_getObsReq")
-       return
-    end if
-    if(col_bdeb)write(*,*)myname,'Compiling obs filter.',ncol,size(col80),size(colexp250)
-    ! compile obs filter
-    call observation_compileFilter(oss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"obs_compileFilter")
-       return
+    if (tobs.ne.0) then
+       if(col_bdeb)write(*,*)myname,'Compiling obs filter.',ncol,size(col80),size(colexp250)
+       ! compile obs filter
+       call observation_compileFilter(oss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"obs_compileFilter")
+          return
+       end if
     end if
     if(col_bdeb)write(*,*)myname,'Compiling colmn expr.',ncol,size(col80),size(colexp250)
     ! compile column expressions
@@ -1375,12 +1532,14 @@ CONTAINS
              return
           end if
           if (.not.bok) then
-             if(col_bdeb)write(*,*)myname,'No more model files.'
+             ! if(col_bdeb)
+             write(*,*)myname,'No more model files.'
              exit MODFILE ! no more files to process
           else 
              mod_cnt=mod_cnt+1
              call observation_setModelFileId(oss,model_getFileId(mss))
-             if(col_bdeb)write(*,*)myname,"Found model file: '"//&
+             !if(col_bdeb)
+             write(*,*)myname,"Found model file: '"//&
                   & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
                   & mod_cnt,model_getFileId(mss)
           end if
@@ -1412,25 +1571,35 @@ CONTAINS
           end if
        end if
        !
-       !
-       if(col_bdeb)write(*,*)myname,'Adjusting obs limits:',obs_lval,mss%currentFile%ind_lim,obs_minval,obs_maxval
-       call observation_setFileStackLimits(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
-          return
+       if (tmod.ne.0) then ! we have model targets specified
+          call model_openCurrentFile(mss,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'model_openCurrentFile'.")
+             return
+          end if
        end if
-       ! calculate observation target limits...
-       call observation_setTargetLimits(oss,mss%currentfile%dim_var,&
-            & mss%currentfile%dim_val,crc250,irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
-          return
+       !
+       if (tobs.ne.0) then
+          if(col_bdeb)write(*,*)myname,'Adjusting obs limits:',obs_lval,mss%currentFile%ind_lim,obs_minval,obs_maxval
+          call observation_setFileStackLimits(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             return
+          end if
+          ! calculate observation target limits...
+          call observation_setTargetLimits(oss,mss%currentfile%dim_var,&
+               & mss%currentfile%dim_val,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             return
+          end if
        end if
        !
        if(col_bdeb)write(*,*)myname,'Entering obs file loop.'
-       ! loop over model data, using model/obs start/end limits
+       ! loop over obs data, using model/obs start/end limits
        OBSFILE : do ! need to enter loop if (tobs.eq.0)
           if (tobs.ne.0) then ! we have observation targets available
              if (col_bdeb) then
@@ -1444,7 +1613,8 @@ CONTAINS
                 return
              end if
              if (.not.bok) then
-                if(col_bdeb)write(*,*)myname,'No more obs files.'
+                !if(col_bdeb)
+                write(*,*)myname,'No more obs files.'
                 exit OBSFILE ! no more files to process
              else 
                 obs_cnt=obs_cnt+1
@@ -1452,6 +1622,7 @@ CONTAINS
                      & oss%currentFile%fn250(1:oss%currentFile%lenf)//"'"
              end if
           end if
+          locstart=locid
           if (tobs.ne.0.and.tmod.ne.0) then ! we have observation targets available
              ! initialise the location list
              if(col_bdeb)write(*,*)myname,'Clear model location stack.'
@@ -1468,14 +1639,13 @@ CONTAINS
 
              if(col_bdeb)write(*,*)myname,'Entering observation loop.'
 
-             locstart=locid
              ! loop over obs data, using model start/end limits
              LOCATION : do
                 !if(col_bdeb)write(*,*)myname,'Slice observation file.'
                 ! read next observation into static BUFR memory and set oss%trg_val
-                call observation_sliceCurrentFile(oss,bok,crc250,irc)
+                call observation_getNextLoc(oss,bok,crc250,irc)
                 if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"observation_sliceCurrentFile")
+                   call colocation_errorappend(crc250,"observation_getNextLoc")
                    return
                 end if
                 if (.not.bok) then
@@ -1520,8 +1690,7 @@ CONTAINS
              end do LOCATION
           else if (tmod.ne.0) then ! use model default values
 
-             if(col_bdeb)write(*,*)myname,'Clearing loc stack.',mss%ctrg,associated(mss%trg_v80)
-
+             if(col_bdeb)write(*,*)myname,'Clearing model loc stack.',mss%ctrg,associated(mss%trg_v80)
              ! initialise the location list
              call model_clearLocStack(mss,crc250,irc)
              if (irc.ne.0) then
@@ -1533,20 +1702,20 @@ CONTAINS
              !    call colocation_errorappend(crc250,"model_sliceTarget")
              !    return
              ! end if
-             if(col_bdeb)write(*,*)myname,'Creating locations from default.',associated(css%firstDef)
-             if(col_bdeb)write(*,*)myname,'...:',associated(css%firstDef%next)
-             css%currentDef=>css%firstDef%next
-             do while (.not.associated(css%currentDef,target=css%lastDef))
-                if(col_bdeb)write(*,*)myname,'Make target values from default.'
+             if(col_bdeb)write(*,*)myname,'Creating locations from default.',associated(css%firstLoc)
+             if(col_bdeb)write(*,*)myname,'...:',associated(css%firstLoc%next)
+             cLoc=>css%firstLoc%next
+             do while (.not.associated(cLoc,target=css%lastLoc))
+                if(col_bdeb)write(*,*)myname,'Make target values from default.',cLoc%cTrg,cloc%val,cloc%vset
                 ! make target values
-                call  model_setTargetDVal(mss,css%currentDef%cdef,&
-                     & css%currentDef%vset,css%currentDef%val,crc250,irc)
+                call  model_setTargetDVal(mss,cLoc%cTrg,cLoc%vset,cLoc%val,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setTargetDVal")
                    return
                 end if
                 ! make new location from observation
                 locid=locid+1
+                if(col_bdeb)write(*,*)myname,'Creating location:',locid
                 ! check target values
                 lok=.true.
                 call  model_checkTargetVal(mss,lok,crc250,irc)
@@ -1555,21 +1724,22 @@ CONTAINS
                    return
                 end if
                 !
-                if(col_bdeb)write(*,*)myname,'Creating location:',locid
+                if(col_bdeb)write(*,*)myname,'Pushing location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
                    return
                 end if
-                css%currentDef=>css%currentDef%next
+                cLoc=>cLoc%next
              end do
           end if
           !
           if (tmod.ne.0) then
-             ! finally slice the model file and write model XML to stdout
-             call model_slicecurrentfile(mss,bok,crc250,irc)
+             if(col_bdeb)write(*,*)myname,'Slicing model locations:',locid
+             ! finally slice the model file and write model output
+             call model_sliceTable(mss,bok,crc250,irc)
              if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_stackslicecurrentfile")
+                call colocation_errorappend(crc250,"model_sliceTable")
                 return
              end if
           end if
@@ -1577,25 +1747,24 @@ CONTAINS
           ! loop over observations again, write valid observations to XML...
           !         
           if (tobs.ne.0) then
-             first=.true.
              locid=locstart
              if (mod_bdeb)write(*,*)myname,'locready=',mss%locReady
              OBSERVATION : do
                 ! read next observation into static memory, return next obs
-                call observation_sliceCurrentFile(oss,bok,crc250,irc)
+                call observation_getNextLoc(oss,bok,crc250,irc)
                 if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"observation_sliceCurrentFile")
+                   call colocation_errorappend(crc250,"observation_getNextLoc")
                    return
                 end if
                 if (.not.bok) then
-                   if(col_bdeb)write(*,*)myname,'No more observations to process.'
+                   !if(col_bdeb)write(*,*)myname,'No more observations to process.'
                    exit OBSERVATION
                 end if
                 !
                 locid=locid+1
                 bbok=.true.
                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_locSearchOk(mss,locid,bbok)        
+                   call model_checkLoc(mss,locid,bbok)        
                 end if
                 !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
@@ -1636,6 +1805,53 @@ CONTAINS
                    end if
                 end if
              end do OBSERVATION
+          else if (tmod.ne.0) then ! use model default values
+             write(*,*)myname,'Printing output:',locstart,css%nloc
+             do locid=locstart+1,locstart+css%nloc
+                bbok=.true.
+                 if (tmod.ne.0) then ! we have match expressions specified
+                   call model_checkLoc(mss,locid,bbok)        
+                end if
+                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,bbok
+                !
+                if (bbok) then
+                   call model_evalExpr(mss,ncol,val,vok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"evalExpr")
+                      return
+                   end if
+                   if (col_bdeb)write(*,*)myname,' OUT:',val(1),vok(1),ncol
+                   if (ncol.ne.0) then
+                      write(ounit,"(X,A)",advance="no") name80(1:lena)
+                   else
+                      write(ounit,"(X,A)") name80(1:lena)
+                   end if
+                   fill=fillx
+                   do ii=1,ncol
+                      if (vok(ii)) then
+                         call colocation_wash(val(ii),s2,len2)
+                      else
+                         s2="NA"
+                         len2=2
+                      end if
+                      if (ii.ne.ncol) then
+                         write(ounit,"(X,A)",advance="no") s2(1:len2)
+                      else
+                         write(ounit,"(X,A)") s2(1:len2)
+                      end if
+                   end do
+                   if(col_bdeb.and.locid.lt.100)then
+                      write(*,'(2(X,A),100(X,F0.1))')&
+                           & myname,'MPO:',mss%mpo_val
+                      write(*,'(2(X,A),100(X,L1))')&
+                           & myname,'mpo:',mss%mpo_vok
+                      write(*,'(2(X,A),100(X,F0.1))')&
+                           & myname,'VAL:',val
+                      write(*,'(2(X,A),100(X,L1))')&
+                           & myname,'val:',vok
+                   end if
+                end if
+             end do
           end if
           ! end obs data loop
           ! do not delete obs-file contents since obs-file...
@@ -1668,6 +1884,16 @@ CONTAINS
           call colocation_errorappend(crc250,"\n")
           return
        end if
+       if (tmod.ne.0) then ! we have model targets specified
+          call model_closeCurrentFile(mss,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'model_closeCurrentFile'.")
+             return
+          end if
+       end if
+       !
+       write(*,*) myname,'Done model file loop.'
        ! end model loop
        if (tmod.eq.0.or.test.ne.0)  then
           exit MODFILE
@@ -1681,6 +1907,7 @@ CONTAINS
     end if
     !
     if (fill) then
+       if (col_bdeb)write(*,*) myname,"Making fill file: '"//fill250(1:lenf)//"'"
        call colocation_fill(fill250,lenf,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
@@ -1689,6 +1916,8 @@ CONTAINS
           call colocation_errorappend(crc250,"\n")
           return
        end if
+    else
+       if (col_bdeb)write(*,*) myname,"No fill file: '"//fill250(1:lenf)//"'"
     end if
     !write(*,*) myname,'Done.'
     return
@@ -1853,7 +2082,8 @@ CONTAINS
     real :: mod_maxval = 0.0D0
     real :: obs_minval = 0.0D0
     real :: obs_maxval = 0.0D0
-    logical :: mod_lval(2),obs_lval(2),bok,bbok,first,lok,bdeb
+    logical :: mod_lval(2),obs_lval(2),bok,bbok,lok,bdeb
+    type(col_location),pointer :: cloc
     integer :: lenf
     logical :: fill, fillx
     !
@@ -1864,6 +2094,9 @@ CONTAINS
     !
     irc=0
     bok=.true.
+    !
+    if(col_bdeb)write(*,*)myname,'Entering.'
+    !
     ! check what we should colocated
     tmod=model_targetCount(mss,crc250,irc)
     if (irc.ne.0) then
@@ -1913,101 +2146,119 @@ CONTAINS
           return
        end if
     end if
+    !
     ! make expression lists
     ! count expressions (match-expressions + obs-index-expression)
     ! make lists
     if(col_bdeb)write(*,*)myname,'Make model target list.',test
-    call model_makeTargetList(mss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_makeTargetList")
-       return
+    if (tmod.ne.0) then
+       call model_makeTargetList(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_makeTargetList")
+          return
+       end if
     end if
-    call observation_makeTargetList(oss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"observation_makeTargetList")
-       return
+    if (tobs.ne.0) then
+       call observation_makeTargetList(oss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"observation_makeTargetList")
+          return
+       end if
     end if
     call colocation_importTargets(css,mss,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"colocation_importTargets")
        return
     end if
-    if (tobs.ne.0.and.tmod.ne.0) then
-       call colocation_makeMatchList(css,mss,crc250,irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,"colocation_makeMatchList")
-          return
-       end if
+    call colocation_makeMatchList(css,mss,crc250,irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,"colocation_makeMatchList")
+       return
     end if
+    if(col_bdeb)write(*,*) myname,'Set model slices.',css%cmatch
     ! Indicate which model targets should be sliced (match obs targets)
     call model_setSliceIndex(mss,css%cmatch,css%mat_2trg,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,"model_setSliceIndex")
        return
     end if
+    mod_lval(1)=.false. ! are model limits available?
+    mod_lval(2)=.false. ! are model limits available?
     if(col_bdeb)write(*,*)myname,'Compile match expressions.',emod,associated(css)
-    if (associated(css)) then
+    if (tobs.ne.0) then ! only compile if we have observations...
+       if(col_bdeb)write(*,*)myname,'Compile match expressions.',emod,associated(css)
        ! compile observation match-experssions
        call colocation_compileMatch(css,oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_compileMatch")
           return
        end if
-    else
-       irc=123
-       call colocation_errorappend(crc250,"No matchs available")
-       return
+       ! convert obs start/end limits (time) to model start/end limits if possible
+       if(col_bdeb)write(*,*)myname,'Setting limits.',mss%ind_lval,mss%ind_minval,&
+            & mss%ind_maxval,oss%ind_lval(2),oss%ind_minval,oss%ind_maxval
+       !
+       ! set observation transformation...
+       ! ...the first match expression is always the index-transformation...
+       call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,myname)
+          call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
+          return
+       end if
+       ! set observation target names
+       call  model_setObsTrg(mss,oss%ntrg,oss%trg80,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_setObsTrg")
+          return
+       end if
     end if
-   ! convert obs start/end limits (time) to model start/end limits if possible
-    if(col_bdeb)write(*,*)myname,'Setting limits.',mss%ind_lval,mss%ind_minval,&
-         & mss%ind_maxval,oss%ind_lval(2),oss%ind_minval,oss%ind_maxval
-    !
-    ! get absolute model and obs limits
-    !
-    mod_lval(1)=.false. ! are model limits available?
-    mod_lval(2)=.false. ! are model limits available?
-    ! set observation transformation...
-    ! ...the first match expression is always the index-transformation...
-    call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
-       return
+    if (tmod.ne.0) then
+       ! compile model filter (called after model_setFilter and model_setObsTrg)
+       call model_compileFilter(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_compileFilter")
+          return
+       end if
+       ! flag used observation targets
+       call  model_getObsReq(mss,oss%ntrg,oss%trg_req,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_getObsReq")
+          return
+       end if
     end if
-    ! set observation target names
-    call  model_setObsTrg(mss,oss%ntrg,oss%trg80,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_setObsTrg")
-       return
+    if (tobs.ne.0) then
+       ! compile obs filter
+       call observation_compileFilter(oss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"obs_compileFilter")
+          return
+       end if
     end if
-    ! compile model filter (called after model_setFilter and model_setObsTrg)
-    call model_compileFilter(mss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"model_compileFilter")
-       return
-    end if
-    ! compile obs filter
-    call observation_compileFilter(oss,crc250,irc)
-    if (irc.ne.0) then
-       call colocation_errorappend(crc250,"obs_compileFilter")
-       return
-    end if
-    ! convert obs-limits to mod-limits
-    mod_lval(1)= mss%ind_lval(1)
-    mod_minval = mss%ind_minval
-    if (mod_lval(1).and.oss%ind_lval(1)) then
-       mod_minval=max(mod_minval,oss%ind_minval)
+    if(col_bdeb)write(*,*)myname,'Analyse limits.',mss%ind_lval,oss%ind_lval
+    ! get overall max/min limits...
+    if (mss%ind_lval(1).and.oss%ind_lval(1)) then
+       mod_minval=max(mss%ind_minval,oss%ind_minval)
+       mod_lval(1)=.true.
+    else if (mss%ind_lval(1)) then
+       mod_minval=mss%ind_minval
+       mod_lval(1)=.true.
     else if (oss%ind_lval(1)) then
        mod_minval=oss%ind_minval
        mod_lval(1)=.true.
+    else
+       mod_lval(1)=.false.
     end if
-    mod_lval(2)= mss%ind_lval(2)
-    mod_maxval = mss%ind_maxval
-    if (mod_lval(2).and.oss%ind_lval(2)) then
-       mod_maxval=min(mod_maxval,oss%ind_maxval)
+    if (mss%ind_lval(2).and.oss%ind_lval(2)) then
+       mod_maxval=min(mss%ind_maxval,oss%ind_maxval)
+       mod_lval(2)=.true.
+    else if(mss%ind_lval(2)) then
+       mod_maxval=mss%ind_maxval
+       mod_lval(2)=.true.
     else if(oss%ind_lval(2)) then
        mod_maxval=oss%ind_maxval
        mod_lval(2)=.true.
+    else
+       mod_lval(2)=.false.
     end if
     if(col_bdeb)write(*,*)myname,'Adjusting mod limits:',mod_lval,mod_minval,mod_maxval,&
          & associated(mss),associated(oss)
@@ -2073,40 +2324,60 @@ CONTAINS
              call colocation_errorappend(crc250,"model_filestartxml")
              return
           end if
-          ! adjust observation file limits
-          obs_lval(1)=mod_lval(1)
-          obs_minval=mod_minval
-          if (obs_lval(1).and.mss%currentFile%ind_lim) then
-             obs_minval=max(obs_minval,mss%currentFile%ind_start)
+          ! get observation file limits
+          if (mod_lval(1).and.mss%currentFile%ind_lim) then
+             obs_minval=max(mod_minval,mss%currentFile%ind_start)
+             obs_lval(1)=.true.
+          else if (mod_lval(1)) then
+             obs_minval=mod_minval
+             obs_lval(1)=.true.
           else if (mss%currentFile%ind_lim) then
              obs_minval=mss%currentFile%ind_start
              obs_lval(1)=.true.
+          else
+             obs_lval(1)=.false.
           end if
           obs_lval(2)=mod_lval(2)
           obs_maxval=mod_maxval
-          if (obs_lval(2).and.mss%currentFile%ind_lim) then
-             obs_maxval=max(obs_maxval,mss%currentFile%ind_stop)
+          if (mod_lval(2).and.mss%currentFile%ind_lim) then
+             obs_maxval=max(mod_maxval,mss%currentFile%ind_stop)
+          else if (mod_lval(2)) then
+             obs_maxval=mod_maxval
+             obs_lval(2)=.true.
           else if (mss%currentFile%ind_lim) then
              obs_maxval=mss%currentFile%ind_stop
              obs_lval(2)=.true.
+          else
+             obs_lval(2)=.false.
           end if
        end if
        !
        !
-       if(col_bdeb)write(*,*)myname,'Adjusting obs limits:',obs_lval,mss%currentFile%ind_lim,obs_minval,obs_maxval
-       call observation_setFileStackLimits(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
-          return
+       if (tmod.ne.0) then ! we have model targets specified
+          call model_openCurrentFile(mss,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'model_openCurrentFile'.")
+             return
+          end if
        end if
-       ! calculate observation target limits...
-       call observation_setTargetLimits(oss,mss%currentfile%dim_var,&
-            & mss%currentfile%dim_val,crc250,irc)
-       if (irc.ne.0) then
-          call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
-          return
+       !
+       if (tobs.ne.0) then
+          if(col_bdeb)write(*,*)myname,'Adjusting obs limits:',obs_lval,mss%currentFile%ind_lim,obs_minval,obs_maxval
+          call observation_setFileStackLimits(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             return
+          end if
+          ! calculate observation target limits...
+          call observation_setTargetLimits(oss,mss%currentfile%dim_var,&
+               & mss%currentfile%dim_val,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             return
+          end if
        end if
        !
        if(col_bdeb)write(*,*)myname,'Entering obs file loop.'
@@ -2140,6 +2411,7 @@ CONTAINS
                 return
              end if
           end if
+          locstart=locid
           if (tobs.ne.0.and.tmod.ne.0) then ! we have observation targets available
              ! initialise the location list
              if(col_bdeb)write(*,*)myname,'Clear model locations.'
@@ -2156,14 +2428,13 @@ CONTAINS
 
              if(col_bdeb)write(*,*)myname,'Entering observation loop.'
 
-             locstart=locid
              ! loop over obs data, using model start/end limits
              LOCATION : do
                 !if(col_bdeb)write(*,*)myname,'Slice observation file.'
                 ! read next observation into static BUFR memory and set oss%trg_val
-                call observation_sliceCurrentFile(oss,bok,crc250,irc)
+                call observation_getNextLoc(oss,bok,crc250,irc)
                 if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"observation_sliceCurrentFile")
+                   call colocation_errorappend(crc250,"observation_getNextLoc")
                    return
                 end if
                 if (.not.bok) then
@@ -2220,20 +2491,20 @@ CONTAINS
              !    call colocation_errorappend(crc250,"model_sliceTarget")
              !    return
              ! end if
-             if(col_bdeb)write(*,*)myname,'Creating locations from default.',associated(css%firstDef)
-             if(col_bdeb)write(*,*)myname,'...:',associated(css%firstDef%next)
-             css%currentDef=>css%firstDef%next
-             do while (.not.associated(css%currentDef,target=css%lastDef))
+             if(col_bdeb)write(*,*)myname,'Creating locations from default.',associated(css%firstLoc)
+             if(col_bdeb)write(*,*)myname,'...:',associated(css%firstLoc%next)
+             cLoc=>css%firstLoc%next
+             do while (.not.associated(cLoc,target=css%lastLoc))
                 if(col_bdeb)write(*,*)myname,'Make target values from default.'
                 ! make target values
-                call  model_setTargetDVal(mss,css%currentDef%cdef,&
-                     & css%currentDef%vset,css%currentDef%val,crc250,irc)
+                call  model_setTargetDVal(mss,cLoc%cTrg,cLoc%vset,cLoc%val,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setTargetDVal")
                    return
                 end if
                 ! make new location from observation
                 locid=locid+1
+                if(col_bdeb)write(*,*)myname,'Creating location:',locid
                 ! check target values
                 lok=.true.
                 call  model_checkTargetVal(mss,lok,crc250,irc)
@@ -2248,16 +2519,16 @@ CONTAINS
                    call colocation_errorappend(crc250,"model_locPush")
                    return
                 end if
-                css%currentDef=>css%currentDef%next
+                cLoc=>cLoc%next
              end do
           end if
           !
           if (tmod.ne.0) then
-             if (mod_bdeb)write(*,*)myname,'A locready=',mss%locReady
+             if(col_bdeb)write(*,*)myname,'Slicing model locations:',locid
              ! finally slice the model file and write model XML to stdout
-             call model_slicecurrentfileXML(mss,ounit,bok,crc250,irc)
+             call model_sliceXML(mss,ounit,bok,crc250,irc)
              if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_stackslicecurrentfile")
+                call colocation_errorappend(crc250,"model_sliceXML")
                 return
              end if
           end if
@@ -2265,14 +2536,13 @@ CONTAINS
           ! loop over observations again, write valid observations to XML...
           !         
           if (tobs.ne.0) then
-             first=.true.
              locid=locstart
              if (mod_bdeb)write(*,*)myname,'B locready=',mss%locReady
              OBSERVATION : do
-                ! read next observation into static memory, return next obs
-                call observation_sliceCurrentFile(oss,bok,crc250,irc)
+                ! read next location into static memory
+                call observation_getNextLoc(oss,bok,crc250,irc)
                 if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"observation_sliceCurrentFile")
+                   call colocation_errorappend(crc250,"observation_getNextLoc")
                    return
                 end if
                 if (.not.bok) then
@@ -2283,7 +2553,7 @@ CONTAINS
                 locid=locid+1
                 bbok=.true.
                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_locSearchOk(mss,locid,bbok)        
+                   call model_checkLoc(mss,locid,bbok)        
                 end if
                 !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
@@ -2301,8 +2571,23 @@ CONTAINS
                    fill=fillx
                 end if
              end do OBSERVATION
+          else if (tmod.ne.0) then ! use model default values
+             write(*,*)myname,'Printing output:',locstart,css%nloc
+             do locid=locstart+1,locstart+css%nloc
+                bbok=.true.
+                 if (tmod.ne.0) then ! we have match expressions specified
+                   call model_checkLoc(mss,locid,bbok)        
+                end if
+                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,bbok
+                !
+                if (bbok) then
+                   ! write location default values to XML (not implemented)...
+                end if
+             end do
           end if
           ! end obs data loop
+          ! do not delete obs-file contents since obs-file...
+          ! ...contents must be available for other model files.
           if (tobs.ne.0.or.test.ne.0) then
              call observation_filestopxml(oss,ounit,crc250,irc)
              if (irc.ne.0) then
@@ -2336,6 +2621,14 @@ CONTAINS
           call colocation_errorappendi(crc250,irc)
           call colocation_errorappend(crc250,"\n")
           return
+       end if
+       if (tmod.ne.0) then ! we have model targets specified
+          call model_closeCurrentFile(mss,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250,"Error return from 'model_closeCurrentFile'.")
+             return
+          end if
        end if
        ! end model loop
        if (tmod.ne.0.or.test.ne.0)  then
@@ -2377,6 +2670,8 @@ CONTAINS
           call colocation_errorappend(crc250,"\n")
           return
        end if
+    else
+       if (col_bdeb)write(*,*) myname,"No fill file: '"//fill250(1:lenf)//"'"
     end if
     !write(*,*) myname,'Done.'
     return
@@ -2797,8 +3092,9 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_fill"
+    character*100 :: buff100
     integer, external :: ftunit
-    integer unitw
+    integer :: unitw
     unitw=ftunit(irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
@@ -2817,14 +3113,23 @@ CONTAINS
        if (col_bdeb)write(*,*) myname,'unable to open:'//fill250(1:lenf)
        return
     end if
-    write(unitw,'("Data available.")')
-    close (unitw)
-    irc=chmod(fill250(1:lenf),"a+w")
+    write(unitw,'("Data available.")',iostat=irc)
+    close (unitw,iostat=irc)
+    open (unit=unitw,form="formatted",action="read",iostat=irc,file=fill250(1:lenf))
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," Error chmod:"//fill250(1:lenf))
+       call colocation_errorappend(crc250," Unable to open:"//fill250(1:lenf))
        call colocation_errorappendi(crc250,irc)
        call colocation_errorappend(crc250,"\n")
+       if (col_bdeb)write(*,*) myname,'unable to open:'//fill250(1:lenf)
+       return
+    end if
+    read(unitw,*,iostat=irc) buff100
+    close (unitw,iostat=irc)
+    irc=chmod(fill250(1:lenf),"a+w")
+    if (irc.ne.0) then
+       if (col_bdeb)write(*,*)"Unable to chmod '"//fill250(1:lenf)//"'"
+       irc=0 ! file could be owned by someone else, so...
     end if
     return
   end subroutine colocation_fill

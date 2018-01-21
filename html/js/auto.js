@@ -181,17 +181,33 @@ function auto_removeFile(item,type,file) {
 function auto_setTable() {
     var item=document.getElementById('autoTable');
     var tail=removeTableChildFromTo(item,"labelsAuto","newlineAuto");
-    for (var model in auto_config["model"]) {
-	auto_insertRow(tail,"model",model,auto_config["model"][model]["last"],auto_config["model"][model]["info"],auto_config["model"][model]["auto"],auto_config["model"][model]["status"]);
+    var models=[];
+    for (var model in auto_config["model"]) models.push(model);
+    models.sort();
+    for (var ii = 0; ii < models.length; ++ii) {
+	var model=models[ii];
+	auto_insertRow(tail,"model",model,auto_config["model"][model]["last"],auto_config["model"][model]["info"],auto_config["model"][model]["auto"],auto_config["model"][model]["status"],"#F78181");
     }
-    for (var obs in auto_config["obs"]) {
-	auto_insertRow(tail,"obs",obs,auto_config["obs"][obs]["last"],auto_config["obs"][obs]["info"],auto_config["obs"][obs]["auto"],auto_config["obs"][obs]["status"]);
+    var obss=[];
+    for (var obs in auto_config["obs"]) obss.push(obs);
+    obss.sort();
+    for (var ii = 0; ii < obss.length; ++ii) {
+	var obs=obss[ii];
+	auto_insertRow(tail,"obs",obs,auto_config["obs"][obs]["last"],auto_config["obs"][obs]["info"],auto_config["obs"][obs]["auto"],auto_config["obs"][obs]["status"],"#F3E2A9");
     }
-    for (var coloc in auto_config["coloc"]) {
-	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"]);
+    var colocs=[];
+    for (var coloc in auto_config["coloc"]) colocs.push(coloc);
+    colocs.sort();
+    for (var ii = 0; ii < colocs.length; ++ii) {
+	var coloc=colocs[ii];
+	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#01DFD7");
     }
-    for (var plot in auto_config["plot"]) {
-	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"]);
+    var plots=[];
+    for (var plot in auto_config["plot"]) plots.push(plot);
+    plots.sort();
+    for (var ii = 0; ii < plots.length; ++ii) {
+	var plot=plots[ii];
+	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"],"#A4A4A4");
     }
 };
 function auto_setCheckbox(item,type,file) {
@@ -202,12 +218,13 @@ function auto_setCheckbox(item,type,file) {
     }
 }
 // create auto table row
-function auto_insertRow(item,type,file,last,info,auto,status) {
+function auto_insertRow(item,type,file,last,info,auto,status,color) {
     var row = document.createElement("TR");
+    row.setAttribute("bgcolor",color);
     var td;
     // make "-" column
     td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("style","min-width:25px;width:25px;");
     var btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_removeFile(this.parentNode.parentNode,'"+type+"','"+file+"')");
     btn.setAttribute("style","width:100%");

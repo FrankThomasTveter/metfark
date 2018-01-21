@@ -1552,6 +1552,9 @@ function coloc_rmfile(path) {
 		  console.log("Error:",data);
 		  var msg=(errors[0].getAttribute("message")||"");
 		  alert("Unable to rmfile: "+path+"\n"+msg);
+	      } else {
+		  delete coloc_config[path];
+		  if (coloc_file == path) {coloc_file="default.cfg";}
 	      };
 	      documentLog.innerHTML="";}
 				}

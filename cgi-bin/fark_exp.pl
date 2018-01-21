@@ -22,8 +22,8 @@ my $parser = XML::LibXML->new();
 my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;
+    fark::debug(5);  # debug parse
 }
-fark::debug(5);  # debug parse
 #
 $XML::LibXML::skipXMLDeclaration = 1;
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
@@ -45,7 +45,7 @@ if ($debug) {
 	print "Processing '".($param->{exp}[0]//"")."'\n";
 	$res=$fark->expression($param->{exp}[0]//"");
 	$fark->close();
-    } "Error while running.";
+    } "Error while running.",0;
 };
 my $mret=$@;if ($mret || $irc) {farkdir::term("fark_exp.pl $stderr $mret");}
 #print "Output: $stdout\n\n $stderr\n";

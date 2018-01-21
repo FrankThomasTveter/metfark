@@ -41,15 +41,22 @@ module plot
   ! default values for the model targets
   !
   type :: plot_default
-     integer :: nTrg
-     integer :: cii = 0
-     logical, pointer :: vset(:)       ! is value set?
-     character*80, pointer :: v80(:)   ! value
-     integer, pointer :: vlen(:)       ! value length
-     real, pointer :: val(:)   ! value
+     character*80 :: n80   ! name
+     integer :: lenn       ! name length
+     character*80 :: v80   ! value
+     integer :: lenv       ! value length
+     real :: val           ! value
      type(plot_default), pointer :: prev => null()   ! linked list
      type(plot_default), pointer :: next => null()   ! linked list
   end type plot_default
+  !
+  type :: plot_location
+     type(plot_default), pointer  :: cDef => null()
+     type(plot_default), pointer  :: firstDef => null()! linked list start
+     type(plot_default), pointer  :: lastDef => null() ! linked list end
+     type(plot_location), pointer :: prev => null()    ! linked list
+     type(plot_location), pointer :: next => null()    ! linked list
+  end type plot_location
   !
   type :: plot_match
      character*80 :: n80 ! name
@@ -91,15 +98,18 @@ module plot
      ! obs data
      type(plot_obstrg), pointer :: firstObstrg => null()        ! linked list
      type(plot_obstrg), pointer :: lastObstrg => null()         ! linked list
+     integer :: nObsTrg = 0
      ! mod data
      type(plot_modtrg), pointer :: firstModtrg => null()        ! linked list
      type(plot_modtrg), pointer :: lastModtrg => null()         ! linked list
+     integer :: nModTrg = 0
      type(plot_obstrg), pointer :: cObstrg => null()            ! linked list
      type(plot_modtrg), pointer :: cModtrg => null()            ! linked list
      ! colocation data
-     type(plot_default), pointer :: firstDef => null()          ! linked list start
-     type(plot_default), pointer :: lastDef => null()           ! linked list end
-     type(plot_default), pointer :: cDef => null()              ! current default
+     type(plot_location), pointer :: firstLoc => null()         ! linked list start
+     type(plot_location), pointer :: lastLoc => null()          ! linked list end
+     type(plot_location), pointer :: currentLoc => null()       ! current location
+     type(plot_location), pointer :: cLoc => null()             ! current location
      integer :: ndef = 0                                        ! number of defaults
      type(plot_match), pointer :: firstMatch => null()          ! linked list
      type(plot_match), pointer :: lastMatch => null()           ! linked list
@@ -808,13 +818,13 @@ CONTAINS
     end if
     set%firstModtrg%next => set%lastModtrg
     set%lastModtrg%prev => set%firstModtrg
-    allocate(set%firstDef,set%lastDef,stat=irc)
+    allocate(set%firstLoc,set%lastLoc,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250,"Unable to allocate 'set-def'.")
     end if
-    set%firstDef%next => set%lastDef
-    set%lastDef%prev => set%firstDef
+    set%firstLoc%next => set%lastLoc
+    set%lastLoc%prev => set%firstLoc
     allocate(set%firstMatch,set%lastMatch,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1003,7 +1013,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current set
     plot_pullset=.false. ! only true if all is ok
     set => pss%firstSet%next
-    if (.not.associated(set,pss%lastSet)) then
+    if (.not.associated(set,target=pss%lastSet)) then
        name80=set%name80
        leg250=set%leg250
        call plot_obsExport(set,oss,crc250,irc) ! set obs data
@@ -1051,7 +1061,7 @@ CONTAINS
     type(plot_set), pointer :: set !  current set
     plot_popset=.false. ! only true if all is ok and irc==0
     set => pss%lastSet%prev
-    if (.not.associated(set,pss%firstSet)) then
+    if (.not.associated(set,target=pss%firstSet)) then
        name80=set%name80
        leg250=set%leg250
        call plot_obsExport(set,oss,crc250,irc) ! set obs data
@@ -1107,7 +1117,7 @@ CONTAINS
     else
        pss%currentSet =>  pss%currentSet%next
     end if
-    if (associated(pss%currentSet,pss%lastSet)) then
+    if (associated(pss%currentSet,target=pss%lastSet)) then
        nullify(pss%currentSet)
        plot_loopset=.false.
     else
@@ -1180,6 +1190,7 @@ CONTAINS
     do while (.not.associated(ctrg,target=set%lastObstrg))
        ntrg => ctrg%next
        call plot_unlinkObstrg(ctrg)
+       set%nObsTrg=set%nObsTrg-1
        call plot_deallocateObstrg(ctrg)
        ctrg  => ntrg
     end do
@@ -1198,6 +1209,7 @@ CONTAINS
     do while (.not.associated(ctrg,target=set%lastModtrg))
        ntrg => ctrg%next
        call plot_unlinkModtrg(ctrg)
+       set%nModTrg=set%nModTrg-1
        call plot_deallocateModtrg(ctrg)
        ctrg  => ntrg
     end do
@@ -1229,22 +1241,17 @@ CONTAINS
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    type(plot_default), pointer :: cDef !  the current default target
-    type(plot_default), pointer :: nDef !  the next default target
-    character*25 :: myname="plot_cleardefault"
-    if (plot_bdeb) write(*,*)myname,'Entering.',irc
-    if (plot_bdeb) write(*,*)myname,'Association.',associated(set), associated(set%firstDef)
-    cDef => set%firstDef%next
-    do while (.not.associated(cDef,target=set%lastDef))
-       nDef => cDef%next
-       cDef%prev%next =>  cDef%next
-       cDef%next%prev =>  cDef%prev
-       if (associated(cDef%vset)) deallocate(cDef%vset)
-       if (associated(cDef%v80)) deallocate(cDef%v80)
-       if (associated(cDef%vlen)) deallocate(cDef%vlen)
-       if (associated(cDef%val)) deallocate(cDef%val)
-       deallocate(cDef,stat=irc)
-       cDef => nDef
+    type(plot_location), pointer :: cLoc !  the current default target
+    type(plot_location), pointer :: nLoc !  the next default target
+    character*25 :: myname="plot_cleardefaultStack"
+    if (plot_bdeb) write(*,*)myname,'Entering.',associated(set), associated(set%firstLoc)
+    cLoc => set%firstLoc%next
+    do while (.not.associated(cLoc,target=set%lastLoc))
+       nLoc => cLoc%next
+       cLoc%prev%next =>  cLoc%next
+       cLoc%next%prev =>  cLoc%prev
+       deallocate(cLoc,stat=irc)
+       cLoc => nLoc
     end do
     set%ndef=0
     if (plot_bdeb) write(*,*)myname,'Exiting.',irc
@@ -1309,6 +1316,7 @@ CONTAINS
     trg%max80=max80
     trg%next => set%lastObstrg
     trg%prev => set%lastObstrg%prev
+    set%nObsTrg=set%nObsTrg+1
     trg%prev%next => trg
     trg%next%prev => trg
     nullify(trg)
@@ -1337,11 +1345,24 @@ CONTAINS
     trg%max80=max80
     trg%next => set%lastModtrg
     trg%prev => set%lastModtrg%prev
+    set%nModTrg=set%nModTrg+1
     trg%prev%next => trg
     trg%next%prev => trg
     nullify(trg)
     return
   end subroutine plot_pushmodtrg
+  !
+  integer function plot_countModTrg(set)
+    type(plot_set),pointer :: set
+    plot_countModTrg=set%nModTrg
+    return
+  end function plot_countModTrg
+  !
+  integer function plot_countObsTrg(set)
+    type(plot_set),pointer :: set
+    plot_countObsTrg=set%nObsTrg
+    return
+  end function plot_countObsTrg
   !
   subroutine plot_pushmatch(set,n80,e250,l80,u80,crc250,irc)
     implicit none
@@ -1374,67 +1395,49 @@ CONTAINS
   ! add default element
   !
   subroutine plot_addDefault(set,n80,v80,crc250,irc)
+    implicit none
     type(plot_set), pointer :: set !  current session
     character*80 :: n80 ! target name
     character*80 :: v80 ! target value
     character*250 :: crc250
     integer :: irc
     integer :: ii, irc2, lenv, lenn
+    type(plot_default),pointer :: newdef
     integer, external :: length
-    character*25 :: myname="plot_addDefault"
-    if(plot_bdeb)write(*,*)myname,'Entering.',irc
-    call plot_makeTargetList(set,crc250,irc)
+    character*25 :: myname="colocation_addDefault"
+    if(plot_bdeb)write(*,*)myname,'Entering.',associated(set%currentLoc),irc
+    allocate(newdef,stat=irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," Error return from makeTargetList.")
-       call plot_errorappendi(crc250,irc)
+       call plot_errorappend(crc250,"Unable to allocate 'newdef'.")
        call plot_errorappend(crc250,"\n")
        return
     end if
-    if(plot_bdeb)write(*,*)myname,'Here.',associated(set%cDef)
-    if (.not.associated(set%cDef)) then
-       allocate(set%cDef, stat=irc)
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250,"Unable to allocate 'firstItm/lastItm'.")
-          call plot_errorappend(crc250,"\n")
-          return
-       end if
-       set%cDef%nTrg=set%nTrgMod
-       allocate(set%cDef%vset(set%cDef%nTrg), set%cDef%v80(set%cDef%nTrg), &
-            & set%cDef%vlen(set%cDef%nTrg),  set%cDef%val(set%cDef%nTrg), stat=irc)
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250,"Unable to allocate 'session: current Default'.")
-          call plot_errorappend(crc250,"\n")
-          return
-       end if
+    newdef%n80=n80
+    call chop0(newdef%n80,80)
+    newdef%lenn=length(newdef%n80,80,10)
+    newdef%v80=v80
+    call chop0(newdef%v80,80)
+    newdef%lenv=length(newdef%v80,80,10)
+    if(plot_bdeb)write(*,*)myname," Assigning: '"//newdef%n80(1:newdef%lenn)//&
+         & "' -> '"//newdef%v80(1:newdef%lenv)//"'"
+    if (.not.associated(set%currentLoc)) then
+       if(plot_bdeb)write(*,*)myname,'New Default.'
+       allocate(set%currentLoc, stat=irc)
+       set%currentLoc%next => set%lastLoc
+       set%currentLoc%prev => set%lastLoc%prev
+       set%lastLoc%prev%next => set%currentLoc
+       set%lastLoc%prev => set%currentLoc
+       allocate(set%currentLoc%firstDef,set%currentLoc%lastDef, stat=irc) ! 
+       set%currentLoc%firstDef%next => set%currentLoc%lastDef
+       set%currentLoc%lastDef%prev => set%currentLoc%firstDef
+       set%ndef=set%ndef+1
     end if
-    call chop0(n80,80)
-    lenn=length(n80,80,10)
-    if(plot_bdeb)write(*,*)myname,'Looking for target:',n80(1:lenn)
-    ii=1
-    SEEK:do while (ii.le.set%nTrgMod)
-       if (set%trgMod80(ii)(1:set%trgModLent(ii)).eq.n80(1:lenn)) exit SEEK
-       ii=ii+1
-    end do SEEK
-    if (ii.le.set%nTrgMod) then
-       set%cDef%vset(ii)=.true.
-       call chop0(v80,80)
-       lenv=length(v80,80,10)
-       set%cDef%v80(ii)=v80 ! value
-       set%cDef%vlen(ii)=lenv
-       read(v80(1:lenv),*,iostat=irc2) set%cDef%val(ii)
-    else
-       irc=220
-       ! write(*,*)myname,'Targets:',set%nTrgMod,set%ntarget
-       ! do ii=1,set%nTrgMod
-       !    write(*,*)myname,'Target:',ii,set%trgMod80(ii)(1:set%trgModLent(ii))
-       ! end do
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Target not found:"//n80(1:lenn))
-       return
-    end if
+    if(plot_bdeb)write(*,*)myname,'Adding default.'
+    newdef%next => set%currentLoc%lastDef
+    newdef%prev => set%currentLoc%lastDef%prev
+    set%currentLoc%lastDef%prev%next => newdef
+    set%currentLoc%lastDef%prev => newdef
     if(plot_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine plot_addDefault
@@ -1482,32 +1485,27 @@ CONTAINS
   ! push default values to the stack
   !
   subroutine plot_pushDefault(set,crc250,irc)
+    implicit none
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    type(plot_default), pointer :: newDefault
+    type(plot_location), pointer :: newLoc
     character*25 :: myname="plot_pushDefault"
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
-    if (.not.associated(set%firstDef)) then
-       allocate(set%firstDef,set%lastDef, stat=irc)
+    if (.not.associated(set %firstLoc)) then
+       allocate(set%firstLoc,set%lastLoc, stat=irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
           call plot_errorappend(crc250,"Unable to allocate 'firstDef/lastDef'.")
           call plot_errorappend(crc250,"\n")
           return
        end if
-       set%firstDef%next => set%lastDef
-       set%lastDef%prev => set%firstDef
+       set%firstLoc%next => set%lastLoc
+       set%lastLoc%prev => set%firstLoc
        set%ndef=0
     end if
-    if (associated(set%cDef)) then
-       newDefault => set%cDef
-       set%ndef=set%ndef+1
-       newDefault%prev => set%lastDef%prev
-       newDefault%next => set%lastDef
-       newDefault%prev%next => newDefault
-       newDefault%next%prev => newDefault
-       nullify(set%cDef)
+    if (associated(set%currentLoc)) then
+       nullify(set%currentLoc)
     end if
     if(plot_bdeb)write(*,*)myname,'Done.',irc
     return
@@ -1537,6 +1535,7 @@ CONTAINS
        min80=trg%min80
        max80=trg%max80
        call plot_unlinkObstrg(trg)
+       set%nObsTrg=set%nObsTrg-1
        trg=>ntrg
        plot_popobstrg=.true.
     end if
@@ -1563,6 +1562,7 @@ CONTAINS
        min80=trg%min80
        max80=trg%max80
        call plot_unlinkModtrg(trg)
+       set%nModTrg=set%nModTrg-1
        trg=>ntrg
        plot_popmodtrg=.true.
     end if
@@ -1613,7 +1613,7 @@ CONTAINS
     else
        set%cobstrg =>  set%cobstrg%next
     end if
-    if (associated(set%cobstrg,set%lastObstrg)) then
+    if (associated(set%cobstrg,target=set%lastObstrg)) then
        nullify(set%cobstrg)
        plot_loopobstrg=.false.
     else
@@ -1638,13 +1638,14 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_loopmodtrg"
+    if (plot_bdeb) write(*,*)myname,' Entering.',irc
     plot_loopmodtrg=.false. ! only true if all is ok
     if (.not.associated(set%cmodtrg)) then
        set%cmodtrg =>  set%firstModtrg%next 
     else
        set%cmodtrg =>  set%cmodtrg%next
     end if
-    if (associated(set%cmodtrg,set%lastModtrg)) then
+    if (associated(set%cmodtrg,target=set%lastModtrg)) then
        nullify(set%cmodtrg)
        plot_loopmodtrg=.false.
     else
@@ -1654,59 +1655,57 @@ CONTAINS
        max80=set%cmodtrg%max80
        plot_loopmodtrg=.true.
     end if
+    if (plot_bdeb) write(*,*)myname,' Done.',plot_loopmodtrg
     return
   end function plot_loopmodtrg
   !
-  logical function plot_loopDefault(set,crc250,irc)
+  logical function plot_loopLocation(set,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="plot_loopdefault"
-    plot_loopdefault=.false. ! only true if all is ok
-    if (.not.associated(set%cDef)) then
-       set%cDef =>  set%firstDef%next 
+    character*22 :: myname="plot_loopLocation"
+    if (plot_bdeb) write(*,*)myname,'Entering.',irc
+    plot_loopLocation=.false. ! only true if all is ok
+    if (.not.associated(set%cLoc)) then
+       set%cLoc =>  set%firstLoc%next 
     else
-       set%cDef =>  set%cDef%next
+       set%cLoc =>  set%cLoc%next
     end if
-    if (associated(set%cDef,set%lastDef)) then
-       nullify(set%cDef)
-       plot_loopdefault=.false.
+    if (associated(set%cLoc,target=set%lastLoc)) then
+       nullify(set%cLoc)
+       plot_loopLocation=.false.
     else
-       plot_loopdefault=.true.
-       set%cDef%cii=0
+       plot_loopLocation=.true.
     end if
     return
-  end function plot_loopdefault
+  end function plot_loopLocation
   !
-  logical function plot_loopDefaultItem(set,trg80,var80,crc250,irc)
+  logical function plot_loopDefault(set,n80,v80,crc250,irc)
     implicit none
     type(plot_set), pointer :: set !  current session
-    character*80  :: trg80      ! target name
-    character*80  :: var80      ! variable
+    character*80  :: n80      ! target name
+    character*80  :: v80      ! variable
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_loopdefitem"
-    plot_loopdefaultitem=.false. ! only true if all is ok
-    if (.not.associated(set%cdef)) then
-       plot_loopdefaultitem=.false.
+    if (plot_bdeb) write(*,*)myname,'Entering.',irc
+    plot_loopDefault=.false. ! only true if all is ok
+    if (.not.associated(set%cLoc%cDef)) then
+       set%cLoc%cDef =>  set%cLoc%firstDef%next 
     else
-       if (set%cdef%cii .eq. 0) then
-          set%cdef%cii=1
-       else
-          set%cdef%cii = set%cdef%cii +1
-       end if
-       if (set%cdef%cii .gt. set%cdef%nTrg) then
-          set%cdef%cii=0
-          plot_loopdefaultitem=.false.
-       else
-          trg80=set%trgMod80(set%cdef%cii)
-          var80=set%cdef%v80(set%cdef%cii)
-          plot_loopdefaultitem=.true.
-       end if
+       set%cLoc%cDef =>  set%cLoc%cDef%next
+    end if
+    if (associated(set%cLoc%cDef,target=set%cLoc%lastDef)) then
+       nullify(set%cLoc%cDef)
+       plot_loopDefault=.false.
+    else
+       plot_loopDefault=.true.
+       n80=set%cLoc%cDef%n80
+       v80=set%cLoc%cDef%v80
     end if
     return
-  end function plot_loopDefaultItem
+  end function plot_loopDefault
   !
   logical function plot_loopmatch(set,n80,e250,l80,u80,crc250,irc)
     implicit none
@@ -1724,7 +1723,7 @@ CONTAINS
     else
        set%cmatch =>  set%cmatch%next
     end if
-    if (associated(set%cmatch,set%lastMatch)) then
+    if (associated(set%cmatch,target=set%lastMatch)) then
        nullify(set%cmatch)
        plot_loopmatch=.false.
     else
@@ -1833,6 +1832,7 @@ CONTAINS
     integer :: lenn
     integer, external :: length
     character*22 :: myname="plot_obsExport"
+    if (plot_countObsTrg(set).eq.0) return ! no targets = nothing to do
     call observation_setTablePath(oss,set%tablepath,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -1968,6 +1968,7 @@ CONTAINS
     integer :: lenn
     integer, external :: length
     character*22 :: myname="plot_modExport"
+    if (plot_countModTrg(set).eq.0) return ! no targets = nothing to do
     call model_setIndex(mss,set%ind_trg80,set%ind_mod80,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2027,6 +2028,7 @@ CONTAINS
     integer, external :: length
     integer :: leno,lenn
     character*22 :: myname="plot_colImport"
+    if (plot_bdeb) write(*,*)myname,'Entering.'
     call colocation_getmodcache(css,set%mod250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2049,11 +2051,12 @@ CONTAINS
        call plot_errorappend(crc250," Error return from clearDefaultStack.")
        return
     end if
-    do while (colocation_loopDefault(css,crc250,irc))
-       do while (colocation_loopDefaultItem(css,n80,v80,crc250,irc))
+    if (plot_bdeb)write(*,*)myname,'Looping over default.'
+    do while (colocation_loopLocation(css,crc250,irc))
+       do while (colocation_loopDefault(css,n80,v80,crc250,irc))
           if (plot_bdeb) then
              lenn=length(n80,80,10)
-             write(*,*)myname,"Inside loopDeafult '"//n80(1:lenn)//"'"
+             write(*,*)myname,"Inside loopDefault '"//n80(1:lenn)//"'"
           end if
           call plot_addDefault(set,n80,v80,crc250,irc)
           if (irc.ne.0) then
@@ -2121,14 +2124,16 @@ CONTAINS
     integer :: lenn
     integer, external :: length
     character*22 :: myname="plot_colExport"
+    if (plot_bdeb) write(*,*)myname,'Entering.'
     call colocation_clearDefaultStack(css,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from clearDefaultStack.")
        return
     end if
-    do while (plot_loopDefault(set,crc250,irc))
-       do while (plot_loopDefaultItem(set,n80,v80,crc250,irc))
+    if (plot_bdeb) write(*,*)myname,'Looping defaults.'
+    do while (plot_loopLocation(set,crc250,irc))
+       do while (plot_loopDefault(set,n80,v80,crc250,irc))
           if (plot_bdeb) then
              lenn=length(n80,80,10)
              write(*,*)myname,"Inside loopDeafult '"//n80(1:lenn)//"'"
@@ -2142,7 +2147,7 @@ CONTAINS
        end do
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250," Error return from loopDefaultItem.")
+          call plot_errorappend(crc250," Error return from loopDefault.")
           return
        end if
        call colocation_pushDefault(css,crc250,irc)
@@ -2154,7 +2159,7 @@ CONTAINS
     end do
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," Error return from loopDefault.")
+       call plot_errorappend(crc250," Error return from loopLocation.")
        return
     end if
     !

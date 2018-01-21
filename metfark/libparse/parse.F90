@@ -186,7 +186,13 @@ CONTAINS
     end if
     ! css must be nullified if not declared...
     if (.not.associated(css)) ALLOCATE (css)
-    NULLIFY (css%ByteCode,css%Immed,css%Stack)
+    if (associated(css%ByteCode)) deallocate(css%ByteCode)
+    if (associated(css%Immed)) deallocate(css%Immed)
+    if (associated(css%Stack)) deallocate(css%Stack)
+    if (associated(css%Stacka)) deallocate(css%Stacka)
+    if (associated(css%Wrka)) deallocate(css%Wrka)
+    if (associated(css%ArgsByte)) deallocate(css%ArgsByte)
+    NULLIFY (css%ByteCode,css%Immed,css%Stack,css%Stacka,css%Wrka,css%ArgsByte)
     !css%parse_laa=ichar('a')
     !css%parse_lzz=ichar('z')
     !css%parse_uaa=ichar('A')
