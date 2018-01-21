@@ -177,6 +177,8 @@ function auto_removeFile(item,type,file) {
     auto_setTable();
 };
 
+//#F78181
+
 // create auto table
 function auto_setTable() {
     var item=document.getElementById('autoTable');
@@ -186,7 +188,7 @@ function auto_setTable() {
     models.sort();
     for (var ii = 0; ii < models.length; ++ii) {
 	var model=models[ii];
-	auto_insertRow(tail,"model",model,auto_config["model"][model]["last"],auto_config["model"][model]["info"],auto_config["model"][model]["auto"],auto_config["model"][model]["status"],"#F78181");
+	auto_insertRow(tail,"model",model,auto_config["model"][model]["last"],auto_config["model"][model]["info"],auto_config["model"][model]["auto"],auto_config["model"][model]["status"],"#01DFD7"); 
     }
     var obss=[];
     for (var obs in auto_config["obs"]) obss.push(obs);
@@ -200,14 +202,14 @@ function auto_setTable() {
     colocs.sort();
     for (var ii = 0; ii < colocs.length; ++ii) {
 	var coloc=colocs[ii];
-	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#01DFD7");
+	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#F6CEEC");
     }
     var plots=[];
     for (var plot in auto_config["plot"]) plots.push(plot);
     plots.sort();
     for (var ii = 0; ii < plots.length; ++ii) {
 	var plot=plots[ii];
-	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"],"#A4A4A4");
+	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"],"#BDBDBD");
     }
 };
 function auto_setCheckbox(item,type,file) {

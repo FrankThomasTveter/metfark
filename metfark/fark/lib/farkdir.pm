@@ -646,7 +646,7 @@ sub findPattern {
 	my $bmi;
 	# find 4-digit year
 	my $cyyyy = &getCandidates($lim{4},0,$lenm-3,1900,2100,"YYYY"); # year candidates
-	my $cmm =   &getCandidates($lim{2},0,$lenm-1,0,12,"MM");        # month  candidates
+	my $cmm =   &getCandidates($lim{2},0,$lenm-1,1,12,"MM");        # month  candidates
 	my $cdd =   &getCandidates($lim{2},0,$lenm-1,1,31,"DD");        # day candidates
 	my $chh =   &getCandidates($lim{2},0,$lenm-1,0,24,"HH");        # hour candidates
 	my $cmi =   &getCandidates($lim{2},0,$lenm-1,0,60,"MI");        # minutes candidates
