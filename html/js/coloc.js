@@ -261,6 +261,9 @@ function coloc_newObsTarget(item) {
 					host:"fark.met.no",
 					password:""};
 		};
+		if (coloc_config[file]["obsConfigFile"]["targets"][name] === undefined) {
+		    coloc_config[file]["obsConfigFile"]["targeto"].push(name);
+		}
 		coloc_config[file]["obsConfigFile"]["targets"][name]={};
 		coloc_config[file]["obsConfigFile"]["targets"][name]["pos"]=(pos || "");
 		coloc_config[file]["obsConfigFile"]["targets"][name]["descr"]=(descr || "");
@@ -268,7 +271,6 @@ function coloc_newObsTarget(item) {
 		coloc_config[file]["obsConfigFile"]["targets"][name]["min"]=(minimum || "");
 		coloc_config[file]["obsConfigFile"]["targets"][name]["max"]=(maximum || "");
 		coloc_configEd++;
-		coloc_config[file]["obsConfigFile"]["targeto"].push(name);
 		//coloc_showObsTargetTable();
 		coloc_show();
 		item.parentNode.parentNode.children[1].children[0].value="";

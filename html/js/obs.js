@@ -147,11 +147,11 @@ function obs_newObsIndexTarget(item) {
 	};
 	if (obs_config[file]["targets"][target] === undefined) {
 	    obs_config[file]["targets"][target]={};
+	    obs_config[file]["targeto"].push(target);
 	};
 	obs_config[file]["targets"][target]["pos"]=pos;
 	obs_config[file]["targets"][target]["descr"]=descr;
 	obs_config[file]["targets"][target]["info"]=info;
-	obs_config[file]["targeto"].push(target);
 	obs_setIndexTargetTable(file);
 	item.parentNode.parentNode.children[1].children[0].value="";
 	item.parentNode.parentNode.children[2].children[0].value="";
