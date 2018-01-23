@@ -16,31 +16,30 @@ use File::Basename;
 use File::Compare;
 use File::Copy;
 #
-my $user=$ENV{USERNAME} // "www";
-my $pub="/metfark/pub";
-#
-my $debug=0;       # debug this script (0=omit output)
-#fark::debug(1);  # debug observations
-#fark::debug(2);  # debug models
-#fark::debug(3);  # debug colocation
-#fark::debug(4);  # debug plot
-#fark::debug(5);  # debug parse
+my $ref=CGI->new();
+my $param    = $ref->{param};
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
+#
+my $debug=0;
+if (defined $param->{debug}[0]) {
+    $debug=1;       # debug this script (0=omit output)
+    #fark::debug(1);  # debug observations
+    #fark::debug(2);  # debug models
+    #fark::debug(3);  # debug colocation
+    #fark::debug(4);  # debug plot
+    #fark::debug(5);  # debug parse
+}
 #
 my $autoDir=      farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
 my $scriptDir=    farkdir::getRootDir("script") || farkdir::term("Invalid root directory (script)");
 my $lockDir=     farkdir::getRootDir("lock") || farkdir::term("Invalid root directory (lock)");
 #
-#
 my $myname = basename($0);
 #
-my $ref=CGI->new();
-
 if($debug){print "Argument='" . shift . "'\n";}
 #
 $XML::LibXML::skipXMLDeclaration = 1;
-my $param    = $ref->{param};
 my $password = $param->{password}[0] // "";
 my $autoFile = $param->{root}[0] // "";
 my $cron     = $param->{cron}[0] // "";
@@ -247,6 +246,7 @@ sub loopCls {
 	    farkdir::makePath($filldir) || farkdir::term("$myname unable to make: $filldir");
 	    my $xmlfile=$clsDir . $clsfile;
 	    my $xmloldfile = $clsOldDir . $clsfile;
+	    if ($debug) {print "Re-run check against: '$xmloldfile'\n";};
 	    my $clean=compare($xmlfile,$xmloldfile);
 	    if ($clean) { # xml-file has changed
 		my ($dir,$name)=farkdir::splitName($xmloldfile);
@@ -463,7 +463,7 @@ sub updateTime {
 		    my $lastFill=0;
 		    if (-f $clsFillFile) {
 			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-			    $mtime,$ctime,$blksize,$blocks) = stat($clsUseFile);
+			    $mtime,$ctime,$blksize,$blocks) = stat($clsFillFile);
 			$lastFill=$atime;
 		    };
 		    if ($lastFill >= $lastStart) {

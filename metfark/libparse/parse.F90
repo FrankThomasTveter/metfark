@@ -4,6 +4,7 @@ module parse
   ! Global constants
   !
   logical     :: parse_bdeb=.false.
+  real        :: secperday = 86400.0D0
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Fortran 90 function parser v1.1
@@ -83,17 +84,19 @@ module parse
        cjulianhh  = 33,         &
        cjulianmi  = 34,         &
        cjulian    = 35,         &
-       cSinh      = 36,         &
-       cCosh      = 37,         &
-       cTanh      = 38,         &
-       cSin       = 39,         &
-       cCos       = 40,         &
-       cTan       = 41,         &
-       cAsin      = 42,         &
-       cAcos      = 43,         &
-       cAtan2     = 44,         &
-       cAtan      = 45,         &
-       VarBegin   = 46,         &
+       cMidnight  = 36,         &
+       cNow       = 37,         &
+       cSinh      = 38,         &
+       cCosh      = 39,         &
+       cTanh      = 40,         &
+       cSin       = 41,         &
+       cCos       = 42,         &
+       cTan       = 43,         &
+       cAsin      = 44,         &
+       cAcos      = 45,         &
+       cAtan2     = 46,         &
+       cAtan      = 47,         &
+       VarBegin   = 48,         &
        VarEnd     = VarBegin+cAtan-cAbs
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
        '-',     &
@@ -128,6 +131,8 @@ module parse
        'julianhh  ', &
        'julianmi  ', &
        'julian    ', &
+       'midnight  ', &
+       'now       ', &
        'sinh      ', &
        'cosh      ', &
        'tanh      ', &
@@ -160,7 +165,6 @@ module parse
   type parse_pointer
      type(parse_session), pointer  :: ptr => null()
   end type parse_pointer
-  INTEGER,   DIMENSION(:),  ALLOCATABLE :: ipos              ! Associates function strings
   !
 CONTAINS
   !	
@@ -270,6 +274,23 @@ CONTAINS
     return
   end function parse_type
   !
+  ! real function parse_val(FuncStr,crc250,irc)
+  !   character (Len=*), INTENT(in)  :: FuncStr
+  !   character*250 :: crc250
+  !   integer :: irc
+  !   CHARACTER (LEN=*), allocatable, INTENT(in) :: Var(:)       ! dummy
+  !   REAL(rn), allocatable, INTENT(in)          :: Val(:)  ! dummy
+  !   type(parse_session), pointer :: css => null()
+  !   call parse_open(css,crc250,irc)
+  !   if (irc.ne.0) return
+  !   call parse_parsef (css, FuncStr, Var,crc250,irc)
+  !   if (irc.ne.0) return
+  !   parse_val=parse_evalf(css,val)
+  !   call parse_close(css,crc250,irc)
+  !   if (irc.ne.0) return
+  !   return
+  ! end function parse_val
+
   SUBROUTINE parse_parsef (css, FuncStr, Var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Parse function string FuncStr and compile it into bytecode
@@ -284,13 +305,11 @@ CONTAINS
     integer, external :: length
     character*25 :: myname = "parse_parsef"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(parse_bdeb)write(*,*) myname,"Parsing '"//funcstr(1:LEN_TRIM(FuncStr))//"'"
-    ALLOCATE (ipos(LEN_TRIM(FuncStr)))                       ! Char. positions in orig. string
     Func = FuncStr                                           ! Local copy of function string
     CALL Replace ('**','^ ',Func)                            ! Exponent into 1-Char. format
     CALL RemoveSpaces (Func)                                 ! Condense function string
+    if(parse_bdeb)write(*,*) myname,"Parsing '"//func(1:len_trim(func))//"'"
     CALL parse_CheckSyntax (Func,FuncStr,Var,crc250,irc)
-    DEALLOCATE (ipos)
     if (irc.ne.0) return
     if(parse_bdeb) write(*,*)myname,"Compiling '"//funcstr(1:LEN_TRIM(FuncStr))//"'"
     CALL Parse_compile (css,Func,Var,crc250,irc)                                ! Compile into bytecode
@@ -673,6 +692,26 @@ CONTAINS
              res=zero
              RETURN
           END IF
+       CASE  (cmidnight)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          call date_and_time(VALUES=values)
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),0.0D0,0.0D0,0.0D0)
+          do ii=1,nargs-1
+             css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday             
+          end do
+       CASE  (cnow)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          call date_and_time(VALUES=values)
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          do ii=1,nargs-1
+             css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
+          end do
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -1136,6 +1175,26 @@ CONTAINS
              res=zero
              RETURN
           END IF
+       CASE  (cmidnight)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          call date_and_time(VALUES=values)
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),0.0D0,0.0D0,0.0D0)
+          do ii=1,nargs-1
+             css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
+          end do
+       CASE  (cnow)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          call date_and_time(VALUES=values)
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          do ii=1,nargs-1
+             css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
+          end do
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -1249,7 +1308,7 @@ CONTAINS
          AI                 ! arguments index
     REAL(rn),                PARAMETER :: zero = 0._rn
     integer :: ii, jj, nargs, imax,imin,iclo
-    real :: vmax,vmin,vclo,v
+    real :: vmax,vmin,vclo,v,buff
     logical :: above, below, found
     character*250 :: str250
     integer :: lens
@@ -1704,7 +1763,7 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          IF (NARGS.EQ.1) THEN ! dtg()
+          IF (NARGS.EQ.1) THEN ! dtg(days)
              call date_and_time(VALUES=values)
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
@@ -1853,6 +1912,36 @@ CONTAINS
              EvalErrType=5
              RETURN
           END IF
+       CASE  (cmidnight)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          call date_and_time(VALUES=values)
+          buff=parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),0.0D0,0.0D0,0.0D0)
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stack(SP)=css%Stack(SP)*secperday+buff
+                do ii=1,nargs-1
+                   css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
+                end do
+             end if
+          end do
+       CASE  (cnow)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          call date_and_time(VALUES=values)
+          buff=parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=css%Stacka(SP,JJ)*secperday+buff
+                do ii=1,nargs-1
+                   css%Stacka(SP,jj)=css%Stacka(SP,jj)+css%Stacka(SP+ii,jj)*secperday
+                end do
+             end if
+          end do
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -2292,7 +2381,7 @@ CONTAINS
     END IF
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
-    if (n.eq.0.and.parse_bdeb)write(*,*) myname,"No match for:"//str(ib:in-1)
+    if (n.eq.0.and.parse_bdeb)write(*,*) myname,"No match for '"//str(ib:in-1)//"'"
     if(parse_bdeb)write(*,*)myname,"Done.",ib,in
   END FUNCTION parse_VariableIndex
   !
@@ -2302,19 +2391,22 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
     CHARACTER (LEN=*), INTENT(inout) :: str
-    INTEGER                          :: k,lstr
+    INTEGER                          :: lstr,ii,jj
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    lstr = LEN_TRIM(str)
-    ipos = (/ (k,k=1,lstr) /)
-    k = 1
-    DO WHILE (str(k:lstr) /= ' ')                             
-       IF (str(k:k) == ' ') THEN
-          str(k:lstr)  = str(k+1:lstr)//' '                  ! Move 1 character to left
-          ipos(k:lstr) = (/ ipos(k+1:lstr), 0 /)             ! Move 1 element to left
-          k = k-1
-       END IF
-       k = k+1
-    END DO
+    lstr = LEN(str)
+    ii=0
+    do jj=1,lstr
+       if (str(jj:jj).ne." ".and.ichar(str(jj:jj)).ge.32) then ! ascii characters >= 32
+          ii=ii+1
+          str(ii:ii)=str(jj:jj)
+       end if
+    end do
+    do jj=ii+1,lstr
+       str(jj:jj)=' '
+    end do
+    !do jj=1,lstr
+    !   write(*,*)'parse_removespaces ',jj,"'"//str(jj:jj)//"'",ichar(str(jj:jj))
+    !end do
   END SUBROUTINE RemoveSpaces
   !
   SUBROUTINE Replace (ca,cb,str)

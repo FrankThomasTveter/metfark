@@ -1057,16 +1057,15 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc  ! error return code (0=ok)
-    integer :: irc2
     type(obs_file), pointer :: currentFile,nextFile
     character*22 :: myname="observation_removeFiles "
     currentFile => css%firstFile%next
     do while (.not.associated(currentFile,target=css%lastFile))
        nextFile => currentFile%next
        if (associated(currentFile)) then
-          if(obs_bdeb)write(*,*)myname,' Removing categories.'
+          !if(obs_bdeb)write(*,*)myname,' Removing categories.'
           call observation_clearCat(currentFile)
-          if(obs_bdeb)write(*,*)myname,' Updating inventory.'
+          !if(obs_bdeb)write(*,*)myname,' Updating inventory.'
           css%nFileIndexes = css%nFileIndexes - 1
           css%stackReady=.false.
           currentFile%next%prev => currentFile%prev
@@ -1093,7 +1092,6 @@ CONTAINS
     integer :: nvalues, tsize, ndims
     integer :: ii,jj,kk,tt
     CHARACTER(LEN=80)               :: varname
-    integer :: irc2
     integer, external :: length
     integer :: lenc,leni,lenv,lens,lenp,lend
     logical :: bbok
@@ -1176,7 +1174,6 @@ CONTAINS
     integer :: irc
     type(obs_file), pointer :: currentFile => null()
     type(obs_file), pointer :: prevFile => null()
-    integer :: irc2
     character*22 :: myname="observation_stackpop"
     logical :: bdone
     integer, external :: length
@@ -1892,7 +1889,7 @@ CONTAINS
              if (irc.ne.0) then
                 if(obs_bdeb)then
                    write(*,*)myname," Compiling target limit: '"//&
-                        & currenttarget%max80(1:lene)//"'",ii
+                        & currenttarget%max80(1:lens)//"'",ii
                    do jj=1,size(var)
                       write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
                            & trim(var(jj))//"'"
@@ -2127,8 +2124,11 @@ CONTAINS
   !
   ! get next observation file within limits...
   !
-  logical function observation_loopFileStack(css,crc250,irc)
+  logical function observation_loopFileStack(css,obs_lval,obs_minval,obs_maxval,crc250,irc)
     type(obs_session), pointer :: css !  current session
+    logical :: obs_lval(2)
+    real :: obs_minval
+    real :: obs_maxval
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="observation_loopFileStack"
@@ -2148,8 +2148,11 @@ CONTAINS
           css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
           css%currentFile => css%fileStack(css%currentFileIndex)%ptr
           ! check if inside limits
-          if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
-               & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then 
+          if (.not.((obs_lval(1).and.obs_minval.gt.css%currentFile%ind_stop) .or.&
+               & (obs_lval(2).and.obs_maxval.lt.css%currentFile%ind_start)).and. &
+               & .not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
+               & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start)) &
+               &) then 
              found=.true.
              bdone=.true.
              if (obs_bdeb) write(*,*)myname,' Found:',&
@@ -2286,32 +2289,54 @@ CONTAINS
     css%int_val(5)=1
   end subroutine observation_stackfirst
   !
-  subroutine observation_findStackLimits(css,crc250,irc)
+  subroutine observation_findStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
     use sort
     type(obs_session), pointer :: css !  current session
+    logical :: ind_lval(2)
+    real :: ind_minval
+    real :: ind_maxval
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="observation_findStackLimits"
     integer :: leftmin,rightmin,leftmax,rightmax
+    logical :: obs_lval(2)
+    real :: obs_minval
+    real :: obs_maxval
     ! leftFileSortIndex refers to fileStackSort(*,2)
     ! rightFileSortIndex refers to fileStackSort(*,2)
     ! check 
-    if (css%ind_lval(1)) then
+    obs_lval(1)=ind_lval(1)
+    obs_minval=ind_minval
+    if (obs_lval(1).and.css%ind_lval(1)) then
+       obs_minval=max(obs_minval,css%ind_minval)
+    else if (css%ind_lval(1)) then
+       obs_lval(1)=.true.
+       obs_minval=css%ind_minval
+    end if
+    obs_lval(2)=ind_lval(2)
+    obs_maxval=ind_maxval
+    if (obs_lval(2).and.css%ind_lval(2)) then
+       obs_maxval=min(obs_maxval,css%ind_maxval)
+    else if (css%ind_lval(2)) then
+       obs_lval(2)=.true.
+       obs_maxval=css%ind_maxval
+    end if
+    if (obs_lval(1)) then
        call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,2),1.0D-5, &
-            & css%nFileSortIndexes,css%fileStackInd(1,2),css%ind_minval,leftmin,rightmin)
+            & css%nFileSortIndexes,css%fileStackInd(1,2),obs_minval,leftmin,rightmin)
        rightmin=max(leftmin,rightmin) ! ignore before first entry
-       if (obs_bdeb) write(*,*)myname,' Minval:',css%ind_minval,&
+       if (obs_bdeb) write(*,*)myname,' Minval:',obs_minval,&
             & css%fileStackSort(1,2),css%fileStackInd(1,2),&
             & leftmin,rightmin
     else
        leftmin=1
        rightmin=1
     end if
-    if (css%ind_lval(2)) then
+    if (obs_lval(2)) then
        call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,1),1.0D-5, &
-            & css%nFileSortIndexes,css%fileStackInd(1,1),css%ind_maxval,leftmax,rightmax)
+            & css%nFileSortIndexes,css%fileStackInd(1,1),obs_maxval,leftmax,rightmax)
        leftmax=min(rightmax,leftmax) ! ignore after last entry
-       if (obs_bdeb) write(*,*)myname,' Maxval:',css%ind_maxval,&
+       if (obs_bdeb) write(*,*)myname,' Maxval:',obs_maxval,&
             & css%fileStackSort(1,1),css%fileStackInd(1,1),&
             & leftmax,rightmax
     else
@@ -2343,8 +2368,9 @@ CONTAINS
     type(parse_session), pointer :: pit
     character*250 :: crc250
     integer :: irc
-    character*22 :: myname="observation_setTransformation"
-    if (obs_bdeb)write(*,*)myname," Transformation:'"//pit%funcStr100(1:pit%lenf)//"'"
+    character*30 :: myname="observation_setTransformation"
+    if (obs_bdeb)write(*,*)myname," Transformation:'"//pit%funcStr100(1:pit%lenf)//"'", &
+         & css%ind_eset,associated(css%ind_pt),css%ind_lval(1),css%ind_lval(2)
     css%ind_pt => pit
     css%ind_tset=associated(css%ind_pt)
     if (css%ind_eset .and. css%ind_tset .and. css%ind_lval(1)) then
@@ -2420,7 +2446,10 @@ CONTAINS
     type(obs_file), pointer :: stackNext => null()
     integer :: lens, lene
     integer, external :: length
-    integer :: irc2
+    type(parse_session),pointer :: plim => null()  ! parse_session pointer must be se
+    character*80, allocatable :: var(:)
+    real, allocatable :: val(:)
+    integer :: ii,jj
     character*22 :: myname="observation_setIndexLimits"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     call chop0(s25,25)
@@ -2428,23 +2457,61 @@ CONTAINS
     call chop0(e25,25)
     lene=length(e25,25,10)
     if(obs_bdeb)write(*,*)myname,' Limits:'//s25(1:lens)//" -> "//e25(1:lene)
-    css%ind_lval(1)=.true.
-    css%ind_lval(2)=.true.
+    call parse_open(plim,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       return
+    end if
     if (lens.ne.0) then
-       read(s25(1:lens),*,iostat=irc2) css%ind_minval
-       if (irc2.ne.0) then
-          css%ind_lval(1)=.false.
+       call parse_parsef(plim,s25(1:lens),var,crc250,irc)
+       if (irc.ne.0) then
+          if(obs_bdeb)then
+             write(*,*)myname," Compiling target limit: '"//&
+                  & s25(1:lens)//"'",ii
+             do jj=1,size(var)
+                write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                     & trim(var(jj))//"'"
+             end do
+          end if
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parsef.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
        end if
+       css%ind_minval=parse_evalf(plim,val)
+       css%ind_lval(1)=.true.
     else
        css%ind_lval(1)=.false.
     end if
     if (lene.ne.0) then
-       read(e25(1:lene),*,iostat=irc2)css%ind_maxval
-       if (irc2.ne.0) then
-          css%ind_lval(2)=.false.
+       call parse_parsef(plim,e25(1:lene),var,crc250,irc)
+       if (irc.ne.0) then
+          if(obs_bdeb)then
+             write(*,*)myname," Compiling target limit: '"//&
+                  & e25(1:lene)//"'",ii
+             do jj=1,size(var)
+                write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                     & trim(var(jj))//"'"
+             end do
+          end if
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parsef.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
        end if
+       css%ind_maxval=parse_evalf(plim,val)
+       css%ind_lval(2)=.true.
     else
        css%ind_lval(2)=.false.
+    end if
+    call parse_close(plim,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Error return from 'parse_close'.")
+       return
     end if
     if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lval,css%ind_minval,css%ind_maxval
     return
@@ -2499,9 +2566,6 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="observation_setFileStackLimits"
-    integer :: irc2
-    ! set limits
-    call observation_setIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
     ! make sure file stack is sorted
     if (.not.css%stackReady) then
        call observation_sortStack(css,crc250,irc)
@@ -2515,7 +2579,7 @@ CONTAINS
        css%stackReady = .true.
     end if
     ! find index start/stop...
-    call observation_findStackLimits(css,crc250,irc)
+    call observation_findStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," Error return from observation_makeStackLimits.")
@@ -2533,7 +2597,6 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     logical :: ind_lval(2)
     real :: ind_minval,ind_maxval
-    integer :: irc2
     character*22 :: myname="observation_setIndexLimitsRaw"
     ! set limits
     css%ind_lval(1)=ind_lval(1)
@@ -2548,7 +2611,6 @@ CONTAINS
     type(obs_session), pointer :: css !  current session
     logical :: ind_lval(2)
     real :: ind_minval,ind_maxval
-    integer :: irc2
     character*22 :: myname="observation_getIndexLimitsRaw"
     ind_lval(1)=css%ind_lval(1)
     ind_lval(2)=css%ind_lval(2)

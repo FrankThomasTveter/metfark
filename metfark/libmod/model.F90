@@ -26,8 +26,8 @@ module model
      character*80 :: n80         ! name
      integer :: lenn             ! length of name
      character*80 :: v80         ! variable
-     character*80 :: l80         ! lower limit
-     character*80 :: u80         ! upper limit
+     character*80 :: min80         ! lower limit
+     character*80 :: max80         ! upper limit
      logical :: lslice = .false. ! is target a slice variable
      type(mod_target), pointer :: prev => null()   ! linked list
      type(mod_target), pointer :: next => null()   ! linked list
@@ -125,6 +125,10 @@ module model
      type(mod_attPointer), pointer :: att(:) => null()
      real :: scale = 1.0D0
      ! missing value
+     logical :: mmrange = .false. ! are limits set?
+     logical :: mmset   = .false. ! were there any valid values?
+     real :: minval = 0.0D0
+     real :: maxval = 0.0D0
      integer :: misstype = 0 ! default
      character*1 ::mc
      integer*1::   m1
@@ -255,8 +259,8 @@ module model
      integer, pointer      :: trg_lenv(:) => null()    ! list of target name length
      integer, pointer      :: trg_dim(:) => null()     ! index to dimension
      integer, pointer      :: trg_var(:) => null()     ! index to variable
-     character*80, pointer :: trg_l80(:) => null()     ! list of lower limits
-     character*80, pointer :: trg_u80(:) => null()     ! list of upper limits
+     character*80, pointer :: trg_min80(:) => null()     ! list of lower limits
+     character*80, pointer :: trg_max80(:) => null()     ! list of upper limits
      real, pointer         :: trg_minval(:) => null()  ! list of lower values
      real, pointer         :: trg_maxval(:) => null()  ! list of upper values
      logical, pointer      :: trg_sliceset(:) => null()! is target a slice variable?
@@ -549,8 +553,8 @@ CONTAINS
     if (associated(css%trg_lenv)) deallocate(css%trg_lenv)
     if (associated(css%trg_dim)) deallocate(css%trg_dim)
     if (associated(css%trg_var)) deallocate(css%trg_var)
-    if (associated(css%trg_l80)) deallocate(css%trg_l80)
-    if (associated(css%trg_u80)) deallocate(css%trg_u80)
+    if (associated(css%trg_min80)) deallocate(css%trg_min80)
+    if (associated(css%trg_max80)) deallocate(css%trg_max80)
     if (associated(css%trg_minval)) deallocate(css%trg_minval)
     if (associated(css%trg_maxval)) deallocate(css%trg_maxval)
     if (associated(css%trg_sliceset)) deallocate(css%trg_sliceset)
@@ -789,7 +793,6 @@ CONTAINS
     integer :: nvalues, tsize, ndims
     integer :: ii,jj,kk,tt
     CHARACTER(LEN=80)               :: var80
-    integer :: irc2
     integer, external :: length
     integer :: lenc,leni,lenv,lens,lenp,lend
     logical :: bbok
@@ -850,6 +853,17 @@ CONTAINS
              call model_errorappend(crc250,"\n")
              return
           end if
+       end if
+       if (bok) then
+          call model_setRange(css,newFile,crc250,irc)
+          if (irc.ne.0) then
+             bok=.false.
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from setLimits.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if          
        end if
        if (bok) then
           call model_readSortVariable(css,newFile,crc250,irc)
@@ -1082,8 +1096,11 @@ CONTAINS
     return
   end function model_getFileId
   !
-  logical function model_loopFileStack(css,crc250,irc)
+  logical function model_loopFileStack(css,mod_lval,mod_minval,mod_maxval,crc250,irc)
     type(mod_session), pointer :: css !  current session
+    logical :: mod_lval(2)
+    real :: mod_minval
+    real :: mod_maxval
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="model_loopFileStack"
@@ -1101,7 +1118,9 @@ CONTAINS
           css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
           css%currentFile => css%fileStack(css%currentFileIndex)%ptr
           ! check if inside limits
-          if (.not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
+          if (.not.((mod_lval(1).and.mod_minval.gt.css%currentFile%ind_stop) .or.&
+               & (mod_lval(2).and.mod_maxval.lt.css%currentFile%ind_start)).and. &
+               & .not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
                & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then ! overlap
              found=.true.
              bdone=.true.
@@ -1113,6 +1132,81 @@ CONTAINS
     model_loopFileStack=found
     return
   end function model_loopFileStack
+  !
+  ! check if we immediately know that current file is outside target limits
+  !
+  logical function model_rangeCheck(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    integer :: ii
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="model_rangeCheck"
+    logical :: bdone,found
+    integer :: itrg,varid
+    type(mod_variable),pointer :: v
+    type(mod_file),pointer :: f
+    ! check if we have targets with limits set
+    if (associated(css%currentFile)) then
+       f => css%currentFile
+       call model_setTargetIndex(css,f,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from setTargetIndex.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if(mod_bdeb)write(*,*)myname,'Checking target range:',css%ctrg
+       do itrg=1,css%ctrg
+          if (css%trg_minset(itrg).or.css%trg_maxset(itrg)) then !check variable max/min
+             ! get variable          
+             varid=css%trg_var(itrg) ! set by model_setTargetIndex
+             v => f%var(varid)%ptr
+             if (associated(v)) then
+                if (v%mmrange) then ! we have limits
+                   if (.not.model_variableCheck(css,v,itrg)) then
+                      if(mod_bdeb)write(*,*)myname,'Failed:',varid," '"//v%var80(1:v%lenv)//"'",&
+                           & itrg, v%mmrange,v%mmset,v%minval,v%maxval,&
+                           & css%trg_minset(itrg),css%trg_maxset(itrg),&
+                           & css%trg_minval(itrg),css%trg_maxval(itrg)
+                      model_rangeCheck=.false.
+                      return
+                   end if
+                end if
+             end if
+          end if
+       end do
+    end if
+    model_rangeCheck=.true. ! file is ok
+    return
+  end function model_rangeCheck
+  !
+  ! Check that variable max/min is within target limits...
+  !
+  logical function model_variableCheck(css,v,itrg)
+    type(mod_session), pointer :: css !  current session
+    type(mod_variable), pointer :: v
+    integer :: itrg
+    if (.not.v%mmset) then
+       model_variableCheck=.false. ! required values are all undefined...
+       return
+    else
+       if (css%trg_minset(itrg)) then
+          if (v%maxval.lt.css%trg_minval(itrg)) then
+             model_variableCheck=.false.
+             return
+          end if
+       end if
+       if (css%trg_maxset(itrg)) then
+          if (v%minval.gt.css%trg_maxval(itrg)) then
+             model_variableCheck=.false.
+             return
+          end if
+       end if
+    end if
+    model_variableCheck=.true. ! all ok so far...
+    return
+  end function model_variableCheck
   !
   ! sort the file stack
   !
@@ -1191,30 +1285,52 @@ CONTAINS
     return
   end subroutine model_sortStack
   !
-  subroutine model_findStackLimits(css,crc250,irc)
+  subroutine model_findStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
     use sort
     type(mod_session), pointer :: css !  current session
-    character*250 :: crc250
+    logical :: ind_lval(2)
+    real :: ind_minval
+    real :: ind_maxval
+     character*250 :: crc250
     integer :: irc
     character*22 :: myname="model_findStackLimits"
     integer :: leftmin,rightmin,leftmax,rightmax
+    logical :: mod_lval(2)
+    real :: mod_minval
+    real :: mod_maxval
     if (mod_bdeb)write(*,*)myname,'Entering, Number of files:',css%nFileIndexes
-    if (css%ind_lval(1)) then
+    mod_lval(1)=ind_lval(1)
+    mod_minval=ind_minval
+    if (mod_lval(1).and.css%ind_lval(1)) then
+       mod_minval=max(mod_minval,css%ind_minval)
+    else if (css%ind_lval(1)) then
+       mod_lval(1)=.true.
+       mod_minval=css%ind_minval
+    end if
+    mod_lval(2)=ind_lval(2)
+    mod_maxval=ind_maxval
+    if (mod_lval(2).and.css%ind_lval(2)) then
+       mod_maxval=min(mod_maxval,css%ind_maxval)
+    else if (css%ind_lval(2)) then
+       mod_lval(2)=.true.
+       mod_maxval=css%ind_maxval
+    end if
+    if (mod_lval(1)) then
        call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,2),1.0D-5, &
-            & css%nFileSortIndexes,css%fileStackInd(1,2),css%ind_minval,leftmin,rightmin)
+            & css%nFileSortIndexes,css%fileStackInd(1,2),mod_minval,leftmin,rightmin)
        rightmin=max(leftmin,rightmin) ! ignore before first entry
-       if (mod_bdeb) write(*,*)myname,' Minval:',css%ind_minval,&
+       if (mod_bdeb) write(*,*)myname,' Minval:',mod_minval,&
             & css%fileStackSort(1,2),css%fileStackInd(1,2),&
             & leftmin,rightmin
     else
        leftmin=1
        rightmin=1
     end if
-    if (css%ind_lval(2)) then
+    if (mod_lval(2)) then
        call sort_heapsearch1r(css%nFileIndexes,css%fileStackSort(1,1),1.0D-5, &
-            & css%nFileSortIndexes,css%fileStackInd(1,1),css%ind_maxval,leftmax,rightmax)
+            & css%nFileSortIndexes,css%fileStackInd(1,1),mod_maxval,leftmax,rightmax)
        leftmax=min(rightmax,leftmax) ! ignore after last entry
-       if (mod_bdeb) write(*,*)myname,' Maxval:',css%ind_maxval,&
+       if (mod_bdeb) write(*,*)myname,' Maxval:',mod_maxval,&
             & css%fileStackSort(1,1),css%fileStackInd(1,1),&
             & leftmax,rightmax
     else
@@ -1249,6 +1365,8 @@ CONTAINS
     integer, external :: length,ftunit
     integer :: lenp,lenf,lenv,lend,unitr,ii,jj
     character*22 :: myname="model_makeCache"
+    character*50 :: minval50,maxval50
+    integer :: lenmi,lenma
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1311,9 +1429,26 @@ CONTAINS
        do ii=1,currentFile%nvar
           !call chop0(currentFile%var(ii)%ptr%var80,80)
           lenv=length(currentFile%var(ii)%ptr%var80,80,5)
-          write(unitr,'(I0,X,A,100(X,I0))',iostat=irc) currentFile%var(ii)%ptr%ndim, &
-               & currentFile%var(ii)%ptr%var80(1:lenv),&
-               & (currentFile%var(ii)%ptr%ind(jj),jj=1,currentFile%var(ii)%ptr%ndim)
+          write(unitr,'(I0,X,A)',advance="no",iostat=irc) &
+               & currentFile%var(ii)%ptr%ndim, currentFile%var(ii)%ptr%var80(1:lenv)
+          do jj=1,currentFile%var(ii)%ptr%ndim
+             write(unitr,'(X,I0)',advance="no",iostat=irc) currentFile%var(ii)%ptr%ind(jj)
+          end do
+          write(unitr,'(X,L1)',advance="no",iostat=irc) &
+               & currentFile%var(ii)%ptr%mmrange
+          if (currentFile%var(ii)%ptr%mmrange) then
+             write(unitr,'(X,L1)',advance="no",iostat=irc) &
+                  & currentFile%var(ii)%ptr%mmset
+             if (currentFile%var(ii)%ptr%mmset) then
+                call model_wash(currentFile%var(ii)%ptr%minval,minval50,lenmi)
+                call model_wash(currentFile%var(ii)%ptr%maxval,maxval50,lenma)
+                write(unitr,'(X,A,X,A)',iostat=irc) minval50(1:lenmi),maxval50(1:lenma)
+             else
+                write(unitr,*,iostat=irc)
+             end if
+          else
+             write(unitr,*,iostat=irc)
+          end if
        end do
        currentFile=>currentFile%next
     end do
@@ -1342,6 +1477,7 @@ CONTAINS
     integer :: lenp,lenb,lend,ii,jj,kk,opos,pos,unitr
     type(mod_variable),pointer :: v     ! variable
     character*250 :: buff250
+    character*1 :: c1
     character*22 :: myname="model_loadCache"
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
@@ -1466,7 +1602,8 @@ CONTAINS
        end do
        allocate(newFile%istart(newFile%ndim),newFile%istop(newFile%ndim),&
             & newFile%dim80(newFile%ndim),newFile%dim_var(newFile%ndim),&
-            & newFile%dim_val(newFile%ndim),newFile%dim_trg(newFile%ndim),stat=irc)
+            & newFile%dim_val(newFile%ndim),newFile%dim_trg(newFile%ndim),&
+            & newFile%var80(newFile%nvar),newFile%lenv(newFile%nvar),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Unable to allocate new Sort item.")
@@ -1517,6 +1654,9 @@ CONTAINS
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           v%var80=buff250(opos+1:min(80+opos,pos-1))
+          v%lenv=pos-opos-1
+          newFile%var80(jj)=v%var80
+          newFile%lenv(jj)=v%lenv
           allocate(v%ind(v%ndim),v%istart(v%ndim),v%icount(v%ndim),stat=irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
@@ -1540,6 +1680,25 @@ CONTAINS
                 return
              end if
           end do
+          opos=pos
+          call findDelimiter(buff250(1:lenb)," ",pos)
+          c1=buff250(opos+1:max(opos+1,min(opos+2,pos-1)))
+          v%mmrange=(c1.eq."T")
+          if (v%mmrange) then
+             opos=pos
+             call findDelimiter(buff250(1:lenb)," ",pos)
+             v%mmset=(buff250(opos+1:pos-1).eq."T")
+          else
+             v%mmset=.false.
+          end if
+          if (v%mmset) then
+             opos=pos
+             call findDelimiter(buff250(1:lenb)," ",pos)
+             read(buff250(opos+1:pos-1),*,iostat=irc)v%minval
+             opos=pos
+             call findDelimiter(buff250(1:lenb)," ",pos)
+             read(buff250(opos+1:pos-1),*,iostat=irc)v%maxval
+          end if
        end do
     end do
     ! close file
@@ -1582,12 +1741,12 @@ CONTAINS
   !
   ! push target to the stack
   !
-  subroutine model_pushtarget(css,n80,v80,l80,u80,crc250,irc)
+  subroutine model_pushtarget(css,n80,v80,min80,max80,crc250,irc)
     type(mod_session), pointer :: css !  current session
     character*80 :: n80        ! target name
     character*80 :: v80        ! variable
-    character*80 :: l80        ! lower value
-    character*80 :: u80        ! upper value
+    character*80 :: min80        ! lower value
+    character*80 :: max80        ! upper value
     character*250 :: crc250
     integer :: irc
     integer, external :: length
@@ -1606,8 +1765,8 @@ CONTAINS
     newTarget%n80=n80
     newTarget%lenn=lenn
     newTarget%v80=v80
-    newTarget%l80=l80
-    newTarget%u80=u80
+    newTarget%min80=min80
+    newTarget%max80=max80
     css%ntrg=css%ntrg+1
     newTarget%prev => css%lastTrg%prev
     newTarget%next => css%lastTrg
@@ -1618,13 +1777,13 @@ CONTAINS
     return
   end subroutine model_pushtarget
   !
-  logical function model_loopTarget(css,n80,v80,l80,u80,crc250,irc)
+  logical function model_loopTarget(css,n80,v80,min80,max80,crc250,irc)
     implicit none
     type(mod_session), pointer :: css !  current session
     character*80  :: n80       ! target name
     character*80  :: v80       ! variable
-    character*80  :: l80      ! min value
-    character*80  :: u80      ! max value
+    character*80  :: min80      ! min value
+    character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="model_loopTarget"
@@ -1640,8 +1799,8 @@ CONTAINS
     else
        n80=css%currentTrg%n80
        v80=css%currentTrg%v80
-       l80=css%currentTrg%l80
-       u80=css%currentTrg%u80
+       min80=css%currentTrg%min80
+       max80=css%currentTrg%max80
        model_looptarget=.true.
     end if
     return
@@ -1766,8 +1925,8 @@ CONTAINS
        if(associated(css%trg_lenv)) deallocate(css%trg_lenv)
        if(associated(css%trg_dim)) deallocate(css%trg_dim)
        if(associated(css%trg_var)) deallocate(css%trg_var)
-       if(associated(css%trg_l80)) deallocate(css%trg_l80)
-       if(associated(css%trg_u80)) deallocate(css%trg_u80)
+       if(associated(css%trg_min80)) deallocate(css%trg_min80)
+       if(associated(css%trg_max80)) deallocate(css%trg_max80)
        if(associated(css%trg_minval)) deallocate(css%trg_minval)
        if(associated(css%trg_maxval)) deallocate(css%trg_maxval)
        if(associated(css%trg_sliceset)) deallocate(css%trg_sliceset)
@@ -1782,7 +1941,7 @@ CONTAINS
        if (css%ctrg.ne.0) then
           allocate(css%trg80(css%ctrg), css%trg_lent(css%ctrg), css%trg_v80(css%ctrg),  &
                & css%trg_lenv(css%ctrg), css%trg_dim(css%ctrg), css%trg_var(css%ctrg), &
-               & css%trg_l80(css%ctrg), css%trg_u80(css%ctrg),&
+               & css%trg_min80(css%ctrg), css%trg_max80(css%ctrg),&
                & css%trg_minval(css%ctrg), css%trg_maxval(css%ctrg), &
                & css%trg_sliceset(css%ctrg), css%trg_valset(css%ctrg), &
                & css%trg_minset(css%ctrg), css%trg_maxset(css%ctrg), &
@@ -1814,11 +1973,11 @@ CONTAINS
                   & css%trg80(ii)(1:css%trg_lent(ii)),&
                   & css%trg_v80(ii)(1:css%trg_lenv(ii))
              !
-             css%trg_l80(ii)=currentTarget%l80
-             call chop0(css%trg_l80(ii),80)
-             lens=length(css%trg_l80(ii),80,10)
+             css%trg_min80(ii)=currentTarget%min80
+             call chop0(css%trg_min80(ii),80)
+             lens=length(css%trg_min80(ii),80,10)
              if (lens.ne.0) then
-                call parse_parsef(plim,css%trg_l80(ii)(1:lens),css%sys_var,crc250,irc)
+                call parse_parsef(plim,css%trg_min80(ii)(1:lens),css%sys_var,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
                    call model_errorappend(crc250," Error return from parsef.")
@@ -1833,12 +1992,12 @@ CONTAINS
              else
                 css%trg_minset(ii)=.false.
              end if
-             !read (css%trg_l80(ii)(1:lens),*,iostat=irc2)
-             css%trg_u80(ii)=currentTarget%u80
-             call chop0(css%trg_u80(ii),80)
-             lens=length(css%trg_u80(ii),80,10)
+             !read (css%trg_min80(ii)(1:lens),*,iostat=irc2)
+             css%trg_max80(ii)=currentTarget%max80
+             call chop0(css%trg_max80(ii),80)
+             lens=length(css%trg_max80(ii),80,10)
              if (lens.ne.0) then
-                call parse_parsef(plim,css%trg_u80(ii)(1:lens),css%sys_var,crc250,irc)
+                call parse_parsef(plim,css%trg_max80(ii)(1:lens),css%sys_var,crc250,irc)
                 if (irc.ne.0) then
                    call model_errorappend(crc250,myname)
                    call model_errorappend(crc250," Error return from parsef.")
@@ -1853,7 +2012,7 @@ CONTAINS
              else
                 css%trg_maxset(ii)=.false.
              end if
-             ! read (css%trg_u80(ii)(1:lens),*,iostat=irc2)css%trg_maxval(ii)
+             ! read (css%trg_max80(ii)(1:lens),*,iostat=irc2)css%trg_maxval(ii)
              !css%trg_maxset(ii)=(irc2.eq.0)
              css%trg_sliceset(ii)=currentTarget%lslice
              css%trg_req(ii)=.false.
@@ -2122,38 +2281,66 @@ CONTAINS
     return
   end subroutine model_setTarget
   !
-  subroutine model_checkTargetVal(css,bok,crc250,irc)
+  subroutine model_checkTargetVal(css,locid,bok,crc250,irc)
     type(mod_session), pointer :: css !  current session
+    integer :: locid
     logical :: bok
     character*250 :: crc250
     integer :: irc
-    character*25 :: myname="model_checkTarget"
-    integer :: ii
-    bok=.true.
-    do ii=1,css%ctrg
-       if (bok) then
-          if (css%trg_valset(ii)) then
-             if (css%trg_minset(ii)) then
-                if (css%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
-             end if
-             if (css%trg_maxset(ii)) then
-                if (css%trg_val(ii).gt.css%trg_maxval(ii)) bok=.false.
-             end if
-             if (bok) then
-                css%trg_ook(ii)=css%trg_ook(ii)+1
-             else
-                css%trg_orm(ii)=css%trg_orm(ii)+1
-             end if
-          end if
-          if (.not.bok.and.mod_bdeb)write(*,*)myname,'Rejected:',ii,&
-               & css%trg_val(ii),css%trg_minval(ii),css%trg_maxval(ii),&
-               & css%trg_valset(ii),css%trg_minset(ii),css%trg_maxset(ii)
+    character*25 :: myname="model_checkTargetVal"
+    type(mod_location), pointer :: loc
+    real :: val
+    integer :: pos,ii
+    if (bok.and.css%locReady) then
+       pos=locid-css%locoffset
+       if (pos.gt.css%nloc) then
+          if(mod_bdeb)write(*,*)myname,'Location pos out of range. resetting.',pos,'->',css%nloc,&
+               & locid,css%locoffset
+          bok=.false.
+          pos=css%nloc
        end if
-    end do
-    if (bok) then
-       css%trg_ook(0)=css%trg_ook(0)+1
-    else
-       css%trg_orm(0)=css%trg_orm(0)+1
+       if (bok) then
+          loc => css%locData(pos)%ptr
+          if (.not.associated(loc)) then
+             if(mod_bdeb)write(*,*)myname,'Location invalid location at ',pos,'->',css%nloc
+             bok=.false.
+          end if
+       end if
+       if (bok) then
+          bok=(loc%bok)
+          if (bok) then
+             css%currentFile%ook(2)=css%currentFile%ook(2)+1
+          else
+             if (mod_bdeb)write(*,*)myname,'Loc fail:',loc%bok
+             css%currentFile%orm(2)=css%currentFile%orm(2)+1 ! location error
+          end if
+       end if
+       do ii=1,loc%ctrg
+          if (bok) then
+             if (loc%trg_lval(ii)) then
+                if (css%trg_minset(ii)) then
+                   if (loc%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
+                end if
+                if (css%trg_maxset(ii)) then
+                   if (loc%trg_val(ii).gt.css%trg_maxval(ii)) bok=.false.
+                end if
+                if (bok) then
+                   css%trg_ook(ii)=css%trg_ook(ii)+1
+                else
+                   css%trg_orm(ii)=css%trg_orm(ii)+1
+                end if
+             end if
+             if (.not.bok.and.mod_bdeb)write(*,*)myname,'Rejected:',&
+                  & ii,css%trg80(ii)(1:css%trg_lent(ii)), &
+                  & loc%trg_val(ii),css%trg_minval(ii),css%trg_maxval(ii),&
+                  & loc%trg_lval(ii),css%trg_minset(ii),css%trg_maxset(ii)
+          end if
+       end do
+       if (bok) then
+          css%trg_ook(0)=css%trg_ook(0)+1
+       else
+          css%trg_orm(0)=css%trg_orm(0)+1
+       end if
     end if
     return
   end subroutine model_checkTargetVal
@@ -2193,16 +2380,19 @@ CONTAINS
     if (mod_bdeb) then
        do ii=1, css%ctrg
           write(*,*)myname," Target ",ii," '"//css%trg80(ii)(1:css%trg_lent(ii)),&
-               & "' -> -"//css%trg_v80(ii)(1:css%trg_lenv(ii))//"'"
+               & "' -> '"//css%trg_v80(ii)(1:css%trg_lenv(ii))//"'"
        end do
     end if
+    if(mod_bdeb)write(*,*)myname,' Setting dims.',file%ndim
     do jj=1,file%ndim
        file%dim_trg(jj)=0
     end do
+    if(mod_bdeb)write(*,*)myname,' Looping targets.',css%ctrg
     do ii=1,css%ctrg
        css%trg_var(ii)=0 ! global variable index
        css%trg_dim(ii)=0 ! global dimension index
        leng=css%trg_lenv(ii)
+       if(mod_bdeb)write(*,*)myname," Checking for dimension '"//css%trg_v80(ii)(1:leng)//"'",file%ndim
        if (leng.gt.2) then
           if (css%trg_v80(ii)(1:1).eq."(".and.css%trg_v80(ii)(leng:leng).eq.")") then
              do jj=1,file%ndim
@@ -2218,9 +2408,12 @@ CONTAINS
              end do
           end if
        end if
+       if(mod_bdeb)write(*,*)myname," Checking for variable '"//css%trg_v80(ii)(1:leng)//"'",&
+            & file%nvar,size(file%var80)
        if (css%trg_dim(ii).eq.0) then ! not a dimension, must be a variable
           do jj=1,file%nvar ! global variable index
              lenv=length(file%var80(jj),80,10)
+             if(mod_bdeb)write(*,*)myname," Variable '"//file%var80(jj)(1:lenv)//"'",jj
              if (css%trg_v80(ii)(1:leng).eq.file%var80(jj)(1:lenv)) then
                 css%trg_var(ii)=jj
                 var => file%var(jj)%ptr
@@ -2683,14 +2876,14 @@ CONTAINS
     return
   end subroutine model_locpushTarget
   !
-  subroutine model_checkLoc(css,locid,bok)
+  subroutine model_checkFilter(css,locid,bok,crc250,irc)
     type(mod_session), pointer :: css !  current session
     integer :: locid
     logical :: bok
     character*250 :: crc250
     integer :: irc
     integer :: pos, ii
-    character*25 :: myname="model_checkLoc"
+    character*25 :: myname="model_checkFilter"
     type(mod_location), pointer :: loc
     real :: val
     if (bok.and.css%locReady) then
@@ -2766,7 +2959,7 @@ CONTAINS
        if (mod_bdeb)write(*,*)myname,'Obs FAIL:',locid,bok,css%mpo_set
     end if
     return
-  end subroutine model_checkLoc
+  end subroutine model_checkFilter
   !
   subroutine model_setfilter(css,flt,crc250,irc)
     implicit none
@@ -6108,7 +6301,7 @@ CONTAINS
              call model_setLocTrgVal(css,ninn,inn,ind,tval,loc,v%itrg,crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Error return from setLocationVal.")
+                call model_errorappend(crc250," Error return from setLocTrgVal.")
                 call model_errorappendi(crc250,irc)
                 call model_errorappend(crc250,"\n")
                 return
@@ -6387,20 +6580,68 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="model_setIndexLimits"
-    integer :: lens, lene
+    integer :: lens, lene, JJ
     integer, external :: length
-    integer :: irc2
-    read(smin,*,iostat=irc2)css%ind_minval
-    if (irc2.ne.0) then
-       css%ind_lval(1)=.false.
-    else
-       css%ind_lval(1)=.true.
+    type(parse_session),pointer :: plim => null()  ! parse_session pointer must be se
+    character*80, allocatable :: var(:)
+    real, allocatable :: val(:)
+    lens=len_trim(smin)
+    lene=len_trim(smax)
+    call parse_open(plim,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       return
     end if
-    read(smax,*,iostat=irc2)css%ind_maxval
-    if (irc2.ne.0) then
-       css%ind_lval(2)=.false.
+    if (lens.ne.0) then
+       call parse_parsef(plim,smin(1:lens),var,crc250,irc)
+       if (irc.ne.0) then
+          if(mod_bdeb)then
+             write(*,*)myname," Compiling target limit: '"//&
+                  & smin(1:lens)//"'"
+             do jj=1,size(var)
+                write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                     & trim(var(jj))//"'"
+             end do
+          end if
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parsef.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       css%ind_minval=parse_evalf(plim,val)
+       css%ind_lval(1)=.true.
     else
+       css%ind_lval(1)=.false.
+    end if
+    if (lene.ne.0) then
+       call parse_parsef(plim,smax(1:lene),var,crc250,irc)
+       if (irc.ne.0) then
+          if(mod_bdeb)then
+             write(*,*)myname," Compiling target limit: '"//&
+                  & smax(1:lene)//"'"
+             do jj=1,size(var)
+                write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                     & trim(var(jj))//"'"
+             end do
+          end if
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parsef.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       css%ind_maxval=parse_evalf(plim,val)
        css%ind_lval(2)=.true.
+    else
+       css%ind_lval(2)=.false.
+    end if
+    call parse_close(plim,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250,"Error return from 'parse_close'.")
+       return
     end if
     if(mod_bdeb)write(*,*)myname,"Done min='"//trim(smin)//"' max='"//smax//"'",&
          css%ind_lval,css%ind_minval,css%ind_maxval
@@ -6417,10 +6658,8 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="model_setFileStackLimits"
-    integer :: irc2
     ! set limits
     if (mod_bdeb)write(*,*)myname,' Entering:',ind_lval,ind_minval,ind_maxval
-    call model_setIndexLimitsRaw(css,ind_lval,ind_minval,ind_maxval)
     ! make sure file stack is sorted
     if (mod_bdeb)write(*,*)myname,'Sorting stack.'
     if (.not.css%stackReady) then
@@ -6436,7 +6675,7 @@ CONTAINS
     end if
     if (mod_bdeb)write(*,*)myname,'Find stack start/stop.'
     ! find index start/stop...
-    call model_findStackLimits(css,crc250,irc)
+    call model_findStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Error return from model_makeStackLimits.")
@@ -6455,7 +6694,6 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     logical :: ind_lval(2)
     real :: ind_minval,ind_maxval
-    integer :: irc2
     character*22 :: myname="model_setIndexLimitsRaw"
     css%ind_lval(1)=ind_lval(1)
     css%ind_lval(2)=ind_lval(2)
@@ -6753,7 +6991,7 @@ CONTAINS
        v%mc=char(nf_fill_char)
        v%m1=nf_fill_int1
        v%m2=nf_fill_int2
-       v%m4=nf_fill_int
+      v%m4=nf_fill_int
        v%mr=nf_fill_real
        v%md=nf_fill_double
        v%misstype=0
@@ -6864,6 +7102,129 @@ CONTAINS
     end do
     if(mod_bdeb)write(*,*)myname,' Done.'
   end subroutine model_readInventory
+  !
+  ! check variable limits
+  !
+  subroutine model_setRange(css,f,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    type(mod_file),pointer :: f
+    character*250 :: crc250
+    integer :: irc
+    integer :: varid,ii
+    type(mod_variable),pointer :: v
+    character*25 :: myname="model_setRange"
+    real :: val
+    integer*8, parameter :: maxlen=1000
+    integer*8 :: dimlen
+    do varid=1,f%nvar
+       v=>f%var(varid)%ptr
+       dimlen=model_varLen(v)
+       if (dimlen.lt.maxlen) then
+          if (mod_bdeb)write(*,*)myname,"Opening '"//v%var80(1:v%lenv)//"'"
+          call model_readVariable(css,f,varid,crc250,irc)       
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from readVariable.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          if (mod_bdeb)write(*,*)myname,"Scanning:'"//v%var80(1:v%lenv)//"'",v%len,v%type
+          v%mmrange=.true.
+          select case (v%type)
+          case (nf_char)
+          case (nf_int1)
+             if (mod_bdeb)write(*,*)myname,"Int1.",v%scale
+             do ii=1,v%len
+                val=real(v%f1(ii)*v%scale)
+                if (v%f1(ii).ne.v%m1) then
+                   if (v%mmset) then
+                      v%minval=min(v%minval,val)
+                      v%maxval=max(v%maxval,val)
+                   else
+                      v%minval=val
+                      v%maxval=val
+                      v%mmset=.true.
+                   end if
+                end if
+             end do
+          case (nf_int2)
+             if (mod_bdeb)write(*,*)myname,"Int2.",v%scale
+             do ii=1,v%len
+                val=real(v%f2(ii)*v%scale)
+                if (v%f2(ii).ne.v%m2) then
+                   if (v%mmset) then
+                      v%minval=min(v%minval,val)
+                      v%maxval=max(v%maxval,val)
+                   else
+                      v%minval=val
+                      v%maxval=val
+                      v%mmset=.true.
+                   end if
+                end if
+             end do
+          case (nf_int)
+             if (mod_bdeb)write(*,*)myname,"Int4.",v%scale
+             do ii=1,v%len
+                val=real(v%f4(ii)*v%scale)
+                if (v%f4(ii).ne.v%m4) then
+                   if (v%mmset) then
+                      v%minval=min(v%minval,val)
+                      v%maxval=max(v%maxval,val)
+                   else
+                      v%minval=val
+                      v%maxval=val
+                      v%mmset=.true.
+                   end if
+                end if
+             end do
+          case (nf_real)
+             if (mod_bdeb)write(*,*)myname,"Real.",v%scale
+             do ii=1,v%len
+                val=real(v%fr(ii)*v%scale)
+                if (v%fr(ii).ne.v%mr) then
+                   if (v%mmset) then
+                      v%minval=min(v%minval,val)
+                      v%maxval=max(v%maxval,val)
+                   else
+                      v%minval=val
+                      v%maxval=val
+                      v%mmset=.true.
+                   end if
+                end if
+             end do
+          case (nf_double)
+             if (mod_bdeb)write(*,*)myname,"Double.",v%scale
+             do ii=1,v%len
+                val=v%fd(ii)*v%scale
+                if (v%fd(ii).ne.v%md) then
+                   if (v%mmset) then
+                      v%minval=min(v%minval,val)
+                      v%maxval=max(v%maxval,val)
+                   else
+                      v%minval=val
+                      v%maxval=val
+                      v%mmset=.true.
+                   end if
+                end if
+             end do
+          case DEFAULT
+          end select
+          if (mod_bdeb)write(*,*)myname,"Clearing:'"//v%var80(1:v%lenv)//"'",&
+               & v%len,v%mmset,v%minval,v%maxval
+          call model_clearVariable(v,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from clearVariable.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       end if
+    end do
+    if (mod_bdeb)write(*,*)myname,"Done."
+    return
+  end subroutine model_setRange
   !
   ! read variable values into memory...
   !

@@ -28,6 +28,16 @@ use File::Touch;
 
 require Exporter;
 
+# capture term-exit signals in termval block
+our $override_exit = 0;
+BEGIN { 
+    *CORE::GLOBAL::exit = sub (;$) {
+        no warnings 'exiting';
+        last EXIT_OVERRIDE if $override_exit;
+        CORE::exit($_[0] // 0);
+    };
+ }
+
 our @ISA = qw(Exporter);
 
 # Items to export into callers namespace by default. Note: do not export
@@ -91,7 +101,7 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
     );
 
-our $debug=1;
+our $debug=0;
 
 # returns dir and name components of path
 # my ($dir,$name) = splitName($path);
@@ -384,7 +394,7 @@ sub FindFiles{
     }
     if (substr($root,-1) ne "/") { $root = $root . "/";};
     my ($sdir) = &cwd; 
-    #print "Opening $wdir\n";
+    if ($debug) {print "Opening $wdir\n";}
     opendir(DIR, $wdir) or die "Unable to open $wdir:$!\n";
     my @dirs = ();
     #print "Here...\n";
@@ -398,39 +408,37 @@ sub FindFiles{
         next if (-l $name ); # skip symlinks
 	my $path=$root . $name;
         if (-d $path){
-	    my $ref=stat($path);
-	    my $fmin=($ref->ctime);
-	    my $fmax=($ref->mtime);
-	    # get times from file name...
-	    my %patt=findPattern($path);
-	    foreach my $k (keys %patt) {
-		$fmin=$patt{$k}[1];
-		$fmax=$patt{$k}[2];
-		print "Resetting: '$path' '$k' '$fmin' '$fmax'\n";
-	    };
-	    my $mge=($t-$fmax)/86400;
-	    my $cge=($t-$fmin)/86400; # inode change time...
 	    my $ok=1;
 	    if ($min || $max) {
+		my $ref=stat($path);
+		my $fmin=($ref->ctime);
+		my $fmax=($ref->mtime);
+		# get times from file name...
+		my %patt=findPattern($path);
+		foreach my $k (keys %patt) {
+		    $fmin=$patt{$k}[1];
+		    $fmax=$patt{$k}[2];
+		    if ($debug){print "Resetting: '$path' '$k' '$fmin' '$fmax'\n";};
+		};
+		my $mge=($t-$fmax)/86400;
+		my $cge=($t-$fmin)/86400; # inode change time...
 #		if ($min && $cge < $min) {$ok=0;}; # if directory has moved , this will fail
 		if ($max && $mge > $max) {$ok=0;};
+		if ($debug){print "Directory: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";};
 	    };
 	    if ($ok) {
 		push (@dirs, $name);
-		print "Directory: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";
-	    } else {
-		print "Skipping: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";
 	    }
         } elsif (-f $path ) {
 	    if ($name  =~ m/$pattern/) {
-		my $age=(-M $path);
 		my $ok=1;
 		if ($min || $max) {
+		    my $age=(-M $path);
 		    #print "Age $age '$path' '$min' '$max'\n";
 		    if ($min && $age < $min) {$ok=0;};
 		    if ($max && $age > $max) {$ok=0;};
+		    if ($debug) {print "File: '$path' '$age' '$ok'\n";};
 		};
-		#print "File: '$path' '$age' '$ok'\n";
 		if ($ok) {
 		    push (@ret, $path);
 		    $hits++;
@@ -457,6 +465,8 @@ sub FindFiles{
 
 sub GetFiles {   # full scan of all files...
     my($filterDir,$filter,$min,$max) = @_;
+    if (! defined($min)) {$min="";};
+    if (! defined($max)) {$max="";};
     my @files=();
     find({wanted => sub {
 	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
@@ -481,6 +491,30 @@ sub GetFiles {   # full scan of all files...
     return @files;
 }
 #
+# check if string is present in any of the files with the root class directory (besides $file)...
+#
+sub checkClassForStrings {
+    my ($cls, $file, @strings) = @_;
+    my @dirs=keys %{$farkdirs{$cls}};
+    my $root=$farkdirs{$cls}{$dirs[0]};
+    my @files=&GetFiles($root,".*");
+    foreach my $f (@files) {
+	if ($file != $f ) {
+	    open(my $fh, '<:encoding(UTF-8)', $f)
+		or break;
+	    while (my $row = <$fh>) {
+		chomp $row;
+		foreach my $s (@strings) {
+		    if ($row =~ m/\Q$s/g) {
+			return $f; # we found a match
+		    }
+		}
+	    }
+	}
+    }
+    return; # no match
+}
+#
 # termval {system "ls -l";} "Error running ls -l";
 #
 sub termval (&@) {
@@ -488,13 +522,32 @@ sub termval (&@) {
     my $code = shift; # reference to block to be executed
     my $msg = shift;
     my $log = shift;
+#    print "Entering termval...\n";
+    my $ret="";
+    my $exit_called = 1;
+#    my ($merged,$irc)=("X","Y");
     my ($merged,$irc)=capture_merged {
-	eval {
-	    &{$code}; # execute block
+#	print "Here...\n";
+      EXIT_OVERRIDE: {
+	  local $override_exit = 1;
+	  eval {
+	      &{$code}; # execute block
+	  };
+	  $ret=$@;
+	  $exit_called = 0;
+	  die $ret if $ret;
 	};
-	if ($@) {return "termval Error:: $@\n";}
+#	print "There...\n";
     };
-    if (defined $log) {	# save to logfile
+#    print "Termval: $ret, $msg, $irc, $merged\n";
+    if ($ret || $exit_called) {
+	if ($merged =~ m/<error message='(.*)'\/>/g) {
+	    term ($1);
+	} else {
+	    term ($msg);
+	};
+    };
+    if (defined $log && $log) {	# save to logfile
 	if (open(my $fh, '>', $log)) {
 	    print $fh $merged;
 	    print $fh $irc;
@@ -503,8 +556,8 @@ sub termval (&@) {
     }
     if ($irc) {
 	term ($msg . " ($irc)"); # use error message if necessary...
-    } else {
-	return $log;
+    } elsif (! defined $log) {
+	print $merged;
     }
 }
 sub ignval (&@) {
@@ -590,6 +643,7 @@ sub dtg {
 
 sub findPattern {
     use strict;
+    use URI::Encode;
     my @files= @_;
     my %patterns;
     # divide into groups with same character settings
@@ -647,7 +701,7 @@ sub findPattern {
 	my $bmi;
 	# find 4-digit year
 	my $cyyyy = &getCandidates($lim{4},0,$lenm-3,1900,2100,"YYYY"); # year candidates
-	my $cmm =   &getCandidates($lim{2},0,$lenm-1,0,12,"MM");        # month  candidates
+	my $cmm =   &getCandidates($lim{2},0,$lenm-1,1,12,"MM");        # month  candidates
 	my $cdd =   &getCandidates($lim{2},0,$lenm-1,1,31,"DD");        # day candidates
 	my $chh =   &getCandidates($lim{2},0,$lenm-1,0,24,"HH");        # hour candidates
 	my $cmi =   &getCandidates($lim{2},0,$lenm-1,0,60,"MI");        # minutes candidates
@@ -709,7 +763,7 @@ sub getCandidates {
     my ($lim,$istart,$istop,$rmin,$rmax,$label)= @_;
     #print "Looking for candidates $rmin, $rmax\n";
     my @ret=();
-    foreach my $ii (@{$lim}) {
+    foreach my $ii (keys @{$lim}) {
 	my $min=$lim->[$ii][0];
 	my $max=$lim->[$ii][1];
 	my $dlen=$lim->[$ii][2];
@@ -736,7 +790,7 @@ sub showPattern {
     my ($s,$w,$cnn,@candidateTypes)= @_;
     if ($debug) {print "showPattern Entering with '$s' '$w'\n";};
     my $bdone=0;
-    my %order={}; # order of the different labels
+    my %order; # order of the different labels
     while (!$bdone) {   # loop while changed
 	# find candidate with highest score...
 	my $maxss=0;
@@ -844,7 +898,8 @@ sub getPatternTime {
 	$ddmin=$dd;
     } else {
 	$ddmin=1;
-	$ddmax=31;
+	$ddmax=31 - (($mmmax == 2) ?
+		     (3 - &IsLeapYear($yymax)) : (($mmmax - 1) % 7 % 2));
     };
     my $hhmax;
     my $hhmin;
@@ -853,11 +908,19 @@ sub getPatternTime {
 	$hhmin=$hh;
     } else {
 	$hhmin=0;
-	$hhmax=24;
+	$hhmax=23;
     };
     my $tmin=timelocal(0,0,$hhmin,$ddmin,$mmmin-1,$yymin);
-    my $tmax=timelocal(60,60,$hhmax,$ddmax,$mmmax-1,$yymax);
+    my $tmax=timelocal(59,59,$hhmax,$ddmax,$mmmax-1,$yymax);
     return ($tmin,$tmax);
+}
+sub IsLeapYear
+{
+   my $year = shift;
+   return 0 if $year % 4;
+   return 1 if $year % 100;
+   return 0 if $year % 400;
+   return 1;
 }
 #
 # get number at location used for $label...

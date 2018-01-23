@@ -464,7 +464,10 @@ sub FindFiles{
 }
 
 sub GetFiles {   # full scan of all files...
+    use File::Find;
     my($filterDir,$filter,$min,$max) = @_;
+    if (! defined($min)) {$min="";};
+    if (! defined($max)) {$max="";};
     my @files=();
     find({wanted => sub {
 	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
@@ -487,6 +490,41 @@ sub GetFiles {   # full scan of all files...
 	}
 	  }}, $filterDir);
     return @files;
+}
+#
+# check if string is present in any of the files with the root class directory (besides $file)...
+#
+sub checkClassForStrings {
+    my ($cls, $file, @strings) = @_;
+    my @dirs=keys %{$farkdirs{$cls}};
+    my $root= (keys (%{$farkdirs{$cls}}))[0]; # get default path
+    my @files=();
+    find({wanted => sub {if (-f $File::Find::name) {push(@files, $File::Find::name);}}}, $root);
+    #print "Looking for ".join(" ",@strings)." in $root\n";
+    foreach my $f (@files) {
+	#print "Found file '$f' <> '$root$file'...";
+	if ("$root$file" eq "$f" ) {
+	    #print "... skipping\n";
+	}else {
+	    #print "... searching\n";
+	    open(my $fh, '<:encoding(UTF-8)', $f)
+		or break;
+	    while (my $row = <$fh>) {
+		chomp $row;
+		foreach my $s (@strings) {
+		    if ($row =~ m/\Q$s/g) {
+			my $fn=$f;
+			if ($fn=~m/$root(.*)$/) {
+			    $fn=$1;
+			}
+			#print "Found '$s' in '$fn'\n";
+			return $fn; # we found a match
+		    }
+		}
+	    }
+	}
+    }
+    return; # no match
 }
 #
 # termval {system "ls -l";} "Error running ls -l";

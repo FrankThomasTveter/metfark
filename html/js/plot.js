@@ -242,7 +242,6 @@ function plot_newDataset(item) {
     var cat =plot_config[file]["cat"];
     var set=item.parentNode.parentNode.children[1].children[0].value;
     var coloc=item.parentNode.parentNode.children[4].children[0].value;
-    fark_last["coloc"]=coloc;
     var clmns=plot_cats[cat]["columns"];
     var columns=[];
     for (var ii =0; ii< clmns.length;ii++) {
@@ -267,6 +266,7 @@ function plot_newDataset(item) {
     } else {
 	alert("Invalid line set/coloc: ('"+set+"'/'"+coloc+"')");
     }
+    fark_last["coloc"]=coloc;
 };
 function plot_removeDataset(set) {
     var file=plot_getConfigFile();
@@ -290,6 +290,7 @@ function plot_removeDataset(set) {
 	}
     }
     item.children[6+clmns.length*2].children[0].value=legend;
+    fark_last["coloc"]=coloc;
 };
 
 function plot_saveConfigFile() {
@@ -548,6 +549,7 @@ function plot_insertDatasetRow(item,file) {
     for (var set in sets) {
 	var type=plot_cats[cat]["lines"][set]||"";
 	var coloc=sets[set]["coloc"];
+	fark_last["coloc"]=coloc;
 	var legend=sets[set]["legend"];
 	var row = document.createElement("TR");
 	var td,bf;

@@ -38,8 +38,8 @@ module colocation
      character*80 :: n80     ! name
      character*250 :: e250   ! obs expression
      integer :: itrg=0      ! index to model target array position
-     character*80 :: l80     ! lower limit
-     character*80 :: u80     ! upper limit
+     character*80 :: min80     ! lower limit
+     character*80 :: max80     ! upper limit
      type(col_match), pointer :: prev => null()   ! linked list
      type(col_match), pointer :: next => null()   ! linked list
   end type col_match
@@ -79,8 +79,8 @@ module colocation
      character*250, pointer:: mat_e250(:)               ! match expression
      integer, pointer      :: mat_lene(:)               ! length of match expression
      integer, pointer      :: mat_2trg(:)                ! index to model target
-     character*80, pointer :: mat_l80(:)                ! lower limit
-     character*80, pointer :: mat_u80(:)                ! upper limit
+     character*80, pointer :: mat_min80(:)                ! lower limit
+     character*80, pointer :: mat_max80(:)                ! upper limit
      type(parse_pointer), pointer  :: mat_psp(:) => null()  ! match expression parser
      real, pointer         :: mat_val(:)                ! match value
      integer :: cii                                     ! loop index
@@ -655,8 +655,8 @@ CONTAINS
     type(mod_session), pointer :: mss !  model session
     character*80 :: n80
     character*250 :: e250
-    character*80 :: l80
-    character*80 :: u80
+    character*80 :: min80
+    character*80 :: max80
     character*250 :: crc250
     integer :: irc
     type(col_match), pointer :: match
@@ -709,11 +709,11 @@ CONTAINS
              return
           end if
           e250=""
-          l80=""
-          u80=""
+          min80=""
+          max80=""
           call chop0(e250,250)
-          call chop0(l80,80)
-          call chop0(u80,80)
+          call chop0(min80,80)
+          call chop0(max80,80)
        end if
        do ii=1,css%cTrg
           cLoc%vset(ii)=.false.
@@ -737,7 +737,7 @@ CONTAINS
              cLoc%vlen(ii)=cdef%lenv
              read(cdef%v80(1:cdef%lenv),*,iostat=irc2) cLoc%val(ii)
              if (first) then ! Use match from defaults
-                call  colocation_pushmatch(css,cdef%n80,e250,l80,u80,crc250,irc)
+                call  colocation_pushmatch(css,cdef%n80,e250,min80,max80,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,myname)
                    call colocation_errorappend(crc250,"Error return from pushMatch")
@@ -793,15 +793,15 @@ CONTAINS
        if(associated(css%mat_e250)) deallocate(css%mat_e250)
        if(associated(css%mat_lene)) deallocate(css%mat_lene)
        if(associated(css%mat_2trg)) deallocate(css%mat_2trg)
-       if(associated(css%mat_l80)) deallocate(css%mat_l80)
-       if(associated(css%mat_u80)) deallocate(css%mat_u80)
+       if(associated(css%mat_min80)) deallocate(css%mat_min80)
+       if(associated(css%mat_max80)) deallocate(css%mat_max80)
        css%cMatch = 0
     end if
     ! allocate match-list if we have target-list
     if (col_bdeb) write(*,*)myname," Looping over matches: ",css%nmatch,mss%ctrg
     if (mss%ctrg .ne.  0) then
        css%cMatch=0
-       do while (colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc))
+       do while (colocation_loopMatch(css,n80,e250,min80,max80,crc250,irc))
           ! find index in model target array
           lenn=length(n80,80,10)
           if (col_bdeb) write(*,*)myname," Matching: '"//n80(1:lenn)//"'",lenn,mss%ctrg
@@ -835,8 +835,8 @@ CONTAINS
             & css%mat_e250(max(1,css%cMatch)), &
             & css%mat_lene(max(1,css%cMatch)), &
             & css%mat_2trg(max(1,css%cMatch)), &
-            & css%mat_l80(max(1,css%cMatch)),  &
-            & css%mat_u80(max(1,css%cMatch)), &
+            & css%mat_min80(max(1,css%cMatch)),  &
+            & css%mat_max80(max(1,css%cMatch)), &
             & css%mat_val(max(1,css%cMatch)), &
             & css%mat_psp(max(1,css%cMatch)), stat=irc)
        if (irc.ne.0) then
@@ -853,7 +853,7 @@ CONTAINS
        end do
        ! loop over matches and find corresponding targets...
        css%cMatch=0
-       do while (colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc))
+       do while (colocation_loopMatch(css,n80,e250,min80,max80,crc250,irc))
           ii=css%currentMatch%itrg
           if (ii.ne.0) then
              css%cMatch=css%cMatch+1
@@ -867,8 +867,8 @@ CONTAINS
              if(col_bdeb)write(*,*)myname,"Match: '"//&
                   & css%mat_n80(css%cMatch)(1:css%mat_lenn(css%cMatch))//"' -> '"//&
                   & css%mat_e250(css%cMatch)(1:css%mat_lene(css%cMatch))//"'",ii
-             css%mat_l80(css%cMatch)=l80
-             css%mat_u80(css%cMatch)=u80
+             css%mat_min80(css%cMatch)=min80
+             css%mat_max80(css%cMatch)=max80
              css%mat_val(css%cMatch)=0.0D0
              call parse_open(css%mat_psp(css%cMatch)%ptr,crc250,irc)
              if (irc.ne.0) then
@@ -905,13 +905,13 @@ CONTAINS
   !
   ! push current match to the stack
   !
-  subroutine colocation_pushmatch(css,n80,e250,l80,u80,crc250,irc)
+  subroutine colocation_pushmatch(css,n80,e250,min80,max80,crc250,irc)
     implicit none
     type(col_session), pointer :: css !  current session
     character*80 :: n80      ! target name
     character*250 :: e250    ! position/sequence number
-    character*80 :: l80      ! lower
-    character*80 :: u80      ! upper
+    character*80 :: min80      ! lower
+    character*80 :: max80      ! upper
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_pushmatch"
@@ -928,8 +928,8 @@ CONTAINS
        end if
        match%n80=n80
        match%e250=e250
-       match%l80=l80
-       match%u80=u80
+       match%min80=min80
+       match%max80=max80
        match%next => css%lastMatch
        match%prev => css%lastMatch%prev
        match%prev%next => match
@@ -942,13 +942,13 @@ CONTAINS
     return
   end subroutine colocation_pushmatch
   !
-  logical function colocation_loopMatch(css,n80,e250,l80,u80,crc250,irc)
+  logical function colocation_loopMatch(css,n80,e250,min80,max80,crc250,irc)
     implicit none
     type(col_session), pointer :: css !  current session
     character*80  :: n80       ! target name
     character*250  :: e250       ! variable
-    character*80  :: l80      ! min value
-    character*80  :: u80      ! max value
+    character*80  :: min80      ! min value
+    character*80  :: max80      ! max value
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_loopMatch"
@@ -965,21 +965,21 @@ CONTAINS
     else
        n80=css%currentMatch%n80
        e250=css%currentMatch%e250
-       l80=css%currentMatch%l80
-       u80=css%currentMatch%u80
+       min80=css%currentMatch%min80
+       max80=css%currentMatch%max80
        colocation_loopmatch=.true.
     end if
     if (col_bdeb) write(*,*)myname," Done.",associated(css%currentMatch),colocation_loopmatch
     return
   end function colocation_loopMatch
   !
-  logical function colocation_loopMatchList(css,n80,e250,l80,u80,crc250,irc)
+  logical function colocation_loopMatchList(css,n80,e250,min80,max80,crc250,irc)
     implicit none
     type(col_session), pointer :: css !  current session
     character*80 :: n80
     character*250 :: e250
-    character*80 :: l80
-    character*80 :: u80
+    character*80 :: min80
+    character*80 :: max80
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_loopmatchlist"
@@ -997,8 +997,8 @@ CONTAINS
     else
        n80=css%mat_n80(css%cii)
        e250=css%mat_e250(css%cii)
-       l80=css%mat_l80(css%cii)
-       u80=css%mat_u80(css%cii)
+       min80=css%mat_min80(css%cii)
+       max80=css%mat_max80(css%cii)
        colocation_loopmatchlist=.true.
     end if
     if (col_bdeb) write(*,*)myname,'Exiting.',irc
@@ -1112,7 +1112,7 @@ CONTAINS
     type(col_match), pointer :: match
     if (css%cmatch.ne.0) then
        do ii=1,css%cmatch
-          if (col_bdeb)write(*,*)myname,' Local:',val
+          !if (col_bdeb)write(*,*)myname,' Local:',val
           css%mat_val(ii)=parse_evalf(css%mat_psp(ii)%ptr,val)
        end do
     else
@@ -1149,8 +1149,8 @@ CONTAINS
     if(associated(css%mat_e250)) deallocate(css%mat_e250)
     if(associated(css%mat_lene)) deallocate(css%mat_lene)
     if(associated(css%mat_2trg))  deallocate(css%mat_2trg)
-    if(associated(css%mat_l80))  deallocate(css%mat_l80)
-    if(associated(css%mat_u80))  deallocate(css%mat_u80)
+    if(associated(css%mat_min80))  deallocate(css%mat_min80)
+    if(associated(css%mat_max80))  deallocate(css%mat_max80)
     css%cMatch = 0
     return
   end subroutine colocation_removeMatchList
@@ -1265,8 +1265,8 @@ CONTAINS
     if (col_bdeb) write(*,*) myname,'Parse.',exp250(1:lene)
     call parse_parsef (pss, exp250(1:lene), var,crc250,irc)        ! parse and bytecompile ith function string 
     if(irc.ne.0) return
-    if (col_bdeb) write(*,*) myname,'Eval.', val
-    if (col_bdeb)write(*,*)myname,' Local:',val
+    !if (col_bdeb) write(*,*) myname,'Eval.', val
+    !if (col_bdeb)write(*,*)myname,' Local:',val
     res = parse_evalf (pss, val)                 ! interprete bytecode representation of ith function
     write(exp250,*) res
     call chop0(exp250,250)
@@ -1521,12 +1521,12 @@ CONTAINS
        return
     end if
     !
-    if(col_bdeb)write(*,*)myname,'Entering model file loop.',mod_lval,mod_minval,mod_maxval,obs_lval,obs_minval,obs_maxval
+    if(col_bdeb)write(*,*)myname,'Entering model file loop.',mod_lval,mod_minval,mod_maxval
     MODFILE: do ! need to enter loop if (tmod.eq.0)
        locid=0 ! observation count (= identification)
        if (tmod.ne.0) then ! we have model targets specified
           ! loop over data
-          bok= model_loopFileStack(mss,crc250,irc)
+          bok= model_loopFileStack(mss,mod_lval,mod_minval,mod_maxval,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,"model_loopFileStack")
              return
@@ -1535,6 +1535,12 @@ CONTAINS
              ! if(col_bdeb)
              write(*,*)myname,'No more model files.'
              exit MODFILE ! no more files to process
+          else if (.not.model_rangeCheck(mss,crc250,irc)) then ! current file is outside target limits
+             !if(col_bdeb)
+             write(*,*)myname,"Out of range: '"//&
+                  & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
+                  & mod_cnt,model_getFileId(mss)
+             cycle MODFILE
           else 
              mod_cnt=mod_cnt+1
              call observation_setModelFileId(oss,model_getFileId(mss))
@@ -1544,6 +1550,8 @@ CONTAINS
                   & mod_cnt,model_getFileId(mss)
           end if
           ! get observation file limits
+          obs_lval(1)=mod_lval(1)
+          obs_minval=mod_minval
           if (mod_lval(1).and.mss%currentFile%ind_lim) then
              obs_minval=max(mod_minval,mss%currentFile%ind_start)
              obs_lval(1)=.true.
@@ -1569,6 +1577,9 @@ CONTAINS
           else
              obs_lval(2)=.false.
           end if
+       else
+          obs_lval(1)=.false.
+          obs_lval(2)=.false.
        end if
        !
        if (tmod.ne.0) then ! we have model targets specified
@@ -1606,7 +1617,7 @@ CONTAINS
                 bdeb=obs_bdeb
                 obs_bdeb=.true.
              end if
-             bok=observation_loopFileStack(oss,crc250,irc)
+             bok=observation_loopFileStack(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
              if (col_bdeb) obs_bdeb=bdeb
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"observation_loopFileStack")
@@ -1678,10 +1689,10 @@ CONTAINS
                    call colocation_errorappend(crc250,"model_setTargetVal")
                    return
                 end if
-
+                ! check target values
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location.',locid
+                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -1718,13 +1729,8 @@ CONTAINS
                 if(col_bdeb)write(*,*)myname,'Creating location:',locid
                 ! check target values
                 lok=.true.
-                call  model_checkTargetVal(mss,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_checkTargetVal")
-                   return
-                end if
-                !
-                if(col_bdeb)write(*,*)myname,'Pushing location:',locid
+                ! make new location from default
+                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -1762,13 +1768,26 @@ CONTAINS
                 end if
                 !
                 locid=locid+1
-                bbok=.true.
+                lok=.true.
                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_checkLoc(mss,locid,bbok)        
+                   if (lok) then
+                      call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                      if (irc.ne.0) then
+                         call colocation_errorappend(crc250,"model_checkTargetVal")
+                         return
+                      end if
+                   end if
+                   if (lok) then
+                      call model_checkFilter(mss,locid,lok,crc250,irc)        
+                      if (irc.ne.0) then
+                         call colocation_errorappend(crc250,"model_checkFilter")
+                         return
+                      end if
+                   end if
                 end if
                 !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
-                if (bbok) then
+                if (lok) then
                    call model_evalExpr(mss,ncol,val,vok,crc250,irc)
                    if (irc.ne.0) then
                       call colocation_errorappend(crc250,"evalExpr")
@@ -1808,13 +1827,24 @@ CONTAINS
           else if (tmod.ne.0) then ! use model default values
              write(*,*)myname,'Printing output:',locstart,css%nloc
              do locid=locstart+1,locstart+css%nloc
-                bbok=.true.
-                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_checkLoc(mss,locid,bbok)        
+                lok=.true.
+                if (lok) then
+                   call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"model_checkTargetVal")
+                      return
+                   end if
                 end if
-                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,bbok
+                if (lok) then
+                   call model_checkFilter(mss,locid,lok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"model_checkFilter")
+                      return
+                   end if
+                end if
+                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,lok
                 !
-                if (bbok) then
+                if (lok) then
                    call model_evalExpr(mss,ncol,val,vok,crc250,irc)
                    if (irc.ne.0) then
                       call colocation_errorappend(crc250,"evalExpr")
@@ -2301,7 +2331,7 @@ CONTAINS
        locid=0 ! observation count (= identification)
        if (tmod.ne.0) then ! we have model targets specified
           ! loop over data
-          bok= model_loopFileStack(mss,crc250,irc)
+          bok= model_loopFileStack(mss,mod_lval,mod_minval,mod_maxval,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,"model_loopFileStack")
              return
@@ -2309,6 +2339,8 @@ CONTAINS
           if (.not.bok) then
              if(col_bdeb)write(*,*)myname,'No more model files.'
              exit MODFILE ! no more files to process
+          else if (.not.model_rangeCheck(mss,crc250,irc)) then ! current file is outside target limits
+             cycle MODFILE
           else 
              mod_cnt=mod_cnt+1
              call observation_setModelFileId(oss,model_getFileId(mss))
@@ -2325,6 +2357,8 @@ CONTAINS
              return
           end if
           ! get observation file limits
+          obs_lval(1)=mod_lval(1)
+          obs_minval=mod_minval
           if (mod_lval(1).and.mss%currentFile%ind_lim) then
              obs_minval=max(mod_minval,mss%currentFile%ind_start)
              obs_lval(1)=.true.
@@ -2350,6 +2384,9 @@ CONTAINS
           else
              obs_lval(2)=.false.
           end if
+       else
+          obs_lval(1)=.false.
+          obs_lval(2)=.false.
        end if
        !
        !
@@ -2388,7 +2425,7 @@ CONTAINS
                 bdeb=obs_bdeb
                 obs_bdeb=.true.
              end if
-             bok=observation_loopFileStack(oss,crc250,irc)
+             bok=observation_loopFileStack(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
              if (col_bdeb) obs_bdeb=bdeb
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"observation_loopFileStack")
@@ -2467,10 +2504,10 @@ CONTAINS
                    call colocation_errorappend(crc250,"model_setTargetVal")
                    return
                 end if
-
+                ! check target values
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location.',locid
+                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -2507,13 +2544,8 @@ CONTAINS
                 if(col_bdeb)write(*,*)myname,'Creating location:',locid
                 ! check target values
                 lok=.true.
-                call  model_checkTargetVal(mss,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_checkTargetVal")
-                   return
-                end if
-                !
-                if(col_bdeb)write(*,*)myname,'Creating location:',locid
+                ! make new location from default
+                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -2551,13 +2583,26 @@ CONTAINS
                 end if
                 !
                 locid=locid+1
-                bbok=.true.
+                lok=.true.
                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_checkLoc(mss,locid,bbok)        
+                   if (lok) then
+                      call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                      if (irc.ne.0) then
+                         call colocation_errorappend(crc250,"model_checkTargetVal")
+                         return
+                      end if
+                   end if
+                   if (lok) then
+                      call model_checkFilter(mss,locid,lok,crc250,irc)
+                      if (irc.ne.0) then
+                         call colocation_errorappend(crc250,"model_checkFilter")
+                         return
+                      end if
+                   end if
                 end if
                 !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
                 !
-                if (bbok) then
+                if (lok) then
                    call observation_writeXML(oss,ounit,locid,crc250,irc)
                    if (irc.ne.0) then
                       call colocation_errorappend(crc250,"observation_writeXML")
@@ -2574,13 +2619,24 @@ CONTAINS
           else if (tmod.ne.0) then ! use model default values
              write(*,*)myname,'Printing output:',locstart,css%nloc
              do locid=locstart+1,locstart+css%nloc
-                bbok=.true.
-                 if (tmod.ne.0) then ! we have match expressions specified
-                   call model_checkLoc(mss,locid,bbok)        
+                lok=.true.
+                if (lok) then
+                   call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"model_checkTargetVal")
+                      return
+                   end if
                 end if
-                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,bbok
+                if (lok) then
+                   call model_checkFilter(mss,locid,lok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"model_checkFilter")
+                      return
+                   end if
+                end if
+                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,lok
                 !
-                if (bbok) then
+                if (lok) then
                    ! write location default values to XML (not implemented)...
                 end if
              end do

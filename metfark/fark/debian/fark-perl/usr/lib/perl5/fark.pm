@@ -1157,7 +1157,7 @@ $fark->pushObservationTarget("yy","10","4001","year","","");
 
 sub pushObservationTarget {
     my ($self,$name,$pos,$descr,$info,$min,$max)=@_;
-    my ($ret,$msg) = xs_pushObsTarget($self->{OID},$name,$pos,$descr,$info,$min,$max);
+    my ($ret,$msg) = xs_pushObsTarget($self->{OID},$name,$pos//"",$descr//"",$info//"",$min//"",$max//"");
     if ($ret != 0) {die $msg;}
     return;
 }

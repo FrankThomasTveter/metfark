@@ -281,8 +281,10 @@ function addTargetButton( item, target, trg, cls) {
     }
 }
 function addFunctionButtons( item, target) {
-    addChildButton(item,"sec1970(,,,,,)","addValue('"+target+"','sec1970(,,,,,)');");
-    addChildButton(item,"julian(,,,,,)","addValue('"+target+"','julian(,,,,,)');");
+    addChildButton(item,"sec1970(<yy>,<mm>,<dd>...)","addValue('"+target+"','sec1970(,,,,,)');");
+    addChildButton(item,"julian(<yy>,<mm>,<dd>...)","addValue('"+target+"','julian(,,,,,)');");
+    addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');");
+    addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');");
     addChildButton(item,"abs()","addValue('"+target+"','abs()');");
     addChildButton(item,"exp()","addValue('"+target+"','exp()');");
     addChildButton(item,"log10()","addValue('"+target+"','log10()');");

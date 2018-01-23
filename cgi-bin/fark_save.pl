@@ -296,6 +296,8 @@ sub saveColoc {
     my $obsStop      = ($param->{obsStop}[0] // "");
     my $obsTargets   = ($param->{obsTargets}[0] // "");
     my $matchRules   = ($param->{matchRules}[0] // "");
+    # emulate output strings
+    my @ostrings = ("xml=\"$xml\"");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
@@ -326,6 +328,12 @@ sub saveColoc {
 		$doc = $parser->parse_string("<coloc><coloc_config/></coloc>");
 		($node) = $doc->findnodes("coloc/coloc_config");
 	    }
+	    # check that output does not match output in other files...
+	    my $ofile=farkdir::checkClassForStrings($cls,$ifile,@ostrings);
+	    if ($ofile) {
+		farkdir::term("Output overlaps with '$ofile'");
+	    }
+	    # process
 	    $node->setAttribute("path",        $loc . $file);
 	    $node->setAttribute("root",        $root);
 	    $node->setAttribute("location",    $loc);
@@ -461,6 +469,8 @@ sub savePlot {
     my $plotCols=($param->{columns}[0] // "");
     my $plotSets=($param->{sets}[0] // "");
     my $plotAttrs=($param->{attributes}[0] // "");
+    # emulate output strings
+    my @ostrings = ("table=\"$table\"","graphics=\"$graphics\"");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
@@ -492,6 +502,11 @@ sub savePlot {
 	    } else {
 		$doc = $parser->parse_string("<plot><plot_config/></plot>");
 		($node) = $doc->findnodes("plot/plot_config");
+	    }
+	    # check that output does not match output in other files...
+	    my $ofile=farkdir::checkClassForStrings($cls,$ifile,@ostrings);
+	    if ($ofile) {
+		farkdir::term("Output overlaps with '$ofile'");
 	    }
 	    $node->setAttribute("path",        $loc . $file);
 	    $node->setAttribute("root",        $root);
