@@ -121,7 +121,7 @@ sub loadCls {
 	    while (my $child = readdir(DIR)) {
 		next if (substr($child,0,1) eq ".");
 		my $cpath=$fpath . $child;
-		farkdir::termval {
+		farkdir::sandbox {
 		    #print "Child: $cpath\n";
 		    if (-f $cpath) {
 			my $cpriv=$priv;
@@ -169,7 +169,7 @@ sub loadCls {
 		    } else {
 			# ignored
 		    }
-		} "Unable to process: $cpath";
+		}{message => "Unable to process: $cpath"};
 	    }
 	    closedir(DIR);
 	}
@@ -194,7 +194,7 @@ sub loadAuto {
 	# load obs data
 	my $parser = XML::LibXML->new();
 	#$parser->expand_entities( 0 ); # leave entities alone
-	farkdir::termval {
+	farkdir::sandbox {
 	    if (-f $path) {
 		my $auto = $parser->parse_file($path);
 		my ($node)=$auto->findnodes("auto/auto_config");
@@ -209,7 +209,7 @@ sub loadAuto {
 	    } else {
 		farkdir::term("Invalid file: $path");
 	    };
-	} "Unable to process: $path";
+	}{message=> "Unable to process: $path"};
     } else {
 	farkdir::term("Invalid directory ($fpath,$priv)");
     };

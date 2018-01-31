@@ -46,7 +46,7 @@ sub saveModel {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    farkdir::termval {
+    farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 	my $fpath=$root . $loc;
@@ -152,7 +152,7 @@ sub saveModel {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    } "Unable to save $ifile\n";
+    }{message=> "Unable to save $ifile\n"};
 }
 sub saveObs {
     my $param = shift;
@@ -173,7 +173,7 @@ sub saveObs {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    farkdir::termval {
+    farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 	my $fpath=$root . $loc;
@@ -275,7 +275,7 @@ sub saveObs {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    } "Unable to save $ifile\n";
+    }{message=> "Unable to save $ifile\n"};
 }
 sub saveColoc {
     my $param = shift;
@@ -301,7 +301,7 @@ sub saveColoc {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    farkdir::termval {
+    farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 	my $fpath=$root . $loc;
@@ -457,7 +457,7 @@ sub saveColoc {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    } "Unable to save $ifile\n";
+    }{message=> "Unable to save $ifile\n"};
 }
 sub savePlot {
     my $param = shift;
@@ -474,7 +474,7 @@ sub savePlot {
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{file}->[0]||"";
-    farkdir::termval {
+    farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 	my $fpath=$root . $loc;
@@ -597,7 +597,7 @@ sub savePlot {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    } "Unable to save $ifile\n";
+    }{message=> "Unable to save $ifile\n"};
 }
 
 sub saveAuto {
@@ -610,7 +610,7 @@ sub saveAuto {
     my $plotFiles=($param->{plotFiles}[0] // "");
     if (! defined ($param->{root}->[0])) {farkdir::term("Undefined file.");};
     my $ifile=$param->{root}->[0]||"";
-    farkdir::termval {
+    farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 	my $fpath=$root . $loc;
@@ -744,5 +744,5 @@ sub saveAuto {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."' $priv");
 	}
-    } "Unable to save $ifile\n";
+    }{message=> "Unable to save $ifile\n"};
 }

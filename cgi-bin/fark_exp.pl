@@ -40,12 +40,12 @@ if ($debug) {
     $res=$fark->expression($param->{exp}[0]//"");
     $fark->close();
 } else {
-    farkdir::termval { 
+    farkdir::sandbox { 
 	my $fark=fark->open();
 	print "Processing '".($param->{exp}[0]//"")."'\n";
 	$res=$fark->expression($param->{exp}[0]//"");
 	$fark->close();
-    } "Error while running.",0;
+    }, {message=>"Error while running."};
 };
 my $mret=$@;if ($mret || $irc) {farkdir::term("fark_exp.pl $stderr $mret");}
 #print "Output: $stdout\n\n $stderr\n";

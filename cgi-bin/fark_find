@@ -1,5 +1,8 @@
 #! /bin/csh
-./fark_find.pl '?type=obsfile&file=starc%2Fsyno20180102.cfg&target=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2018%2F01%2F02%2Fsyno_2018010206.bufr&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2018%2F01%2F02&filterFile=syno_2018010206.bufr&table=%2Fmetfark%2Fbufrtables%2F&obsTargets=%7Cyy~5~4001~YEAR%7Cmm~6~4002~MONTH%7Cdd~7~4003~DAY%7Chh~8~4004~HOUR%7Cmi~9~4005~MINUTE&indexTarget=time&indexExp=sec1970(yy%2Cmm%2Cdd%2Chh%2Cmi)&bufrType=0&subType=1&typeInfo=synop+land'
+./fark_find.pl '?type=obsfile&file=default.cfg&target=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2018%2F01%2F01%2Fsyno_2018010100.bufr&password=fark&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2018%2F01%2F01%2F&filterFile=syno_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd.bufr&table=%2Fmetfark%2Fbufrtables%2F&obsTargets=%7Cyy~5~4001~YEAR%7Cmm~6~4002~MONTH%7Cdd~7~4003~DAY%7Chh~8~4004~HOUR%7Cmi~9~4005~MINUTE&indexTarget=time&indexExp=sec1970(yy%2Cmm%2Cdd%2Chh%2Cmi)&bufrType=1&subType=0&typeInfo='
+
+
+#'?type=obsfile&file=starc%2Fsyno20180102.cfg&target=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2018%2F01%2F02%2Fsyno_2018010206.bufr&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2018%2F01%2F02&filterFile=syno_2018010206.bufr&table=%2Fmetfark%2Fbufrtables%2F&obsTargets=%7Cyy~5~4001~YEAR%7Cmm~6~4002~MONTH%7Cdd~7~4003~DAY%7Chh~8~4004~HOUR%7Cmi~9~4005~MINUTE&indexTarget=time&indexExp=sec1970(yy%2Cmm%2Cdd%2Chh%2Cmi)&bufrType=0&subType=1&typeInfo=synop+land'
 
 
 

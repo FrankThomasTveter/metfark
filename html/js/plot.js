@@ -383,14 +383,14 @@ function plot_insertDatasetHeader(row,file) {
     row.appendChild(th);
     // make Line column
     th=document.createElement("TH");
-    th.setAttribute("style","min-width:10%");
+    th.setAttribute("style","min-width:40px");
     bf=document.createElement("BF");
     bf.innerHTML="Line";
     th.appendChild(bf);
     row.appendChild(th);
     // make ColocationFile column
     th=document.createElement("TH");
-    th.setAttribute("style","min-width:30%");
+    th.setAttribute("style","min-width:150px");
     bf=document.createElement("BF");
     bf.innerHTML="Colocation file";
     th.appendChild(bf);

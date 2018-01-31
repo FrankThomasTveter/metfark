@@ -1177,6 +1177,7 @@ CONTAINS
        css%obs250=path250
        call chop0(css%obs250,250)
        css%leno=length(css%obs250,250,10)
+       if(col_bdeb)write(*,*)myname," Path: '"//css%obs250(1:css%leno)//"'"
     end if
     !
   end subroutine colocation_setobscache
@@ -1209,11 +1210,11 @@ CONTAINS
     integer, external :: length
     INTEGER                         :: nvar = 0
     !
-    if(col_bdeb)write(*,*)myname,'Entering.',irc
     if (associated(css)  .and. .not.associated(css,target=lastSession)) then
        css%mod250=path250
        call chop0(css%mod250,250)
        css%lenm=length(css%mod250,250,10)
+       if(col_bdeb)write(*,*)myname," Path: '"//css%mod250(1:css%lenm)//"'"
     end if
     !
   end subroutine colocation_setmodcache
@@ -1532,20 +1533,17 @@ CONTAINS
              return
           end if
           if (.not.bok) then
-             ! if(col_bdeb)
-             write(*,*)myname,'No more model files.'
+             if(col_bdeb)write(*,*)myname,'No more model files.'
              exit MODFILE ! no more files to process
           else if (.not.model_rangeCheck(mss,crc250,irc)) then ! current file is outside target limits
-             !if(col_bdeb)
-             write(*,*)myname,"Out of range: '"//&
+             if(col_bdeb)write(*,*)myname,"Out of range: '"//&
                   & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
                   & mod_cnt,model_getFileId(mss)
              cycle MODFILE
           else 
              mod_cnt=mod_cnt+1
              call observation_setModelFileId(oss,model_getFileId(mss))
-             !if(col_bdeb)
-             write(*,*)myname,"Found model file: '"//&
+             if(col_bdeb)write(*,*)myname,"Found model file: '"//&
                   & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
                   & mod_cnt,model_getFileId(mss)
           end if
@@ -1567,7 +1565,7 @@ CONTAINS
           obs_lval(2)=mod_lval(2)
           obs_maxval=mod_maxval
           if (mod_lval(2).and.mss%currentFile%ind_lim) then
-             obs_maxval=max(mod_maxval,mss%currentFile%ind_stop)
+             obs_maxval=min(mod_maxval,mss%currentFile%ind_stop)
           else if (mod_lval(2)) then
              obs_maxval=mod_maxval
              obs_lval(2)=.true.
@@ -1624,13 +1622,13 @@ CONTAINS
                 return
              end if
              if (.not.bok) then
-                !if(col_bdeb)
-                write(*,*)myname,'No more obs files.'
+                if(col_bdeb)write(*,*)myname,'No more obs files.'
                 exit OBSFILE ! no more files to process
              else 
                 obs_cnt=obs_cnt+1
                 if(col_bdeb)write(*,*)myname,"Found obs file: '"//&
-                     & oss%currentFile%fn250(1:oss%currentFile%lenf)//"'"
+                     & oss%currentFile%fn250(1:oss%currentFile%lenf)//"'",&
+                     & oss%currentFileIndex
              end if
           end if
           locstart=locid
@@ -3112,16 +3110,18 @@ CONTAINS
   subroutine colocation_wash(val,s2,len2)
     real :: val
     character*50 :: s2
-    integer :: len2
+    integer :: len2,lenb
     integer, external :: length
     integer :: jj,irc
     write(s2,'(F0.10)',iostat=irc) val; 
-    call chop0(s2,50); 
-    len2=length(s2,50,10) ! ignore last digit...
     if (irc.ne.0) then
        s2="NA"
        len2=2
     else
+       call chop0(s2,50); 
+       len2=length(s2,50,10) ! ignore last digit...
+       lenb=len2
+       len2=len2-1
        if (len2.gt.1) then
           OUTER: do JJ=1,len2
              if (s2(JJ:JJ).eq.".") then
@@ -3138,6 +3138,7 @@ CONTAINS
              len2=len2-1
           end if
        end if
+       if (len2.eq.lenb-1) len2=lenb
     end if
     return
   end subroutine colocation_wash

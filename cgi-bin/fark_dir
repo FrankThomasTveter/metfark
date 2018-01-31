@@ -1,4 +1,4 @@
 #! /bin/csh
-./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2Fmeps%2F2018%2F01%2F03&filter=meps_mbr0_'
+./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2017%2F01%2F01'
 #
 #./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F'

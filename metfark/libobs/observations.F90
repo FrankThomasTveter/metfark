@@ -652,7 +652,10 @@ CONTAINS
     integer :: lenp,unitr
     character*250 :: buff250, str250
     character*22 :: myname="observation_makeCache"
+    integer :: ii, leno,cnt
+    character*250 :: old250
     !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
+    leno=0
     call chop0(path250,250)
     lenp=length(path250,250,20)
     if(obs_bdeb)write(*,*)myname," *** Entering '"//path250(1:lenp)//"'",irc
@@ -676,9 +679,38 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    !
+    call observation_makeTargetList(css,crc250,irc) 
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from makeTargetList.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    call observation_sortStack(css,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from sortStack.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    !
     ! write number of files: css%nFileIndexes
     if(obs_bdeb)write(*,*) myname,' Files:',css%nFileIndexes
-    write(unitr,'(I0)',iostat=irc) css%nFileIndexes
+    leno=0
+    cnt=0
+    do ii=1,css%newnFileSortIndexes(1)
+       currentFile=>css%fileStack(css%fileStackInd(ii,1))%ptr
+       if (old250(1:leno).ne.currentFile%fn250(1:currentFile%lenf)) then
+          cnt=cnt+1
+       end if
+       old250=currentFile%fn250
+       leno=currentFile%lenf
+    end do
+    write(unitr,'(I0)',iostat=irc) cnt
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," unable to write to:"//path250(1:lenp))
@@ -687,26 +719,30 @@ CONTAINS
        return
     end if
     ! loop over file stack
-    currentFile=>css%firstFile%next
-    do while (.not.associated(currentFile,target=css%lastFile))
+    leno=0
+    do ii=1,css%newnFileSortIndexes(1)
+       currentFile=>css%fileStack(css%fileStackInd(ii,1))%ptr
+       if (old250(1:leno).ne.currentFile%fn250(1:currentFile%lenf)) then
           write(unitr,'(L1,2(X,F0.10),4(X,I0),X,A)',iostat=irc) &
                & currentFile%ind_lim,&
                & currentFile%ind_start,currentFile%ind_stop,&
                & currentFile%nmessage,currentFile%ncat,currentFile%nsub,&
                & currentFile%lenf,currentFile%fn250(1:currentFile%lenf)
-       ! write category summary
-       currentCat=>currentFile%firstCategory%next
-       do while (.not.associated(currentCat,target=currentFile%lastCategory)) 
-          write(unitr,'(3(X,I0))',iostat=irc) currentCat%category,&
-               & currentCat%cnt,currentCat%nsub
-          currentSub=> currentCat%firstSubCategory%next
-          do while (.not.associated(currentSub,target=currentCat%lastSubCategory)) 
-             write(unitr,'(2(X,I0))',iostat=irc) currentSub%subcategory,currentSub%cnt
-             currentSub=>currentSub%next
+          ! write category summary
+          currentCat=>currentFile%firstCategory%next
+          do while (.not.associated(currentCat,target=currentFile%lastCategory)) 
+             write(unitr,'(3(X,I0))',iostat=irc) currentCat%category,&
+                  & currentCat%cnt,currentCat%nsub
+             currentSub=> currentCat%firstSubCategory%next
+             do while (.not.associated(currentSub,target=currentCat%lastSubCategory)) 
+                write(unitr,'(2(X,I0))',iostat=irc) currentSub%subcategory,currentSub%cnt
+                currentSub=>currentSub%next
+             end do
+             currentCat=>currentCat%next
           end do
-          currentCat=>currentCat%next
-       end do
-       currentFile=>currentFile%next
+       end if
+       old250=currentFile%fn250
+       leno=currentFile%lenf
     end do
     ! close file
     close(unitr,iostat=irc)
@@ -788,7 +824,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
-    if(obs_bdeb)write(*,*)myname," Indexed filed:",css%nFileIndexes
+    if(obs_bdeb)write(*,*)myname," Indexed files:",css%nFileIndexes
     ! loop through cache file
     do ii=1,css%nFileIndexes
        allocate(newFile,stat=irc)
@@ -848,6 +884,8 @@ CONTAINS
        newFile%fn250=buff250(opos+1:pos)
        call chop0(newFile%fn250,250)
        lenf=length(newFile%fn250,250,10)
+       !
+       if(obs_bdeb)write(*,*)myname,"Loaded: '"//newFile%fn250(1:newFile%lenf)//"'",ii
        !
        do jj=1,newFile%ncat
           allocate(newCat,stat=irc)
@@ -1137,9 +1175,7 @@ CONTAINS
     ! open file
     if (bok) then
        ! open file
-       if(obs_bdeb)write(*,*)myname,'Flare.',bok
        call observation_scanFile(css,bok,crc250,irc)
-       if(obs_bdeb)write(*,*)myname,'Share.',bok
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
           call observation_errorappend(crc250," Error return from observation_scanFile.")
@@ -2200,6 +2236,7 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    if (obs_bdeb) write(*,*)myname,'Making sort stack list:',css%nFileIndexes
     currentFile => css%firstFile%next
     ii=0
     kk=0
@@ -2215,15 +2252,15 @@ CONTAINS
              buff=css%trg_val(css%ntrg)
              css%trg_vok(css%ntrg)=.true.
              css%trg_val(css%ntrg)=currentFile%ind_start
-             if (obs_bdeb) then
-                write(*,*)myname,' Eval:',css%ntrg,css%trg_val(css%ntrg),&
-                     & "'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
-                do jj=1,css%ntrg
-                   write(*,'(X,A,A,I0,A,F0.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
-                end do
-             end if
+             !if (obs_bdeb) then
+             !   write(*,*)myname,' Eval:',css%ntrg,css%trg_val(css%ntrg),&
+             !        & "'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
+             !   do jj=1,css%ntrg
+             !      write(*,'(X,A,A,I0,A,F0.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
+             !   end do
+             !end if
              if (css%ind_tset) then
-                if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
+                !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
                 css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val)
              else
                 css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
@@ -2231,13 +2268,13 @@ CONTAINS
              css%trg_vok(css%ntrg)=.true.
              css%trg_val(css%ntrg)=currentFile%ind_stop
              if (css%ind_tset) then
-                if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
+                !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
                 css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val)
              else
-                css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
+                css%fileStackSort(ii,2)=css%trg_val(css%ntrg)
              end if
-             if (obs_bdeb)write(*,*)myname,'Eval:',ii,css%fileStackSort(ii,1),css%fileStackSort(ii,2),&
-                  & currentFile%ind_start,currentFile%ind_stop
+             !if (obs_bdeb)write(*,*)myname,'Eval:',ii,css%fileStackSort(ii,1),css%fileStackSort(ii,2),&
+              !    & currentFile%ind_start,currentFile%ind_stop
              css%trg_val(css%ntrg)=buff
              css%trg_vok(css%ntrg)=luff
           else
@@ -2262,15 +2299,29 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    if (obs_bdeb) write(*,*)myname,'Sorting:',css%nFileIndexes
     ! make sorted index (chronologically)
     css%nFileIndexes=ii
     css%nFileSortIndexes=css%nFileIndexes
     css%newnFileSortIndexes(1)=css%nFileIndexes
     css%newnFileSortIndexes(2)=css%nFileIndexes
+    if (obs_bdeb)then
+       do ii=1,css%nFileSortIndexes
+          write(*,'(X,A,X,A,X,I0,2(X,I0,X,F15.1))') myname,"Before: ",ii,&
+               & css%fileStackInd(ii,1),css%fileStackSort(ii,1),css%fileStackInd(ii,2),css%fileStackSort(ii,2)
+       end do
+    end if
     call sort_heapsort1r(css%nFileIndexes,css%fileStackSort(1,1),1.0D-5, &
          & css%newnFileSortIndexes(1),css%nFileSortIndexes,css%fileStackInd(1,1),.false.)
     call sort_heapsort1r(css%nFileIndexes,css%fileStackSort(1,2),1.0D-5, &
          & css%newnFileSortIndexes(2),css%nFileSortIndexes,css%fileStackInd(1,2),.false.)
+    if (obs_bdeb)then
+       write(*,*)myname,'Indexes:',css%nFileSortIndexes,css%newnFileSortIndexes
+       do ii=1,css%nFileSortIndexes
+          write(*,'(X,A,X,A,X,I0,2(X,I0,X,F15.1))') myname,"After: ",ii,&
+               & css%fileStackInd(ii,1),css%fileStackSort(ii,1),css%fileStackInd(ii,2),css%fileStackSort(ii,2)
+       end do
+    end if
     ! set index range
     if(obs_bdeb)write(*,*)myname,' Done.',css%newnFileSortIndexes
     return

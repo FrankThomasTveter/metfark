@@ -26,9 +26,7 @@ use File::Path qw( make_path );
 use Cwd 'abs_path';
 use File::Touch;
 
-require Exporter;
-
-# capture term-exit signals in termval block
+# capture term-exit signals in sanbox block
 our $override_exit = 0;
 BEGIN { 
     *CORE::GLOBAL::exit = sub (;$) {
@@ -37,6 +35,8 @@ BEGIN {
         CORE::exit($_[0] // 0);
     };
  }
+
+require Exporter;
 
 our @ISA = qw(Exporter);
 
@@ -527,74 +527,63 @@ sub checkClassForStrings {
     return; # no match
 }
 #
-# termval {system "ls -l";} "Error running ls -l";
+# sandbox {system "ls -l";} {message=>"Error running ls -l"};
 #
-sub termval (&@) {
+sub sandbox (&@) {
     use Capture::Tiny 'capture_merged';
     my $code = shift; # reference to block to be executed
-    my $msg = shift;
-    my $log = shift;
-#    print "Entering termval...\n";
+    my $opts = shift;
+    my $msg    = $opts->{"message"}//"";     # term-message in case of error
+    my $log    = $opts->{"logfile"}//"";     # logfile to save output
+    my $print  = $opts->{"print"}//(!$log);  # print to stdout?
+    my $termx  = $opts->{"terminate"}//"1";  # allow termination... 
     my $ret="";
     my $exit_called = 1;
-#    my ($merged,$irc)=("X","Y");
     my ($merged,$irc)=capture_merged {
-#	print "Here...\n";
+      #print "Here...\n";
       EXIT_OVERRIDE: {
 	  local $override_exit = 1;
 	  eval {
 	      &{$code}; # execute block
 	  };
 	  $ret=$@;
+	  #print "Strange... $ret\n";
 	  $exit_called = 0;
-	  die $ret if $ret;
 	};
-#	print "There...\n";
-    };
-#    print "Termval: $ret, $msg, $irc, $merged\n";
-    if ($ret || $exit_called) {
-	if ($merged =~ m/<error message='(.*)'\/>/g) {
-	    term ($1);
-	} else {
-	    term ($msg);
-	};
+	#print "There... '$msg' '$log'\n";
     };
     if (defined $log && $log) {	# save to logfile
 	if (open(my $fh, '>', $log)) {
 	    print $fh $merged;
-	    print $fh $irc;
+	    print $fh "msg:$msg\n";
+	    print $fh "log:$log\n";
+	    print $fh "print:$print\n";
+	    print $fh "termx:$termx\n";
+	    print $fh "exit:$exit_called\n";
+	    print $fh "ret:$ret\n";
+	    print $fh "irc:$irc\n";
 	    close $fh;
 	};
     }
+    #print "sandbox: $ret, $msg, $irc, $merged\n";
+    if ($termx && ($ret || $exit_called)) {
+	if ($merged =~ m/<error message='(.*)'\/>/g) {
+	    term ($1);
+	} elsif ($ret) {
+	    term ($ret);
+	} else {
+	    term ($msg);
+	};
+    };
     if ($irc) {
-	term ($msg . " ($irc)"); # use error message if necessary...
-    } elsif (! defined $log) {
+	if ($termx) {
+	    term ($msg . " ($irc)"); # use error message if necessary...
+		
+	}
+    } elsif ($print) {
 	print $merged;
     }
-}
-sub ignval (&@) {
-    use Capture::Tiny 'capture_merged';
-    my $code = shift; # reference to block to be executed
-    my $msg = shift;
-    my $log = shift;
-    my ($merged,$irc)=capture_merged {
-	eval {
-	    &{$code}; # execute block
-	};
-	if ($@) {return "termval Error:: $@\n";}
-    };
-    if (defined $log) {	# save to logfile
-	if (open(my $fh, '>', $log)) {
-	    print $fh $merged;
-	    print $fh $irc;
-	    close $fh;
-	};
-    }
-    if ($irc) {
-	return "$msg ($irc)";
-    } else {
-	return $log;
-    }
+    #print "sandbox: Done\n";
 }
 
 #

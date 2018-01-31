@@ -21,12 +21,14 @@ my $param    = $ref->{param};
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 #
+#fark::debug(2);  # debug models
+#fark::debug(3);  # debug colocation
 my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;       # debug this script (0=omit output)
     #fark::debug(1);  # debug observations
     #fark::debug(2);  # debug models
-    #fark::debug(3);  # debug colocation
+    fark::debug(3);  # debug colocation
     #fark::debug(4);  # debug plot
     #fark::debug(5);  # debug parse
 }
@@ -261,7 +263,7 @@ sub loopCls {
 	    if($debug){print "Processing '$xmlfile'\n";}
 	    if ( my ($clsnode)=$clsdoc->findnodes($cls."/".$cls."_config")) {
 		if ($debug) {
-		    eval{
+		    farkdir::sandbox {
 			&processCls($xmlfile,
 				    $clsnode,
 				    $colocDir,
@@ -273,9 +275,13 @@ sub loopCls {
 				    $obsRegDir,
 				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
+		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
+		      logfile=>$logfile,
+		      print=>1,
+		      terminate=>1
 		    };
 		} elsif ($cron)  {
-		    farkdir::ignval {
+		    farkdir::sandbox {
 			&processCls($xmlfile,
 				    $clsnode,
 				    $colocDir,
@@ -287,9 +293,14 @@ sub loopCls {
 				    $obsRegDir,
 				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
-		    } "$myname $cls file: $xmlfile, see $logfile",$logfile;
+		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
+		      logfile=>$logfile,
+		      print=>0,
+		      terminate=>0
+		    };
 		} else {
-		    farkdir::termval {
+		    print "Calling farkdir::sandbox\n";
+		    farkdir::sandbox {
 			&processCls($xmlfile,
 				    $clsnode,
 				    $colocDir,
@@ -301,7 +312,11 @@ sub loopCls {
 				    $obsRegDir,
 				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
-		    } "$myname $cls file: $xmlfile, see $logfile",$logfile;
+		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
+		      logfile=>$logfile,
+		      terminate=>1
+		    };
+		    print "After farkdir::sandbox\n";
 		};
 	    } else {
 		farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
@@ -661,6 +676,7 @@ sub setModelConfig {
     if (-e $cachefile) {
 	$fark->loadModelCache($cachefile);# load cached model file stack
     };
+    print "Model config complete\n";
 }
 
 sub setObsConfig {

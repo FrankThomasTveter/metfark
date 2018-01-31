@@ -98,7 +98,7 @@ sub findModel {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
-    	farkdir::termval {
+    	farkdir::sandbox {
 	    my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
 	    if (@files) {
 		$node->setAttribute("password",        $password//"");
@@ -131,7 +131,7 @@ sub findModel {
 	    } else {
 		return "No files found.";
 	    }
-	} "Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax",0; #ignore output
+	}{message=>"Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax"}; #ignore output
 	# report xml-structure
 	print $doc->toString . "\n";
     } else {

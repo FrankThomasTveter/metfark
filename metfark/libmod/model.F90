@@ -43,7 +43,7 @@ module model
      integer :: ctrg=0                  ! number of target variables
      real, allocatable    :: trg_val(:) ! value of target variable
      logical, allocatable :: trg_vok(:) ! value of target variable
-     logical, allocatable :: trg_lval(:)! is target variable set?
+     logical, allocatable :: trg_set(:)! is target variable set?
      integer :: cobs=0                  ! number of obs variables
      real, allocatable    :: obs_val(:) ! value of obs variable
      logical, allocatable :: obs_vok(:) ! is value set?
@@ -799,10 +799,10 @@ CONTAINS
     integer :: nslice
     character*80, allocatable :: sdim80(:)
     character*25 :: myname="model_pushFile"
-    if(mod_bdeb)write(*,*)myname,'Entering.',irc
+    if(mod_bdeb)write(*,*)myname,'Entering.',css%nFileIndexes,irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(mod_bdeb)write(*,*)myname,' File.',path250(1:lenp)
+    if(mod_bdeb)write(*,*)myname," File: '"//path250(1:lenp)//"'"
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -895,8 +895,12 @@ CONTAINS
        newFile%next => css%lastFile
        newFile%prev%next => newFile
        newFile%next%prev => newFile
+    else
+       call deleteFile(css,newFile,crc250,irc)
+       deallocate(newFile,stat=irc)
+       irc=0 ! ignore any errors
     end if
-    if(mod_bdeb)write(*,*)myname,' Done.'
+    if(mod_bdeb)write(*,*)myname,' Done.',css%nFileIndexes
   end subroutine model_pushFile
 
   !
@@ -913,6 +917,7 @@ CONTAINS
     logical :: bdone
     integer, external :: length
     integer :: lenp
+    if(mod_bdeb)write(*,*)myname,'Entering.',css%nFileIndexes,irc
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -930,8 +935,7 @@ CONTAINS
     do while (.not. bdone) 
        prevFile=>currentFile%prev
        if (currentFile%fn250(1:currentFile%lenf).eq.path250(1:lenp).or.lenp.eq.0) then
-          css%nFileIndexes=css%nFileIndexes - 1
-          css%tsort=css%tsort - currentFile%nsort
+          if(mod_bdeb)write(*,*)myname," File: '"//path250(1:lenp)//"'"
           call model_deleteFile(css,currentFile,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
@@ -946,6 +950,8 @@ CONTAINS
        currentFile=>prevFile
        bdone=(bdone.or.associated(currentFile,target=css%firstFile))
     end do
+    if(mod_bdeb)write(*,*)myname,' Done.',css%nFileIndexes
+    return
   end subroutine model_popfile
 
   !
@@ -1337,7 +1343,8 @@ CONTAINS
        leftmax=css%nFileSortIndexes
        rightmax=css%nFileSortIndexes
     end if
-    if (mod_bdeb)write(*,*)myname,'Limits.', leftmin,rightmin,leftmax,rightmax
+    if (mod_bdeb)write(*,'(X,A,X,A,5(X,I0))')myname,'Limits.', &
+         & leftmin,rightmin,leftmax,rightmax,css%nFileSortIndexes
     css%sortLimitsOk= (leftmin.le.css%nFileSortIndexes.and.rightmax.ge.1) ! check for overlap...
     if (css%sortLimitsOk) then
        css%leftFileSortIndex=min(leftmin,rightmin)
@@ -1363,10 +1370,11 @@ CONTAINS
     integer :: irc
     type(mod_file), pointer :: currentFile !  current file
     integer, external :: length,ftunit
-    integer :: lenp,lenf,lenv,lend,unitr,ii,jj
+    integer :: lenp,lenf,lenv,lend,unitr,ii,jj,kk
     character*22 :: myname="model_makeCache"
     character*50 :: minval50,maxval50
-    integer :: lenmi,lenma
+    integer :: lenmi,lenma,leno,cnt
+    character*250 :: old250
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1391,9 +1399,41 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    !
+    call model_makeTargetList(css,crc250,irc) 
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from makeTargetList.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
+    call model_sortStack(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from sortStack.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
     ! write number of files: css%nFileIndexes
     if(mod_bdeb)write(*,*) myname,' Stack entries.',css%nFileIndexes,unitr
-    write(unitr,'(I0)',iostat=irc) css%nFileIndexes
+    leno=0
+    cnt=0
+    do ii=1,css%newnFileSortIndexes(1)
+       if (css%fileStackInd(ii,1).eq.0) cycle
+       currentFile=>css%fileStack(css%fileStackInd(ii,1))%ptr
+       if (old250(1:leno).ne.currentFile%fn250(1:currentFile%lenf)) then
+          cnt=cnt+1
+       end if
+       old250=currentFile%fn250
+       leno=currentFile%lenf
+    end do
+    if(mod_bdeb)write(*,*) myname,' Stack cnt.',cnt,&
+         & css%newnFileSortIndexes(1),size(css%fileStackInd(:,1))
+    write(unitr,'(I0)',iostat=irc) cnt
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," unable to write to:"//path250(1:lenp))
@@ -1402,56 +1442,65 @@ CONTAINS
        return
     end if
     ! loop over file stack
-    currentFile=>css%firstFile%next
-    do while (.not.associated(currentFile,target=css%lastFile))
-       lenf=length(currentFile%fn250,250,currentFile%lenf)
-       write(unitr,'(L1,5(X,I0),X,A)',iostat=irc) &
-            & currentFile%ind_lim,&
-            & currentFile%tsort,&
-            & currentFile%nsort,&
-            & currentFile%ndim,&
-            & currentFile%nvar,&
-            & currentFile%lenf,&
-            & currentFile%fn250(1:LENF)
-       ! write category summary
-       do ii=1,currentFile%nsort
-          lend=length(currentFile%desc250(ii),250,5)
-          write(unitr,'(X,F0.10,X,I0,X,A)',iostat=irc) &
-               & currentFile%sort(ii),&
-               & currentFile%indsort(ii),&
-               & currentFile%desc250(ii)(1:lend)
-       end do
-       do ii=1,currentFile%ndim
-          lend=length(currentFile%dim80(ii),80,5)
-          write(unitr,'(X,I0,X,A)',iostat=irc) currentFile%istop(ii),&
-               & currentFile%dim80(ii)(1:lend)
-       end do
-       do ii=1,currentFile%nvar
-          !call chop0(currentFile%var(ii)%ptr%var80,80)
-          lenv=length(currentFile%var(ii)%ptr%var80,80,5)
-          write(unitr,'(I0,X,A)',advance="no",iostat=irc) &
-               & currentFile%var(ii)%ptr%ndim, currentFile%var(ii)%ptr%var80(1:lenv)
-          do jj=1,currentFile%var(ii)%ptr%ndim
-             write(unitr,'(X,I0)',advance="no",iostat=irc) currentFile%var(ii)%ptr%ind(jj)
+    leno=0
+    cnt=0
+    do ii=1,css%newnFileSortIndexes(1)
+       !if(mod_bdeb)write(*,*) myname,' Loop.',ii
+       if (css%fileStackInd(ii,1).eq.0) cycle
+       currentFile=>css%fileStack(css%fileStackInd(ii,1))%ptr
+       if (old250(1:leno).ne.currentFile%fn250(1:currentFile%lenf)) then
+          cnt=cnt+1
+          lenf=currentFile%lenf
+          write(unitr,'(L1,5(X,I0),X,A)',iostat=irc) &
+               & currentFile%ind_lim,&
+               & currentFile%tsort,&
+               & currentFile%nsort,&
+               & currentFile%ndim,&
+               & currentFile%nvar,&
+               & currentFile%lenf,&
+               & currentFile%fn250(1:LENF)
+          ! write category summary
+          do jj=1,currentFile%nsort
+             lend=length(currentFile%desc250(jj),250,5)
+             write(unitr,'(X,F0.10,X,I0,X,A)',iostat=irc) &
+                  & currentFile%sort(jj),&
+                  & currentFile%indsort(jj),&
+                  & currentFile%desc250(jj)(1:lend)
           end do
-          write(unitr,'(X,L1)',advance="no",iostat=irc) &
-               & currentFile%var(ii)%ptr%mmrange
-          if (currentFile%var(ii)%ptr%mmrange) then
+          do jj=1,currentFile%ndim
+             lend=length(currentFile%dim80(jj),80,5)
+             write(unitr,'(X,I0,X,A)',iostat=irc) currentFile%istop(jj),&
+                  & currentFile%dim80(jj)(1:lend)
+          end do
+          do jj=1,currentFile%nvar
+             !call chop0(currentFile%var(jj)%ptr%var80,80)
+             lenv=length(currentFile%var(jj)%ptr%var80,80,5)
+             write(unitr,'(I0,X,A)',advance="no",iostat=irc) &
+                  & currentFile%var(jj)%ptr%ndim, currentFile%var(jj)%ptr%var80(1:lenv)
+             do kk=1,currentFile%var(jj)%ptr%ndim
+                write(unitr,'(X,I0)',advance="no",iostat=irc) currentFile%var(jj)%ptr%ind(kk)
+             end do
              write(unitr,'(X,L1)',advance="no",iostat=irc) &
-                  & currentFile%var(ii)%ptr%mmset
-             if (currentFile%var(ii)%ptr%mmset) then
-                call model_wash(currentFile%var(ii)%ptr%minval,minval50,lenmi)
-                call model_wash(currentFile%var(ii)%ptr%maxval,maxval50,lenma)
-                write(unitr,'(X,A,X,A)',iostat=irc) minval50(1:lenmi),maxval50(1:lenma)
+                  & currentFile%var(jj)%ptr%mmrange
+             if (currentFile%var(jj)%ptr%mmrange) then
+                write(unitr,'(X,L1)',advance="no",iostat=irc) &
+                     & currentFile%var(jj)%ptr%mmset
+                if (currentFile%var(jj)%ptr%mmset) then
+                   call model_wash(currentFile%var(jj)%ptr%minval,minval50,lenmi)
+                   call model_wash(currentFile%var(jj)%ptr%maxval,maxval50,lenma)
+                   write(unitr,'(X,A,X,A)',iostat=irc) minval50(1:lenmi),maxval50(1:lenma)
+                else
+                   write(unitr,*,iostat=irc)
+                end if
              else
                 write(unitr,*,iostat=irc)
              end if
-          else
-             write(unitr,*,iostat=irc)
-          end if
-       end do
-       currentFile=>currentFile%next
+          end do
+       end if
+       old250=currentFile%fn250
+       leno=currentFile%lenf
     end do
+    if(mod_bdeb)write(*,*) myname,' Closing.',cnt,css%newnFileSortIndexes(1)
     ! close file
     close(unitr,iostat=irc)
     if (irc.ne.0) then
@@ -1474,11 +1523,12 @@ CONTAINS
     type(mod_file), pointer :: cfile, cfilen
     type(mod_file),pointer :: newFile
     integer, external :: length
-    integer :: lenp,lenb,lend,ii,jj,kk,opos,pos,unitr
+    integer :: lenp,lenb,lend,ii,jj,kk,opos,pos,unitr,cnt
     type(mod_variable),pointer :: v     ! variable
     character*250 :: buff250
     character*1 :: c1
     character*22 :: myname="model_loadCache"
+    logical :: bok
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1520,8 +1570,10 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    cnt=0
     read(buff250,*,iostat=irc) css%nFileIndexes
     if (irc.ne.0) then
+       if (mod_bdeb) write(*,*) myname," Unable to interprt nfileindexes."
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," unable to interpret:"//path250(1:lenp))
        call model_errorappendi(crc250,irc)
@@ -1529,9 +1581,13 @@ CONTAINS
        return
     end if
     ! loop through cache file
+    if (mod_bdeb)write(*,*)myname,'Looking for files:',css%nFileIndexes
     do ii=1,css%nFileIndexes
+       !if (mod_bdeb) write(*,*) myname," file loop started.",ii,css%nFileIndexes
+       bok=.true.
        allocate(newFile,stat=irc)
        if (irc.ne.0) then
+          if (mod_bdeb) write(*,*) myname," Unable to allocate new File item."
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Unable to allocate new File item.")
           call model_errorappend(crc250,"\n")
@@ -1543,52 +1599,74 @@ CONTAINS
        newFile%prev%next => newFile
        newFile%next%prev => newFile
        !
+       !if (mod_bdeb) write(*,*) myname," reading index.",ii
        read(unitr,'(A)',iostat=irc) buff250
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read new line."
        call chop0(buff250,250)
        lenb=length(buff250,250,10)
        pos=0
        opos=pos
        call findDelimiter(buff250(1:lenb)," ",pos)
        read(buff250(opos+1:pos-1),*,iostat=irc)newFile%ind_lim
+       if(bok)bok=(irc.eq.0)
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' ind_lim"
        opos=pos
        call findDelimiter(buff250(1:lenb)," ",pos)
        read(buff250(opos+1:pos-1),*,iostat=irc)newFile%tsort
+       if(bok)bok=(irc.eq.0)
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' tsort"
        opos=pos
        call findDelimiter(buff250(1:lenb)," ",pos)
        read(buff250(opos+1:pos-1),*,iostat=irc)newFile%nsort
+       if(bok)bok=(irc.eq.0)
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' nsort"
        opos=pos
        call findDelimiter(buff250(1:lenb)," ",pos)
        read(buff250(opos+1:pos-1),*,iostat=irc)newFile%ndim
+       if(bok)bok=(irc.eq.0)
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' ndim"
        opos=pos
        call findDelimiter(buff250(1:lenb)," ",pos)
-       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%nvar
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%nvar 
+       if(bok)bok=(irc.eq.0)
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' nvar"
        opos=pos
        call findDelimiter(buff250(1:lenb)," ",pos)
        read(buff250(opos+1:pos-1),*,iostat=irc)newFile%lenf
+       if(bok)bok=(irc.eq.0)
+       if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' lenf"
        opos=pos
        pos=251 ! call findDelimiter(buff250(1:lenb)," ",pos)
        newFile%fn250=buff250(opos+1:pos-1)
        !
-       if (mod_bdeb) write(*,*) myname," Loaded:'"//newFile%fn250(1:newFile%lenf)//"'",newFile%ind_lim
+       if (mod_bdeb) write(*,*) myname," Loaded:'"//newFile%fn250(1:newFile%lenf)//"'",newFile%ind_lim,ii
        !
        allocate(newFile%sort(newFile%nsort),newFile%indsort(newFile%nsort),newFile%desc250(newFile%nsort),stat=irc)
        if (irc.ne.0) then
+          if (mod_bdeb) write(*,*) myname," Unable to allocate new Sort item."
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Unable to allocate new Sort item.")
           call model_errorappend(crc250,"\n")
           return
        end if
+       !if (mod_bdeb) write(*,*) myname," reading sort."
        do jj=1,newFile%nsort
           read(unitr,'(A)',iostat=irc) buff250
+          if(bok)bok=(irc.eq.0)
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read new line."
           call chop0(buff250,250)
           lenb=length(buff250,250,10)
           pos=0
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           read(buff250(opos+1:pos-1),*,iostat=irc)newFile%sort(jj)
+          if(bok)bok=(irc.eq.0)
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' sort(",jj,")"
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           read(buff250(opos+1:pos-1),*,iostat=irc)newFile%indsort(jj)
+          if(bok)bok=(irc.eq.0)
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' indsort(",jj,")"
           opos=pos
           pos=251 ! call findDelimiter(buff250(1:lenb)," ",pos)
           newFile%desc250(jj)=buff250(opos+1:pos-1)
@@ -1605,19 +1683,24 @@ CONTAINS
             & newFile%dim_val(newFile%ndim),newFile%dim_trg(newFile%ndim),&
             & newFile%var80(newFile%nvar),newFile%lenv(newFile%nvar),stat=irc)
        if (irc.ne.0) then
+          if (mod_bdeb) write(*,*) myname," Unable to allocate new sort item."
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Unable to allocate new Sort item.")
           call model_errorappend(crc250,"\n")
           return
        end if
+       !if (mod_bdeb) write(*,*) myname," reading dims."
        do jj=1,newFile%ndim
           read(unitr,'(A)',iostat=irc) buff250
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read new line."
           call chop0(buff250,250)
           lenb=length(buff250,250,10)
           pos=0
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           read(buff250(opos+1:pos-1),*,iostat=irc)newFile%istop(jj)
+          if(bok)bok=(irc.eq.0)
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' istop(",jj,")"
           newFile%istart(jj)=1
           opos=pos
           pos=251 ! call findDelimiter(buff250(1:lenb)," ",pos)
@@ -1630,14 +1713,17 @@ CONTAINS
        end do
        allocate(newFile%var(newFile%nvar),stat=irc)
        if (irc.ne.0) then
+          if (mod_bdeb) write(*,*) myname," Unable to allocate new var item."
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Unable to allocate new Var item.")
           call model_errorappend(crc250,"\n")
           return
        end if
+       !if (mod_bdeb) write(*,*) myname," reading vars."
        do jj=1,newFile%nvar
           allocate(newFile%var(jj)%ptr,stat=irc)
           if (irc.ne.0) then
+             if (mod_bdeb) write(*,*) myname," Unable to allocate new var ptr."
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250," Unable to allocate new Var item.")
              call model_errorappend(crc250,"\n")
@@ -1645,12 +1731,16 @@ CONTAINS
           end if
           v => newFile%var(jj)%ptr
           read(unitr,'(A)',iostat=irc) buff250
+          if(bok)bok=(irc.eq.0)
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read new line."
           call chop0(buff250,250)
           lenb=length(buff250,250,10)
           pos=0
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           read(buff250(opos+1:pos-1),*,iostat=irc)v%ndim
+          if(bok)bok=(irc.eq.0)
+          if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' ndim"
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           v%var80=buff250(opos+1:min(80+opos,pos-1))
@@ -1659,6 +1749,7 @@ CONTAINS
           newFile%lenv(jj)=v%lenv
           allocate(v%ind(v%ndim),v%istart(v%ndim),v%icount(v%ndim),stat=irc)
           if (irc.ne.0) then
+             if (mod_bdeb) write(*,*) myname," Unable to allocate new var dim."
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250," Unable to allocate new Var dim item.")
              call model_errorappendi(crc250,jj)
@@ -1670,15 +1761,8 @@ CONTAINS
              opos=pos
              call findDelimiter(buff250(1:lenb)," ",pos)
              read(buff250(opos+1:pos-1),*,iostat=irc) v%ind(kk)
-             if (irc.ne.0) then
-                call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Unable to read cache.'"//buff250(1:lenb)//"'")
-                call model_errorappendi(crc250,opos+1)
-                call model_errorappendi(crc250,pos-1)
-                call model_errorappendi(crc250,irc)
-                call model_errorappend(crc250,"\n")
-                return
-             end if
+             if(bok)bok=(irc.eq.0)
+             if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' ind(",kk,")"
           end do
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
@@ -1695,21 +1779,42 @@ CONTAINS
              opos=pos
              call findDelimiter(buff250(1:lenb)," ",pos)
              read(buff250(opos+1:pos-1),*,iostat=irc)v%minval
+             if(bok)bok=(irc.eq.0)
+             if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' minval"
              opos=pos
              call findDelimiter(buff250(1:lenb)," ",pos)
              read(buff250(opos+1:pos-1),*,iostat=irc)v%maxval
+             if(bok)bok=(irc.eq.0)
+             if(mod_bdeb.and.irc.ne.0)write(*,*)myname,"Unable to read:'"//buff250(opos+1:pos-1)//"' maxval"
           end if
        end do
+       if (bok) then
+          cnt=cnt+1
+       else
+          irc=0
+          if (mod_bdeb)write(*,*)myname,'System error! Deleting Invalid entry:',ii
+          call model_deleteFile(css,newFile,crc250,irc)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Error return from deleteFile.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+       end if
+       !if (mod_bdeb) write(*,*) myname," file loop ended.",ii,css%nFileIndexes
     end do
     ! close file
     close(unitr,iostat=irc)
     if (irc.ne.0) then
+       if (mod_bdeb) write(*,*) myname," Unable to close:"//path250(1:lenp)
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," unable to close:"//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
     end if
+    css%nFileIndexes=cnt! should not be necessary...
     if(mod_bdeb)write(*,*)myname,' Done, files in stack:',css%nFileIndexes,irc
   end subroutine model_loadcache
   !
@@ -2037,8 +2142,10 @@ CONTAINS
                   & css%trg_v80(ii)(1:css%trg_lenv(ii))
              !
              css%trg_valset(ii)=.true.
-             css%trg_minset(ii)=.false.
-             css%trg_maxset(ii)=.false.
+             css%trg_minset(ii)=css%ind_lval(1)
+             css%trg_maxset(ii)=css%ind_lval(2)
+             css%trg_minval(ii)=css%ind_minval
+             css%trg_maxval(ii)=css%ind_maxval
              css%trg_req(ii)=.false.
              css%trg_vok(ii)=.false.
              css%trg_val(ii)=0.0D0
@@ -2174,12 +2281,12 @@ CONTAINS
     end if
     loc%trg_vok(itrg)=.true.
     loc%trg_val(itrg)=val
-    loc%trg_lval(itrg)=.true.
+    loc%trg_set(itrg)=.true.
     do jj=1,ninn
        if (ind(jj).gt.0.and.ind(jj).le.loc%ctrg) then
           loc%trg_vok(ind(jj))=.true.
           loc%trg_val(ind(jj))=loc%rpos(inn(jj))
-          loc%trg_lval(ind(jj))=.true.
+          loc%trg_set(ind(jj))=.true.
        else if (ind(jj).ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Invalid index.")
@@ -2294,10 +2401,18 @@ CONTAINS
     if (bok.and.css%locReady) then
        pos=locid-css%locoffset
        if (pos.gt.css%nloc) then
-          if(mod_bdeb)write(*,*)myname,'Location pos out of range. resetting.',pos,'->',css%nloc,&
+          if(mod_bdeb)write(*,*)myname,'Location pos out of range.',pos,'->',css%nloc,&
                & locid,css%locoffset
           bok=.false.
-          pos=css%nloc
+          irc=945
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Locid out of range:")
+          call model_errorappendi(crc250,locid)
+          call model_errorappend(crc250,"<>")
+          call model_errorappendi(crc250,css%nloc)
+          call model_errorappendi(crc250,css%locoffset)
+          call model_errorappend(crc250,"\n")
+          return
        end if
        if (bok) then
           loc => css%locData(pos)%ptr
@@ -2317,7 +2432,7 @@ CONTAINS
        end if
        do ii=1,loc%ctrg
           if (bok) then
-             if (loc%trg_lval(ii)) then
+             if (loc%trg_set(ii)) then
                 if (css%trg_minset(ii)) then
                    if (loc%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
                 end if
@@ -2333,7 +2448,7 @@ CONTAINS
              if (.not.bok.and.mod_bdeb)write(*,*)myname,'Rejected:',&
                   & ii,css%trg80(ii)(1:css%trg_lent(ii)), &
                   & loc%trg_val(ii),css%trg_minval(ii),css%trg_maxval(ii),&
-                  & loc%trg_lval(ii),css%trg_minset(ii),css%trg_maxset(ii)
+                  & loc%trg_set(ii),css%trg_minset(ii),css%trg_maxset(ii)
           end if
        end do
        if (bok) then
@@ -2843,7 +2958,7 @@ CONTAINS
     newLoc%ctrg=css%ctrg
     allocate(newLoc%trg_val(newLoc%ctrg),&
          & newLoc%trg_vok(newLoc%ctrg),&
-         & newLoc%trg_lval(newLoc%ctrg),stat=irc)
+         & newLoc%trg_set(newLoc%ctrg),stat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," Unable to allocate newLoc%trg_val.")
@@ -2853,7 +2968,7 @@ CONTAINS
     end if
     do ii=1,newLoc%ctrg
        newLoc%trg_val(ii)=0.0D0
-       newLoc%trg_lval(ii)=.false.
+       newLoc%trg_set(ii)=.false.
     end do
     ! push onto stack
     css%nloc=css%nloc + 1
@@ -2890,10 +3005,18 @@ CONTAINS
        css%currentFile%ook(1)=css%currentFile%ook(1)+1
        pos=locid-css%locoffset
        if (pos.gt.css%nloc) then
-          if(mod_bdeb)write(*,*)myname,'Location pos out of range. resetting.',pos,'->',css%nloc,&
+          if(mod_bdeb)write(*,*)myname,'Location pos out of range.',pos,'->',css%nloc,&
                & locid,css%locoffset
           bok=.false.
-          pos=css%nloc
+          irc=944
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Locid out of range:")
+          call model_errorappendi(crc250,locid)
+          call model_errorappend(crc250,"<>")
+          call model_errorappendi(crc250,css%nloc)
+          call model_errorappendi(crc250,css%locoffset)
+          call model_errorappend(crc250,"\n")
+          return
        end if
        if (bok) then
           loc => css%locData(pos)%ptr
@@ -3216,13 +3339,15 @@ CONTAINS
     integer :: ii
     do ii=1,css%ctrg
        if (css%mpo_req(ii)) then
-          write(*,*)myname,"Filter requires trg_mod(",ii,")"
+          !write(*,'(X,A,X,A,X,I0,A)')myname,&
+          !     & "Used: trg_mod(",ii,")->'"//css%trg80(ii)(1:css%trg_lent(ii))//"'"
           css%trg_req(ii)=.true.
        end if
     end do
     do ii=1,css%cobs
        if (css%mpo_req(ii+css%ctrg)) then
-          write(*,*)myname,"Filter requires trg_obs(",ii,")"
+          !write(*,'(X,A,X,A,X,I0,A)')myname,&
+          !     & "Used: trg_obs(",ii,")->'"//css%obs_var(ii)(1:css%obs_lenv(ii))//"'"
           css%obs_req(ii)=.true.
        end if
     end do
@@ -3300,7 +3425,7 @@ CONTAINS
        if (allocated(loc%sli_val))  deallocate(loc%sli_val)
        if (allocated(loc%trg_val))  deallocate(loc%trg_val)
        if (allocated(loc%trg_vok))  deallocate(loc%trg_vok)
-       if (allocated(loc%trg_lval)) deallocate(loc%trg_lval)
+       if (allocated(loc%trg_set)) deallocate(loc%trg_set)
        if (allocated(loc%obs_val))  deallocate(loc%obs_val)
        if (allocated(loc%obs_vok))  deallocate(loc%obs_vok)
        if (allocated(loc%pos))      deallocate(loc%pos)
@@ -5165,6 +5290,26 @@ CONTAINS
     return
   end function model_setLocGrid
   !
+  ! set variable grid to the search-cell...
+  !
+  subroutine model_resetGrid(f,v)
+    type(mod_file), pointer :: f
+    type(mod_variable), pointer :: v
+    type(mod_plan), pointer :: p
+    character*25 :: myname="model_resetGrid"
+    integer :: jj
+    do jj=1,v%ndim
+       v%istart(jj)=f%istart(v%ind(jj))
+       v%icount(jj)=f%istop(v%ind(jj))-f%istart(v%ind(jj))+1
+    end do
+    if (mod_bdeb)then
+       do jj=1,v%ndim
+          write(*,*)myname,'Dim:',jj,v%istart(jj),v%istart(jj)+v%icount(jj)-1
+       end do
+    end if
+    return
+  end subroutine model_resetGrid
+  !
   integer*8 function model_varLen(v)
     type(mod_variable), pointer :: v
     integer :: jj
@@ -5185,7 +5330,6 @@ CONTAINS
     end do
     return
   end function model_fileLen
-
   !
   !###############################################################################
   ! TABLE ROUTINES
@@ -5347,6 +5491,7 @@ CONTAINS
           if(mod_bdeb)write(*,*)myname,' ** Not a target:',v%var80(1:v%lenv)
           cycle VAR
        end if
+       call model_resetGrid(f,v) ! reset grid in case earlier call to setLocGrid
        var250=model_getvar250(f,varid)
        lenv=length(var250,250,10)
        dimlen=model_varLen(v)
@@ -5968,6 +6113,7 @@ CONTAINS
              if(mod_bdeb)write(*,*)myname,' ** Not a target:',v%var80(1:v%lenv)
              cycle VAR
           end if
+          call model_resetGrid(f,v) ! reset grid in case earlier call to setLocGrid
           var250=model_getvar250(f,varid)
           lenv=length(var250,250,10)
           dimlen=model_varLen(v)
@@ -6364,7 +6510,7 @@ CONTAINS
           write(ounit,'(3X,A,I0,A)') "<location id='",loc%locid,"' status='ok'>"
           write(ounit,'(4X,A,I0,A)') "<model targets='",loc%ctrg,"'>"
           do ii=1,loc%ctrg
-             if (loc%trg_lval(ii)) then
+             if (loc%trg_set(ii)) then
                 call model_wash(loc%trg_val(ii),s3,len3)
                 if (len3.ne.0) then
                    s3=" value='"//s3(1:len3)//"'"
@@ -6589,8 +6735,8 @@ CONTAINS
     lene=len_trim(smax)
     call parse_open(plim,crc250,irc)
     if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250,"Error return from 'parse_open'.")
        return
     end if
     if (lens.ne.0) then
@@ -6678,7 +6824,7 @@ CONTAINS
     call model_findStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from model_makeStackLimits.")
+       call model_errorappend(crc250," Error return from model_setStackLimits.")
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return

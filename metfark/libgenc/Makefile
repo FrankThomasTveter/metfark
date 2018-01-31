@@ -74,7 +74,7 @@
 # Compilation flags 
 #	(Put the compilation flags here (-g is recommented))
 #
- OPTIONS =-g -fdefault-real-8 -fPIC
+ OPTIONS = -O2 -fdefault-real-8 -fPIC
 #
 #------------------------------------------------------------------------
 #		the rest not is not likely to be changed

@@ -86,17 +86,18 @@ module parse
        cjulian    = 35,         &
        cMidnight  = 36,         &
        cNow       = 37,         &
-       cSinh      = 38,         &
-       cCosh      = 39,         &
-       cTanh      = 40,         &
-       cSin       = 41,         &
-       cCos       = 42,         &
-       cTan       = 43,         &
-       cAsin      = 44,         &
-       cAcos      = 45,         &
-       cAtan2     = 46,         &
-       cAtan      = 47,         &
-       VarBegin   = 48,         &
+       cRound     = 38,         &
+       cSinh      = 39,         &
+       cCosh      = 40,         &
+       cTanh      = 41,         &
+       cSin       = 42,         &
+       cCos       = 43,         &
+       cTan       = 44,         &
+       cAsin      = 45,         &
+       cAcos      = 46,         &
+       cAtan2     = 47,         &
+       cAtan      = 48,         &
+       VarBegin   = 49,         &
        VarEnd     = VarBegin+cAtan-cAbs
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
        '-',     &
@@ -133,6 +134,7 @@ module parse
        'julian    ', &
        'midnight  ', &
        'now       ', &
+       'round     ', &
        'sinh      ', &
        'cosh      ', &
        'tanh      ', &
@@ -340,6 +342,7 @@ CONTAINS
     integer :: ii, imax,nargs
     character*22 :: myname ="parse_evalf"
     character*250 :: str250
+    real  :: eps
     integer :: lens
     integer, external :: length
     logical :: above,below,found
@@ -712,6 +715,16 @@ CONTAINS
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
+       CASE  (cround)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          eps=max(1.0D-5,abs(css%Stack(SP+1)))
+          if (nargs.gt.1) then
+             css%Stack(SP)=nint(css%Stack(SP)/eps)*eps
+          else
+             css%Stack(SP)=nint(css%Stack(SP))
+          end if
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -825,6 +838,7 @@ CONTAINS
     integer :: ii, nargs
     character*22 :: myname ="parse_evals"
     character*250 :: str250
+    real :: eps
     integer :: lens
     integer, external :: length
     logical :: above,below,found
@@ -1195,6 +1209,16 @@ CONTAINS
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
+       CASE  (cround)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          eps=max(1.0D-5,abs(css%Stack(SP+1)))
+          if (nargs.gt.1) then
+             css%Stack(SP)=nint(css%Stack(SP)/eps)*eps
+          else
+             css%Stack(SP)=nint(css%Stack(SP))
+          end if
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -1311,6 +1335,7 @@ CONTAINS
     real :: vmax,vmin,vclo,v,buff
     logical :: above, below, found
     character*250 :: str250
+    real :: eps
     integer :: lens
     integer, external :: length
     character*12 :: myname ="parse_evala"
@@ -1940,6 +1965,20 @@ CONTAINS
                 do ii=1,nargs-1
                    css%Stacka(SP,jj)=css%Stacka(SP,jj)+css%Stacka(SP+ii,jj)*secperday
                 end do
+             end if
+          end do
+       CASE  (cround)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                eps=max(1.0D-5,abs(css%Stacka(SP+1,JJ)))
+                if (nargs.gt.1) then
+                   css%Stacka(SP,JJ)=nint(css%Stacka(SP,JJ)/eps)*eps
+                else
+                   css%Stacka(SP,JJ)=nint(css%Stacka(SP,JJ))
+                end if
              end if
           end do
        CASE  (cSinh)
