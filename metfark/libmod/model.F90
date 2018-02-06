@@ -2091,7 +2091,14 @@ CONTAINS
                    return
                 end if
                 if (mod_bdeb)write(*,*)myname,' System:',css%sys_val
-                css%trg_minval(ii)=parse_evalf(plim,css%sys_val)
+                css%trg_minval(ii)=parse_evalf(plim,css%sys_val,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from evalf.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
                 css%trg_minset(ii)=.true.
                 if (mod_bdeb) write(*,*)myname,'Minval:',css%trg_minval(ii),css%trg_minset(ii)
              else
@@ -2111,7 +2118,14 @@ CONTAINS
                    return
                 end if
                 if (mod_bdeb)write(*,*)myname,' System:',css%sys_val
-                css%trg_maxval(ii)=parse_evalf(plim,css%sys_val)
+                css%trg_maxval(ii)=parse_evalf(plim,css%sys_val,crc250,irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Error return from evalf.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
                 css%trg_maxset(ii)=.true.
                 if (mod_bdeb) write(*,*)myname,'Maxval:',css%trg_maxval(ii),css%trg_maxset(ii)
              else
@@ -3057,7 +3071,14 @@ CONTAINS
                 css%mpo_vok(ii+css%ctrg)=loc%obs_vok(ii)
              end do
              if (mod_bdeb)write(*,*)myname,' MPO:',css%mpo_val
-             val=parse_evalf(css%psf,css%mpo_val)
+             val=parse_evalf(css%psf,css%mpo_val,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from evalf.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
              bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
              if (mod_bdeb)write(*,*)myname,'Returned:',val,bok
           else
@@ -3224,9 +3245,12 @@ CONTAINS
     character*22 :: myname="model_evalExpr"
     integer :: ii
     do ii=1,css%cpsp
-       call parse_evals(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,val(ii),set(ii))
+       call parse_evals(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,val(ii),set(ii),crc250,irc)
        if (irc.ne.0) then
-          call model_errorappend(crc250,"parse_evals")
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from evals.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
           return
        end if
     end do
@@ -5354,8 +5378,8 @@ CONTAINS
     integer, external :: length
     type(mod_variable),pointer :: v
     type(mod_location), pointer :: loc
-    !integer*8, parameter :: maxlen=2147483647
-    integer*8, parameter :: maxlen=1000
+    integer*8, parameter :: maxlen=2147483647
+    !integer*8, parameter :: maxlen=1000
     integer*8 :: dimlen
      if(mod_bdeb)write(*,*)myname,' Entering.',nloc
     !
@@ -5478,6 +5502,7 @@ CONTAINS
     end do
     !
     if(mod_bdeb)write(*,*)myname,'Looping over remaining variables.',f%nvar, p%nvar
+    write(*,*)myname,'Looping over remaining variables.',f%nvar, p%nvar
     !
     ! loop over remaining variables
     !
@@ -5496,6 +5521,7 @@ CONTAINS
        lenv=length(var250,250,10)
        dimlen=model_varLen(v)
        if(mod_bdeb)write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
+       write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
        if (dimlen.gt.maxlen) then ! read variable in segments
           do ll=1,nloc
              loc=>lp(ll)%ptr
@@ -6756,7 +6782,14 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
-       css%ind_minval=parse_evalf(plim,val)
+       css%ind_minval=parse_evalf(plim,val,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from evalf.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
        css%ind_lval(1)=.true.
     else
        css%ind_lval(1)=.false.
@@ -6778,7 +6811,14 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
-       css%ind_maxval=parse_evalf(plim,val)
+       css%ind_maxval=parse_evalf(plim,val,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from evalf.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
        css%ind_lval(2)=.true.
     else
        css%ind_lval(2)=.false.
@@ -7137,7 +7177,7 @@ CONTAINS
        v%mc=char(nf_fill_char)
        v%m1=nf_fill_int1
        v%m2=nf_fill_int2
-      v%m4=nf_fill_int
+       v%m4=nf_fill_int
        v%mr=nf_fill_real
        v%md=nf_fill_double
        v%misstype=0
@@ -7164,6 +7204,14 @@ CONTAINS
           if (ret .ne. NF_NOERR) cycle
           RET=NF_INQ_ATT(f%NCID,VARID,att%att80,att%type,att%len)
           if (ret.ne.NF_NOERR) cycle
+          if (att%len.eq.0) then
+             irc=845
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250,"Zero length attribute ")
+             call model_errorappend(crc250,att%att80)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
           select case (att%type)
           case (nf_char)
              if (allocated(att%ac)) deallocate(att%ac)
@@ -7171,23 +7219,23 @@ CONTAINS
              if (irc.eq.0) ret = nf_get_att_text (f%ncid, varid,att%att80,att%ac)
           case(nf_int1)
              if (allocated(att%a1)) deallocate(att%a1)
-             allocate(att%a1(len),stat=irc)
+             allocate(att%a1(att%len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_int1 (f%ncid, varid,att%att80,att%a1)
           case(nf_int2)
              if (allocated(att%a2)) deallocate(att%a2)
-             allocate(att%a2(len),stat=irc)
+             allocate(att%a2(att%len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_int2 (f%ncid, varid,att%att80,att%a2)
           case(nf_int)
              if (allocated(att%a4)) deallocate(att%a4)
-             allocate(att%a4(len),stat=irc)
+             allocate(att%a4(att%len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_int (f%ncid, varid,att%att80,att%a4)
           case(nf_real)
              if (allocated(att%ar)) deallocate(att%ar)
-             allocate(att%ar(len),stat=irc)
+             allocate(att%ar(att%len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_real (f%ncid, varid, att%att80,att%ar)
           case(nf_double)
              if (allocated(att%ad)) deallocate(att%ad)
-             allocate(att%ad(len),stat=irc)
+             allocate(att%ad(att%len),stat=irc)
              if (irc.eq.0) ret = nf_get_att_double (f%ncid, varid,att%att80,att%ad)
           case DEFAULT
           end select

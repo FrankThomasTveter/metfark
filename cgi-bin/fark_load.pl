@@ -169,7 +169,7 @@ sub loadCls {
 		    } else {
 			# ignored
 		    }
-		}{message => "Unable to process: $cpath"};
+		}{message => "Unable to process: $cpath",stdout=>"never"};
 	    }
 	    closedir(DIR);
 	}
@@ -209,7 +209,7 @@ sub loadAuto {
 	    } else {
 		farkdir::term("Invalid file: $path");
 	    };
-	}{message=> "Unable to process: $path"};
+	}{message=> "Unable to process: $path",stdout=>"never"};
     } else {
 	farkdir::term("Invalid directory ($fpath,$priv)");
     };

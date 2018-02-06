@@ -323,13 +323,15 @@ CONTAINS
     return
   END SUBROUTINE parse_parsef
   !
-  FUNCTION parse_evalf (css, Val) RESULT (res)
+  FUNCTION parse_evalf (css, Val, crc250,irc) RESULT (res)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Evaluate bytecode of ith function for the values passed in array Val(:)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
     type(parse_session), pointer,INTENT(IN) :: css
     REAL(rn), allocatable, INTENT(in)       :: Val(:)  ! Variable values
+    character*250 :: crc250
+    integer :: irc
     REAL(rn)                                :: res     ! Result
     !
     INTEGER                                 :: IP,   & ! Instruction pointer
@@ -377,6 +379,12 @@ CONTAINS
           SP=SP-1
        CASE   (cDiv)
           IF (css%Stack(SP)==0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Division by zero."
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Division by zero.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=1
              res=zero
              RETURN
@@ -401,6 +409,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (css%Stack(SP)<=0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Negative argument to LOG10.",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Negative argument to LOG10.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=3
              res=zero
              RETURN
@@ -411,6 +425,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (css%Stack(SP)<=0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Negative argument to LOG.",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Negative argument to LOG.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=3
              res=zero
              RETURN
@@ -421,7 +441,13 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (css%Stack(SP)<0._rn) THEN
-             EvalErrType=3
+             if (parse_bdeb) write(*,*)"*** Negative argument to SQRT.",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Negative argument to SQRT.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=2
              res=zero
              RETURN
           ENDIF
@@ -630,7 +656,12 @@ CONTAINS
                   0.0D0, &
                   0.0D0)
           ELSE 
-             write(*,*)"*** Unexpected number of arguments to s1970:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to s1970:",nargs
+             irc=308
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to s1970.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
              RETURN
@@ -690,7 +721,12 @@ CONTAINS
                   0.0D0, &
                   0.0D0)
           ELSE 
-             write(*,*)"*** Unexpected number of arguments to d2000:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to d2000:",nargs
+             irc=309
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to d2000.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
              RETURN
@@ -719,8 +755,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          eps=max(1.0D-5,abs(css%Stack(SP+1)))
           if (nargs.gt.1) then
+             eps=max(1.0D-5,abs(css%Stack(SP+1)))
              css%Stack(SP)=nint(css%Stack(SP)/eps)*eps
           else
              css%Stack(SP)=nint(css%Stack(SP))
@@ -760,6 +796,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             if (parse_bdeb) write(*,*)"*** Invalid argument to ASIN:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Invalid argument to ASIN.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=4
              res=zero
              RETURN
@@ -770,6 +812,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Invalid argument to ACOS.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=4
              res=zero
              RETURN
@@ -782,7 +830,12 @@ CONTAINS
           IF (NARGS.EQ.2) THEN
              css%Stack(SP)=ATAN2(css%Stack(SP),css%Stack(SP+1))
           ELSE 
-             write(*,*)"*** Unexpected number of arguments to atan2:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to atan2:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
              RETURN
@@ -818,7 +871,7 @@ CONTAINS
     !if(parse_bdeb)write(*,*)myname,"Done."
   END FUNCTION parse_evalf
   !
-  subroutine parse_evals (css, Val, set, res, ret) 
+  subroutine parse_evals (css, Val, set, res, ret, crc250,irc) 
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Evaluate bytecode of ith function for the values passed in array Val(:)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -829,6 +882,8 @@ CONTAINS
     logical, allocatable, INTENT(in)   :: set(:)            ! is variable set?
     REAL(rn)                           :: res                ! Result
     logical                            :: ret                ! is result set?
+    character*250 :: crc250
+    integer :: irc
     INTEGER                            :: IP,              & ! Instruction pointer
          DP,              & ! Data pointer
          SP,              & ! Stack pointer
@@ -871,6 +926,11 @@ CONTAINS
           SP=SP-1
        CASE   (cDiv)
           IF (css%Stack(SP)==0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Division by zero."
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Division by zero.')
+             call parse_errorappend(crc250,"\n")
              EvalErrType=1
              res=zero
              RETURN
@@ -895,6 +955,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (css%Stack(SP)<=0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Negative argument to LOG10:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Negative argument to LOG10.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=3
              res=zero
              RETURN
@@ -905,6 +971,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (css%Stack(SP)<=0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Negative argument to LOG:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Negative argument to LOG.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=3
              res=zero
              RETURN
@@ -915,6 +987,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (css%Stack(SP)<0._rn) THEN
+             if (parse_bdeb) write(*,*)"*** Negative argument to SQRT:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Negative argument to SQRT.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=3
              res=zero
              RETURN
@@ -1124,7 +1202,12 @@ CONTAINS
                   0.0D0, &
                   0.0D0)
           ELSE 
-             write(*,*)"*** Unexpected number of arguments to s1970:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to s1970:",nargs
+             irc=311
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to s1970.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
              RETURN
@@ -1184,7 +1267,12 @@ CONTAINS
                   0.0D0, &
                   0.0D0)
           ELSE 
-             write(*,*)"*** Unexpected number of arguments to d2000:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to d2000:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to d2000.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
              RETURN
@@ -1213,8 +1301,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          eps=max(1.0D-5,abs(css%Stack(SP+1)))
           if (nargs.gt.1) then
+             eps=max(1.0D-5,abs(css%Stack(SP+1)))
              css%Stack(SP)=nint(css%Stack(SP)/eps)*eps
           else
              css%Stack(SP)=nint(css%Stack(SP))
@@ -1254,6 +1342,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             if (parse_bdeb) write(*,*)"*** Invalid argument to ASIN:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Invalid argument to ASIN.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=4
              res=zero
              RETURN
@@ -1264,6 +1358,12 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
+             if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Invalid argument to ACOS.')
+             call parse_errorappendr(crc250,css%Stack(SP))
+             call parse_errorappend(crc250,"\n")
              EvalErrType=4
              res=zero
              RETURN
@@ -1276,7 +1376,12 @@ CONTAINS
           IF (NARGS.EQ.2) THEN
              css%Stack(SP)=ATAN2(css%Stack(SP),css%Stack(SP+1))
           ELSE 
-             write(*,*)"*** Unexpected number of arguments to atan2:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to atan2:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
              RETURN
@@ -1406,7 +1511,8 @@ CONTAINS
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 IF (css%Stacka(SP,JJ)==0._rn) THEN
-                   irc=300
+                   if (parse_bdeb) write(*,*)"*** Division by zero."
+                   irc=314
                    call parse_errorappend(crc250,myname)
                    call parse_errorappend(crc250,'Division by zero.')
                    call parse_errorappend(crc250,"\n")
@@ -1449,9 +1555,11 @@ CONTAINS
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 IF (css%Stacka(SP,JJ)<=0._rn) THEN
-                   irc=301
+                   if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
+                   irc=315
                    call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Invalid logarithm argument.')
+                   call parse_errorappend(crc250,'Negative argument to LOG10.')
+                   call parse_errorappendr(crc250,css%Stack(SP))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=3
                    RETURN
@@ -1467,9 +1575,11 @@ CONTAINS
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 IF (css%Stacka(SP,JJ)<=0._rn) THEN
-                   irc=302
+                   if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
+                   irc=316
                    call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Invalid logarithm argument.')
+                   call parse_errorappend(crc250,'Negative argument to LOG.')
+                   call parse_errorappendr(crc250,css%Stack(SP))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=3
                    RETURN
@@ -1485,9 +1595,11 @@ CONTAINS
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 IF (css%Stacka(SP,JJ)<0._rn) THEN
-                   irc=303
+                   if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
+                   irc=317
                    call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Negative square root.')
+                   call parse_errorappend(crc250,'Negative argument to SQRT.')
+                   call parse_errorappendr(crc250,css%Stack(SP))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=3
                    RETURN
@@ -1830,7 +1942,8 @@ CONTAINS
                 END IF
              END DO
           ELSE 
-             irc=304
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to s1970:",nargs
+             irc=318
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Invalid number of arguments to s1970.')
              call parse_errorappendi(crc250,nargs)
@@ -1929,7 +2042,8 @@ CONTAINS
                 END IF
              END DO
           ELSE 
-             irc=305
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to d2000:",nargs
+             irc=319
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Invalid number of arguments to d2000.')
              call parse_errorappendi(crc250,nargs)
@@ -1973,8 +2087,8 @@ CONTAINS
           SP=SP-NARGS+1
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
-                eps=max(1.0D-5,abs(css%Stacka(SP+1,JJ)))
                 if (nargs.gt.1) then
+                   eps=max(1.0D-5,abs(css%Stacka(SP+1,JJ)))
                    css%Stacka(SP,JJ)=nint(css%Stacka(SP,JJ)/eps)*eps
                 else
                    css%Stacka(SP,JJ)=nint(css%Stacka(SP,JJ))
@@ -2042,7 +2156,8 @@ CONTAINS
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
-                   irc=306
+                   if (parse_bdeb) write(*,*)"*** Invalid argument to ASIN:",css%Stacka(SP,JJ)
+                   irc=320
                    call parse_errorappend(crc250,myname)
                    call parse_errorappend(crc250,'Invalid arguments to asin.')
                    call parse_errorappendr(crc250,css%Stacka(SP,JJ))
@@ -2061,7 +2176,8 @@ CONTAINS
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
-                   irc=307
+                   if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stacka(SP,JJ)
+                   irc=321
                    call parse_errorappend(crc250,myname)
                    call parse_errorappend(crc250,'Invalid arguments to acos.')
                    call parse_errorappendr(crc250,css%Stacka(SP,JJ))
@@ -2084,7 +2200,8 @@ CONTAINS
                 END IF
              END DO
           ELSE 
-             irc=308
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to atan2:",nargs
+             irc=322
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
              call parse_errorappendi(crc250,nargs)
@@ -2340,7 +2457,7 @@ CONTAINS
     call parse_errorappendi(crc250,j)
     call parse_errorappend(crc250,' '//Msg)
     call parse_errorappend(crc250,"\n")
-    irc=309
+    irc=323
     return
   END SUBROUTINE parse_ParseErrMsg
   !
@@ -2499,7 +2616,7 @@ CONTAINS
        call parse_errorappend(crc250,myname)
        call parse_errorappend(crc250,'*** Parser error: Memmory allocation for byte code failed')
        call parse_errorappend(crc250,"\n")
-       irc=310
+       irc=324
        return
     ELSE
        css%ByteCodeSize = 0

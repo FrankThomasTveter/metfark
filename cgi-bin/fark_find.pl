@@ -131,7 +131,7 @@ sub findModel {
 	    } else {
 		return "No files found.";
 	    }
-	}{message=>"Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax"}; #ignore output
+	}{message=>"Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax",stdout=>"never"}; #ignore output
 	# report xml-structure
 	print $doc->toString . "\n";
     } else {

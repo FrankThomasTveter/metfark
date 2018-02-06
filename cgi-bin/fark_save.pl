@@ -152,7 +152,7 @@ sub saveModel {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n"};
+    }{message=> "Unable to save $ifile\n",stdout=>"success"};
 }
 sub saveObs {
     my $param = shift;
@@ -275,7 +275,7 @@ sub saveObs {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n"};
+    }{message=> "Unable to save $ifile\n",stdout=>"success"};
 }
 sub saveColoc {
     my $param = shift;
@@ -457,7 +457,7 @@ sub saveColoc {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n"};
+    }{message=> "Unable to save $ifile\n",stdout=>"success"};
 }
 sub savePlot {
     my $param = shift;
@@ -597,7 +597,7 @@ sub savePlot {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n"};
+    }{message=> "Unable to save $ifile\n",stdout=>"success"};
 }
 
 sub saveAuto {
@@ -744,5 +744,5 @@ sub saveAuto {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."' $priv");
 	}
-    }{message=> "Unable to save $ifile\n"};
+    }{message=> "Unable to save $ifile\n",stdout=>"success"};
 }

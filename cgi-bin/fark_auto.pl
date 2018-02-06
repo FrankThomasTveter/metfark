@@ -27,7 +27,7 @@ my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;       # debug this script (0=omit output)
     #fark::debug(1);  # debug observations
-    #fark::debug(2);  # debug models
+    fark::debug(2);  # debug models
     fark::debug(3);  # debug colocation
     #fark::debug(4);  # debug plot
     #fark::debug(5);  # debug parse
@@ -44,7 +44,7 @@ if($debug){print "Argument='" . shift . "'\n";}
 $XML::LibXML::skipXMLDeclaration = 1;
 my $password = $param->{password}[0] // "";
 my $autoFile = $param->{root}[0] // "";
-my $cron     = $param->{cron}[0] // "";
+my $cron     = $param->{cron}[0];
 my $ipath    = $param->{file}[0] // "";
 my $cls      = $param->{type}[0] // "undef";
 if (! defined $param->{root}) {farkdir::term("Undefined root file.".Dumper($param))};
@@ -91,15 +91,15 @@ if (-f $autopath) { # we have a config file...
 	    &loopCls("plot",$test, $plotr,$cron) || farkdir::term("Error return from loopPlot:$file");
 	}
     }
+    #$doc = $parser->parse_file($autopath);
+    #print $doc->toString . "\n";
+    if ( my ($node)=$doc->findnodes("auto/auto_config")) {
+	&updateTime($node,"model");
+	&updateTime($node,"obs");
+	&updateTime($node,"coloc");
+	&updateTime($node,"plot");
+    }
     if ($save) {
-	my $doc = $parser->parse_file($autopath);
-	#print $doc->toString . "\n";
-	if ( my ($node)=$doc->findnodes("auto/auto_config")) {
-	    &updateTime($node,"model");
-	    &updateTime($node,"obs");
-	    &updateTime($node,"coloc");
-	    &updateTime($node,"plot");
-	}
 	if (open(my $fh, '>', $autopath)) {
 	    print $fh $doc->toString;
 	    close $fh;
@@ -107,10 +107,11 @@ if (-f $autopath) { # we have a config file...
 	} else {
 	    farkdir::term("Unable to open:".$autopath);
 	}
- 	print $doc->toString . "\n";
-    } else {
-	farkdir::info("Processing complete.");
     };
+    if ( my ($node)=$doc->findnodes("auto/auto_config")) {
+	if (defined $node->getAttribute("password")) {$node->removeAttribute("password");}
+    }
+    print $doc->toString . "\n";
 } else {  # config file does not exist, create temporary xml-structure
     if (defined $param->{type}) {
 	my $doc = $parser->parse_string("<auto><auto_config/></auto>");
@@ -155,7 +156,7 @@ if (-f $autopath) { # we have a config file...
 sub getCls {
     my $cls  = shift//"";
     my $node = shift;
-    my $cron = shift//"";
+    my $cron = shift//0;
     my $file = shift//"";
     my %clshash=();
     if ($node) {
@@ -193,9 +194,10 @@ sub loopCls {
     my $cls           = shift // "";
     my $test          = shift // 0;
     my $clsr          = shift;
-    my $cron          = shift;
+    my $cron          = shift // 0;
     my %clshash=%{$clsr};
     #
+    if ($debug){print "Starting loopCls... ($cls, $cron)\n";};
     my $clsDir=     farkdir::getRootDir("$cls") || 
 	farkdir::term("Invalid root directory (".$cls.")");
     my $clsOldDir=  farkdir::getRootDir($cls."_old") || 
@@ -262,7 +264,9 @@ sub loopCls {
 	    my $clsdoc = $parser->parse_file($xmlfile);
 	    if($debug){print "Processing '$xmlfile'\n";}
 	    if ( my ($clsnode)=$clsdoc->findnodes($cls."/".$cls."_config")) {
+		if($debug){print "Processing node... ($debug,$cron)\n";}
 		if ($debug) {
+		    if($debug){print "Calling farkdir::sandbox (debug)\n";};
 		    farkdir::sandbox {
 			&processCls($xmlfile,
 				    $clsnode,
@@ -276,11 +280,16 @@ sub loopCls {
 				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
 		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
-		      logfile=>$logfile,
-		      print=>1,
-		      terminate=>1
+		      logfile   => $logfile,
+		      stdout    => "always",
+		      debug     => 1
 		    };
+		    if($debug){print "After farkdir::sandbox\n";};
 		} elsif ($cron)  {
+		    if($debug){print "Calling farkdir::sandbox (cron=$cron)\n";};
+
+		    if ($cls eq "model") { fark::debug(2);};  # debug models
+
 		    farkdir::sandbox {
 			&processCls($xmlfile,
 				    $clsnode,
@@ -293,13 +302,13 @@ sub loopCls {
 				    $obsRegDir,
 				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
-		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
-		      logfile=>$logfile,
-		      print=>0,
-		      terminate=>0
+		    }{stdout    => "always",
+		      fork      => 1,
+		      debug     => 1
 		    };
+		    if($debug){print "After farkdir::sandbox\n";};
 		} else {
-		    print "Calling farkdir::sandbox\n";
+		    if($debug){print "Calling farkdir::sandbox (cron=$cron)\n";};
 		    farkdir::sandbox {
 			&processCls($xmlfile,
 				    $clsnode,
@@ -312,11 +321,11 @@ sub loopCls {
 				    $obsRegDir,
 				    $cls,$clsfile,$clean,
 				    $test,$clsFillFile);
-		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
-		      logfile=>$logfile,
-		      terminate=>1
+		    }{message   => "$myname $cls file: $xmlfile, see $logfile",
+		      logfile   => $logfile,
+		      stdout    => "never"
 		    };
-		    print "After farkdir::sandbox\n";
+		    if($debug){print "After farkdir::sandbox\n";};
 		};
 	    } else {
 		farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
@@ -358,6 +367,7 @@ sub loopCls {
 	#farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
 	#system "ls -lu $lockfile";
     }
+    if($debug) {print "Ending loopCls... $cls\n";}
     return \%clshash;
 };
 
@@ -373,7 +383,7 @@ sub processCls{
 	$obsRegDir,
 	$cls,$clsfile,$clean,
 	$test,$clsFillFile) =@_;
-    print "Processing $cls $xmlfile\n";
+    if($debug){print "Processing $cls $xmlfile\n";}
     if ($cls eq "model") {
 	my $cachefile=$modelCacheDir . $clsfile;
 	my $registerfile=$modelRegDir . $clsfile;
@@ -654,8 +664,10 @@ sub processPlot {
     #
     if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}
     my $cmd="Rscript --vanilla $fpath $tablefile $plotfile $test";
-    print "Executing '$cmd'\n";
-    system $cmd;
+    if($debug){print "Executing '$cmd'\n";}
+    eval {
+	system $cmd;
+    }; # ignore any output
     #
     $fark->close();
     if($debug){print "processPlot Exiting.\n";}
@@ -676,7 +688,7 @@ sub setModelConfig {
     if (-e $cachefile) {
 	$fark->loadModelCache($cachefile);# load cached model file stack
     };
-    print "Model config complete\n";
+    if($debug){print "Model config complete\n";}
 }
 
 sub setObsConfig {

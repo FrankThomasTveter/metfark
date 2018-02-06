@@ -36,16 +36,16 @@ my $log="";
 my ($stdout,$stderr,$irc)=("","",0);
 if ($debug) {
     my $fark=fark->open();
-    print "Processing '".($param->{exp}[0]//"")."'\n";
+    #print "Processing '".($param->{exp}[0]//"")."'\n";
     $res=$fark->expression($param->{exp}[0]//"");
     $fark->close();
 } else {
     farkdir::sandbox { 
 	my $fark=fark->open();
-	print "Processing '".($param->{exp}[0]//"")."'\n";
+	#print "Processing '".($param->{exp}[0]//"")."'\n";
 	$res=$fark->expression($param->{exp}[0]//"");
 	$fark->close();
-    }, {message=>"Error while running."};
+    } {message=>"Error while running.",stdout=>"success"};
 };
 my $mret=$@;if ($mret || $irc) {farkdir::term("fark_exp.pl $stderr $mret");}
 #print "Output: $stdout\n\n $stderr\n";

@@ -1113,7 +1113,14 @@ CONTAINS
     if (css%cmatch.ne.0) then
        do ii=1,css%cmatch
           !if (col_bdeb)write(*,*)myname,' Local:',val
-          css%mat_val(ii)=parse_evalf(css%mat_psp(ii)%ptr,val)
+          css%mat_val(ii)=parse_evalf(css%mat_psp(ii)%ptr,val,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,myname)
+             call colocation_errorappend(crc250," Error return from evalf.")
+             call colocation_errorappendi(crc250,irc)
+             call colocation_errorappend(crc250,"\n")
+             return
+          end if
        end do
     else
        irc=341
@@ -1268,7 +1275,14 @@ CONTAINS
     if(irc.ne.0) return
     !if (col_bdeb) write(*,*) myname,'Eval.', val
     !if (col_bdeb)write(*,*)myname,' Local:',val
-    res = parse_evalf (pss, val)                 ! interprete bytecode representation of ith function
+    res = parse_evalf (pss, val,crc250,irc)                 ! interprete bytecode representation of ith function
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Error return from evalf.")
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
+       return
+    end if
     write(exp250,*) res
     call chop0(exp250,250)
     if (col_bdeb) write(*,*) myname,'Done.',irc,res
@@ -1311,7 +1325,7 @@ CONTAINS
     integer :: tmod,emod,dmod,tobs,ii,jj,nfunc
     logical :: bobsind
     logical :: mod_lval(2),obs_lval(2),bok,lok
-    integer :: locid,locstart
+    integer :: locid,locstart,locstop
     integer :: lena,lenc,lene,lenn,lenl
     integer, external :: length
     integer :: irc2
@@ -1607,6 +1621,22 @@ CONTAINS
           end if
        end if
        !
+       locstart=locid
+       ! initialise the location list
+       if (tmod.ne.0) then ! we have observation targets available
+          if(col_bdeb)write(*,*)myname,'Clear model location stack.'
+          call model_clearLocStack(mss,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,"model_clearLocStack")
+             return
+          end if
+       end if
+       ! call model_sliceTarget(mss,crc250,irc)
+       ! if (irc.ne.0) then
+       !    call colocation_errorappend(crc250,"model_sliceTarget")
+       !    return
+       ! end if
+       
        if(col_bdeb)write(*,*)myname,'Entering obs file loop.'
        ! loop over obs data, using model/obs start/end limits
        OBSFILE : do ! need to enter loop if (tobs.eq.0)
@@ -1631,21 +1661,7 @@ CONTAINS
                      & oss%currentFileIndex
              end if
           end if
-          locstart=locid
           if (tobs.ne.0.and.tmod.ne.0) then ! we have observation targets available
-             ! initialise the location list
-             if(col_bdeb)write(*,*)myname,'Clear model location stack.'
-             call model_clearLocStack(mss,crc250,irc)
-             if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_clearLocStack")
-                return
-             end if
-             ! call model_sliceTarget(mss,crc250,irc)
-             ! if (irc.ne.0) then
-             !    call colocation_errorappend(crc250,"model_sliceTarget")
-             !    return
-             ! end if
-
              if(col_bdeb)write(*,*)myname,'Entering observation loop.'
 
              ! loop over obs data, using model start/end limits
@@ -1698,19 +1714,6 @@ CONTAINS
                 end if
              end do LOCATION
           else if (tmod.ne.0) then ! use model default values
-
-             if(col_bdeb)write(*,*)myname,'Clearing model loc stack.',mss%ctrg,associated(mss%trg_v80)
-             ! initialise the location list
-             call model_clearLocStack(mss,crc250,irc)
-             if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_clearLocStack")
-                return
-             end if
-             ! call model_sliceTarget(mss,crc250,irc)
-             ! if (irc.ne.0) then
-             !    call colocation_errorappend(crc250,"model_sliceTarget")
-             !    return
-             ! end if
              if(col_bdeb)write(*,*)myname,'Creating locations from default.',associated(css%firstLoc)
              if(col_bdeb)write(*,*)myname,'...:',associated(css%firstLoc%next)
              cLoc=>css%firstLoc%next
@@ -1737,150 +1740,6 @@ CONTAINS
                 cLoc=>cLoc%next
              end do
           end if
-          !
-          if (tmod.ne.0) then
-             if(col_bdeb)write(*,*)myname,'Slicing model locations:',locid
-             ! finally slice the model file and write model output
-             call model_sliceTable(mss,bok,crc250,irc)
-             if (irc.ne.0) then
-                call colocation_errorappend(crc250,"model_sliceTable")
-                return
-             end if
-          end if
-          !
-          ! loop over observations again, write valid observations to XML...
-          !         
-          if (tobs.ne.0) then
-             locid=locstart
-             if (mod_bdeb)write(*,*)myname,'locready=',mss%locReady
-             OBSERVATION : do
-                ! read next observation into static memory, return next obs
-                call observation_getNextLoc(oss,bok,crc250,irc)
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"observation_getNextLoc")
-                   return
-                end if
-                if (.not.bok) then
-                   !if(col_bdeb)write(*,*)myname,'No more observations to process.'
-                   exit OBSERVATION
-                end if
-                !
-                locid=locid+1
-                lok=.true.
-                if (tmod.ne.0) then ! we have match expressions specified
-                   if (lok) then
-                      call  model_checkTargetVal(mss,locid,lok,crc250,irc)
-                      if (irc.ne.0) then
-                         call colocation_errorappend(crc250,"model_checkTargetVal")
-                         return
-                      end if
-                   end if
-                   if (lok) then
-                      call model_checkFilter(mss,locid,lok,crc250,irc)        
-                      if (irc.ne.0) then
-                         call colocation_errorappend(crc250,"model_checkFilter")
-                         return
-                      end if
-                   end if
-                end if
-                !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
-                !
-                if (lok) then
-                   call model_evalExpr(mss,ncol,val,vok,crc250,irc)
-                   if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"evalExpr")
-                      return
-                   end if
-                   if (ncol.ne.0) then
-                      write(ounit,"(X,A)",advance="no") name80(1:lena)
-                   else
-                      write(ounit,"(X,A)") name80(1:lena)
-                   end if
-                   fill=fillx
-                   do ii=1,ncol
-                      if (vok(ii)) then
-                         call colocation_wash(val(ii),s2,len2)
-                      else
-                         s2="NA"
-                         len2=2
-                      end if
-                      if (ii.ne.ncol) then
-                         write(ounit,"(X,A)",advance="no") s2(1:len2)
-                      else
-                         write(ounit,"(X,A)") s2(1:len2)
-                      end if
-                   end do
-                   if(col_bdeb.and.locid.lt.100)then
-                      write(*,'(2(X,A),100(X,F0.1))')&
-                           & myname,'MPO:',mss%mpo_val
-                      write(*,'(2(X,A),100(X,L1))')&
-                           & myname,'mpo:',mss%mpo_vok
-                      write(*,'(2(X,A),100(X,F0.1))')&
-                           & myname,'VAL:',val
-                      write(*,'(2(X,A),100(X,L1))')&
-                           & myname,'val:',vok
-                   end if
-                end if
-             end do OBSERVATION
-          else if (tmod.ne.0) then ! use model default values
-             write(*,*)myname,'Printing output:',locstart,css%nloc
-             do locid=locstart+1,locstart+css%nloc
-                lok=.true.
-                if (lok) then
-                   call  model_checkTargetVal(mss,locid,lok,crc250,irc)
-                   if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"model_checkTargetVal")
-                      return
-                   end if
-                end if
-                if (lok) then
-                   call model_checkFilter(mss,locid,lok,crc250,irc)
-                   if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"model_checkFilter")
-                      return
-                   end if
-                end if
-                if (col_bdeb)write(*,*)myname,' SEARCH:',locid,lok
-                !
-                if (lok) then
-                   call model_evalExpr(mss,ncol,val,vok,crc250,irc)
-                   if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"evalExpr")
-                      return
-                   end if
-                   if (col_bdeb)write(*,*)myname,' OUT:',val(1),vok(1),ncol
-                   if (ncol.ne.0) then
-                      write(ounit,"(X,A)",advance="no") name80(1:lena)
-                   else
-                      write(ounit,"(X,A)") name80(1:lena)
-                   end if
-                   fill=fillx
-                   do ii=1,ncol
-                      if (vok(ii)) then
-                         call colocation_wash(val(ii),s2,len2)
-                      else
-                         s2="NA"
-                         len2=2
-                      end if
-                      if (ii.ne.ncol) then
-                         write(ounit,"(X,A)",advance="no") s2(1:len2)
-                      else
-                         write(ounit,"(X,A)") s2(1:len2)
-                      end if
-                   end do
-                   if(col_bdeb.and.locid.lt.100)then
-                      write(*,'(2(X,A),100(X,F0.1))')&
-                           & myname,'MPO:',mss%mpo_val
-                      write(*,'(2(X,A),100(X,L1))')&
-                           & myname,'mpo:',mss%mpo_vok
-                      write(*,'(2(X,A),100(X,F0.1))')&
-                           & myname,'VAL:',val
-                      write(*,'(2(X,A),100(X,L1))')&
-                           & myname,'val:',vok
-                   end if
-                end if
-             end do
-          end if
           ! end obs data loop
           ! do not delete obs-file contents since obs-file...
           ! ...contents must be available for other model files.
@@ -1888,6 +1747,81 @@ CONTAINS
              exit OBSFILE
           end if
        end do OBSFILE
+       !
+       if (tmod.ne.0) then
+          if(col_bdeb)write(*,*)myname,'Slicing model locations:',mss%nloc,locid-locstart,locid
+          ! finally slice the model file and write model output
+          call model_sliceTable(mss,bok,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,"model_sliceTable")
+             return
+          end if
+       end if
+       locstop=locid
+       !
+       ! loop over observations again, write valid observations to XML...
+       !         
+       do locid=locstart+1,locstop
+          if (mod_bdeb)write(*,*)myname,'locready=',mss%locReady
+          lok=.true.
+          if (tmod.ne.0) then ! we have match expressions specified
+             if (lok) then
+                call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,"model_checkTargetVal")
+                   return
+                end if
+             end if
+             if (lok) then
+                call model_checkFilter(mss,locid,lok,crc250,irc)        
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,"model_checkFilter")
+                   return
+                end if
+             end if
+          end if
+          !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
+          !
+          if (lok) then
+             call model_evalExpr(mss,ncol,val,vok,crc250,irc)
+             if (irc.ne.0) then
+                call colocation_errorappend(crc250,"evalExpr")
+                return
+             end if
+             if (ncol.ne.0) then
+                write(ounit,"(X,A)",advance="no") name80(1:lena)
+             else
+                write(ounit,"(X,A)") name80(1:lena)
+             end if
+             fill=fillx
+             do ii=1,ncol
+                if (vok(ii)) then
+                   call colocation_wash(val(ii),s2,len2)
+                else
+                   s2="NA"
+                   len2=2
+                end if
+                if (ii.ne.ncol) then
+                   write(ounit,"(X,A)",advance="no") s2(1:len2)
+                else
+                   write(ounit,"(X,A)") s2(1:len2)
+                end if
+             end do
+             if(col_bdeb.and.locid.lt.100)then
+                write(*,'(2(X,A),100(X,F0.1))')&
+                     & myname,'MPO:',mss%mpo_val
+                write(*,'(2(X,A),100(X,L1))')&
+                     & myname,'mpo:',mss%mpo_vok
+                write(*,'(2(X,A),100(X,F0.1))')&
+                     & myname,'VAL:',val
+                write(*,'(2(X,A),100(X,L1))')&
+                     & myname,'val:',vok
+             end if
+          end if
+       end do
+       ! end obs data loop
+       ! do not delete obs-file contents since obs-file...
+       ! ...contents must be available for other model files.
        ! remove location stack
        call model_clearLocStack(mss,crc250,irc)
        if (irc.ne.0) then

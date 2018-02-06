@@ -1,3 +1,4 @@
+#__file: 'fark/Makefile' 0100644    **DO NOT DELETE**
 # This Makefile is for the fark extension to perl.
 #
 # It was generated automatically by MakeMaker version
@@ -216,56 +217,56 @@ TO_INST_PM = check.pl \
 	lib/xmlparse.mod \
 	t.pl
 
-PM_TO_BLIB = lib/model.mod \
-	blib/lib/model.mod \
-	lib/fark.pm \
-	blib/lib/fark.pm \
+PM_TO_BLIB = lib/libbufrc.a \
+	blib/lib/libbufrc.a \
 	farkobs.pl \
 	$(INST_LIB)/farkobs.pl \
-	lib/libbufrc.a \
-	blib/lib/libbufrc.a \
-	lib/xmlparse.mod \
-	blib/lib/xmlparse.mod \
-	lib/libgenc.a \
-	blib/lib/libgenc.a \
-	lib/sort.mod \
-	blib/lib/sort.mod \
-	lib/libbufr.a \
-	blib/lib/libbufr.a \
-	lib/farkdir.pm \
-	blib/lib/farkdir.pm \
-	lib/read_xml_primitives.mod \
-	blib/lib/read_xml_primitives.mod \
-	t.pl \
-	$(INST_LIB)/t.pl \
+	fark.pl \
+	$(INST_LIB)/fark.pl \
+	lib/observations.mod \
+	blib/lib/observations.mod \
 	lib/libobs.a \
 	blib/lib/libobs.a \
 	lib/colocation.mod \
 	blib/lib/colocation.mod \
-	lib/libsort.a \
-	blib/lib/libsort.a \
-	fark.pl \
-	$(INST_LIB)/fark.pl \
-	lib/farkdata.pm \
-	blib/lib/farkdata.pm \
-	lib/observations.mod \
-	blib/lib/observations.mod \
-	lib/libcoloc.a \
-	blib/lib/libcoloc.a \
-	lib/libparse.a \
-	blib/lib/libparse.a \
+	lib/sort.mod \
+	blib/lib/sort.mod \
+	lib/libbufr.a \
+	blib/lib/libbufr.a \
+	lib/fark.pm \
+	blib/lib/fark.pm \
 	check.pl \
 	$(INST_LIB)/check.pl \
+	lib/libmodel.a \
+	blib/lib/libmodel.a \
+	lib/read_xml_primitives.mod \
+	blib/lib/read_xml_primitives.mod \
+	lib/libsort.a \
+	blib/lib/libsort.a \
+	lib/farkdir.pm \
+	blib/lib/farkdir.pm \
+	t.pl \
+	$(INST_LIB)/t.pl \
+	lib/libgenc.a \
+	blib/lib/libgenc.a \
+	lib/xmlparse.mod \
+	blib/lib/xmlparse.mod \
 	lib/plot.mod \
 	blib/lib/plot.mod \
+	lib/libcoloc.a \
+	blib/lib/libcoloc.a \
+	lib/model.mod \
+	blib/lib/model.mod \
 	lib/libplot.a \
 	blib/lib/libplot.a \
 	fark2.pl \
 	$(INST_LIB)/fark2.pl \
+	lib/libparse.a \
+	blib/lib/libparse.a \
 	lib/parse.mod \
 	blib/lib/parse.mod \
-	lib/libmodel.a \
-	blib/lib/libmodel.a
+	lib/farkdata.pm \
+	blib/lib/farkdata.pm
 
 
 # --- MakeMaker platform_constants section:
@@ -582,13 +583,13 @@ POD2MAN = $(POD2MAN_EXE)
 
 
 manifypods : pure_all  \
+	lib/fark.pm \
 	lib/farkdata.pm \
-	lib/farkdir.pm \
-	lib/fark.pm
+	lib/farkdir.pm
 	$(NOECHO) $(POD2MAN) --section=$(MAN3EXT) --perm_rw=$(PERM_RW) \
+	  lib/fark.pm $(INST_MAN3DIR)/fark.$(MAN3EXT) \
 	  lib/farkdata.pm $(INST_MAN3DIR)/farkdata.$(MAN3EXT) \
-	  lib/farkdir.pm $(INST_MAN3DIR)/farkdir.$(MAN3EXT) \
-	  lib/fark.pm $(INST_MAN3DIR)/fark.$(MAN3EXT) 
+	  lib/farkdir.pm $(INST_MAN3DIR)/farkdir.$(MAN3EXT) 
 
 
 
@@ -615,22 +616,22 @@ clean_subdirs :
 
 clean :: clean_subdirs
 	- $(RM_F) \
-	  MYMETA.yml perlmain.c \
-	  core $(BASEEXT).exp \
-	  $(INST_ARCHAUTODIR)/extralibs.all $(INST_ARCHAUTODIR)/extralibs.ld \
-	  perl$(EXE_EXT) core.[0-9][0-9][0-9][0-9][0-9] \
-	  core.*perl.*.? *$(LIB_EXT) \
-	  so_locations MYMETA.json \
-	  mon.out pm_to_blib \
-	  core.[0-9][0-9][0-9][0-9] perl \
-	  blibdirs.ts $(BASEEXT).def \
-	  *$(OBJ_EXT) fark.c \
-	  tmon.out core.[0-9] \
-	  $(BASEEXT).x pm_to_blib.ts \
-	  lib$(BASEEXT).def $(BOOTSTRAP) \
-	  $(MAKE_APERL_FILE) core.[0-9][0-9] \
-	  *perl.core perl.exe \
-	  core.[0-9][0-9][0-9] $(BASEEXT).bso 
+	  blibdirs.ts tmon.out \
+	  $(INST_ARCHAUTODIR)/extralibs.all core.*perl.*.? \
+	  $(INST_ARCHAUTODIR)/extralibs.ld so_locations \
+	  perl.exe lib$(BASEEXT).def \
+	  core.[0-9][0-9][0-9][0-9] MYMETA.json \
+	  $(BASEEXT).x core \
+	  core.[0-9][0-9][0-9][0-9][0-9] $(BASEEXT).exp \
+	  perl$(EXE_EXT) *perl.core \
+	  $(BASEEXT).bso core.[0-9] \
+	  MYMETA.yml fark.c \
+	  perlmain.c perl \
+	  core.[0-9][0-9] pm_to_blib \
+	  $(BOOTSTRAP) mon.out \
+	  *$(OBJ_EXT) core.[0-9][0-9][0-9] \
+	  pm_to_blib.ts *$(LIB_EXT) \
+	  $(MAKE_APERL_FILE) $(BASEEXT).def 
 	- $(RM_RF) \
 	  blib 
 	- $(MV) $(FIRST_MAKEFILE) $(MAKEFILE_OLD) $(DEV_NULL)
@@ -645,8 +646,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(FIRST_MAKEFILE) $(MAKEFILE_OLD) \
-	  $(OBJECT) 
+	  $(FIRST_MAKEFILE) $(OBJECT) \
+	  $(MAKEFILE_OLD) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 
@@ -1085,31 +1086,31 @@ ppd :
 
 pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
-	  lib/model.mod blib/lib/model.mod \
-	  lib/fark.pm blib/lib/fark.pm \
-	  farkobs.pl $(INST_LIB)/farkobs.pl \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
-	  lib/xmlparse.mod blib/lib/xmlparse.mod \
-	  lib/libgenc.a blib/lib/libgenc.a \
-	  lib/sort.mod blib/lib/sort.mod \
-	  lib/libbufr.a blib/lib/libbufr.a \
-	  lib/farkdir.pm blib/lib/farkdir.pm \
-	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
-	  t.pl $(INST_LIB)/t.pl \
+	  farkobs.pl $(INST_LIB)/farkobs.pl \
+	  fark.pl $(INST_LIB)/fark.pl \
+	  lib/observations.mod blib/lib/observations.mod \
 	  lib/libobs.a blib/lib/libobs.a \
 	  lib/colocation.mod blib/lib/colocation.mod \
-	  lib/libsort.a blib/lib/libsort.a \
-	  fark.pl $(INST_LIB)/fark.pl \
-	  lib/farkdata.pm blib/lib/farkdata.pm \
-	  lib/observations.mod blib/lib/observations.mod \
-	  lib/libcoloc.a blib/lib/libcoloc.a \
-	  lib/libparse.a blib/lib/libparse.a \
+	  lib/sort.mod blib/lib/sort.mod \
+	  lib/libbufr.a blib/lib/libbufr.a \
+	  lib/fark.pm blib/lib/fark.pm \
 	  check.pl $(INST_LIB)/check.pl \
+	  lib/libmodel.a blib/lib/libmodel.a \
+	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
+	  lib/libsort.a blib/lib/libsort.a \
+	  lib/farkdir.pm blib/lib/farkdir.pm \
+	  t.pl $(INST_LIB)/t.pl \
+	  lib/libgenc.a blib/lib/libgenc.a \
+	  lib/xmlparse.mod blib/lib/xmlparse.mod \
 	  lib/plot.mod blib/lib/plot.mod \
+	  lib/libcoloc.a blib/lib/libcoloc.a \
+	  lib/model.mod blib/lib/model.mod \
 	  lib/libplot.a blib/lib/libplot.a \
 	  fark2.pl $(INST_LIB)/fark2.pl \
+	  lib/libparse.a blib/lib/libparse.a \
 	  lib/parse.mod blib/lib/parse.mod \
-	  lib/libmodel.a blib/lib/libmodel.a 
+	  lib/farkdata.pm blib/lib/farkdata.pm 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
 
@@ -1120,3 +1121,715 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 
 
 # End.
+#__file: 'libbufrc/Makefile' 0100664    **DO NOT DELETE**
+#
+#
+#
+LIB = bufrc
+
+LIBRARY = ../fark/lib/lib$(LIB).a
+#
+include  config.linux
+#
+include  options_linux
+#
+TARGETS      = all clean
+#
+include sources
+#
+OBJECTS.F    = $(SOURCES.F:.F=.o) 
+OBJECTS.c    = $(SOURCES.c:.c=.o)
+OBJECTS      = $(OBJECTS.F) $(OBJECTS.c)
+FASTOBJ.o    = $(FASTSRC.c:.c=.o)
+FASTOBJ      = $(FASTOBJ.o)
+#
+#
+.PRECIOUS: $(LIBRARY)
+
+all: $(LIBRARY)
+
+$(FASTOBJ.o): $(FASTSRC.c)
+	$(CC) $(FASTCFLAGS) -c $(FASTSRC.c)
+
+$(LIBRARY): $(OBJECTS) $(FASTOBJ)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
+
+include make.dep
+
+clean:
+	\rm -f $(OBJECTS) $(FASTOBJ) *.f
+#__file: 'libbufr/Makefile' 0100664    **DO NOT DELETE**
+#
+#                                 Makefile for bufrdc
+#
+LIB = bufr
+#
+LIBRARY = ../fark/lib/lib$(LIB).a
+#
+include config.linux
+#
+include options_linux
+#
+TARGETS      = all clean
+#
+include sources
+#
+OBJECTS.F    = $(SOURCES.F:.F=.o) 
+OBJECTS.f    = $(SOURCES.f:.f=.o)
+OBJECTS.c    = $(SOURCES.c:.c=.o)
+OBJECTS      = $(OBJECTS.F) $(OBJECTS.f) $(OBJECTS.c)
+#
+#
+.PRECIOUS: $(LIBRARY)
+
+all: $(LIBRARY)
+
+$(LIBRARY): $(OBJECTS)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
+
+clean:
+	\rm -f $(OBJECTS)
+#__file: 'libcoloc/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the static library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# LIB_DYN	- full pathname of the shared library to be maintained
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = ttt.F90
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libcoloc.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+LIBS = ../libmodel/libmodel.a \
+       ../libgenc/libgenc.a
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+ INCL = ./ ../libxml ../libobs ../libmod ../libparse /usr/include
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+ OPTIONS = -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ ORDER = colocation.F90
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ./
+ BIN_SUFFIX = .bin
+#
+ include MakeInclude_F90
+#
+#__file: 'libgenc/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = 
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libgenc.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+# LIBS= 
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+# INCL = ../../include/
+# /opt/netcdf-fortran-4.2/include
+ INCL = ./
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -O2 -fdefault-real-8 -fPIC
+#
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ../../bin
+# BIN_SUFFIX = .bin
+#
+ include MakeInclude_F
+#
+
+#__file: 'libmod/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the static library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# LIB_DYN	- full pathname of the shared library to be maintained
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = ttt.F90
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libmodel.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+LIBS = ../libmodel/libmodel.a \
+       ../libgenc/libgenc.a
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+ INCL = ./ ../libxml ../libparse ../libsort /usr/include
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ ORDER = model.F90
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ./
+ BIN_SUFFIX = .bin
+#
+ include MakeInclude_F90
+#
+#__file: 'libobs/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the static library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# LIB_DYN	- full pathname of the shared library to be maintained
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = ttt.F90
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libobs.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+LIBS = ../libgenc/libgenc.a
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+ INCL = ./ ../libxml ../libparse ../libsort
+# /usr/include
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ ORDER = observations.F90
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ./
+ BIN_SUFFIX = .bin
+#
+ include MakeInclude_F90
+#
+#__file: 'libparse/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the static library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# LIB_DYN	- full pathname of the shared library to be maintained
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = ttt.F90
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libparse.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+LIBS = ../libmodel/libmodel.a \
+       ../libgenc/libgenc.a
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+ INCL = ./ ../libxml ../libobs ../libmod /usr/include
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ ORDER = parse.F90
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ./
+ BIN_SUFFIX = .bin
+#
+ include MakeInclude_F90
+#
+#__file: 'libplot/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the static library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# LIB_DYN	- full pathname of the shared library to be maintained
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = ttt.F90
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libplot.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+LIBS = ../libmodel/libmodel.a \
+       ../libobs/libobs.a \
+       ../libgenc/libgenc.a
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+ INCL = ./ ../libxml ../libobs ../libmod ../libcoloc ../libparse /usr/include
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ ORDER = plot.F90
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ./
+ BIN_SUFFIX = .bin
+#
+ include MakeInclude_F90
+#
+#__file: 'libsort/Makefile' 0100664    **DO NOT DELETE**
+#! gmake
+#
+# Makefile    - template Makefile to compile and maintain 
+#             a fortran object library and link binaries
+#             using the C preprocessor (cpp) on fortran files
+#             with the '.F' suffix
+#
+# Calling:
+#	make		- make all binaries
+#	make lib	- make library
+#	make check_src	- checks if source files have been
+#			  changed since last library update
+#	make check_libs	- checks if external libaries have been
+#			  changed since last binary update
+#	make check	- performs both above checks
+#
+# + Get the list of All fortran source files (suffix .F) 
+#   in the directory.
+# + Build a library which contains all fortran objects.
+#   (the objects are build with selected options)
+# + Link binaries from the maintained and external libraries
+#
+# NOTE:	Names in <> are sympolic names to be replaced by the 
+#	actual ones.
+#	In [] are sample or recommented settings.
+#
+# Macro Description (to be adapted):
+# MAINS		- list of fortran files containing main programs
+#		  [<prog1.F>, <prog2.F>, ...]
+# LIB_NAM	- full pathname of the static library to be maintained
+#		  [$(HOME)/lib/lib<proj>.a]
+# LIB_DYN	- full pathname of the shared library to be maintained
+# BIN		- directory to place the binaries in
+#		  [$(HOME)/bin]
+# LIBS		- library options: 
+#		  -L<lib1home> -l<lib1-name>
+# INCL		- include options: 
+#		  -I<includedir>
+# OPTIONS - fortran compile & link options: 
+#				   -g - create debugger info
+#
+#-------------------------------------------------------------------
+#
+# List of Main Programs
+#	(Put a list of FORTRAN source files containing main programs
+#	 here) 
+#
+# MAINS = ttt.F90
+#
+# Full library name
+#	(All objects will be stored in a library (using the UNIX 
+#	 'ar' command) - put the full pathname of this library here)
+#
+ LIB_NAM = ../fark/lib/libsort.a
+#
+# Target Directory for Tools Binaries
+#	(All binaries will be installed in a dedicated 
+#	 'bin' directory - put the path here)
+#
+#BIN = $(HOME)/bin
+#
+# Tools Libraries
+#	(Specify libraries to be linked in here. (e.g. orbit/attitude libs
+#	 MIND the ORDER!)
+#
+LIBS = ../libmodel/libmodel.a \
+       ../libgenc/libgenc.a
+#
+# Include Directory
+#	(Specify directories to pick up include files (MIND the ORDER!)
+#
+ INCL = ./ ../libxml ../libobs ../libmod /usr/include
+#
+# Compilation flags 
+#	(Put the compilation flags here (-g is recommented))
+#
+# BINOP = -L/home/franktt/model/src/libmodel -L/home/franktt/model/src/libgenc -lmodel -lfmgenc -lgfortran -L/usr/lib
+# OPTIONS = -g -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+#
+#OPTIONS = -g -pg  -fbacktrace -fbounds-check -fdefault-real-8 -fPIC  -fmax-errors=10 
+ OPTIONS = -O2 -fdefault-real-8 -fPIC  -fmax-errors=10 
+ ORDER = sort.F90
+#------------------------------------------------------------------------
+#		the rest not is not likely to be changed
+#------------------------------------------------------------------------
+#
+# BIN = ./
+ BIN_SUFFIX = .bin
+#
+ include MakeInclude_F90
+#

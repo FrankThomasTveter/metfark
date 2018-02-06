@@ -1939,7 +1939,14 @@ CONTAINS
              end if
              css%trg_req(ii)=.true.
              if (obs_bdeb)write(*,*)myname,' Local:',val
-             css%trg_minval(ii)=parse_evalf(plim,val)
+             css%trg_minval(ii)=parse_evalf(plim,val,crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from evalf.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
              css%trg_lval(1,ii)=.true.
           else
              css%trg_lval(1,ii)=.false.
@@ -1963,7 +1970,14 @@ CONTAINS
              end if
              css%trg_req(ii)=.true.
              if (obs_bdeb)write(*,*)myname,' Local:',val
-             css%trg_maxval(ii)=parse_evalf(plim,val)
+             css%trg_maxval(ii)=parse_evalf(plim,val,crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from evalf.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
              css%trg_lval(2,ii)=.true.
           else
              css%trg_lval(2,ii)=.false.
@@ -2261,7 +2275,14 @@ CONTAINS
              !end if
              if (css%ind_tset) then
                 !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
-                css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val)
+                css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
+                if (irc.ne.0) then
+                   call observation_errorappend(crc250,myname)
+                   call observation_errorappend(crc250," Error return from evalf.")
+                   call observation_errorappendi(crc250,irc)
+                   call observation_errorappend(crc250,"\n")
+                   return
+                end if
              else
                 css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
              end if
@@ -2269,7 +2290,14 @@ CONTAINS
              css%trg_val(css%ntrg)=currentFile%ind_stop
              if (css%ind_tset) then
                 !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
-                css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val)
+                css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
+                if (irc.ne.0) then
+                   call observation_errorappend(crc250,myname)
+                   call observation_errorappend(crc250," Error return from evalf.")
+                   call observation_errorappendi(crc250,irc)
+                   call observation_errorappend(crc250,"\n")
+                   return
+                end if
              else
                 css%fileStackSort(ii,2)=css%trg_val(css%ntrg)
              end if
@@ -2428,13 +2456,27 @@ CONTAINS
        css%trg_vok(css%ntrg)=.true.
        css%trg_val(css%ntrg)=css%ind_minval
        if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
-       css%ind_minval=parse_evalf(css%ind_pt,css%trg_val)
+       css%ind_minval=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from evalf.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
     end if
     if (css%ind_eset .and. css%ind_tset .and. css%ind_lval(2)) then
        css%trg_vok(css%ntrg)=.true.
        css%trg_val(css%ntrg)=css%ind_maxval
        if (obs_bdeb)write(*,*)myname,' Targets:',css%trg_val
-       css%ind_maxval=parse_evalf(css%ind_pt,css%trg_val)
+       css%ind_maxval=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from evalf.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
     end if
     return
   end subroutine observation_setTransformation
@@ -2531,7 +2573,14 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
-       css%ind_minval=parse_evalf(plim,val)
+       css%ind_minval=parse_evalf(plim,val,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from evalf.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        css%ind_lval(1)=.true.
     else
        css%ind_lval(1)=.false.
@@ -2553,7 +2602,14 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
-       css%ind_maxval=parse_evalf(plim,val)
+       css%ind_maxval=parse_evalf(plim,val,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from evalf.")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        css%ind_lval(2)=.true.
     else
        css%ind_lval(2)=.false.
@@ -3126,7 +3182,14 @@ CONTAINS
                 select case (css%trg_type(ii))
                 case (parse_internal)
                    if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
-                   css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
+                   css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val,crc250,irc)
+                   if (irc.ne.0) then
+                      call observation_errorappend(crc250,myname)
+                      call observation_errorappend(crc250," Error return from evalf.")
+                      call observation_errorappendi(crc250,irc)
+                      call observation_errorappend(crc250,"\n")
+                      return
+                   end if
                    css%trg_vok(ii)=.true.
                    if (obs_bdeb)write(*,*)myname,' Internal:',&
                         & ii,css%trg_val(ii)
@@ -5135,7 +5198,14 @@ CONTAINS
                 end if
              case (parse_internal)
                 if (obs_bdeb)write(*,*)myname,' Internals:',css%int_val
-                css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val)
+                css%trg_val(ii)=parse_evalf(css%trg_psp(ii)%ptr,css%int_val,crc250,irc)
+                if (irc.ne.0) then
+                   call observation_errorappend(crc250,myname)
+                   call observation_errorappend(crc250," Error return from evalf.")
+                   call observation_errorappendi(crc250,irc)
+                   call observation_errorappend(crc250,"\n")
+                   return
+                end if
                 css%trg_vok(ii)=.true.
                 if (obs_bdeb)write(*,*)myname,' Internal:',ii,css%trg_val(ii)
              case (parse_variable)
@@ -5156,7 +5226,14 @@ CONTAINS
                 end if
              case (parse_expression)
                 if (obs_bdeb)write(*,*)myname,' Dynamic val:',ii,css%dyn_val
-                dyn_pos=nint(parse_evalf(css%trg_psp(ii)%ptr,css%dyn_val))
+                dyn_pos=nint(parse_evalf(css%trg_psp(ii)%ptr,css%dyn_val,crc250,irc))
+                if (irc.ne.0) then
+                   call observation_errorappend(crc250,myname)
+                   call observation_errorappend(crc250," Error return from evalf.")
+                   call observation_errorappendi(crc250,irc)
+                   call observation_errorappend(crc250,"\n")
+                   return
+                end if
                 if (dyn_pos.ge.1.and.dyn_pos.le.ktdexl) then ! out of bounds...
                    css%trg_seq(ii)=dyn_pos
                    if (css%trg_descr(ii).ne.ktdexp(dyn_pos)) then
@@ -5193,11 +5270,25 @@ CONTAINS
              if(obs_bdeb)write(*,*)myname,"Calling parse_evals.",&
                   & associated(css%ind_pe),allocated(css%trg_val),css%dyn_pos
              call parse_evals(css%ind_pe,css%trg_val,css%trg_vok,&
-                  & css%trg_val(css%ntrg),css%trg_vok(css%ntrg))
+                  & css%trg_val(css%ntrg),css%trg_vok(css%ntrg),crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from evals.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
           end if
           if (bok.and.css%ind_tset) then
              call parse_evals(css%ind_pt,css%trg_val,css%trg_vok,&
-                  & css%trg_val(css%ntrg),css%trg_vok(css%ntrg))
+                  & css%trg_val(css%ntrg),css%trg_vok(css%ntrg),crc250,irc)
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," Error return from evals.")
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
           end if
           if (bok) then
              css%ind_val=css%trg_val(css%ntrg)
