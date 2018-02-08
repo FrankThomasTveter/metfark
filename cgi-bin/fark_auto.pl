@@ -30,7 +30,7 @@ if (defined $param->{debug}[0]) {
     fark::debug(2);  # debug models
     fark::debug(3);  # debug colocation
     #fark::debug(4);  # debug plot
-    #fark::debug(5);  # debug parse
+    fark::debug(5);  # debug parse
 }
 #
 my $autoDir=      farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
@@ -195,19 +195,74 @@ sub loopCls {
     my $test          = shift // 0;
     my $clsr          = shift;
     my $cron          = shift // 0;
+    my $clsDir=     farkdir::getRootDir("$cls") || 
+	farkdir::term("Invalid root directory (".$cls.")");
+    my $clsLogDir=  farkdir::getRootDir($cls."_log") || 
+	farkdir::term("Invalid root directory (".$cls."_log)");
+    #
+    foreach my $clsfile (keys %{$clsr}) {
+	my $xmlfile=$clsDir . $clsfile;
+	# check logfile
+	my $logfile = $clsLogDir ."$clsfile.log";
+	my $errfile = $clsLogDir ."$clsfile.err";
+	my ($logdir,$logname)=farkdir::splitName($logfile);
+	farkdir::makePath($logdir) || farkdir::term("$myname unable to make: $logdir"); # make sure directory exists in case we create lockfile next
+	if($debug){print "Logfile '$logfile'\n";}
+	if ($debug) {
+	    if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
+	    farkdir::sandbox {
+		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{message=>"$myname $cls file: $xmlfile, see $logfile",
+	      logfile   => $logfile,
+	      errfile   => $errfile . ".debug",
+	      stdout    => "always",
+	      debug     => 1
+	    };
+	    if($debug){print "After farkdir::sandbox\n";};
+	} elsif ($cron)  {
+	    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
+	    if ($cls eq "model") { fark::debug(2);};  # debug models
+	    farkdir::sandbox {
+		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{stdout    => "always",
+	      errfile   => $errfile . ".cron",
+	      fork      => 1,
+	      debug     => 1
+	    };
+	    if($debug){print "After farkdir::sandbox\n";};
+	} else {
+	    if($debug){print "Calling farkdir::sandbox '$clsfile'\n";};
+	    farkdir::sandbox {
+		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{message   => "$myname $cls file: $xmlfile, see $errfile",
+	      logfile   => $logfile,
+	      errfile   => $errfile,
+	      stdout    => "never"
+	    };
+	};
+	if($debug){print "After farkdir::sandbox\n";};
+    };
+    if($debug) {print "Ending loopCls... $cls\n";}
+    return $clsr;
+}
+#
+sub execCls {
+    my $cls           = shift // "";
+    my $test          = shift // 0;
+    my $clsr          = shift;
+    my $cron          = shift // 0;
+    my $clsfile       = shift;
+    my $xmlfile       = shift;
+    my $logfile       = shift;
     my %clshash=%{$clsr};
     #
     if ($debug){print "Starting loopCls... ($cls, $cron)\n";};
-    my $clsDir=     farkdir::getRootDir("$cls") || 
-	farkdir::term("Invalid root directory (".$cls.")");
     my $clsOldDir=  farkdir::getRootDir($cls."_old") || 
 	farkdir::term("Invalid root directory (".$cls."_old)");
     my $clsUseDir=  farkdir::getRootDir($cls."_use") || 
 	farkdir::term("Invalid root directory (".$cls."_use)");
     my $clsFillDir=  farkdir::getRootDir($cls."_fill") || 
 	farkdir::term("Invalid root directory (".$cls."_fill)");
-    my $clsLogDir=  farkdir::getRootDir($cls."_log") || 
-	farkdir::term("Invalid root directory (".$cls."_log)");
     # type-specific directories
     my $modelDir=     farkdir::getRootDir("model") || 
 	farkdir::term("Invalid root directory (model)");
@@ -223,144 +278,87 @@ sub loopCls {
 	farkdir::term("Invalid root directory (obs_reg)");
     my $colocDir=     farkdir::getRootDir("coloc") || 
 	farkdir::term("Invalid root directory (coloc)");
+
+
+    my $timeAuto = "";
+    my $infoAuto = "";
     #
-    foreach my $clsfile (keys %clshash) {
-	my $timeAuto = "";
-	my $infoAuto = "";
-	#
-	# check logfile
-	my $logfile = $clsLogDir ."$clsfile.log";
-	my ($logdir,$logname)=farkdir::splitName($logfile);
-	farkdir::makePath($logdir) || farkdir::term("$myname unable to make: $logdir"); # make sure directory exists in case we create lockfile next
-	if($debug){print "Logfile '$logfile'\n";}
-	#
-	# check lockfile
-	my $lockfile = $lockDir ."$cls/$clsfile.lock";
-	my ($lockdir,$lockname)=farkdir::splitName($lockfile);
-	farkdir::makePath($lockdir) || farkdir::term("$myname unable to make: $lockdir"); # make sure directory exists in case we create lockfile next
-	#if($debug){print "Lockfile '$lockfile'\n";}
-	if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
-	    # this defines processing start time
-	    farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
-	    #system "ls -lu $lockfile";
-	    chmod 0666, $lockfile;
-	    my $lastStart=time();
-	    my $clsFillFile=$clsFillDir . $clsfile; 
-	    my ($filldir,$fillname)=farkdir::splitName($clsFillFile);
-	    farkdir::makePath($filldir) || farkdir::term("$myname unable to make: $filldir");
-	    my $xmlfile=$clsDir . $clsfile;
-	    my $xmloldfile = $clsOldDir . $clsfile;
-	    if ($debug) {print "Re-run check against: '$xmloldfile'\n";};
-	    my $clean=compare($xmlfile,$xmloldfile);
-	    if ($clean) { # xml-file has changed
-		my ($dir,$name)=farkdir::splitName($xmloldfile);
-		farkdir::makePath($dir);
-		copy ($xmlfile,$xmloldfile);
-	    };
-	    # auto config file...
-	    if ( ! -e $xmlfile) { farkdir::term("$myname unable to find: $xmlfile $cls $clsDir $clsfile");}
-	    # read config file into memory
-	    my $parser = XML::LibXML->new();
-	    my $clsdoc = $parser->parse_file($xmlfile);
-	    if($debug){print "Processing '$xmlfile'\n";}
-	    if ( my ($clsnode)=$clsdoc->findnodes($cls."/".$cls."_config")) {
-		if($debug){print "Processing node... ($debug,$cron)\n";}
-		if ($debug) {
-		    if($debug){print "Calling farkdir::sandbox (debug)\n";};
-		    farkdir::sandbox {
-			&processCls($xmlfile,
-				    $clsnode,
-				    $colocDir,
-				    $modelDir,
-				    $modelCacheDir,
-				    $modelRegDir,
-				    $obsDir,
-				    $obsCacheDir,
-				    $obsRegDir,
-				    $cls,$clsfile,$clean,
-				    $test,$clsFillFile);
-		    }{message=>"$myname $cls file: $xmlfile, see $logfile",
-		      logfile   => $logfile,
-		      stdout    => "always",
-		      debug     => 1
-		    };
-		    if($debug){print "After farkdir::sandbox\n";};
-		} elsif ($cron)  {
-		    if($debug){print "Calling farkdir::sandbox (cron=$cron)\n";};
-
-		    if ($cls eq "model") { fark::debug(2);};  # debug models
-
-		    farkdir::sandbox {
-			&processCls($xmlfile,
-				    $clsnode,
-				    $colocDir,
-				    $modelDir,
-				    $modelCacheDir,
-				    $modelRegDir,
-				    $obsDir,
-				    $obsCacheDir,
-				    $obsRegDir,
-				    $cls,$clsfile,$clean,
-				    $test,$clsFillFile);
-		    }{stdout    => "always",
-		      fork      => 1,
-		      debug     => 1
-		    };
-		    if($debug){print "After farkdir::sandbox\n";};
-		} else {
-		    if($debug){print "Calling farkdir::sandbox (cron=$cron)\n";};
-		    farkdir::sandbox {
-			&processCls($xmlfile,
-				    $clsnode,
-				    $colocDir,
-				    $modelDir,
-				    $modelCacheDir,
-				    $modelRegDir,
-				    $obsDir,
-				    $obsCacheDir,
-				    $obsRegDir,
-				    $cls,$clsfile,$clean,
-				    $test,$clsFillFile);
-		    }{message   => "$myname $cls file: $xmlfile, see $logfile",
-		      logfile   => $logfile,
-		      stdout    => "never"
-		    };
-		    if($debug){print "After farkdir::sandbox\n";};
-		};
-	    } else {
-		farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
-	    }
-	    my $clsUseFile=$clsUseDir . $clsfile; 
-	    # this defines processing end time
-	    if($debug){print "Usefile '$clsUseFile'\n";}
-	    farkdir::touchFile($clsUseFile) || farkdir::term("$myname unable to touch '$clsUseFile'");
-	    #system "ls -l $clsUseFile; date";
-	    my $lastStop=time();
-	    $timeAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
-	    my $duration = $lastStop-$lastStart;
-	    # last "fill" time, i.e. last time we had any data...
-	    my $lastFill=0;
-	    if($debug){print "Fillfile '$clsFillFile'\n";}
-	    if (-f $clsFillFile) {
-		my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
-		    $mtime,$ctime,$blksize,$blocks) = stat($clsFillFile);
-		$lastFill=$atime;
-	    };
-	    my $timeFill=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastFill));
-	    if ($lastFill >= $lastStart) {
-		$infoAuto="> ok (".(farkdir::dtg($duration)) . ")";
-	    } else {
-		$infoAuto="# no data (".(farkdir::dtg($duration)) . ")";
-	    }
-	    if($debug){print "Last fill: '$timeFill'\n";}
-	    if($debug){print "Last time: '$timeAuto'\n";}
-	    if($debug){print "Last info: '$infoAuto'\n";}
-	    #if ($debug){print "Done '$lastStop' '$lastStart' $infoAuto\n";};
-	    if (defined $clshash{$clsfile}->[0]) {
-		$clshash{$clsfile}->[1]=$timeAuto;
-		$clshash{$clsfile}->[2]=$infoAuto;
-		$clshash{$clsfile}->[3]=$logfile;
-	    }
+    # check lockfile
+    my $lockfile = $lockDir ."$cls/$clsfile.lock";
+    my ($lockdir,$lockname)=farkdir::splitName($lockfile);
+    farkdir::makePath($lockdir) || farkdir::term("$myname unable to make: $lockdir"); # make sure directory exists in case we create lockfile next
+    #if($debug){print "Lockfile '$lockfile'\n";}
+    if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
+	# this defines processing start time
+	farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
+	#system "ls -lu $lockfile";
+	chmod 0666, $lockfile;
+	my $lastStart=time();
+	my $clsFillFile=$clsFillDir . $clsfile; 
+	my ($filldir,$fillname)=farkdir::splitName($clsFillFile);
+	farkdir::makePath($filldir) || farkdir::term("$myname unable to make: $filldir");
+	my $xmloldfile = $clsOldDir . $clsfile;
+	if ($debug) {print "Re-run check against: '$xmloldfile'\n";};
+	my $clean=compare($xmlfile,$xmloldfile);
+	if ($clean) { # xml-file has changed
+	    my ($dir,$name)=farkdir::splitName($xmloldfile);
+	    farkdir::makePath($dir);
+	    copy ($xmlfile,$xmloldfile);
+	};
+	# auto config file...
+	if ( ! -e $xmlfile) { farkdir::term("$myname unable to find: $xmlfile ($cls)");}
+	# read config file into memory
+	my $parser = XML::LibXML->new();
+	my $clsdoc = $parser->parse_file($xmlfile);
+	if($debug){print "Processing '$xmlfile'\n";}
+	if ( my ($clsnode)=$clsdoc->findnodes($cls."/".$cls."_config")) {
+	    if($debug){print "Processing node... ($debug,$cron)\n";}
+	    &processCls($xmlfile,
+			$clsnode,
+			$colocDir,
+			$modelDir,
+			$modelCacheDir,
+			$modelRegDir,
+			$obsDir,
+			$obsCacheDir,
+			$obsRegDir,
+			$cls,$clsfile,$clean,
+			$test,$clsFillFile);
+	} else {
+	    farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
+	}
+	my $clsUseFile=$clsUseDir . $clsfile; 
+	# this defines processing end time
+	if($debug){print "Usefile '$clsUseFile'\n";}
+	farkdir::touchFile($clsUseFile) || farkdir::term("$myname unable to touch '$clsUseFile'");
+	#system "ls -l $clsUseFile; date";
+	my $lastStop=time();
+	$timeAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
+	my $duration = $lastStop-$lastStart;
+	# last "fill" time, i.e. last time we had any data...
+	my $lastFill=0;
+	if($debug){print "Fillfile '$clsFillFile'\n";}
+	if (-f $clsFillFile) {
+	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
+		$mtime,$ctime,$blksize,$blocks) = stat($clsFillFile);
+	    $lastFill=$atime;
+	};
+	my $timeFill=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastFill));
+	if ($lastFill >= $lastStart) {
+	    $infoAuto="> ok (".(farkdir::dtg($duration)) . ")";
+	} elsif ($cls eq "model" or $cls eq "obs") {
+	    $infoAuto="# no new data (".(farkdir::dtg($duration)) . ")";
+	} else {
+	    $infoAuto="# no data (".(farkdir::dtg($duration)) . ")";
+	}
+	if($debug){print "Last fill: '$timeFill'\n";}
+	if($debug){print "Last time: '$timeAuto'\n";}
+	if($debug){print "Last info: '$infoAuto'\n";}
+	#if ($debug){print "Done '$lastStop' '$lastStart' $infoAuto\n";};
+	if (defined $clsr->{$clsfile}->[0]) {
+	    $clsr->{$clsfile}->[1]=$timeAuto;
+	    $clsr->{$clsfile}->[2]=$infoAuto;
+	    $clsr->{$clsfile}->[3]=$logfile;
 	}
 	#print "Closing lock file $lockfile\n";
 	close(MLOCKFILE);
@@ -368,7 +366,7 @@ sub loopCls {
 	#system "ls -lu $lockfile";
     }
     if($debug) {print "Ending loopCls... $cls\n";}
-    return \%clshash;
+    return $clsr;
 };
 
 sub processCls{
@@ -405,6 +403,7 @@ sub processCls{
 	if ($clean) {
 	    if($debug){print "Unlinking '$cachefile' '$registerfile'\n";}
 	    unlink $cachefile;
+	    unlink $clsFillFile;
 	    unlink $registerfile;
 	}
 	&processObs($xmlfile,
@@ -493,6 +492,8 @@ sub updateTime {
 		    };
 		    if ($lastFill >= $lastStart) {
 			$infoAuto="> ok (".(farkdir::dtg($duration)) . ")";
+		    } elsif ($cls eq "model" or $cls eq "obs") {
+			$infoAuto="# no new data (".(farkdir::dtg($duration)) . ")";
 		    } else {
 			$infoAuto="# no data (".(farkdir::dtg($duration)) . ")";
 		    }
@@ -515,7 +516,7 @@ sub processModel {
     my $registerfile = shift;
     my $file = shift;
     my $test = shift;
-    my $fillfile = shift;
+    my $clsFillFile = shift;
     #
     my $fark=fark->open();
     &setModelConfig($fark,$node,$cachefile);
@@ -525,12 +526,14 @@ sub processModel {
     my $filterDirMax=$node->getAttribute("filterDirMax")||"";
     my $filterFile=$node->getAttribute("filterFile");
     # registerfile is updated if (! $test)
-    $fark->updateModelRegister($registerfile,$filterDir,$filterFile,$filterDirMin,$filterDirMax,$test,$fillfile);
+    $fark->updateModelRegister($registerfile,$filterDir,$filterFile,$filterDirMin,$filterDirMax,$test,$clsFillFile);
     $fark->makeModelCache($cachefile);
     #
     $fark->close();
     #
     if (! -e $cachefile) {
+	unlink $clsFillFile;
+	unlink $registerfile;
 	farkdir::term("Unable to make cache file:'".$cachefile."'")
     };
     return;
@@ -543,7 +546,7 @@ sub processObs {
     my $registerfile = shift;
     my $file = shift;
     my $test = shift;
-    my $fillfile = shift;
+    my $clsFillFile = shift;
     #
     my $fark=fark->open();
     &setObsConfig($fark,$node,$cachefile);
@@ -553,12 +556,14 @@ sub processObs {
     my $filterDirMax=$node->getAttribute("filterDirMax")||"";
     my $filterFile=$node->getAttribute("filterFile");
     # registerfile is updated if (! $test)
-    $fark->updateObservationRegister($registerfile,$filterDir,$filterFile,$filterDirMin,$filterDirMax,$test,$fillfile);
+    $fark->updateObservationRegister($registerfile,$filterDir,$filterFile,$filterDirMin,$filterDirMax,$test,$clsFillFile);
     $fark->makeObservationCache($cachefile);
     #
     $fark->close();
     #
     if (! -e $cachefile) {
+	unlink $clsFillFile;
+	unlink $registerfile;
 	farkdir::term("Unable to make cache file:'".$cachefile."'")
     };
     return;
@@ -574,7 +579,7 @@ sub processColoc {
     my $obsCacheDir = shift;
     my $file = shift;
     my $test = shift;
-    my $fillfile = shift;
+    my $clsFillFile = shift;
     #
     if($debug){print "processColoc Entering with '$xmlfile' '$file'\n";}
     my $fark=fark->open();
@@ -583,7 +588,7 @@ sub processColoc {
     # make the resulting XML
     #print "Calling colocXML\n";
     my $xml       = $node->getAttribute("xml");
-    my ($irc, $msg) = $fark->makeColocXML($xml,$test,$fillfile);
+    my ($irc, $msg) = $fark->makeColocXML($xml,$test,$clsFillFile);
     #
     # close session
     $fark->close();
@@ -601,7 +606,7 @@ sub processPlot {
     my $obsCacheDir = shift;
     my $file = shift;
     my $test = shift;
-    my $fillfile = shift;
+    my $clsFillFile = shift;
     #
     if($debug){print "processPlot Entering with '$xmlfile' '$file'\n";}
     my $table=$node->getAttribute("table");
@@ -660,7 +665,7 @@ sub processPlot {
     my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
     my $fpath=$root . $loc . $cat;
     if($debug){print "****** Make table\n";}
-    my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics,$fpath,$test,$fillfile); 
+    my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics,$fpath,$test,$clsFillFile); 
     #
     if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}
     my $cmd="Rscript --vanilla $fpath $tablefile $plotfile $test";

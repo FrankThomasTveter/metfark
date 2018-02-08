@@ -30,7 +30,7 @@ function auto_updateData() {
 function auto_newConfigFile(item) {
     var type=item.parentNode.parentNode.children[1].children[0].value;
     var file=item.parentNode.parentNode.children[3].children[0].value;
-    var auto=item.parentNode.parentNode.children[7].children[0].value;
+    var auto=item.parentNode.parentNode.children[5].children[0].value;
     showValue('autoType',"");
     showValue('autoConfigFile',"");
     document.getElementById("autoCron").value=auto_cron[0];
@@ -67,8 +67,8 @@ function auto_testNow(target,type,file,row) {
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
 	fark_last[type]=file;
-	row.children[5].innerHTML=""; // last
-	row.children[6].innerHTML="# running"; // info
+	row.children[9].innerHTML=""; // last
+	row.children[10].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1},
 	      function(data, status){
@@ -96,8 +96,8 @@ function auto_runNow(target,type,file,row) {
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
 	fark_last[type]=file;
-	row.children[5].innerHTML=""; // last
-	row.children[6].innerHTML="# running"; // info
+	row.children[9].innerHTML=""; // last
+	row.children[10].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file},
 	      function(data, status){
@@ -170,7 +170,7 @@ function auto_removeFile(item,type,file) {
     var newitem=document.getElementById("newlineAuto");
     newitem.children[1].children[0].value=type;
     newitem.children[3].children[0].value=file;
-    newitem.children[7].children[0].value=auto_cron[0];
+    newitem.children[5].children[0].value=auto_cron[0];
     //if (! checkAutoPassword()) {return;}
     //item.parentNode.removeChild(item);
     delete auto_config[type][file];
@@ -184,34 +184,74 @@ function auto_setTable() {
     var item=document.getElementById('autoTable');
     var tail=removeTableChildFromTo(item,"labelsAuto","newlineAuto");
     var models=[];
-    for (var model in auto_config["model"]) models.push(model);
-    models.sort();
+    var obss=[];
+    var colocs=[];
+    var plots=[];
+    for (var ii = 0; ii < auto_cron.length; ++ii) {
+	var cron=auto_cron[ii];
+	var modell=[];
+	var obsl=[];
+	var colocl=[];
+	var plotl=[];
+	for (var model in auto_config["model"]) {
+	    if (auto_config["model"][model]["auto"] === cron) {
+		console.log("*** Found: ",cron, model);
+		modell.push(model);
+	    }
+	}
+	for (var obs in auto_config["obs"]) {
+	    if (auto_config["obs"][obs]["auto"] == cron) {
+		console.log("*** Found: ",cron,obs);
+		obsl.push(obs);
+	    }
+	}
+	for (var coloc in auto_config["coloc"]) {
+	    if (auto_config["coloc"][coloc]["auto"] == cron) {
+		console.log("*** Found: ",cron,coloc);
+		colocl.push(coloc);
+	    }
+	}
+	for (var plot in auto_config["plot"]) {
+	    if (auto_config["plot"][plot]["auto"] == cron) {
+		console.log("*** Found: ",cron,plot);
+		plotl.push(plot);
+	    }
+	}
+	// sort...
+	modell.sort();
+	obsl.sort();
+	colocl.sort();
+	plotl.sort();
+	// add to global array...
+	models.extend(modell);
+	obss.extend(obsl);
+	colocs.extend(colocl);
+	plots.extend(plotl);
+    }
     for (var ii = 0; ii < models.length; ++ii) {
 	var model=models[ii];
+	console.log("Insert row: ",model);
 	auto_insertRow(tail,"model",model,auto_config["model"][model]["last"],auto_config["model"][model]["info"],auto_config["model"][model]["auto"],auto_config["model"][model]["status"],"#01DFD7"); 
     }
-    var obss=[];
-    for (var obs in auto_config["obs"]) obss.push(obs);
-    obss.sort();
     for (var ii = 0; ii < obss.length; ++ii) {
 	var obs=obss[ii];
+	console.log("Insert row: ",obs);
 	auto_insertRow(tail,"obs",obs,auto_config["obs"][obs]["last"],auto_config["obs"][obs]["info"],auto_config["obs"][obs]["auto"],auto_config["obs"][obs]["status"],"#F3E2A9");
     }
-    var colocs=[];
-    for (var coloc in auto_config["coloc"]) colocs.push(coloc);
-    colocs.sort();
     for (var ii = 0; ii < colocs.length; ++ii) {
 	var coloc=colocs[ii];
+	console.log("Insert row: ",coloc);
 	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#F6CEEC");
     }
-    var plots=[];
-    for (var plot in auto_config["plot"]) plots.push(plot);
-    plots.sort();
     for (var ii = 0; ii < plots.length; ++ii) {
 	var plot=plots[ii];
+	console.log("Insert row: ",plot);
 	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"],"#BDBDBD");
     }
 };
+
+
+
 function auto_setCheckbox(item,type,file) {
     var checked = item.checked;
     console.log("Checked:",checked);
@@ -251,17 +291,6 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
     row.appendChild(td);
-    // make LAST column
-    td=document.createElement("TD");
-    if (status !== "") {
-	td.setAttribute("style","color:blue");
-    }
-    td.innerHTML=last;
-    row.appendChild(td);
-    // make INFO column
-    td=document.createElement("TD");
-    td.innerHTML=info;
-    row.appendChild(td);
     // make AUTO checkbox column
     td=document.createElement("TD");
     td.innerHTML=auto;
@@ -293,6 +322,17 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);
+    row.appendChild(td);
+    // make LAST column
+    td=document.createElement("TD");
+    if (status !== "") {
+	td.setAttribute("style","color:blue");
+    }
+    td.innerHTML=last;
+    row.appendChild(td);
+    // make INFO column
+    td=document.createElement("TD");
+    td.innerHTML=info;
     row.appendChild(td);
     // make add row to table
     item.parentNode.insertBefore(row,item);

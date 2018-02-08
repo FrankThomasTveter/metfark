@@ -66,13 +66,13 @@ button:hover, button:focus {
     background-color: #0cf;
 }
 .test {
-    background-color: #eef;
+    background-color: yellow;
 }
 .test:hover, .test:focus {
-    background-color: red;
+    background-color: orange;
 }
 .run {
-    background-color: yellow;
+    background-color: Tomato;
 }
 .run:hover, .run:focus {
     background-color: red;

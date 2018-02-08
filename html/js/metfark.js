@@ -391,7 +391,7 @@ function showDropdown(target, arg = "") {
 		    //if (dd.substr(dd.length-1) == "/" || dd == "") {
 		    //  dd=dd + file;
 		    //}
-		    console.log("Adding dir button: ",dd);
+		    console.log("Adding dir button: ",dd,ii,dirs[ii]);
 		    addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();");
 		}
 	    };
@@ -2334,10 +2334,18 @@ function getSubDirs(cls,root,loc,child) {
 	    pos=pos[child];
 	};
     };
-    var ret=[];
     console.log("getSubDirs parent '"+parent+"'");
+    var keys=[];
+    for (var k in pos) {
+	if (pos.hasOwnProperty(k)) {
+	    keys.push(k);
+	}
+    }
+    keys.sort();
+    var ret=[];
     ret.push(parent);
-    for (var key in pos) {
+    for (var i=0; i< keys.length; i++) {
+	key=keys[i];
 	console.log("getSubDirs Found dir:",key);
 	var entry=key;
 	if (pos[key] != "file") {
@@ -2363,7 +2371,6 @@ function arrayUp(array,ii) {
     	array[array.length-1]=buff;
     };
 }
-
 
 Array.prototype.extend = function (other_array) {
     /* you should include a test to check whether other_array really is an array */

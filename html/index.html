@@ -516,12 +516,12 @@
 	      <th style="min-width:25px;width:25px"></th>
 	      <th>Setup file</th>
 	      <th style="min-width:25px;width:25px"></th>
-	      <th width="200px">Last</th>
-	      <th width="200px">Info</th>
 	      <th style="min-width:50px;width:50px" align="center">Auto</th>
 	      <th style="min-width:25px;width:25px"></th>
 	      <th style="min-width:50px;width:50px" align="center">Test</th>
 	      <th style="min-width:50px;width:50px" align="center">Run</th>
+	      <th width="200px">Last</th>
+	      <th width="200px">Info</th>
 	    </tr>
 	    <tr id="newlineAuto">
 	      <td style="min-width:25px;width:25px" align="center"><button onclick="auto_newConfigFile(this)">&#43;</button></td>
@@ -535,8 +535,6 @@
 		<div id="autoConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('autoConfigFile',this.parentNode.parentNode.children[3].children[0].value)" class="dropbtn">&#9776;</button></td>
-	      <td id="autoLastTime"></td>
-	      <td id="autoLastInfo"></td>
 	      <td class="fill">
 		<input id="autoCron" type="text" value="" style="width:100%" disabled/> 
 		<div id="autoCronDropdown" class="dropdown-content"></div>
@@ -546,6 +544,8 @@
 		<button class="test" onclick="auto_testNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)">&#9762;</button></td>
 	      <td style="min-width:25px;width:25px" align="center">
 		<button class="run" onclick="auto_runNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)">&#9762;</button></td>
+	      <td id="autoLastTime"></td>
+	      <td id="autoLastInfo"></td>
 	    </tr>
 	  </table>
 	  <table width="100%">

@@ -256,6 +256,8 @@ sub updateTime {
 		    };
 		    if ($lastFill >= $lastStart) {
 			$lastAccess="> ok (".(farkdir::dtg($duration)) . ")";
+		    } elsif ($cls eq "model" or $cls eq "obs") {
+			$lastAccess="# no new data (".(farkdir::dtg($duration)) . ")";
 		    } else {
 			$lastAccess="# no data (".(farkdir::dtg($duration)) . ")";
 		    }

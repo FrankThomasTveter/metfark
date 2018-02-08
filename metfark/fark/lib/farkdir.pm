@@ -532,6 +532,7 @@ sub checkClassForStrings {
 # } {
 #   message=>"Error: See 'log' for more detail,",
 #   logfile   => "log",
+#   errfile   => "err",
 #   stdout    => "success",
 #   fork      => 1,
 #   debug     => 0,
@@ -545,18 +546,40 @@ sub sandbox (&@) {
     my $opts = shift;
     my $msg    = $opts->{"message"}//"";      # termination-message in case of error
     my $log    = $opts->{"logfile"}//"";      # logfile to save stdout/err
+    my $err    = $opts->{"errfile"}//"";      # logfile to save err
     my $print  = $opts->{"stdout"}//"always"; # print stdout: "always", "never", "success"
     my $termx  = $opts->{"terminate"}//$msg;  # allow termination (termination-message => yes)... 
     my $fork   = $opts->{"fork"}//"0";        # fork process?
     my $debug   = $opts->{"debug"}//"0";      # print debug info
     my ($pid,$core,$sig,$ext,$wait,$blk,$mrg)=(0,0,0,0,0,0,0);
-    my $err="";
+    my $cmd="";
     my $merged="";
-    if (! $log && $print eq "always") {
-	($pid,$core,$sig,$ext,$wait,$blk,$err)=sandcorn($code,$fork,$debug);
+    if (! $err && ! $log && $print eq "always") {
+	($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$debug);
     } else {
 	($merged,$mrg)=capture_merged {
-	    ($pid,$core,$sig,$ext,$wait,$blk,$err)=sandcorn($code,$fork,$debug);
+	    ($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$debug);
+	};
+	my $ok=(! $core       # child core dump 
+		&& ! $sig     # child abort signal
+		&& ! $ext     # child exit/die
+		&& ! $wait    # child pid vanished
+		&& ! $cmd     # eval return string
+		&& ! $blk );
+	if (defined $err && $err && ! $ok) { # save to errfile
+	    if (open(my $fh, '>', $err)) {
+		print $fh $merged;
+		my $s="";
+		if ($core) {$s .="* core:$core *";}
+		if ($sig)  {$s .="* signal:$sig *";}
+		if ($ext)  {$s .="* exit:$ext *";}
+		if ($wait) {$s .="* wait:$wait *";}
+		if ($blk)  {$s .="* block: $blk *";}
+		if ($cmd)  {$s .="* cmd:$cmd *";}
+		#if ($mrg)  {$s .="* merge:$mrg *";}
+		if ($s) {print $fh "**" . $s . "**\n";}
+		close $fh;
+	    };
 	};
 	if (defined $log && $log) { # save to logfile
 	    if (open(my $fh, '>', $log)) {
@@ -567,21 +590,15 @@ sub sandbox (&@) {
 		if ($ext)  {$s .="* exit:$ext *";}
 		if ($wait) {$s .="* wait:$wait *";}
 		if ($blk)  {$s .="* block: $blk *";}
-		if ($err)  {$s .="* err:$err *";}
+		if ($cmd)  {$s .="* cmd:$cmd *";}
 		#if ($mrg)  {$s .="* merge:$mrg *";}
 		if ($s) {print $fh "**" . $s . "**\n";}
 		close $fh;
 	    };
 	};
-	if ($print eq "always" || ( $print eq "success" 
-				    && ! $core    # child core dump 
-				    && ! $sig     # child abort signal
-				    && ! $ext     # child exit/die
-				    && ! $wait    # child pid vanished
-				    && ! $err     # eval return string
-				    && ! $blk )) { # block exit
+	if ($print eq "always" || ( $print eq "success" && $ok)) { # block exit
 	    print $merged;
-	    if ($err) {print $err;} # any error message from command
+	    if ($cmd) {print $cmd;} # any error message from command
 	}
     };
     # handle errors...
@@ -596,10 +613,10 @@ sub sandbox (&@) {
 	    term($msg . " (Process $pid returned $ext.)");
 	}elsif ($wait) {
 	    term($msg . " (Process $pid just vanished. How strange.)");
-	} elsif ($err) {
-	    term ($err);
+	} elsif ($cmd) {
+	    term ($cmd);
 	} elsif ($blk) {
-	    term ($msg . " [$err]");
+	    term ($msg . " [$cmd]");
 	};
     }
 }
@@ -611,7 +628,7 @@ sub sandcorn {
     my $sig=0;      # child abort signal
     my $ext=0;      # child exit/die
     my $wait=0;     # child pid vanished
-    my $err="";     # eval return string
+    my $cmd="";     # eval return string
     my $blk = 0;    # block exit
     if($debug){print "farkdir::sandbox started '$fork'.\n";}
     if ($fork) {
@@ -628,32 +645,32 @@ sub sandcorn {
 		} else {
 		    $|=1; # flush stdout buffer, otherwise it will not be captured by parent...
 		    if($debug){print "farkdir::sandbox child start=$$.\n";}
-		    eval {&{$code};};$err=$@;   # capture any "die" messages from the system...
+		    eval {&{$code};};$cmd=$@;   # capture any "die" messages from the system...
 		    if($debug){print "farkdir::sandbox child end=$$.\n";}
-		    if ($err) {
-			print $err;
+		    if ($cmd) {
+			print $cmd;
 			exit 1;
 		    } else {
 			exit 0;
 		    }
 		}
 	    } else {
-		$err="Unable to fork.";
+		$cmd="Unable to fork.";
 	    }
 	};
-	$err=$@;   # capture any "die" messages from the system...
+	$cmd=$@;   # capture any "die" messages from the system...
 	if($debug){print "farkdir::sandbox Detected child end=$pid ($$) '$?' '$ext' '$sig' '$core'.\n";}
     } else { # no fork, must catch exit signals
 	$blk = 1;
       EXIT_OVERRIDE: {
 	  $|=1; # flush stdout buffer, otherwise it will not be captured by parent...
 	  local $override_exit = 1;
-	  eval {&{$code};};$err=$@;   # capture any "die" messages from the system...
+	  eval {&{$code};};$cmd=$@;   # capture any "die" messages from the system...
 	  $blk = 0;
 	};
     }
     if($debug){print "farkdir::sandbox stopped.\n";}
-    return ($pid,$core,$sig,$ext,$wait,$blk,$err);
+    return ($pid,$core,$sig,$ext,$wait,$blk,$cmd);
 }
 
 #
