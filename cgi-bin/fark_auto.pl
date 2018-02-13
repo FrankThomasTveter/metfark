@@ -221,7 +221,7 @@ sub loopCls {
 	    if($debug){print "After farkdir::sandbox\n";};
 	} elsif ($cron)  {
 	    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
-	    if ($cls eq "model") { fark::debug(2);};  # debug models
+	    #if ($cls eq "model") { fark::debug(2);};  # debug models
 	    farkdir::sandbox {
 		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
 	    }{stdout    => "always",

@@ -5381,7 +5381,8 @@ CONTAINS
     integer*8, parameter :: maxlen=2147483647
     !integer*8, parameter :: maxlen=1000
     integer*8 :: dimlen
-     if(mod_bdeb)write(*,*)myname,' Entering.',nloc
+    if(mod_bdeb)write(*,*)myname,' Entering.',nloc
+    write(*,*)myname,'Processing ',f%fn250(1:f%lenf)//"'"
     !
     ! initialise location positions
     !
@@ -5502,7 +5503,6 @@ CONTAINS
     end do
     !
     if(mod_bdeb)write(*,*)myname,'Looping over remaining variables.',f%nvar, p%nvar
-    write(*,*)myname,'Looping over remaining variables.',f%nvar, p%nvar
     !
     ! loop over remaining variables
     !
@@ -5521,7 +5521,6 @@ CONTAINS
        lenv=length(var250,250,10)
        dimlen=model_varLen(v)
        if(mod_bdeb)write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
-       write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
        if (dimlen.gt.maxlen) then ! read variable in segments
           do ll=1,nloc
              loc=>lp(ll)%ptr

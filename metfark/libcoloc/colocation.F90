@@ -1854,8 +1854,6 @@ CONTAINS
              return
           end if
        end if
-       !
-       write(*,*) myname,'Done model file loop.'
        ! end model loop
        if (tmod.eq.0.or.test.ne.0)  then
           exit MODFILE
