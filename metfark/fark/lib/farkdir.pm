@@ -370,128 +370,6 @@ sub removeDir {
 }
 
 #
-# my @files = &find (".*\.nc",$dir,"",time);
-#
-
-sub FindFiles{
-    use File::stat;
-    use Cwd;
-    my $wdir = shift;
-    my $pattern = shift;
-    my $min = shift || "";
-    my $max = shift || "";
-    my $maxtime = shift || 0;
-    my $root = shift || "";
-    my $t = shift || time;
-    my $hits = shift || 0;
-    my @ret = ();
-    if ($maxtime && time - $t > $maxtime) {return @ret;}; # use maximum 2 seconds
-    #print "Time:" . (time-$t) . "\n";
-    if ($root ne "") {
-	$root=$root . $wdir;
-    } else {
-	$root=$wdir;
-    }
-    if (substr($root,-1) ne "/") { $root = $root . "/";};
-    my ($sdir) = &cwd; 
-    if ($debug) {print "Opening $wdir\n";}
-    opendir(DIR, $wdir) or die "Unable to open $wdir:$!\n";
-    my @dirs = ();
-    #print "Here...\n";
-    my @entries = sort { $a cmp $b } readdir(DIR);
-    while ( my $name = shift @entries ){
-	#print "Checking $name\n";
-	if ($maxtime && time - $t > $maxtime && $hits > 1) {last;}; # use max 2 seconds if we have hits
-	if ($maxtime && time - $t > $maxtime*3) {last;}; # use max 10 seconds
-        next if ($name eq ".");
-        next if ($name eq "..");
-        next if (-l $name ); # skip symlinks
-	my $path=$root . $name;
-        if (-d $path){
-	    my $ok=1;
-	    if ($min || $max) {
-		my $ref=stat($path);
-		my $fmin=($ref->ctime);
-		my $fmax=($ref->mtime);
-		# get times from file name...
-		my %patt=findPattern($path);
-		foreach my $k (keys %patt) {
-		    $fmin=$patt{$k}[1];
-		    $fmax=$patt{$k}[2];
-		    if ($debug){print "Resetting: '$path' '$k' '$fmin' '$fmax'\n";};
-		};
-		my $mge=($t-$fmax)/86400;
-		my $cge=($t-$fmin)/86400; # inode change time...
-#		if ($min && $cge < $min) {$ok=0;}; # if directory has moved , this will fail
-		if ($max && $mge > $max) {$ok=0;};
-		if ($debug){print "Directory: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";};
-	    };
-	    if ($ok) {
-		push (@dirs, $name);
-	    }
-        } elsif (-f $path ) {
-	    if ($name  =~ m/$pattern/) {
-		my $ok=1;
-		if ($min || $max) {
-		    my $age=(-M $path);
-		    #print "Age $age '$path' '$min' '$max'\n";
-		    if ($min && $age < $min) {$ok=0;};
-		    if ($max && $age > $max) {$ok=0;};
-		    if ($debug) {print "File: '$path' '$age' '$ok'\n";};
-		};
-		if ($ok) {
-		    push (@ret, $path);
-		    $hits++;
-		}
-	    } else {
-		#print "No match: $pattern $name\n";
-	    };
-	} else {
-	    #print "How strange $path does not exist...\n";
-	}
-    };
-    closedir(DIR);
-    # loop over sub directories
-    chdir($wdir) or die "Unable to enter dir $wdir:$!\n";
-    foreach my $name (@dirs) {
-	#print "Processing $name\n";
-	my @lret=&FindFiles($name,$pattern,$min,$max,$maxtime,$root,$t,$hits);
-	push (@ret,@lret);
-	$hits+=@lret;
-    }
-    chdir($sdir) or die "Unable to change to dir $sdir:$!\n";
-    return sort @ret;
-}
-
-sub GetFiles {   # full scan of all files...
-    use File::Find;
-    my($filterDir,$filter,$min,$max) = @_;
-    if (! defined($min)) {$min="";};
-    if (! defined($max)) {$max="";};
-    my @files=();
-    find({wanted => sub {
-	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
-	    my $file=$File::Find::name;
-	    my $ok=1;
-	    if ($min || $max) {
-		my $age=(-M $file);
-		if ($min && $age < $min) {
-		    $ok=0;
-		};
-		if ($max && $age > $max) {
-		    $ok=0;
-		};
-	    }
-	    if ($ok) {
-		my $sb=(stat($file))[9];
-		my $s= $sb. " " . $file;
-		push(@files, $s);
-	    }
-	}
-	  }}, $filterDir);
-    return @files;
-}
-#
 # check if string is present in any of the files with the root class directory (besides $file)...
 #
 sub checkClassForStrings {
@@ -537,7 +415,6 @@ sub checkClassForStrings {
 #   fork      => 1,
 #   debug     => 0,
 #   terminate => \&farkdir::term};
-#
 
 sub sandbox (&@) {
     use 5.014;
@@ -688,6 +565,31 @@ sub sandcorn {
 }
 
 #
+
+sub dtg {
+    use POSIX qw (floor);
+    my $tsec=shift;
+    my $s="";
+    if ($tsec > 86400) {
+	my $dd=floor($tsec/86400);
+	$tsec=$tsec-$dd*86400;
+	$s=$s . $dd . "d";
+    }
+    if ($tsec > 3600) {
+	my $hh=floor($tsec/3600);
+	$tsec=$tsec-$hh*3600;
+	$s=$s . $hh . "h";
+    }
+    if ($tsec > 60) {
+	my $mm=floor($tsec/60);
+	$tsec=$tsec-$mm*60;
+	$s=$s . $mm . "m";
+    }
+    $s=$s . $tsec . "s";
+    return $s;
+}
+
+#
 # my $ret = &term ("System error...");
 #
 sub term {
@@ -715,27 +617,127 @@ sub termAll {
     print "<error message='".$msg."'/>\n";
 }
 
-sub dtg {
-    use POSIX qw (floor);
-    my $tsec=shift;
-    my $s="";
-    if ($tsec > 86400) {
-	my $dd=floor($tsec/86400);
-	$tsec=$tsec-$dd*86400;
-	$s=$s . $dd . "d";
+#
+# my @files = &find (".*\.nc",$dir,"",time);
+#
+
+sub FindFiles{
+    use File::stat;
+    use Cwd;
+    my $wdir = shift;
+    my $pattern = shift;
+    my $min = shift || "";
+    my $max = shift || "";
+    my $maxtime = shift || 0;
+    my $root = shift || "";
+    my $t = shift || time;
+    my $hits = shift || 0;
+    my @ret = ();
+    if ($maxtime && time - $t > $maxtime) {return @ret;}; # use maximum 2 seconds
+    #print "Time:" . (time-$t) . "\n";
+    if ($root ne "") {
+	$root=$root . $wdir;
+    } else {
+	$root=$wdir;
     }
-    if ($tsec > 3600) {
-	my $hh=floor($tsec/3600);
-	$tsec=$tsec-$hh*3600;
-	$s=$s . $hh . "h";
+    if (substr($root,-1) ne "/") { $root = $root . "/";};
+    my ($sdir) = &cwd; 
+    if ($debug) {print "Opening $wdir\n";}
+    opendir(DIR, $wdir) or die "Unable to open $wdir:$!\n";
+    my @dirs = ();
+    #print "Here...\n";
+    my @entries = sort { $a cmp $b } readdir(DIR);
+    while ( my $name = shift @entries ){
+	#print "Checking $name\n";
+	if ($maxtime && time - $t > $maxtime && $hits > 1) {last;}; # use max 2 seconds if we have hits
+	if ($maxtime && time - $t > $maxtime*3) {last;}; # use max 10 seconds
+        next if ($name eq ".");
+        next if ($name eq "..");
+        next if (-l $name ); # skip symlinks
+	my $path=$root . $name;
+        if (-d $path){
+	    my $ok=1;
+	    if ($min || $max) {
+		my $ref=stat($path);
+		my $fmin=($ref->ctime);
+		my $fmax=($ref->mtime);
+		# get times from file name...
+		my %patt=findPattern($path);
+		foreach my $k (keys %patt) {
+		    $fmin=$patt{$k}[1];
+		    $fmax=$patt{$k}[2];
+		    if ($debug){print "Resetting: '$path' '$k' '$fmin' '$fmax'\n";};
+		};
+		my $mge=($t-$fmax)/86400;
+		my $cge=($t-$fmin)/86400; # inode change time...
+#		if ($min && $cge < $min) {$ok=0;}; # if directory has moved , this will fail
+		if ($max && $mge > $max) {$ok=0;};
+		if ($debug){print "Directory: min=$cge, max=$mge  '$path' '$min' '$max' $t $fmin $fmax $ok\n";};
+	    };
+	    if ($ok) {
+		push (@dirs, $name);
+	    }
+        } elsif (-f $path ) {
+	    if ($name  =~ m/$pattern/) {
+		my $ok=1;
+		if ($min || $max) {
+		    my $age=(-M $path);
+		    #print "Age $age '$path' '$min' '$max'\n";
+		    if ($min && $age < $min) {$ok=0;};
+		    if ($max && $age > $max) {$ok=0;};
+		    if ($debug) {print "File: '$path' '$age' '$ok'\n";};
+		};
+		if ($ok) {
+		    push (@ret, $path);
+		    $hits++;
+		}
+	    } else {
+		#print "No match: $pattern $name\n";
+	    };
+	} else {
+	    #print "How strange $path does not exist...\n";
+	}
+    };
+    closedir(DIR);
+    # loop over sub directories
+    chdir($wdir) or die "Unable to enter dir $wdir:$!\n";
+    foreach my $name (@dirs) {
+	#print "Processing $name\n";
+	my @lret=&FindFiles($name,$pattern,$min,$max,$maxtime,$root,$t,$hits);
+	push (@ret,@lret);
+	$hits+=@lret;
     }
-    if ($tsec > 60) {
-	my $mm=floor($tsec/60);
-	$tsec=$tsec-$mm*60;
-	$s=$s . $mm . "m";
-    }
-    $s=$s . $tsec . "s";
-    return $s;
+    chdir($sdir) or die "Unable to change to dir $sdir:$!\n";
+    return sort @ret;
+}
+
+sub GetFiles {   # full scan of all files...
+    use File::Find;
+    my($filterDir,$filter,$min,$max) = @_;
+    if (! defined($min)) {$min="";};
+    if (! defined($max)) {$max="";};
+    my @files=();
+    find({wanted => sub {
+	if (-f $File::Find::name && $File::Find::name =~ m/$filter/) {
+	    my $file=$File::Find::name;
+	    my $ok=1;
+	    if ($min || $max) {
+		my $age=(-M $file);
+		if ($min && $age < $min) {
+		    $ok=0;
+		};
+		if ($max && $age > $max) {
+		    $ok=0;
+		};
+	    }
+	    if ($ok) {
+		my $sb=(stat($file))[9];
+		my $s= $sb. " " . $file;
+		push(@files, $s);
+	    }
+	}
+	  }}, $filterDir);
+    return @files;
 }
 
 # find YYYY MM DD pattern in file/directory names
@@ -889,6 +891,7 @@ sub getCandidates {
 
 sub showPattern {
     use strict;
+    use POSIX qw (floor);
     my ($s,$w,$cnn,@candidateTypes)= @_;
     if ($debug) {print "showPattern Entering with '$s' '$w'\n";};
     my $bdone=0;
@@ -1061,6 +1064,7 @@ sub addPattern {
 }
 
 sub getScore {
+    use POSIX qw (floor);
     my ($s,$w,$score)=@_;
     # adjacent
     if ($debug) {my $s2=floor($score*100)/100;

@@ -28,9 +28,9 @@ if (defined $param->{debug}[0]) {
     $debug=1;       # debug this script (0=omit output)
     #fark::debug(1);  # debug observations
     fark::debug(2);  # debug models
-    fark::debug(3);  # debug colocation
+    #fark::debug(3);  # debug colocation
     #fark::debug(4);  # debug plot
-    fark::debug(5);  # debug parse
+    #fark::debug(5);  # debug parse
 }
 #
 my $autoDir=      farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
@@ -212,12 +212,14 @@ sub loopCls {
 	    if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
 	    farkdir::sandbox {
 		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-	    }{message=>"$myname $cls file: $xmlfile, see $logfile",
-	      logfile   => $logfile,
-	      errfile   => $errfile . ".debug",
-	      stdout    => "always",
+	    }{stdout    => "always",
 	      debug     => 1
 	    };
+	    
+#message=>"$myname $cls file: $xmlfile, see $logfile",
+#	      logfile   => $logfile,
+#	      errfile   => $errfile . ".debug",	      
+	    
 	    if($debug){print "After farkdir::sandbox\n";};
 	} elsif ($cron)  {
 	    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};

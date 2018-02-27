@@ -2542,7 +2542,7 @@ CONTAINS
        if (css%trg_dim(ii).eq.0) then ! not a dimension, must be a variable
           do jj=1,file%nvar ! global variable index
              lenv=length(file%var80(jj),80,10)
-             if(mod_bdeb)write(*,*)myname," Variable '"//file%var80(jj)(1:lenv)//"'",jj
+             !if(mod_bdeb)write(*,*)myname,jj," Variable '"//file%var80(jj)(1:lenv)//"'"
              if (css%trg_v80(ii)(1:leng).eq.file%var80(jj)(1:lenv)) then
                 css%trg_var(ii)=jj
                 var => file%var(jj)%ptr
@@ -3015,6 +3015,9 @@ CONTAINS
     character*25 :: myname="model_checkFilter"
     type(mod_location), pointer :: loc
     real :: val
+    logical :: bdeb
+    bdeb=mod_bdeb
+    mod_bdeb=.false.
     if (bok.and.css%locReady) then
        css%currentFile%ook(1)=css%currentFile%ook(1)+1
        pos=locid-css%locoffset
@@ -3102,6 +3105,7 @@ CONTAINS
     else
        if (mod_bdeb)write(*,*)myname,'Obs FAIL:',locid,bok,css%mpo_set
     end if
+    mod_bdeb=bdeb
     return
   end subroutine model_checkFilter
   !
@@ -5381,6 +5385,7 @@ CONTAINS
     integer*8, parameter :: maxlen=2147483647
     !integer*8, parameter :: maxlen=1000
     integer*8 :: dimlen
+    logical :: bdeb
     if(mod_bdeb)write(*,*)myname,' Entering.',nloc
     write(*,*)myname,'Processing ',f%fn250(1:f%lenf)//"'"
     !
@@ -5409,6 +5414,8 @@ CONTAINS
     ! loop over batch-jobs
     !
     if(mod_bdeb)write(*,*)myname,'Batch job loop.'
+    bdeb=mod_bdeb
+    mod_bdeb=.false.
     b=>p%first%next
     do while ( .not.associated(b,target=p%last))
        !
@@ -5501,6 +5508,7 @@ CONTAINS
        !
        b=>b%next
     end do
+    mod_bdeb=bdeb
     !
     if(mod_bdeb)write(*,*)myname,'Looping over remaining variables.',f%nvar, p%nvar
     !
@@ -5513,15 +5521,18 @@ CONTAINS
           cycle VAR ! already processed
        end if
        if (v%itrg.eq.0) then ! this is not a target variable
-          if(mod_bdeb)write(*,*)myname,' ** Not a target:',v%var80(1:v%lenv)
+          if(mod_bdeb)write(*,*)myname,' ** Not a Target:',v%var80(1:v%lenv)
           cycle VAR
        end if
+       if(mod_bdeb)write(*,*)myname,"Resetting grid for '"//v%var80(1:v%lenv)//"'"
        call model_resetGrid(f,v) ! reset grid in case earlier call to setLocGrid
        var250=model_getvar250(f,varid)
        lenv=length(var250,250,10)
        dimlen=model_varLen(v)
        if(mod_bdeb)write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
        if (dimlen.gt.maxlen) then ! read variable in segments
+          bdeb=mod_bdeb
+          mod_bdeb=.false.
           do ll=1,nloc
              loc=>lp(ll)%ptr
              if (model_setLocGrid(v,loc,p)) then
@@ -5572,6 +5583,7 @@ CONTAINS
                 return
              end if
           end do ! locations
+          mod_bdeb=bdeb
           !
        else ! read variables once...
           !
@@ -5598,6 +5610,8 @@ CONTAINS
           !
           ! loop over locations
           !
+          bdeb=mod_bdeb
+          mod_bdeb=.false.
           do ll=1,nloc
              loc => lp(ll)%ptr
              if (loc%bok) then
@@ -5619,6 +5633,7 @@ CONTAINS
              ! end loop over locations
              !
           end do
+          mod_bdeb=bdeb
           !
           ! clear variable from memory
           !
@@ -5976,6 +5991,7 @@ CONTAINS
     integer*8, parameter :: maxlen=1000
     integer*8 :: dimlen
     integer, external :: length
+    logical :: bdeb
     if(mod_bdeb)write(*,*)myname,' Entering. locready=',css%locready,nloc
     !
     ! initialise location positions
@@ -6135,15 +6151,18 @@ CONTAINS
              cycle VAR ! already processed
           end if
           if (v%itrg.eq.0) then ! this is not a target variable
-             if(mod_bdeb)write(*,*)myname,' ** Not a target:',v%var80(1:v%lenv)
+             if(mod_bdeb)write(*,*)myname,' ** Not a TARGET:',v%var80(1:v%lenv)
              cycle VAR
           end if
+          if(mod_bdeb)write(*,*)myname,"Resetting grid for '"//v%var80(1:v%lenv)//"'"
           call model_resetGrid(f,v) ! reset grid in case earlier call to setLocGrid
           var250=model_getvar250(f,varid)
           lenv=length(var250,250,10)
           dimlen=model_varLen(v)
           if(mod_bdeb)write(*,'(X,A,X,A,X,A,"(",I0,")")')myname,' Target variable:',v%var80(1:v%lenv),dimlen
           if (dimlen.gt.maxlen) then ! read variable in segments
+             bdeb=mod_bdeb
+             mod_bdeb=.false.
              do ll=1,nloc
                 loc=>lp(ll)%ptr
                 if (model_setLocGrid(v,loc,p)) then
@@ -6197,6 +6216,7 @@ CONTAINS
                 ! end loop over locations
                 !
              end do
+             mod_bdeb=bdeb
           else ! read variables once
              !
              ! read variable into memory
@@ -7437,6 +7457,7 @@ CONTAINS
     integer,external :: length
     character*50 :: dim50
     type(mod_variable),pointer :: v
+    integer*8, parameter :: maxlen=2147483647
     !
     v => f%var(varid)%ptr
     !
@@ -7531,7 +7552,8 @@ CONTAINS
           return
        end if
     case (nf_real)
-       if(mod_bdeb)write(*,*)myname,'Allocating Real.',v%len
+       if(mod_bdeb)write(*,*)myname,'Allocating Real.',v%len,&
+            & f%ncid,varid,nf_real,v%type
        allocate( v%fr(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
@@ -7541,8 +7563,10 @@ CONTAINS
           call model_errorappend(crc250,"\n")
           return
        end if
-       if(mod_bdeb)write(*,*)myname,'Reading.',v%istart,v%icount,v%len
+       if(mod_bdeb)write(*,*)myname,'Reading.',v%istart,v%icount,v%len,&
+            & allocated(v%fr),size(v%fr)
        ret = nf_get_vara_real(f%ncid,varid,v%istart,v%icount,v%fr)
+       if(mod_bdeb)write(*,*)myname,'Returned real',ret
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
