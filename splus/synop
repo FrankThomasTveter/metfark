@@ -20,10 +20,10 @@
 # Attribute=Version|1.0:
 #
 # Column=cycle_epoch
-# Column=epoch
+# Column=time_epoch
 # Column=obs_id
-# Column=lat
-# Column=lon
+# Column=lat_deg
+# Column=lon_deg
 # Column=model_variable_n
 # Column=obs_variable_n
 #
@@ -63,7 +63,7 @@ for (ii in 1:attr$_n) {
  title=attr[,get(paste0("title",ii)];
  label=attr[,get(paste0("label",ii)];
  refcol="cycle_epoch";
- timecol="epoch";
+ timecol="time_epoch";
  obscol=paste0("obs_value",ii);
  modcol=paste0("model_value",ii);
  obslabel=paste("observation",label);

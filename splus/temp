@@ -1,29 +1,35 @@
 #!/usr/bin/env Rscript
 #
-# Id=1|circle
-# Id=2|star
-# Id=3|triangle
+# Id=1|circle/solid
+# Id=2|triangle/dashed
+# Id=3|pluss/dotted
+# Id=4|cross/dot dashed
+# Id=5|diamond/long dashed
+# Id=6|down triangle/two dashed
+# Id=7|cross square/solid
+# Id=8|star/dashed
+# Id=9|cross diamond/dotted
 #
 # Attribute=_n|1:2:3:4:5:6:7:8:9:10:11:12:13:14:15
-# Attribute=title_n|Title
-# Attribute=label_n|Label
-# Attribute=name_n|var
+# Attribute=title_string_n|Title
+# Attribute=axis_string_n|Label
+# Attribute=file_string_n|var
 # Attribute=Orientation|landscape:portrait
 # Attribute=Format|Jpeg:png:PDF:PostScript
 # Attribute=Suffix|.jpg:.png:.pdf:.ps
 # Attribute=Version|1.0:
 #
 # Column=cycle_epoch
-# Column=epoch
-# Column=lat
-# Column=lon
-# Column=model_variable_n
+# Column=time_epoch
 # Column=obs_id
+# Column=lat_deg
+# Column=lon_deg
+# Column=pressure_hpa
+# Column=model_variable_n
 # Column=obs_variable_n
 #
 # Usage: Rscript --vanilla verify table.txt plot
 #
-
 library(farkRPackage);
 
 args <- getArguments(); 
@@ -58,27 +64,20 @@ for (ii in 1:attr$_n) {
  title=attr[,get(paste0("title",ii)];
  label=attr[,get(paste0("label",ii)];
  refcol="cycle_epoch";
- timecol="epoch";
+ timecol="time_epoch";
+ prescol="pressure_hpa";
  obscol=paste0("obs_value",ii);
  modcol=paste0("model_value",ii);
  obslabel=paste("observation",label);
  modlabel=paste("model",label);
 
- scattfile=paste0(prefix,name,"_scatter",suffix);
- print(paste0("Processing '",scattfile,"'"));
- scatterPlot(scattfile,attr,legs,thin_data,title,setcol,obscol,modcol,obslabel,modlabel);
-
  seriesfile=paste0(prefix,name,"_series",suffix);
  print(paste0("Processing '",seriesfile,"'"));
  seriesPlot(seriesfile,attr,legs,data,title,setcol,timecol,modcol,obscol,label);
 
- scorefile=paste0(prefix,name,"_score",suffix);
- print(paste0("Processing '",scorefile,"'"));
- scorePlot(seriesfile,attr,legs,data,title,setcol,refcol,timecol,modcol,obscol,label);
-
- histfile=paste0(prefix,name,"_hist",suffix);
- print(paste0("Processing '",histfile,"'"));
- histPlot(histfile,attr,legs,data,title,setcol,refcol,timecol,modcol,obscol,label);
+ profilefile=paste0(prefix,name,"_profile",suffix);
+ print(paste0("Processing '",profilefile,"'"));
+ profilePlot(profilefile,attr,legs,data,title,setcol,refcol,timecol,prescol,modcol,obscol,label);
 
 }
 
