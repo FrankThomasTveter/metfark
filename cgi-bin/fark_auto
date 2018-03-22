@@ -3,7 +3,13 @@
 # Note: if "test" is defined, it is always true (regardless of value)!
 # ;debug=1
 #
-./fark_auto.pl '?root=auto.cfg&password=&type=model&file=meps%2Fmember0_30d.cfg;debug=1'
+#./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=meps_syno_003d.cfg&debug=1'
+#./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=meps_temp_030d.cfg&debug=1'
+
+./fark_auto.pl '?root=auto.cfg&password=fark&type=coloc&file=meps_temp_test.cfg&debug=1'
+
+
+#wget --tries=1 -O - "http://localhost/cgi-bin/fark_auto.pl?root=auto.cfg&password=&type=plot&file=meps_syno_365d.cfg;debug=1"
 # '?root=auto.cfg&password=&type=plot&file=meps_syno20180102.cfg'
 # '?root=auto.cfg&password=&type=model&file=meps%2Fmember0.cfg'
 #
@@ -14,7 +20,6 @@
 #  '?root=auto.cfg&password=&type=model&file=meps%2Fmember0_20180101.cfgX'
 # ./fark_auto.pl  '?root=auto.cfg&password=fark&type=plot&file=meps_syno_1d.cfg'
 #
-#./fark_auto.pl '?root=auto.cfg&password=fark&type=obs&file=starc%2Fsyno20180102.cfg'
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc_syno30d.cfg'
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc.cfg'
 #

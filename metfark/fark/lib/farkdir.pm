@@ -26,6 +26,9 @@ use File::Path qw( make_path );
 use Cwd 'abs_path';
 use File::Touch;
 
+no warnings 'once';
+
+
 # capture term-exit signals in sanbox block
 our $override_exit = 0;
 BEGIN { 
@@ -232,7 +235,7 @@ sub makePath{
 	    if(!-d $path) {
 		make_path $path; 
 		chmod 0777, $path;
-	    }
+	    };1;
 	};
 	return ($@); # send error return code to $irc
     };
@@ -410,20 +413,18 @@ sub checkClassForStrings {
 # } {
 #   message=>"See 'log' for more detail,",
 #   logfile   => "log",
-#   errfile   => "err",
-#   stdout    => "success",# "always","never"
+#   stdout    => "success",# "always", must have logfile to use "success"...
 #   fork      => 1,
 #   debug     => 0,
 #   terminate => \&farkdir::term};
 
 sub sandbox (&@) {
     use 5.014;
-    use Capture::Tiny 'capture_merged';
+    use File::Copy;
     my $code = shift; # reference to block to be executed
     my $opts = shift;
     my $msg    = $opts->{"message"}//"";      # termination-message in case of error
-    my $log    = $opts->{"logfile"}//"";      # logfile to save stdout/err
-    my $err    = $opts->{"errfile"}//"";      # logfile to save err
+    my $log    = $opts->{"logfile"}//"";      # logfile
     my $print  = $opts->{"stdout"}//"always"; # print stdout: "always", "never", "success"
     my $term   = $opts->{"terminate"};        # terminate on error using function...
     my $fork   = $opts->{"fork"}//"0";        # fork process?
@@ -432,69 +433,66 @@ sub sandbox (&@) {
     my ($pid,$core,$sig,$ext,$wait,$blk,$mrg)=(0,0,0,0,0,0,0);
     my $cmd="";
     my $merged="";
-    if (! $err && ! $log && $print eq "always") {
-	($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$debug);
-    } else {
-	($merged,$mrg)=capture_merged {
-	    ($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$debug);
-	};
-	my $ok=(! $core       # child core dump 
-		&& ! $sig     # child abort signal
-		&& ! $ext     # child exit/die
-		&& ! $wait    # child pid vanished
-		&& ! $cmd     # eval return string
-		&& ! $blk );
-	if (defined $err && $err && ! $ok) { # save to errfile
-	    if (open(my $fh, '>', $err)) {
-		print $fh $merged;
-		my $s="";
-		if ($core) {$s .="* core:$core *";}
-		if ($sig)  {$s .="* signal:$sig *";}
-		if ($ext)  {$s .="* exit:$ext *";}
-		if ($wait) {$s .="* wait:$wait *";}
-		if ($blk)  {$s .="* block: $blk *";}
-		if ($cmd)  {$s .="* cmd:$cmd *";}
-		#if ($mrg)  {$s .="* merge:$mrg *";}
-		if ($s) {print $fh "**" . $s . "**\n";}
-		close $fh;
-	    };
-	};
-	if (defined $log && $log) { # save to logfile
-	    if (open(my $fh, '>', $log)) {
-		print $fh $merged;
-		my $s="";
-		if ($core) {$s .="* core:$core *";}
-		if ($sig)  {$s .="* signal:$sig *";}
-		if ($ext)  {$s .="* exit:$ext *";}
-		if ($wait) {$s .="* wait:$wait *";}
-		if ($blk)  {$s .="* block: $blk *";}
-		if ($cmd)  {$s .="* cmd:$cmd *";}
-		#if ($mrg)  {$s .="* merge:$mrg *";}
-		if ($s) {print $fh "**" . $s . "**\n";}
-		close $fh;
-	    };
-	};
-	if ($print eq "always" || ( $print eq "success" && $ok)) { # block exit
-	    print $merged;
-	    if ($cmd) {print $cmd;} # any error message from command
+    if (!$log && $print eq "success") {
+	die ("farkdir::sandbox A logfile is required when using option stdout=>'success'.");
+    }
+    if (defined $log && $log) {
+	&redirect_streams($log);
+    } elsif ( $print eq "never") {
+	&redirect_streams("/dev/null");
+    };
+    ($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$debug);
+    if ($debug) {
+	my $s="";
+	if ($core) {$s .=" core:$core";}
+	if ($sig)  {$s .=" signal:$sig";}
+	if ($ext)  {$s .=" exit:$ext";}
+	if ($wait) {$s .=" wait:$wait";}
+	if ($blk)  {$s .=" block: $blk";}
+	if ($cmd)  {$s .=" cmd:$cmd";}
+	#if ($mrg)  {$s .=" merge:$mrg";}
+	print $s;
+    };
+    my $ok=(! $core       # child core dump 
+	    && ! $sig     # child abort signal
+	    && ! $ext     # child exit/die
+	    && ! $wait    # child pid vanished
+	    && ! $cmd     # eval return string
+	    && ! $blk );
+    if (defined $log && $log) {
+	&restore_streams();
+	if ($print eq "always"  || ($print eq "success" && $ok)) {
+	    &print_file($log);
+	    if ($cmd) {print $cmd;}
 	}
+	if (! $ok) { # save to errfile
+	    copy($log, $log.".err");
+	};
+    } elsif ( $print eq "never") {
+	&restore_streams();
     };
     # handle errors...
-    if ($term) {
+    if (! $ok) {
+	my $message=$msg;
 	if ($merged =~ m/<error message='(.*)'\/>/g) {
-	    $term->($1);
+	    $message=$1;
 	} elsif ($core){
-	    $term->($msg . " (Process $pid dumped core.)");
+	    $message = $msg . " (Process $pid dumped core.)";
 	}elsif($sig){
-	    $term->($msg . " (Process $pid died suddenly.)");
+	    $message=$msg . " (Process $pid died suddenly.)";
 	}elsif ($ext) {
-	    $term->($msg . " (Process $pid returned $ext.)");
+	    $message=$msg . " (Process $pid returned $ext.)";
 	}elsif ($wait) {
-	    $term->($msg . " (Process $pid just vanished. How strange.)");
+	    $message=$msg . " (Process $pid just vanished. How strange.)";
 	} elsif ($cmd) {
-	    $term->($cmd);
+	    $message=$cmd;
 	} elsif ($blk) {
-	    $term->($msg . " [$cmd]");
+	    $message=$msg . " [$cmd]";
+	};
+	if ($term) {
+	    $term->($message);
+	} elsif ($debug) {
+	    print $message;
 	};
     }
 }
@@ -509,7 +507,11 @@ sub sandcorn {
     my $wait=0;     # child pid vanished
     my $cmd="";     # eval return string
     my $blk = 0;    # block exit
-    if($debug){print "farkdir::sandbox started '$fork'.\n";}
+    #
+    my $tstart=time();
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+    #
+    if($debug){printf ("farkdir::sandbox started '$fork' at %02d:%02d:%02d\n",$hour,$min,$sec);}
     if ($fork) {
 	my $ret=0;
 	my $ps="";
@@ -535,7 +537,7 @@ sub sandcorn {
 		} else { # child process
 		    $|=1; # flush stdout buffer, otherwise it will not be captured by parent...
 		    if($debug){print "farkdir::sandbox child start=$$.\n";}
-		    eval {&{$code};};$cmd=$@;   # capture any "die" messages from the system...
+		    eval {&{$code};1;};$cmd=$@;   # capture any "die" messages from the system...
 		    if($debug){print "farkdir::sandbox child end=$$.\n";}
 		    if ($cmd) {
 			print $cmd;
@@ -546,21 +548,26 @@ sub sandcorn {
 		}
 	    } else {
 		$cmd="Unable to fork.";
-	    }
+	    };1;
 	};
 	$cmd=$@;   # capture any "die" messages from the system...
 	if($debug && $ps){print "farkdir::sandbox Last child info:\n$ps";}
-	if($debug){print "farkdir::sandbox Detected child end=$pid ($$) code='$ret' (exit='$ext') (signal='$sig') (core='$core').\n";}
+	if($debug){print "farkdir::sandbox Completed fork (pid=$$) code='$ret' (exit='$ext') (signal='$sig') (core='$core').\n";}
     } else { # no fork, must catch exit signals
 	$blk = 1;
       EXIT_OVERRIDE: {
 	  $|=1; # flush stdout buffer, otherwise it will not be captured by parent...
 	  local $override_exit = 1;
-	  eval {&{$code};};$cmd=$@;   # capture any "die" messages from the system...
+	  eval {&{$code};1;};$cmd=$@;   # capture any "die" messages from the system...
 	  $blk = 0;
 	};
     }
-    if($debug){print "farkdir::sandbox stopped.\n";}
+    #
+    my $tstop=time();
+    my $dtime=$tstop-$tstart;
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+    if($debug){printf("farkdir::sandbox completed at %02d:%02d:%02d (%s)\n",
+		      $hour,$min,$sec,dtg($dtime));}
     return ($pid,$core,$sig,$ext,$wait,$blk,$cmd);
 }
 
@@ -597,7 +604,7 @@ sub term {
     $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
     $msg=~s/ +/ /g;
     print "<error message='".$msg."'/>\n";
-    exit 1;
+    exit 2;
 }
 
 sub info {
@@ -605,7 +612,7 @@ sub info {
     $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
     $msg=~s/ +/ /g;
     print "<info message='".$msg."'/>\n";
-    exit 1;
+    exit 3;
 }
 
 sub termAll {
@@ -1132,5 +1139,39 @@ sub mod {
     return $mod;
 }
 
+sub restore_streams
+{
+    use strict;
+    close(STDOUT) || die "Can't close STDOUT: $!";
+    close(STDERR) || die "Can't close STDERR: $!";
+    open(STDERR, ">&OLDERR") || die "Can't restore stderr: $!";
+    open(STDOUT, ">&OLDOUT") || die "Can't restore stdout: $!";
+    if ($debug) {print "Streams restored.\n";};    
+};
+
+sub redirect_streams
+{
+    use strict;
+    (my $log_file) =@_;
+    if ($debug) {print "Redirecting streams to '$log_file'\n";};    
+    open OLDOUT,">&STDOUT" || die "Can't duplicate STDOUT: $!";
+    open OLDERR,">&STDERR" || die "Can't duplicate STDERR: $!";
+    open(STDOUT,"> $log_file");
+    open(STDERR,">&STDOUT");
+}
+
+sub print_file
+{
+    my ($filename)=@_;
+    if ($debug) {print "*** Start of '$filename' ***\n";};    
+    open(my $fh, '<:encoding(UTF-8)', $filename)
+	or die "Could not open file '$filename' $!";
+    
+    while (my $row = <$fh>) {
+	chomp $row;
+	print "$row\n";
+    };
+    if ($debug) {print "*** End of '$filename' ***\n";};    
+}
 
 1;

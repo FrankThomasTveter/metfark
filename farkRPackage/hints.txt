@@ -1,0 +1,47 @@
+cd packageDir
+R CMD check .
+cd ..
+R CMD build farkRPackage
+
+R
+> install.packages('farkRPackage_0.2.0.tar.gz', repos=NULL)
+> library('farkRpackage');
+
+
+#######################################################
+
+
+
+
+sudo R
+> install.packages("ggplot2")
+###> install.packages(path_to_file, repos = NULL, type="source")
+#i.e. "/home/blah/RJSONIO_0.2-3.tar.gz".
+> library("ggplot2")
+
+
+> install.packages("devtools"), 
+> devtools::install_github("hadley/babynames")
+
+
+> installed.packages()
+old.packages()
+update.packages() or install.packages("vioplot")
+
+library()
+detach("package:babynames", unload=TRUE)
+
+help(vioplot, package = "vioplot")
+ls("package:babynames")
+
+
+vignette(package = "ggplot2")
+vignette("ggplot2-specs")
+
+
+> install.packages("knitr")
+> install.packages("rmarkdown")
+# check package...
+~
+~
+~

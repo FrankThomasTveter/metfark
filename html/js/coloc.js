@@ -329,7 +329,7 @@ function coloc_showModelTargetTable() {
 	    //console.log("*** Check:",variable);
 	    if (variable.substring(0,1) == "(" && 
 		variable.substring(len-1,len) == ")") { // dimension
-		    var dim =variable.substring(1,len-1);
+		    var dim =removeSubstring(variable.substring(1,len-1),"[");
 		//console.log("*** Dimension:",dim);
 		if (dimensions !== undefined) {
 		    if (dimensions[dim] === undefined) {
@@ -340,7 +340,7 @@ function coloc_showModelTargetTable() {
 		};
 	    } else {                                    // variable
 		if (variables !== undefined) {
-		    if (variables[variable] === undefined) {
+		    if (variables[removeSubstring(variable,"[")] === undefined) {
 			color="red";
 		    };
 		} else {
@@ -965,7 +965,6 @@ function coloc_showTargetMatchTable() {
     }
     var indexExp=coloc_config[file]["modelConfigFile"]["exp"];;
     coloc_insertTargetMatchRow(tail,cnt,indexTarget,indexExp);
-    cnt=cnt+1;
     //for (var target in targets) {
     for (var ii =0; ii< targeto.length;ii++) {
 	var target=targeto[ii];

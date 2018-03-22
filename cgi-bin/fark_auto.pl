@@ -27,9 +27,9 @@ my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;       # debug this script (0=omit output)
     #fark::debug(1);  # debug observations
-    fark::debug(2);  # debug models
-    #fark::debug(3);  # debug colocation
-    #fark::debug(4);  # debug plot
+    #fark::debug(2);  # debug models
+    fark::debug(3);  # debug colocation
+    fark::debug(4);  # debug plot
     #fark::debug(5);  # debug parse
 }
 #
@@ -38,8 +38,6 @@ my $scriptDir=    farkdir::getRootDir("script") || farkdir::term("Invalid root d
 my $lockDir=     farkdir::getRootDir("lock") || farkdir::term("Invalid root directory (lock)");
 #
 my $myname = basename($0);
-#
-if($debug){print "Argument='" . shift . "'\n";}
 #
 $XML::LibXML::skipXMLDeclaration = 1;
 my $password = $param->{password}[0] // "";
@@ -54,7 +52,12 @@ my ($dir,$name)=farkdir::splitName($ipath);
 my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 my $file = $loc . $name;
 my $test = (defined $param->{test}[0]) ? 1 : 0;
+#
+if (defined $cron) {$debug=1;};
+#
+if ($debug) {print "Argument='" . shift . "'\n";}
 if ($debug) {print "Processing $file\n";}
+#
 # auto config file...
 my $parser = XML::LibXML->new();
 if (-f $autopath) { # we have a config file...
@@ -201,48 +204,72 @@ sub loopCls {
 	farkdir::term("Invalid root directory (".$cls."_log)");
     #
     foreach my $clsfile (keys %{$clsr}) {
+	my $cmd="";
 	my $xmlfile=$clsDir . $clsfile;
 	# check logfile
 	my $logfile = $clsLogDir ."$clsfile.log";
-	my $errfile = $clsLogDir ."$clsfile.err";
 	my ($logdir,$logname)=farkdir::splitName($logfile);
 	farkdir::makePath($logdir) || farkdir::term("$myname unable to make: $logdir"); # make sure directory exists in case we create lockfile next
 	if($debug){print "Logfile '$logfile'\n";}
 	if ($debug) {
 	    if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
 	    farkdir::sandbox {
-		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-	    }{stdout    => "always",
-	      debug     => 1
+		$cmd=&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{message=>"$myname $cls file: $xmlfile",
+	      debug     => 1,
+	      stdout    => "always"
 	    };
 	    
-#message=>"$myname $cls file: $xmlfile, see $logfile",
+#message=>"$myname $cls file: $xmlfile, see '$logfile.err'",
 #	      logfile   => $logfile,
-#	      errfile   => $errfile . ".debug",	      
 	    
+	    if ($cmd) {
+		farkdir::sandbox {
+		    system($cmd);
+		}{fork      => 1,
+		  debug     => 1,
+		  stdout    => "always"
+		};
+	    }
 	    if($debug){print "After farkdir::sandbox\n";};
 	} elsif ($cron)  {
 	    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
 	    #if ($cls eq "model") { fark::debug(2);};  # debug models
 	    farkdir::sandbox {
-		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-	    }{stdout    => "always",
-	      errfile   => $errfile . ".cron",
+		$cmd=&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{logfile   => $logfile,
 	      fork      => 1,
-	      debug     => 1
+	      debug     => 1,
+	      stdout    => "always"
 	    };
+	    if ($cmd) {
+		farkdir::sandbox {
+		    system($cmd);
+		}{fork      => 1,
+		  debug     => 1,
+		  stdout    => "always"
+		};
+	    }
 	    if($debug){print "After farkdir::sandbox\n";};
 	} else {
 	    if($debug){print "Calling farkdir::sandbox '$clsfile'\n";};
 	    farkdir::sandbox {
-		&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-	    }{message   => "$myname $cls file: $xmlfile, see $errfile",
+		$cmd=&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{message   => "$myname $cls file: $xmlfile, see '$logfile.err'",
 	      logfile   => $logfile,
-	      errfile   => $errfile,
+	      fork      => 1,
 	      stdout    => "never"
 	    };
+	    if ($cmd) {
+		farkdir::sandbox {
+		    system($cmd);
+		}{logfile   => $logfile . "sys",
+		  fork      => 1,
+		  stdout    => "never"
+		};
+	    }
+	    if($debug){print "After farkdir::sandbox\n";};
 	};
-	if($debug){print "After farkdir::sandbox\n";};
     };
     if($debug) {print "Ending loopCls... $cls\n";}
     return $clsr;
@@ -257,6 +284,7 @@ sub execCls {
     my $xmlfile       = shift;
     my $logfile       = shift;
     my %clshash=%{$clsr};
+    my $cmd="";
     #
     if ($debug){print "Starting loopCls... ($cls, $cron)\n";};
     my $clsOldDir=  farkdir::getRootDir($cls."_old") || 
@@ -291,6 +319,9 @@ sub execCls {
     farkdir::makePath($lockdir) || farkdir::term("$myname unable to make: $lockdir"); # make sure directory exists in case we create lockfile next
     #if($debug){print "Lockfile '$lockfile'\n";}
     if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
+	close(MLOCKFILE);
+	unlink($lockfile) || farkdir::term("$myname unable to rm '$lockfile'");
+	open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) || farkdir::term("$myname unable to lock '$lockfile'");
 	# this defines processing start time
 	farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
 	#system "ls -lu $lockfile";
@@ -315,25 +346,28 @@ sub execCls {
 	if($debug){print "Processing '$xmlfile'\n";}
 	if ( my ($clsnode)=$clsdoc->findnodes($cls."/".$cls."_config")) {
 	    if($debug){print "Processing node... ($debug,$cron)\n";}
-	    &processCls($xmlfile,
-			$clsnode,
-			$colocDir,
-			$modelDir,
-			$modelCacheDir,
-			$modelRegDir,
-			$obsDir,
-			$obsCacheDir,
-			$obsRegDir,
-			$cls,$clsfile,$clean,
-			$test,$clsFillFile);
+	    $cmd=&processCls($xmlfile,
+			     $clsnode,
+			     $colocDir,
+			     $modelDir,
+			     $modelCacheDir,
+			     $modelRegDir,
+			     $obsDir,
+			     $obsCacheDir,
+			     $obsRegDir,
+			     $cls,$clsfile,$clean,
+			     $test,$clsFillFile);
 	} else {
 	    farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
 	}
 	my $clsUseFile=$clsUseDir . $clsfile; 
 	# this defines processing end time
-	if($debug){print "Usefile '$clsUseFile'\n";}
+	#if($debug){
+	print "Usefile '$clsUseFile'\n";
+	#}
+	unlink($clsUseFile);
 	farkdir::touchFile($clsUseFile) || farkdir::term("$myname unable to touch '$clsUseFile'");
-	#system "ls -l $clsUseFile; date";
+	system "ls -l $clsUseFile; date";
 	my $lastStop=time();
 	$timeAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
 	my $duration = $lastStop-$lastStart;
@@ -362,13 +396,13 @@ sub execCls {
 	    $clsr->{$clsfile}->[2]=$infoAuto;
 	    $clsr->{$clsfile}->[3]=$logfile;
 	}
-	#print "Closing lock file $lockfile\n";
+	print "Closing lock file $lockfile\n";
 	close(MLOCKFILE);
 	#farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
-	#system "ls -lu $lockfile";
+	system "ls -lu $lockfile";
     }
     if($debug) {print "Ending loopCls... $cls\n";}
-    return $clsr;
+    return $cmd;
 };
 
 sub processCls{
@@ -383,6 +417,7 @@ sub processCls{
 	$obsRegDir,
 	$cls,$clsfile,$clean,
 	$test,$clsFillFile) =@_;
+    my $cmd="";
     if($debug){print "Processing $cls $xmlfile\n";}
     if ($cls eq "model") {
 	my $cachefile=$modelCacheDir . $clsfile;
@@ -425,17 +460,18 @@ sub processCls{
 		      $cls,
 		      $test,$clsFillFile);
     } elsif ($cls eq "plot") {
-	&processPlot($xmlfile,
-		     $clsnode,
-		     $colocDir,
-		     $modelDir,
-		     $modelCacheDir,
-		     $obsDir,
-		     $obsCacheDir,
-		     $cls,
-		     $test,$clsFillFile);
+	$cmd=&processPlot($xmlfile,
+			  $clsnode,
+			  $colocDir,
+			  $modelDir,
+			  $modelCacheDir,
+			  $obsDir,
+			  $obsCacheDir,
+			  $cls,
+			  $test,$clsFillFile);
     };
     #### if (-e $clsFillFile) {chmod 0777, $clsFillFile;}
+    return $cmd;
 };
 
 sub updateCls { 
@@ -671,14 +707,14 @@ sub processPlot {
     #
     if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}
     my $cmd="Rscript --vanilla $fpath $tablefile $plotfile $test";
-    if($debug){print "Executing '$cmd'\n";}
-    eval {
-	system $cmd;
-    }; # ignore any output
+    if($debug){print "Not executing '$cmd'\n";}
+    #eval {
+    #	system $cmd; # The system command may exit, in which case it is catched by the higher level sandbox...
+    #}
     #
     $fark->close();
     if($debug){print "processPlot Exiting.\n";}
-    return;
+    return $cmd;
 }
 sub setModelConfig {
     my $fark = shift;

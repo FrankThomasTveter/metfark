@@ -1,0 +1,9 @@
+* installing *source* package ‘farkRPackage’ ...
+** R
+Error in parse(outFile) : 
+  /metfark/metfark/farkRPackage/R/fark.R:50:10: unexpected symbol
+49: getFormat <- function(attributes) {
+50:   return toString
+             ^
+ERROR: unable to collate and parse R files for package ‘farkRPackage’
+* removing ‘/metfark/metfark/farkRPackage/..Rcheck/farkRPackage’

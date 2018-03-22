@@ -1020,7 +1020,7 @@ sub loadObservationCache {
     my $obsfile = shift;
     if (my ($ret,$msg) = xs_loadObsCache($self->{OID},$obsfile)){
 	if ($ret != 0) {
-	    die $msg;
+	    die $msg." (".$obsfile.")";
 	};
     }
 }

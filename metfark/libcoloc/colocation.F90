@@ -314,10 +314,10 @@ CONTAINS
     integer :: irc
     character*25 :: myname="colocation_importTargets"
     integer :: ii
+    if(mod_bdeb)write(*,*) myname,'Entering:',css%ctrg,mss%ctrg
     if(associated(css%trg80)) deallocate(css%trg80)
     if(associated(css%trg_lent)) deallocate(css%trg_lent)
     css%ctrg=mss%ctrg
-    if(mod_bdeb)write(*,*) myname,'Targets:',css%ctrg
     if (css%ctrg.ne.0) then
        allocate(css%trg80(css%ctrg), css%trg_lent(css%ctrg),stat=irc)
        if (irc.ne.0) then
@@ -1674,7 +1674,8 @@ CONTAINS
                    return
                 end if
                 if (.not.bok) then
-                   if(col_bdeb)write(*,*)myname,'No more observations to process.'
+                   if(col_bdeb)write(*,'(X,A,A,I0,A)')myname,&
+                        & 'No more observations to process A (',locid,')'
                    exit LOCATION
                 end if
                 locid=locid+1
@@ -1706,13 +1707,14 @@ CONTAINS
                 ! check target values
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
+                if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
                    return
                 end if
              end do LOCATION
+             if(col_bdeb)write(*,*)myname,'Locations:',locid
           else if (tmod.ne.0) then ! use model default values
              if(col_bdeb)write(*,*)myname,'Creating locations from default.',associated(css%firstLoc)
              if(col_bdeb)write(*,*)myname,'...:',associated(css%firstLoc%next)
@@ -1731,7 +1733,7 @@ CONTAINS
                 ! check target values
                 lok=.true.
                 ! make new location from default
-                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
+                if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -1739,6 +1741,7 @@ CONTAINS
                 end if
                 cLoc=>cLoc%next
              end do
+             if(col_bdeb)write(*,*)myname,'Locations:',locid
           end if
           ! end obs data loop
           ! do not delete obs-file contents since obs-file...
@@ -1780,7 +1783,6 @@ CONTAINS
                 end if
              end if
           end if
-          !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
           !
           if (lok) then
              call model_evalExpr(mss,ncol,val,vok,crc250,irc)
@@ -2405,7 +2407,8 @@ CONTAINS
                    return
                 end if
                 if (.not.bok) then
-                   if(col_bdeb)write(*,*)myname,'No more observations to process.'
+                   if(col_bdeb)write(*,'(X,A,A,I0,A)')myname,&
+                        & 'No more observations to process B (',locid,')'
                    exit LOCATION
                 end if
                 locid=locid+1
@@ -2437,13 +2440,14 @@ CONTAINS
                 ! check target values
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
+                if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
                    return
                 end if
              end do LOCATION
+             if(col_bdeb)write(*,*)myname,'Locations:',locid
           else if (tmod.ne.0) then ! use model default values
 
              if(col_bdeb)write(*,*)myname,'Clearing loc stack.',mss%ctrg,associated(mss%trg_v80)
@@ -2475,7 +2479,7 @@ CONTAINS
                 ! check target values
                 lok=.true.
                 ! make new location from default
-                if(col_bdeb.and.locid.lt.100)write(*,*)myname,'Push location:',locid
+                if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")
@@ -2483,6 +2487,7 @@ CONTAINS
                 end if
                 cLoc=>cLoc%next
              end do
+             if(col_bdeb)write(*,*)myname,'Locations:',locid
           end if
           !
           if (tmod.ne.0) then
@@ -2508,7 +2513,8 @@ CONTAINS
                    return
                 end if
                 if (.not.bok) then
-                   if(col_bdeb)write(*,*)myname,'NO MORE OBSERVATIONS TO PROCESS.'
+                   if(col_bdeb)write(*,'(X,A,A,I0,A)')myname,&
+                        & 'No more observations to process C (',locid,')'
                    exit OBSERVATION
                 end if
                 !
@@ -3122,5 +3128,12 @@ CONTAINS
     end if
     return
   end subroutine colocation_fill
+  !
+  logical function model_lucky(cnt)
+    integer :: cnt
+    integer :: skip
+    skip=10**(int(log10(real(max(1,cnt)))))
+    model_lucky=(mod(cnt,skip).eq.0)
+  end function model_lucky
   !
 end module colocation

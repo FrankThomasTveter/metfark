@@ -57,7 +57,7 @@ void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
 void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,char* cat250,int* test,char* fill250,char*  crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
 void plo_settype_(int* pid, char* type250, char* crc250, int* irc, int len1, int len2);
 void plo_clearattrstack_(int* pid, char* crc250, int* irc, int len1, int len2);
-void plo_pushattr_(int* pid, char* name250, char* value250, char* crc250, int* irc, int len1, int len2);
+void plo_pushattr_(int* pid, char* name80, char* value250, char* crc250, int* irc, int len1, int len2, int len3);
 void plo_clearsetstack_(int* pid, char* crc250, int* irc, int len1, int len2);
 void plo_clearcolumn_(int* pid, char* crc250, int* irc, int len1);
 void plo_pushcolumn_(int* pid, char* name80, char* exp250, char* crc250, int* irc, int len1, int len2, int len3);
@@ -1708,26 +1708,26 @@ xs_clearPlotAttributeStack(int pid);
 void
 xs_pushPlotAttribute(int pid, char *name, char *value);
     PREINIT:
-      char *name250;
+      char *name80;
       char *value250;
       int  irc;
       char *crc250;
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      name250 = calloc(sizeof(char), 250);
+      name80 = calloc(sizeof(char), 80);
       value250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      strcpy(name250,name);
+      strcpy(name80,name);
       strcpy(value250,value);
-      plo_pushattr_(&pid, name250, value250, crc250, &irc, 250, 250);
+      plo_pushattr_(&pid, name80, value250, crc250, &irc, 80, 250, 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
       EXTEND(SP, 2);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
-      free(name250);
+      free(name80);
       free(value250);
       free(crc250);
 

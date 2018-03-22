@@ -245,6 +245,23 @@ function removeTableChildFrom(item,from) {
     //console.log("removeTableChildFrom Done",head);
     return head;
 }
+function removeTableChildren(item) {
+    //console.log("removeTableChildren Entering",item);
+    var tbody=item.children[0];
+    var children=tbody.children;
+    var len=children.length;
+    var active=false;
+    var head;
+    var active=true;
+    for (var ii=len-1;ii>=0;ii--){
+	//console.log("RemoveTableChildren ",ii,children[ii],len,children.length);
+	if (children[ii] !== undefined) {
+	    tbody.removeChild(children[ii]);
+	}
+    };
+    //console.log("removeTableChildren Done",item);
+    return tbody;
+}
 function getChild(item,target) {
     var tbody=item.children[0];
     var children=tbody.children;
@@ -1454,7 +1471,7 @@ function showDropdown(target, arg = "") {
 		  };
 		  documentLog.innerHTML="";
 	      });
-    } else if (target === 'plotLine') { //***********************************
+    } else if (target === 'plotSet') { //***********************************
 	var args=getArgs(arg);
 	//documentLog.innerHTML="Sent line-load request.";
 	//$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
@@ -1467,7 +1484,7 @@ function showDropdown(target, arg = "") {
 	    var cat=plot_config[file]["cat"];
 	    for (var line in plot_cats[cat]["lines"]) {
 		console.log("Adding config button: ",line);
-		addChildButton(item,line+" ("+plot_cats[cat]["lines"][line]+")","showValue('plotLine','"+line+"');showValue('plotType',plot_cats['"+cat+"'][\"lines\"]['"+line+"']);");
+		addChildButton(item,line+" ("+plot_cats[cat]["lines"][line]+")","showValue('plotSet','"+line+"');showValue('plotType',plot_cats['"+cat+"'][\"lines\"]['"+line+"']);");
 	    }
 	//documentLog.innerHTML="";
 	//});
@@ -2371,6 +2388,26 @@ function arrayUp(array,ii) {
     	array[array.length-1]=buff;
     };
 }
+
+function removeSubstring(str,start,stop) {
+    var istart=str.indexOf(start);
+    console.log("RemoveSubstring length:",istart.length);
+    if (istart >= 0) {
+	var out=str.substr(0,istart);
+	console.log("RemoveSubstring out:",out);
+    } else {
+	var out=str;
+    }
+    if (stop !== undefined) {
+	var istop=str.indexOf(stop);
+	if (istop >= 0) {
+	    out=out + str.substr(istop);
+	}
+    }
+    console.log("RemoveSubstring:",str," '",start,"' ->",out);
+    return out;
+}
+
 
 Array.prototype.extend = function (other_array) {
     /* you should include a test to check whether other_array really is an array */

@@ -45,7 +45,10 @@ if ($debug) {
 	#print "Processing '".($param->{exp}[0]//"")."'\n";
 	$res=$fark->expression($param->{exp}[0]//"");
 	$fark->close();
-    } {message=>"Error while running.",stdout=>"success"};
+    } {message=>"Error while running.",
+       logfile=>"/tmp/fark_exp.tmp",
+       stdout=>"success"
+    };
 };
 my $mret=$@;if ($mret || $irc) {farkdir::term("fark_exp.pl $stderr $mret");}
 #print "Output: $stdout\n\n $stderr\n";

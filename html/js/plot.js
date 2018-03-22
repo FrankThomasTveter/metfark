@@ -1,4 +1,3 @@
-
 plot_file = "default.cfg";
 plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
 						   coloc:"coloc", 
@@ -51,8 +50,7 @@ function plot_getConfigFile() {
     return plot_file;
 };
 function plot_getColocConfigFile() {
-    var item=document.getElementById("newlinePlotDataset");
-    var file = item.children[4].children[0].value;
+    var file = document.getElementById("plotColoc").value;
     return file;
 };
 function plot_getModelConfigFile() {
@@ -236,37 +234,43 @@ function plot_isEmpty(obj) {
     }
     return true;
 };
-function plot_newDataset(item) {
+function plot_newDataset() {
     //if (! plot_checkPassword()) {return;}
     var file= plot_getConfigFile();
     var cat =plot_config[file]["cat"];
-    var set=item.parentNode.parentNode.children[1].children[0].value;
-    var coloc=item.parentNode.parentNode.children[4].children[0].value;
+    var set=document.getElementById("plotSet");
+    var coloc=document.getElementById("plotColoc");
+    var legend=document.getElementById("plotLegend");
     var clmns=plot_cats[cat]["columns"];
     var columns=[];
     for (var ii =0; ii< clmns.length;ii++) {
-	console.log("newDataset, cleaning:",ii);
-	columns.push(item.parentNode.parentNode.children[6+ii*2].children[0].value);
-	item.parentNode.parentNode.children[6+ii*2].children[0].value="";
+	var itemId="plotExpression"+(ii);
+	console.log("newDataset, cleaning:",ii,itemId);
+	var item=document.getElementById(itemId);
+	if (item !== undefined && item !== null) {
+	    columns.push(item.value);
+	    item.value="";
+	} else {
+	    console.log("NewDataset: Undefined itemId:",itemId);
+	}
     }
-    var legend=item.parentNode.parentNode.children[6+clmns.length*2].children[0].value;
-    console.log("New: trg:",set," file:",coloc," columns:",columns," leg:",legend);
-    if (set !== "" && coloc !== "") {
+    fark_last["coloc"]=coloc.value;
+    console.log("New: trg:",set.value," file:",coloc.value," columns:",columns," leg:",legend.value);
+    if (set.value !== "" && coloc.value !== "") {
 	if (plot_config[file] === undefined) {
 	    plot_config[file]={dataset : {},
 			       attributes : {},
 			       password: ""};
 	};
-	plot_config[file]["dataset"][set]={coloc:coloc,columns:columns,legend:legend};
-	item.parentNode.parentNode.children[1].children[0].value="";
-	item.parentNode.parentNode.children[3].children[0].value="";
-	item.parentNode.parentNode.children[4].children[0].value="";
-	item.parentNode.parentNode.children[6+clmns.length*2].children[0].value="";
+	plot_config[file]["dataset"][set.value]={coloc:coloc.value,columns:columns,legend:legend.value};
+
+	set.value="";
+	coloc.value="";
+	legend.value="";
 	plot_showDatasetTable();
     } else {
-	alert("Invalid line set/coloc: ('"+set+"'/'"+coloc+"')");
+	alert("Invalid line set/coloc: ('"+set.value+"'/'"+coloc.value+"')");
     }
-    fark_last["coloc"]=coloc;
 };
 function plot_removeDataset(set) {
     var file=plot_getConfigFile();
@@ -274,22 +278,27 @@ function plot_removeDataset(set) {
     var type=plot_cats[plot_config[file]["cat"]]["lines"][set]||"";
     var coloc=plot_config[file]["dataset"][set]["coloc"];
     var columns=plot_config[file]["dataset"][set]["columns"];
-    var item=document.getElementById("newlinePlotDataset");
     var legend=plot_config[file]["dataset"][set]["legend"];
     delete plot_config[file]["dataset"][set];
     plot_showDatasetTable();
-    item.children[1].children[0].value=set;
-    item.children[3].children[0].value=type;
-    item.children[4].children[0].value=coloc;
+    document.getElementById("plotSet").value=set;
+    document.getElementById("plotType").value=type;
+    document.getElementById("plotColoc").value=coloc;
+    document.getElementById("plotLegend").value=legend;
     var clmns=plot_cats[cat]["columns"];
     for (var ii =0; ii< clmns.length;ii++) {
-	if (columns[ii] !== undefined) {
-	    item.children[6+ii*2].children[0].value=columns[ii];
+	var itemId="plotExpression"+(ii);
+	var item=document.getElementById(itemId);
+	if (item !== null && item !== undefined) {
+	    if (columns[ii] !== undefined) {
+		item.value=columns[ii];
+	    } else {
+		item.value=0;
+	    }
 	} else {
-	    item.children[6+ii*2].children[0].value=0;
+	    console.log("RemoveDataset: Undefined itemId:",itemId);
 	}
     }
-    item.children[6+clmns.length*2].children[0].value=legend;
     fark_last["coloc"]=coloc;
 };
 
@@ -328,8 +337,10 @@ function plot_saveConfigFile() {
 	plotSets=plotSets + "|" + set + "~" + coloc + "~" + legend + "~" + columns;
     };
     var plotAttrs="";
+    var order=plot_cats[cat]['order'];
     var attrs=plot_config[file]["attributes"];
-    for (var attr in attrs) {
+    for (var ii=0;ii<order.length;ii++) {
+	var attr=order[ii];
 	var value=attrs[attr];
 	if (value !== undefined) {
 	    plotAttrs=plotAttrs + "|" + attr + "~" + value;
@@ -353,160 +364,196 @@ function plot_saveConfigFile() {
 	 );
     makeUrl("plot",file);
 };
-// make new plot-index entry
+// Transposed function...
 function plot_showDatasetTable() {
     var file=plot_getConfigFile();
-    var item=document.getElementById('plotDatasetTable');
-    var header=clearTableChild(item,"labelsPlotDataset");
-    var newline=clearTableChild(item,"newlinePlotDataset");
-    var tail=removeTableChildFromTo(item,"labelsPlotDataset","newlinePlotDataset");
-    plot_insertDatasetHeader(header,file);
-    plot_insertDatasetNewline(newline,file);
-    plot_insertDatasetRow(tail,file);
-}
-function plot_insertDatasetHeader(row,file) {
-    var th,bf;
-    // make "-" column
-    th=document.createElement("TH");
-    th.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(th);
-    // make Id column
-    th=document.createElement("TH");
-    th.setAttribute("style","min-width:30px;width:30px");
-    bf=document.createElement("BF");
-    bf.innerHTML="Id";
-    th.appendChild(bf);
-    row.appendChild(th);
-    // make select-Id column
-    th=document.createElement("TH");
-    th.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(th);
-    // make Line column
-    th=document.createElement("TH");
-    th.setAttribute("style","min-width:40px");
-    bf=document.createElement("BF");
-    bf.innerHTML="Line";
-    th.appendChild(bf);
-    row.appendChild(th);
-    // make ColocationFile column
-    th=document.createElement("TH");
-    th.setAttribute("style","min-width:150px");
-    bf=document.createElement("BF");
-    bf.innerHTML="Colocation file";
-    th.appendChild(bf);
-    row.appendChild(th);
-    // make select-ColocationFile column
-    th=document.createElement("TH");
-    th.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(th);
-    // expression columns
+    var data={};
     var cat=plot_config[file]["cat"];
     var clmns=plot_cats[cat]["columns"];
+    // make column headers
+    var type=[1,2,3,4,5];
+    var col1=["Action","Id","Set","Colocation file","Legend"];
     for (var ii =0; ii< clmns.length;ii++) {
-	var label=plot_cats[cat]["columns"][ii];
-	// make expression column
-	th=document.createElement("TH");
-	bf=document.createElement("BF");
-	bf.innerHTML=label;
-	th.appendChild(bf);
-	row.appendChild(th);
-	// make select-expression column
-	th=document.createElement("TH");
-	th.setAttribute("style","min-width:25px;width:25px");
-	row.appendChild(th);
+	col1.push(plot_cats[cat]["columns"][ii]);
+	type.push(6); //offset starts with first "6"
     }
-    // make Legend column
+    // make data expressions
+    var data=[];
+    var sets=plot_config[file]["dataset"];
+    for (var set in sets) {
+	var item=[-1,
+		  set,
+		  plot_cats[cat]["lines"][set]||"",
+		  sets[set]["coloc"],
+		  sets[set]["legend"]
+		 ];
+	fark_last["coloc"]=sets[set]["coloc"];
+	for (var ii =0; ii< clmns.length;ii++) {
+	    var expr;
+	    if (sets[set]["columns"] !== undefined) {
+		expr = sets[set]["columns"][ii]||"0";
+	    } else {
+		expr = "0";
+	    }
+	    item.push(expr);
+	};
+	data.push(item);
+    }
+    var item=document.getElementById('plotDatasetTable');
+    var tbody=removeTableChildren(item);
+    plot_insertDataset(tbody,type,col1,data);
+}
+//
+function plot_insertDataset(item,type,col1,data) {
+    // insert rows
+    offset=-1;
+    for (var ii=0;ii<type.length;ii++) {
+	if (type[[ii]] == 6 && offset==-1) {offset=ii;}
+    }
+    console.log("Offset=",offset);
+    for (var ii=0;ii<type.length;ii++) {
+	var row = document.createElement("TR");
+	plot_insertHeader(row,type,col1,ii,offset);
+	for (var jj=0;jj<data.length;jj++) {
+	    plot_insertItem(row,type,data,jj,ii,offset);
+	}
+	plot_insertNew(row,type,ii,offset);
+	item.appendChild(row);
+    }
+}
+//
+function plot_insertHeader(row,type,col1,ii,offset) {
     th=document.createElement("TH");
     bf=document.createElement("BF");
-    bf.innerHTML="Legend";
+    th.setAttribute("bgcolor","#00b9f2");
+    bf.innerHTML=col1[[ii]];
     th.appendChild(bf);
     row.appendChild(th);
 }
-function plot_insertDatasetNewline(row,file) {
-    var td,bf,inp,div;
-    // make "-" column
-    td=document.createElement("TD");
-    td.setAttribute("align","center");
-    td.setAttribute("style","min-width:25px;width:25px");
-    btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","plot_newDataset(this)");
-    btn.setAttribute("style","width:100%");
-    btn.innerHTML="&#43";
-    td.appendChild(btn);
-    row.appendChild(td);
-    // make id column
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("id","plotLine");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value","");
-    inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","");
-    td.appendChild(inp);
-    div=document.createElement("DIV");
-    div.setAttribute("id","plotLineDropdown");
-    div.setAttribute("class","dropdown-content");
-    td.appendChild(div);
-    row.appendChild(td);
-    // make select-id column
-    td=document.createElement("TD");
-    td.setAttribute("align","center");
-    btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","showDropdown('plotLine',this.parentNode.parentNode.children[1].children[0].value)");
-    btn.setAttribute("class","dropbtn");
-    //var t=document.createTextNode("&#9776");
-    //btn.appendChild(t);
-    btn.innerHTML="&#9776";
-    td.appendChild(btn);
-    row.appendChild(td);
-    // make line column
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("id","plotType");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value","");
-    inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","");
-    inp.disabled=true;
-    td.appendChild(inp);
-    row.appendChild(td);
-    // make colocationFile column
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("id","plotColoc");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value","");
-    inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","");
-    td.appendChild(inp);
-    div=document.createElement("DIV");
-    div.setAttribute("id","plotColocDropdown");
-    div.setAttribute("class","dropdown-content");
-    td.appendChild(div);
-    row.appendChild(td);
-    // make select-colocationFile column
-    td=document.createElement("TD");
-    td.setAttribute("align","center");
-    btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","showDropdown('plotColoc',this.parentNode.parentNode.children[4].children[0].value)");
-    btn.setAttribute("class","dropbtn");
-    //var t=document.createTextNode("&#9776");
-    //btn.appendChild(t);
-    btn.innerHTML="&#9776";
-    td.appendChild(btn);
-    row.appendChild(td);
-    // expression columns
-    var cat=plot_config[file]["cat"];
-    var clmns=plot_cats[cat]["columns"];
-    for (var ii =0; ii< clmns.length;ii++) {
-	var expr=plot_cats[cat]["columns"][ii];
-	// make expression column
-	var itemId="plotExpression"+ii;
+//
+function plot_insertItem(row,type,data,jj,ii,offset) {
+    if (type[[ii]] == 1) { // action "delete"
+	td=document.createElement("TD");
+	td.setAttribute("style","min-width:25px;width:25px;");
+	var btn=document.createElement("BUTTON");
+	btn.setAttribute("onclick","plot_removeDataset('"
+			 + data[[jj]][[1]]+"')");
+	btn.setAttribute("style","width:100%");
+	var t=document.createTextNode("-");
+	btn.appendChild(t);
+	td.appendChild(btn);
+	row.appendChild(td);
+    } else {
+	td=document.createElement("TD");
+	td.innerHTML=data[[jj]][[ii]];
+	row.appendChild(td);
+    }
+}
+//
+function plot_insertNew(row,type,ii,offset) {
+    var td;
+    var btn;
+    var inp;
+    if (type[[ii]] == 1 ) { // action "add"
+	td=document.createElement("TD");
+	td.setAttribute("align","center");
+	td.setAttribute("style","width:100%");
+	//td.setAttribute("style","min-width:25px;width:25px");
+	btn=document.createElement("BUTTON");
+	btn.setAttribute("onclick","plot_newDataset()");
+	btn.setAttribute("style","width:100%");
+	btn.innerHTML="&#43";
+	td.appendChild(btn);
+	row.appendChild(td);
+	//
+	td=document.createElement("TD");
+	td.setAttribute("style","min-width:25px;width:25px");
+	row.appendChild(td);
+    } else if (type[[ii]] == 2) { // Id
 	td=document.createElement("TD");
 	td.setAttribute("class","fill");
+	td.setAttribute("style","width:100%");
+	inp=document.createElement("INPUT");
+	inp.setAttribute("id","plotSet");
+	inp.setAttribute("type","text");
+	inp.setAttribute("value","");
+	inp.setAttribute("style","width:100%");
+	inp.setAttribute("onblur","");
+	td.appendChild(inp);
+	div=document.createElement("DIV");
+	div.setAttribute("id","plotSetDropdown");
+	div.setAttribute("class","dropdown-content");
+	td.appendChild(div);
+	row.appendChild(td);
+	// make select-id column
+	td=document.createElement("TD");
+	td.setAttribute("align","center");
+	btn=document.createElement("BUTTON");
+	btn.setAttribute("onclick","showDropdown('plotSet',document.getElementById('plotSet').value)");
+	btn.setAttribute("class","dropbtn");
+	btn.innerHTML="&#9776";
+	td.appendChild(btn);
+	row.appendChild(td);
+    } else if (type[[ii]] == 3) { // line
+	// make line column
+	td=document.createElement("TD");
+	td.setAttribute("class","fill");
+	td.setAttribute("style","width:100%");
+	inp=document.createElement("INPUT");
+	inp.setAttribute("id","plotType");
+	inp.setAttribute("type","text");
+	inp.setAttribute("value","");
+	inp.setAttribute("style","width:100%");
+	inp.setAttribute("onblur","");
+	inp.disabled=true;
+	td.appendChild(inp);
+	row.appendChild(td);
+    } else if (type[[ii]] == 4) { // colocation file
+	// make colocationFile column
+	td=document.createElement("TD");
+	td.setAttribute("class","fill");
+	td.setAttribute("style","width:100%");
+	inp=document.createElement("INPUT");
+	inp.setAttribute("id","plotColoc");
+	inp.setAttribute("type","text");
+	inp.setAttribute("value","");
+	inp.setAttribute("style","width:100%");
+	inp.setAttribute("onblur","");
+	td.appendChild(inp);
+	div=document.createElement("DIV");
+	div.setAttribute("id","plotColocDropdown");
+	div.setAttribute("class","dropdown-content");
+	td.appendChild(div);
+	row.appendChild(td);
+	// make select-colocationFile column
+	td=document.createElement("TD");
+	td.setAttribute("align","center");
+	btn=document.createElement("BUTTON");
+	btn.setAttribute("onclick","showDropdown('plotColoc',document.getElementById('plotColoc').value)");
+	btn.setAttribute("class","dropbtn");
+    btn.innerHTML="&#9776";
+    td.appendChild(btn);
+    row.appendChild(td);
+    } else if (type[[ii]] == 5) { // legend
+	// make Legend column
+	td=document.createElement("TD");
+	td.setAttribute("class","fill");
+	td.setAttribute("style","width:100%");
+	inp=document.createElement("INPUT");
+	inp.setAttribute("id","plotLegend");
+	inp.setAttribute("type","text");
+	inp.setAttribute("value","");
+	inp.setAttribute("style","width:100%");
+	inp.setAttribute("onblur","");
+	td.appendChild(inp);
+	row.appendChild(td);
+    } else if (type[[ii]] == 6) { // expression
+	// make expression column
+	var itemId="plotExpression"+(ii-offset);
+	console.log("insertNew Inserting:",itemId);
+	td=document.createElement("TD");
+	td.setAttribute("class","fill");
+	td.setAttribute("style","width:100%");
 	inp=document.createElement("INPUT");
 	inp.setAttribute("id",itemId);
 	inp.setAttribute("type","text");
@@ -523,7 +570,8 @@ function plot_insertDatasetNewline(row,file) {
 	td=document.createElement("TD");
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
-	btn.setAttribute("onclick","showDropdown('"+itemId+"',this.parentNode.parentNode.children["+(6+ii*2)+"].children[0].value)");
+	btn.setAttribute("onclick","showDropdown('"+itemId
+			 + "',document.getElementById('"+itemId+"').value)");
 	btn.setAttribute("class","dropbtn");
 	//var t=document.createTextNode("&#9776");
 	//btn.appendChild(t);
@@ -531,90 +579,8 @@ function plot_insertDatasetNewline(row,file) {
 	td.appendChild(btn);
 	row.appendChild(td);
     }
-    // make Legend column
-    td=document.createElement("TD");
-    td.setAttribute("class","fill");
-    inp=document.createElement("INPUT");
-    inp.setAttribute("id","plotLegend");
-    inp.setAttribute("type","text");
-    inp.setAttribute("value","");
-    inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","");
-    td.appendChild(inp);
-    row.appendChild(td);
 }
-function plot_insertDatasetRow(item,file) {
-    var cat =plot_config[file]["cat"];
-    var sets=plot_config[file]["dataset"];
-    for (var set in sets) {
-	var type=plot_cats[cat]["lines"][set]||"";
-	var coloc=sets[set]["coloc"];
-	fark_last["coloc"]=coloc;
-	var legend=sets[set]["legend"];
-	var row = document.createElement("TR");
-	var td,bf;
-	// make "-" column
-	td=document.createElement("TD");
-	td.setAttribute("style","min-width:25px;width:25px");
-	var btn=document.createElement("BUTTON");
-	btn.setAttribute("onclick","plot_removeDataset('"+set+"')");
-	btn.setAttribute("style","width:100%");
-	var t=document.createTextNode("-");
-	btn.appendChild(t);
-	td.appendChild(btn);
-	row.appendChild(td);
-	// make id column
-	td=document.createElement("TD");
-	td.innerHTML=set;
-	row.appendChild(td);
-	// make select-id column
-	td=document.createElement("TD");
-	td.setAttribute("style","min-width:25px;width:25px");
-	row.appendChild(td);
-	// make line column
-	td=document.createElement("TD");
-	td.innerHTML=type;
-	row.appendChild(td);
-	// make colocationFile column
-	td=document.createElement("TD");
-	td.innerHTML=coloc;
-	row.appendChild(td);
-	// make select-colocationFile column
-	td=document.createElement("TD");
-	td.setAttribute("style","min-width:25px;width:25px");
-	row.appendChild(td);
-	// make expressions
-	var clmns=plot_cats[cat]["columns"];
-	for (var ii =0; ii< clmns.length;ii++) {
-	    var expr;
-	    if (sets[set]["columns"] !== undefined) {
-		expr = sets[set]["columns"][ii]||"0";
-	    } else {
-		expr = "0";
-	    }
-	    // make expression column
-	    td=document.createElement("TD");
-	    td.innerHTML=expr;
-	    row.appendChild(td);
-	    // make select-expression column
-	    td=document.createElement("TD");
-	    td.setAttribute("style","min-width:25px;width:25px");
-	    row.appendChild(td);
-	}
-	// make Legend column
-	td=document.createElement("TD");
-	td.setAttribute("class","fill");
-	inp=document.createElement("INPUT");
-	inp.setAttribute("type","text");
-	inp.setAttribute("value",legend);
-	inp.setAttribute("style","width:100%");
-	inp.setAttribute("onblur","plot_setDataset('"+set+"','legend',this.value);");
-	td.appendChild(inp);
-	row.appendChild(td);
-	// add row to table  ***************************
-	item.parentNode.insertBefore(row,item);
-    }
-}
+//
 function plot_showAttributesTable() {
     var file=plot_getConfigFile();
     var cat=plot_config[file]["cat"];
@@ -670,7 +636,7 @@ function plot_insertAttributeRow(item,cat,attr,value,val) {
 	td.setAttribute("align","center");
 	td.setAttribute("style","min-width:25px;width:25px");
 	btn=document.createElement("BUTTON");
-	btn.setAttribute("onclick","showDropdown('"+itemId+"',this.parentNode.parentNode.children[1].children[0].value)");
+	btn.setAttribute("onclick","showDropdown('"+itemId+"',document.getElementById('"+itemId+"').value)");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
 	td.appendChild(btn);

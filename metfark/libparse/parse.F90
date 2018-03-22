@@ -1,10 +1,16 @@
 module parse
   IMPLICIT NONE
   !
+  !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Global constants
+  !------- -------- --------- --------- --------- --------- --------- --------- -------
   !
+  INTEGER, PARAMETER :: rn = KIND(0.0d0)          ! Precision of real numbers
+  INTEGER, PARAMETER :: is = 4                    ! Data type of bytecode
   logical     :: parse_bdeb=.false.
-  real        :: secperday = 86400.0D0
+  logical     :: parse_init=.false.
+  real(rn)    :: secperday = 86400.0D0
+  integer,dimension(8) :: val8    
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Fortran 90 function parser v1.1
@@ -23,9 +29,6 @@ module parse
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! The function parser concept is based on a C++ class library written by  Juha 
   ! Nieminen <warp@iki.fi> available from http://warp.povusers.org/FunctionParser/
-  !------- -------- --------- --------- --------- --------- --------- --------- -------
-  INTEGER, PARAMETER :: rn = KIND(0.0d0)          ! Precision of real numbers
-  INTEGER, PARAMETER :: is = 4                    ! Data type of bytecode
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   PUBLIC                     :: parse_open,    & ! Open parse session
        parse_close,   & ! Close parse session
@@ -170,6 +173,13 @@ module parse
   !
 CONTAINS
   !	
+  subroutine parse_initialise()
+    if (parse_init) return
+    call date_and_time(VALUES=val8)
+    parse_init=.true.
+    return
+  end subroutine parse_initialise
+
   SUBROUTINE parse_open (css,crc250,irc)
     IMPLICIT NONE
     type(parse_session), pointer :: css
@@ -205,6 +215,7 @@ CONTAINS
     !css%parse_uzz=ichar('Z')
     !css%parse_und=ichar('_')
     !if(parse_bdeb)write(*,*)myname,"Done"
+    call parse_initialise()
     return
   END SUBROUTINE parse_open
   !
@@ -241,7 +252,7 @@ CONTAINS
     integer :: ii,lfunc
     integer :: c
     integer :: ival
-    real :: rval
+    real(rn) :: rval
     character*25 :: myname = "parse_type"
     Func = trim(FuncStr)                                           ! Local copy of function string
     lFunc = LEN_TRIM(Func)
@@ -276,7 +287,7 @@ CONTAINS
     return
   end function parse_type
   !
-  ! real function parse_val(FuncStr,crc250,irc)
+  ! real(rn) function parse_val(FuncStr,crc250,irc)
   !   character (Len=*), INTENT(in)  :: FuncStr
   !   character*250 :: crc250
   !   integer :: irc
@@ -340,11 +351,10 @@ CONTAINS
          AP,   & ! arguments pointer
          AI      ! arguments index
     REAL(rn),                PARAMETER :: zero = 0._rn
-    integer,dimension(8) :: values    
     integer :: ii, imax,nargs
     character*22 :: myname ="parse_evalf"
     character*250 :: str250
-    real  :: eps
+    real(rn)  :: eps
     integer :: lens
     integer, external :: length
     logical :: above,below,found
@@ -631,9 +641,8 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             call date_and_time(VALUES=values)
-             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
-                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(val8(1)),real(val8(2)),&
+                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -696,9 +705,8 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             call date_and_time(VALUES=values)
-             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
-                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(val8(1)),real(val8(2)),&
+                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -735,9 +743,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          call date_and_time(VALUES=values)
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
-               &real(values(3)),0.0D0,0.0D0,0.0D0)
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
+               &real(val8(3)),0.0D0,0.0D0,0.0D0)
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday             
           end do
@@ -745,9 +752,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          call date_and_time(VALUES=values)
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
-               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
+               &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
@@ -757,9 +763,9 @@ CONTAINS
           SP=SP-NARGS+1
           if (nargs.gt.1) then
              eps=max(1.0D-5,abs(css%Stack(SP+1)))
-             css%Stack(SP)=nint(css%Stack(SP)/eps)*eps
+             css%Stack(SP)=dnint(css%Stack(SP)/eps)*eps
           else
-             css%Stack(SP)=nint(css%Stack(SP))
+             css%Stack(SP)=dnint(css%Stack(SP))
           end if
        CASE  (cSinh)
           AI=AI+1
@@ -877,7 +883,6 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     IMPLICIT NONE
     type(parse_session), pointer :: css
-    integer,dimension(8) :: values    
     REAL(rn), allocatable, INTENT(in)  :: Val(:)             ! Variable values
     logical, allocatable, INTENT(in)   :: set(:)            ! is variable set?
     REAL(rn)                           :: res                ! Result
@@ -893,7 +898,7 @@ CONTAINS
     integer :: ii, nargs
     character*22 :: myname ="parse_evals"
     character*250 :: str250
-    real :: eps
+    real(rn) :: eps
     integer :: lens
     integer, external :: length
     logical :: above,below,found
@@ -1177,9 +1182,8 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             call date_and_time(VALUES=values)
-             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
-                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(val8(1)),real(val8(2)),&
+                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -1242,9 +1246,8 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             call date_and_time(VALUES=values)
-             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
-                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(val8(1)),real(val8(2)),&
+                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -1281,9 +1284,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          call date_and_time(VALUES=values)
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
-               &real(values(3)),0.0D0,0.0D0,0.0D0)
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
+               &real(val8(3)),0.0D0,0.0D0,0.0D0)
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
@@ -1291,9 +1293,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          call date_and_time(VALUES=values)
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(values(1)),real(values(2)),&
-               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
+               &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
@@ -1303,9 +1304,9 @@ CONTAINS
           SP=SP-NARGS+1
           if (nargs.gt.1) then
              eps=max(1.0D-5,abs(css%Stack(SP+1)))
-             css%Stack(SP)=nint(css%Stack(SP)/eps)*eps
+             css%Stack(SP)=dnint(css%Stack(SP)/eps)*eps
           else
-             css%Stack(SP)=nint(css%Stack(SP))
+             css%Stack(SP)=dnint(css%Stack(SP))
           end if
        CASE  (cSinh)
           AI=AI+1
@@ -1429,7 +1430,6 @@ CONTAINS
     REAL(rn),allocatable,INTENT(INOUT)       :: res(:)     ! Result
     character*250 :: crc250
     integer :: irc
-    integer,dimension(8)    :: values                        ! time array
     INTEGER                            :: IP,              & ! Instruction pointer
          DP,              & ! Data pointer
          SP,              & ! Stack pointer
@@ -1437,10 +1437,10 @@ CONTAINS
          AI                 ! arguments index
     REAL(rn),                PARAMETER :: zero = 0._rn
     integer :: ii, jj, nargs, imax,imin,iclo
-    real :: vmax,vmin,vclo,v,buff
+    real(rn) :: vmax,vmin,vclo,v,buff
     logical :: above, below, found
     character*250 :: str250
-    real :: eps
+    real(rn) :: eps
     integer :: lens
     integer, external :: length
     character*12 :: myname ="parse_evala"
@@ -1901,11 +1901,10 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg(days)
-             call date_and_time(VALUES=values)
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
-                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_f1970(real(values(1)),real(values(2)),&
-                        &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_f1970(real(val8(1)),real(val8(2)),&
+                        &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
                 END IF
              END DO
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
@@ -2001,11 +2000,10 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             call date_and_time(VALUES=values)
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
-                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_fjulian(real(values(1)),real(values(2)),&
-                        &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_fjulian(real(val8(1)),real(val8(2)),&
+                        &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
                 END IF
              END DO
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
@@ -2055,9 +2053,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          call date_and_time(VALUES=values)
-          buff=parse_f1970(real(values(1)),real(values(2)),&
-               &real(values(3)),0.0D0,0.0D0,0.0D0)
+          buff=parse_f1970(real(val8(1)),real(val8(2)),&
+               &real(val8(3)),0.0D0,0.0D0,0.0D0)
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 css%Stack(SP)=css%Stack(SP)*secperday+buff
@@ -2070,9 +2067,8 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          call date_and_time(VALUES=values)
-          buff=parse_f1970(real(values(1)),real(values(2)),&
-               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
+          buff=parse_f1970(real(val8(1)),real(val8(2)),&
+               &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 css%Stacka(SP,JJ)=css%Stacka(SP,JJ)*secperday+buff
@@ -2089,9 +2085,9 @@ CONTAINS
              IF(SET(JJ))THEN
                 if (nargs.gt.1) then
                    eps=max(1.0D-5,abs(css%Stacka(SP+1,JJ)))
-                   css%Stacka(SP,JJ)=nint(css%Stacka(SP,JJ)/eps)*eps
+                   css%Stacka(SP,JJ)=dnint(css%Stacka(SP,JJ)/eps)*eps
                 else
-                   css%Stacka(SP,JJ)=nint(css%Stacka(SP,JJ))
+                   css%Stacka(SP,JJ)=dnint(css%Stacka(SP,JJ))
                 end if
              end if
           end do
@@ -3175,8 +3171,8 @@ CONTAINS
     implicit none
     REAL*8 JD
     INTEGER YEAR,MONTH,DAY,HOUR,MINUTES
-    REAL SECONDS
-    REAL DJ
+    REAL*8 SECONDS
+    REAL*8 DJ
     INTEGER*8 I,J,K,L,N,IJ
     IJ= INT(JD+0.5D0)
     DJ=(JD+0.5D0)-real(ij)
@@ -3246,7 +3242,7 @@ CONTAINS
   subroutine parse_errorappendr(crc250,rnum)
     implicit none
     character*250 :: crc250
-    real :: rnum
+    real(rn) :: rnum
     character*250 :: buff250
     integer :: lenc, lenb
     integer, external :: length

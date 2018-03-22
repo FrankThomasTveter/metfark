@@ -622,7 +622,6 @@ CONTAINS
        call plot_errorappend(crc250,pss%tab250(1:pss%lent))
        return
     end if
-    write(ounit,'("#",X,A,":",A)',iostat=irc) "set","id"
     if (ncol.eq.0) then
        write(ounit,'(X,A)',iostat=irc)"set"
     else
@@ -2225,6 +2224,7 @@ CONTAINS
     character*80, allocatable :: col80(:)
     character*250, allocatable :: exp250(:)
     !
+    write(*,*)myname,"Starting subroutine."
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
     !
     ! open table file
@@ -2302,6 +2302,7 @@ CONTAINS
     if (allocated(col80)) deallocate(col80)
     if (allocated(exp250)) deallocate(exp250)
     !
+    write(*,*)myname,"Normal end of subroutine."
     if(plot_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine plot_maketable
