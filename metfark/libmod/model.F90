@@ -1262,7 +1262,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     logical :: bdone,found
-    integer :: itrg,varid
+    integer :: itrg
     type(mod_file),pointer :: f
     type(mod_variable),pointer :: v
     integer :: ff
@@ -1281,7 +1281,7 @@ CONTAINS
              ! get variable          
              if (v%mmrange) then ! we have limits
                 if (.not.model_variableCheck(css,v,itrg)) then
-                   if(mod_bdeb)write(*,*)myname,'Failed:',varid," '"//&
+                   if(mod_bdeb)write(*,*)myname,"Failed '"//&
                         & v%var80(1:v%lenv)//"'",&
                         & itrg, v%mmrange,v%mmset,v%minval,v%maxval,&
                         & css%trg_minset(itrg),css%trg_maxset(itrg),&
@@ -6165,11 +6165,11 @@ CONTAINS
                 end if
                 first=.false.
              end if
-             if(mod_bdeb)write(*,*)myname,"Here: ",itrg,css%ctrg
+             !if(mod_bdeb)write(*,*)myname,"Here: ",itrg,css%ctrg
              ff=css%trg_offset(itrg)
              trg80=css%trg80(itrg)
              lent=css%trg_lent(itrg)
-             if(mod_bdeb)write(*,*)myname,"There: ",itrg,css%ctrg
+             !if(mod_bdeb)write(*,*)myname,"There: ",itrg,css%ctrg
              !
              ! loop over locations
              if(mod_bdeb)write(*,*)myname,"Starting inner loop: ",nloc

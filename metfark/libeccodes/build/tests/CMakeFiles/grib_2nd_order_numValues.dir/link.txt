@@ -1,0 +1,1 @@
+/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/grib_2nd_order_numValues.dir/grib_2nd_order_numValues.c.o  -o grib_2nd_order_numValues -rdynamic ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

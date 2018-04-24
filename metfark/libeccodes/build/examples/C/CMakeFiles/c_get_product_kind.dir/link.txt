@@ -1,0 +1,1 @@
+/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/c_get_product_kind.dir/get_product_kind.c.o  -o c_get_product_kind -rdynamic ../../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

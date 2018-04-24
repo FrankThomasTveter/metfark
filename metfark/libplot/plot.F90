@@ -1145,7 +1145,7 @@ CONTAINS
           return
        end if
        !
-       if(plot_bdeb)write(*,*)myname,"Make columns.",pss%currentSet%ccol,size(col80)
+       if(plot_bdeb)write(*,*)myname,"Make columns.",pss%currentSet%ccol,allocated(col80)
        ncol=pss%currentSet%ccol
        if (.not.allocated(col80).or..not.allocated(exp250).or.&
             & pss%currentSet%ccol > size(col80).or.pss%currentSet%ccol > size(exp250)) then

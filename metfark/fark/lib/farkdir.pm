@@ -71,7 +71,7 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 			     "/lustre/storeB/project/"   => "ro",
 			     "/opdata/"                  => "ro",
 			     "/metfark/bufrtables/"      => "ro" }, 
-		  output => {"/lustre/storeA/project/nwp/fark/output/"     => "rw",
+		  output => {"/lustre/storeA/project/nwp/fark/"     => "rw",
 			     "/metfark/output/"          => "rw" }, 
 		  script      => {"/metfark/config/splus/" => "rw" }, # splus scripts
 		  model       => {"/metfark/config/mod/"     => "rw" }, # model config files
@@ -152,6 +152,65 @@ sub splitDir {
     # get abs path
     if (defined $tdir && -d $tdir) { # total path
 	my $adir = abs_path( $tdir ); # absolute total path
+	if (defined $adir) {
+	    $priv = "denied";
+	    foreach my $k (keys %{$farkdirs{$cls}}) {
+		my $kk = substr($k,0,-1); # remove last "/" from "%farkdirs" directory name
+		#print "Checking $adir~$kk $priv\n";
+		if ( $tdir =~ /^$kk\/?(.*)$/) {
+		    $root = $k;
+		    $loc = $1;
+		    $loc =~ s/\/+/\//g;
+		    if ($loc ne "") {
+			my $suffix = substr $loc,-1;
+			if ($suffix ne "\/") {
+			    $loc = $loc . "/"; # relative path
+			};
+		    }
+		    $priv=$farkdirs{$cls}{$k};
+		    #print "Match $adir~$kk $priv\n";
+		}
+	    }
+	} else {
+	    $root="";
+	    $loc=$tdir;
+	    $priv="invalid";
+	}
+    } else {
+	$root="";
+	$loc=$tdir // "";
+	$priv="missing";
+    }
+    #print "splitDir '$ipath' '$cls' -> '$root' '$loc' '$priv'\n";
+    return ( $root, $loc, $priv );
+}
+
+sub splitPattern {
+    my $ipath=shift; # input path
+    my $cls=shift;   # class
+    my $priv = "";   # ipath privileges
+    my $root = "";   # root
+    my $loc = "";    # location
+    makeRoot($cls);
+    my $ddir = (keys (%{$farkdirs{$cls}}))[0]; # get default path
+    # ...get complete path
+    my $pdir = $ipath;
+    my $tdir = $ddir;
+    if ($pdir ne "") {
+	my $prefix = substr $pdir,0,1;
+	if ($prefix eq "\/") {
+	    $tdir = $pdir; # absolute path
+	} elsif (defined $ddir) {
+	    $tdir = $ddir . $pdir; # relative path
+	} else {
+	    $tdir = $pdir; # relative path
+	};
+    }
+    #
+    #print "Dir: '$ipath' => '$tdir'\n";
+    # get abs path
+    if (defined $tdir) { # total path
+	my $adir = $tdir; # total path
 	if (defined $adir) {
 	    $priv = "denied";
 	    foreach my $k (keys %{$farkdirs{$cls}}) {

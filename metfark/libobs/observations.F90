@@ -5413,6 +5413,15 @@ CONTAINS
                       bok2=.false.
                       css%currentfile%hint80(7)=css%trg80(ii)(1:25)
                       bok=.false.
+                      ! bah... abort anyway...
+                      irc=945
+                      call observation_errorappend(crc250,myname)
+                      call observation_errorappend(crc250,"Failed sanity check for target "// &
+                           & css%trg80(ii)(1:css%trg_lent(ii))//",")
+                      call observation_errorappendi(crc250,css%trg_descr(ii))
+                      call observation_errorappend(crc250,"!=")
+                      call observation_errorappendi(crc250,ktdexp(css%trg_seq(ii)))
+                      RETURN
                    end if
                 end if
              case (parse_internal)

@@ -3044,8 +3044,9 @@ CONTAINS
        end if
     end do
   end subroutine findDelimiter
-  !
+
   subroutine colocation_wash(val,s2,len2)
+    implicit none
     real :: val
     character*50 :: s2
     integer :: len2,lenb
@@ -3057,29 +3058,63 @@ CONTAINS
        len2=2
     else
        call chop0(s2,50); 
-       len2=length(s2,50,10) ! ignore last digit...
-       lenb=len2
-       len2=len2-1
-       if (len2.gt.1) then
-          OUTER: do JJ=1,len2
-             if (s2(JJ:JJ).eq.".") then
-                INNER: do while (len2.gt.JJ.and.&
-                     & (s2(len2:len2).eq."0".or.s2(len2:len2).eq."."))
-                   len2=len2-1
-                end do INNER
-                exit OUTER
-             end if
-          end do OUTER
-          if (len2.eq.1.and.s2(1:1).eq.".") then
-             s2="0"
-          else if (s2(len2:len2).eq.".") then
-             len2=len2-1
+       lenb=length(s2,50,10) ! ignore last digit...
+       len2=lenb-1 ! ignore last digit
+       OUTER: do JJ=1,len2
+          if (s2(JJ:JJ).eq.".") then
+             INNER: do while (s2(len2:len2).eq."0")
+                len2=len2-1
+             end do INNER
+             exit OUTER
           end if
+       end do OUTER
+       ! handle special cases:
+       if (s2(len2:len2).eq.".") len2=len2-1  ! .00000
+       if (s2(1:len2).eq."-") len2=len2-1    ! -.0000
+       if (len2.eq.0) then              ! .00000 or -.0000
+          s2="0"
+          len2=1
        end if
-       if (len2.eq.lenb-1) len2=lenb
+       if (len2.eq.lenb-1) len2=lenb ! include last digit...
     end if
     return
   end subroutine colocation_wash
+  ! !
+  ! subroutine colocation_wash(val,s2,len2)
+  !   real :: val
+  !   character*50 :: s2
+  !   integer :: len2,lenb
+  !   integer, external :: length
+  !   integer :: jj,irc
+  !   write(s2,'(F0.10)',iostat=irc) val; 
+  !   if (irc.ne.0) then
+  !      s2="NA"
+  !      len2=2
+  !   else
+  !      call chop0(s2,50); 
+  !      len2=length(s2,50,10) ! ignore last digit...
+  !      lenb=len2
+  !      len2=len2-1
+  !      if (len2.gt.1) then
+  !         OUTER: do JJ=1,len2
+  !            if (s2(JJ:JJ).eq.".") then
+  !               INNER: do while (len2.gt.JJ.and.&
+  !                    & (s2(len2:len2).eq."0".or.s2(len2:len2).eq."."))
+  !                  len2=len2-1
+  !               end do INNER
+  !               exit OUTER
+  !            end if
+  !         end do OUTER
+  !         if (len2.eq.1.and.s2(1:1).eq.".") then
+  !            s2="0"
+  !         else if (s2(len2:len2).eq.".") then
+  !            len2=len2-1
+  !         end if
+  !      end if
+  !      if (len2.eq.lenb-1) len2=lenb
+  !   end if
+  !   return
+  ! end subroutine colocation_wash
   !
   subroutine colocation_fill(fill250,lenf,crc250,irc)
     character*250 :: fill250

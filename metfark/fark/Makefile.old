@@ -204,6 +204,8 @@ TO_INST_PM = check.pl \
 	lib/libbufr.a \
 	lib/libbufrc.a \
 	lib/libcoloc.a \
+	lib/libeccodes.a \
+	lib/libeccodes_f90.a \
 	lib/libgenc.a \
 	lib/libmodel.a \
 	lib/libobs.a \
@@ -241,6 +243,10 @@ PM_TO_BLIB = check.pl \
 	blib/lib/libbufrc.a \
 	lib/libcoloc.a \
 	blib/lib/libcoloc.a \
+	lib/libeccodes.a \
+	blib/lib/libeccodes.a \
+	lib/libeccodes_f90.a \
+	blib/lib/libeccodes_f90.a \
 	lib/libgenc.a \
 	blib/lib/libgenc.a \
 	lib/libmodel.a \
@@ -647,8 +653,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(MAKEFILE_OLD) $(FIRST_MAKEFILE) \
-	  $(OBJECT) 
+	  $(FIRST_MAKEFILE) $(OBJECT) \
+	  $(MAKEFILE_OLD) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 
@@ -1102,6 +1108,8 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  lib/libbufr.a blib/lib/libbufr.a \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
 	  lib/libcoloc.a blib/lib/libcoloc.a \
+	  lib/libeccodes.a blib/lib/libeccodes.a \
+	  lib/libeccodes_f90.a blib/lib/libeccodes_f90.a \
 	  lib/libgenc.a blib/lib/libgenc.a \
 	  lib/libmodel.a blib/lib/libmodel.a \
 	  lib/libobs.a blib/lib/libobs.a \

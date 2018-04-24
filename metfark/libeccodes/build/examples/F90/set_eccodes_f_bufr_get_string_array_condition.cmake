@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_bufr_get_string_array_condition TRUE)
+  else()
+    set(_eccodes_f_bufr_get_string_array_condition FALSE)
+  endif()

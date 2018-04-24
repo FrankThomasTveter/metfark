@@ -25,6 +25,7 @@
 # Column=lat_deg
 # Column=lon_deg
 # Column=pressure_hpa
+# Column=altitude_meter
 # Column=model_variable_n
 # Column=obs_variable_n
 #
@@ -32,52 +33,49 @@
 #
 library(farkRPackage);
 
-args <- getArguments(); 
-tablefile <- args[0];
-prefix <- args[1];
-suffix = attr$Suffix;
+print (paste("################### starting script #####################"));
 
-legs <- readComments(tablefile,"LEGENDS");
+args <- getArguments(); 
+tablefile = args[1];
+prefix = args[2];
+
+leg <- readComments(tablefile,"LEGENDS");
 attr <- readComments(tablefile,"ATTRIBUTES");
 cols <- readComments(tablefile,"COLUMNS");
 data <- readData(tablefile);
 
-# mountain data
-mnt_id <- c("22522","2981","2741","2773");
-mnt_name = "Mountain stations";
-mnt_data <- data[data%obs_id %in% mnt_id,];
+suffix = attr["Suffix",];
 
-# coastal data
-coast_id <- c("2758","2794","2949","2983");
-coast_name = "Coastal stations";
-coast_data <- data[data%obs_id %in% coast_id,];
+setcol  = "set";
+refcol  = "cycle_epoch";
+timecol = "time_epoch";
+idcol   = "obs_id";
+altcol   = "altitude_meter";
+pcol   = "pressure_hpa";
 
-# thinned data
-set.seed(1);
-thin_n = min(c(1000,nrow(data)));
-thin_name = "Thinned data";
-thin_data <- sample(data,thin_n, replace=TRUE)
 
-for (ii in 1:attr$_n) {
+#thres = attr["geopotential_threshold",];
+n <- norwegian(data,idcol);
 
- name=attr[,get(paste0("name",ii)];
- title=attr[,get(paste0("title",ii)];
- label=attr[,get(paste0("label",ii)];
- refcol="cycle_epoch";
- timecol="time_epoch";
- prescol="pressure_hpa";
- obscol=paste0("obs_value",ii);
- modcol=paste0("model_value",ii);
- obslabel=paste("observation",label);
- modlabel=paste("model",label);
+#if (sum(n) < 1) { stop ("No norwegian stations found.");};
 
- seriesfile=paste0(prefix,name,"_series",suffix);
- print(paste0("Processing '",seriesfile,"'"));
- seriesPlot(seriesfile,attr,legs,data,title,setcol,timecol,modcol,obscol,label);
+for (ii in 1:attr["_n",]) {
 
- profilefile=paste0(prefix,name,"_profile",suffix);
- print(paste0("Processing '",profilefile,"'"));
- profilePlot(profilefile,attr,legs,data,title,setcol,refcol,timecol,prescol,modcol,obscol,label);
+    file=attr[paste0("file_string",ii),];
+    title=attr[paste0("title_string",ii),];
+    label=attr[paste0("axis_string",ii),];
+    obscol=paste0("obs_variable",ii);
+    modcol=paste0("model_variable",ii);
+    obslabel=paste("observed",label);
+    modlabel=paste("modelled",label);
 
+    ;# profile plot
+    proffile=paste0(prefix,file,"_prof",suffix);
+    print(paste0("Processing '",proffile,"'"));
+    profilePlot(proffile,attr,leg,data,title,setcol,refcol,timecol,idcol,
+                "Pressure (hPA)",pcol,"descending",modcol,obscol,label);
+                                        #,"Norwegian stations",n);
 }
+
+#warnings();
 

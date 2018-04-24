@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_grib_multi_write_condition TRUE)
+  else()
+    set(_eccodes_f_grib_multi_write_condition FALSE)
+  endif()

@@ -1,0 +1,278 @@
+Determining if the system is big endian passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_ebaf8/fast"
+/usr/bin/make -f CMakeFiles/cmTC_ebaf8.dir/build.make CMakeFiles/cmTC_ebaf8.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_ebaf8.dir/TestEndianess.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_ebaf8.dir/TestEndianess.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/TestEndianess.c
+Linking C executable cmTC_ebaf8
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ebaf8.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_ebaf8.dir/TestEndianess.c.o  -o cmTC_ebaf8 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+TestEndianess.c:
+/* A 16 bit integer is required. */
+typedef unsigned short cmakeint16;
+
+/* On a little endian machine, these 16bit ints will give "THIS IS LITTLE ENDIAN."
+   On a big endian machine the characters will be exchanged pairwise. */
+const cmakeint16 info_little[] =  {0x4854, 0x5349, 0x4920, 0x2053, 0x494c, 0x5454, 0x454c, 0x4520, 0x444e, 0x4149, 0x2e4e, 0x0000};
+
+/* on a big endian machine, these 16bit ints will give "THIS IS BIG ENDIAN."
+   On a little endian machine the characters will be exchanged pairwise. */
+const cmakeint16 info_big[] =     {0x5448, 0x4953, 0x2049, 0x5320, 0x4249, 0x4720, 0x454e, 0x4449, 0x414e, 0x2e2e, 0x0000};
+
+#ifdef __CLASSIC_C__
+int main(argc, argv) int argc; char *argv[];
+#else
+int main(int argc, char *argv[])
+#endif
+{
+  int require = 0;
+  require += info_little[argc];
+  require += info_big[argc];
+  (void)argv;
+  return require;
+}
+
+
+Performing C SOURCE FILE Test IEEE_BE failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_86a60/fast"
+/usr/bin/make -f CMakeFiles/cmTC_86a60.dir/build.make CMakeFiles/cmTC_86a60.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_86a60.dir/src.c.o
+/usr/bin/cc    -pipe -DIEEE_BE -fPIE   -o CMakeFiles/cmTC_86a60.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_86a60
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_86a60.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DIEEE_BE    CMakeFiles/cmTC_86a60.dir/src.c.o  -o cmTC_86a60 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Return value: 1
+Source file was:
+int compare(unsigned char* a,unsigned char* b) {
+         while(*a != 0) if (*(b++)!=*(a++)) return 1;
+         return 0;
+       }
+       int main(int argc,char** argv) {
+         unsigned char dc[]={0x30,0x61,0xDE,0x80,0x93,0x67,0xCC,0xD9,0};
+         double da=1.23456789e-75;
+         unsigned char* ca;
+
+         unsigned char fc[]={0x05,0x83,0x48,0x22,0};
+         float fa=1.23456789e-35;
+
+         if (sizeof(double)!=8) return 1;
+
+         ca=(unsigned char*)&da;
+         if (compare(dc,ca)) return 1;
+
+         if (sizeof(float)!=4) return 1;
+
+         ca=(unsigned char*)&fa;
+         if (compare(fc,ca)) return 1;
+
+         return 0;
+       }
+Determining if the lseek exist failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d860e/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d860e.dir/build.make CMakeFiles/cmTC_d860e.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d860e.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_d860e.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c: In function ‘main’:
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: error: ‘lseek’ undeclared (first use in this function)
+   return ((int*)(&lseek))[argc];
+                   ^
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: note: each undeclared identifier is reported only once for each function it appears in
+CMakeFiles/cmTC_d860e.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_d860e.dir/CheckSymbolExists.c.o' failed
+make[1]: *** [CMakeFiles/cmTC_d860e.dir/CheckSymbolExists.c.o] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_d860e/fast' failed
+make: *** [cmTC_d860e/fast] Error 2
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/types.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef lseek
+  return ((int*)(&lseek))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the open exist failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d4d28/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d4d28.dir/build.make CMakeFiles/cmTC_d4d28.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d4d28.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_d4d28.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c: In function ‘main’:
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: error: ‘open’ undeclared (first use in this function)
+   return ((int*)(&open))[argc];
+                   ^
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: note: each undeclared identifier is reported only once for each function it appears in
+CMakeFiles/cmTC_d4d28.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_d4d28.dir/CheckSymbolExists.c.o' failed
+make[1]: *** [CMakeFiles/cmTC_d4d28.dir/CheckSymbolExists.c.o] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_d4d28/fast' failed
+make: *** [cmTC_d4d28/fast] Error 2
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/types.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef open
+  return ((int*)(&open))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the funopen exist failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_6ba8b/fast"
+/usr/bin/make -f CMakeFiles/cmTC_6ba8b.dir/build.make CMakeFiles/cmTC_6ba8b.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_6ba8b.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_6ba8b.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c: In function ‘main’:
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: error: ‘funopen’ undeclared (first use in this function)
+   return ((int*)(&funopen))[argc];
+                   ^
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: note: each undeclared identifier is reported only once for each function it appears in
+CMakeFiles/cmTC_6ba8b.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_6ba8b.dir/CheckSymbolExists.c.o' failed
+make[1]: *** [CMakeFiles/cmTC_6ba8b.dir/CheckSymbolExists.c.o] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_6ba8b/fast' failed
+make: *** [cmTC_6ba8b/fast] Error 2
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef funopen
+  return ((int*)(&funopen))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if files sys/malloc.h exist failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_153ea/fast"
+/usr/bin/make -f CMakeFiles/cmTC_153ea.dir/build.make CMakeFiles/cmTC_153ea.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_153ea.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_153ea.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c:2:24: fatal error: sys/malloc.h: No such file or directory
+compilation terminated.
+CMakeFiles/cmTC_153ea.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_153ea.dir/CheckIncludeFiles.c.o' failed
+make[1]: *** [CMakeFiles/cmTC_153ea.dir/CheckIncludeFiles.c.o] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_153ea/fast' failed
+make: *** [cmTC_153ea/fast] Error 2
+
+Source:
+/* */
+#include <sys/malloc.h>
+
+
+int main(void){return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_SYSPROC failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d1826/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d1826.dir/build.make CMakeFiles/cmTC_d1826.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d1826.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_SYSPROC -fPIE   -o CMakeFiles/cmTC_d1826.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c:1:22: fatal error: sys/proc.h: No such file or directory
+compilation terminated.
+CMakeFiles/cmTC_d1826.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_d1826.dir/src.c.o' failed
+make[1]: *** [CMakeFiles/cmTC_d1826.dir/src.c.o] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_d1826/fast' failed
+make: *** [cmTC_d1826/fast] Error 2
+
+Source file was:
+#include <sys/proc.h>
+int main(){ return 0; }
+
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_faf14/fast"
+/usr/bin/make -f CMakeFiles/cmTC_faf14.dir/build.make CMakeFiles/cmTC_faf14.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_faf14.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_faf14.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_faf14
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_faf14.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_faf14.dir/CheckSymbolExists.c.o  -o cmTC_faf14 -rdynamic 
+CMakeFiles/cmTC_faf14.dir/CheckSymbolExists.c.o: In function `main':
+CheckSymbolExists.c:(.text+0x1b): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_faf14.dir/build.make:97: recipe for target 'cmTC_faf14' failed
+make[1]: *** [cmTC_faf14] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_faf14/fast' failed
+make: *** [cmTC_faf14/fast] Error 2
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_36ddd/fast"
+/usr/bin/make -f CMakeFiles/cmTC_36ddd.dir/build.make CMakeFiles/cmTC_36ddd.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_36ddd.dir/CheckFunctionExists.c.o
+/usr/bin/cc    -pipe -DCHECK_FUNCTION_EXISTS=pthread_create -fPIE   -o CMakeFiles/cmTC_36ddd.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_36ddd
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_36ddd.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_36ddd.dir/CheckFunctionExists.c.o  -o cmTC_36ddd -rdynamic -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_36ddd.dir/build.make:97: recipe for target 'cmTC_36ddd' failed
+make[1]: *** [cmTC_36ddd] Error 1
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_36ddd/fast' failed
+make: *** [cmTC_36ddd/fast] Error 2
+
+

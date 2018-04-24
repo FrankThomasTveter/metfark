@@ -1,0 +1,5 @@
+  if(  EC_HAVE_FMEMOPEN OR EC_HAVE_FUNOPEN )
+    set(_MEMFS_condition TRUE)
+  else()
+    set(_MEMFS_condition FALSE)
+  endif()

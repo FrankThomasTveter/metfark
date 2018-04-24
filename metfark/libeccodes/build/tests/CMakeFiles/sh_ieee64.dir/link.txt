@@ -1,0 +1,1 @@
+/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/sh_ieee64.dir/sh_ieee64.c.o  -o sh_ieee64 -rdynamic ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

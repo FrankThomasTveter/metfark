@@ -1,0 +1,8 @@
+inputDelayedDescriptorReplicationFactor=2 3
+inputExtendedDelayedDescriptorReplicationFactor=3 4
+/subsetNumber=1/delayedDescriptorReplicationFactor=2
+/subsetNumber=1/extendedDelayedDescriptorReplicationFactor=3
+/subsetNumber=2/delayedDescriptorReplicationFactor=3
+/subsetNumber=2/extendedDelayedDescriptorReplicationFactor=4
+pressure={102400,50000,40000,30000,20000,15000,102400,50000,40000,30000,20000,15000
+}

@@ -1,0 +1,2001 @@
+The system is: Linux - 4.4.0-116-generic - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is GNU, found in "/metfark/metfark/metfark/libeccodes/build/CMakeFiles/3.5.1/CompilerIdC/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f8250/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f8250.dir/build.make CMakeFiles/cmTC_f8250.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f8250.dir/testCCompiler.c.o
+/usr/bin/cc     -o CMakeFiles/cmTC_f8250.dir/testCCompiler.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_f8250
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f8250.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_f8250.dir/testCCompiler.c.o  -o cmTC_f8250 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8b128/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8b128.dir/build.make CMakeFiles/cmTC_8b128.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o
+/usr/bin/cc     -o CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o   -c /usr/share/cmake-3.5/Modules/CMakeCCompilerABI.c
+Linking C executable cmTC_8b128
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8b128.dir/link.txt --verbose=1
+/usr/bin/cc      -v CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o  -o cmTC_8b128 -rdynamic  
+Using built-in specs.
+COLLECT_GCC=/usr/bin/cc
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu 5.4.0-6ubuntu1~16.04.9' --with-bugurl=file:///usr/share/doc/gcc-5/README.Bugs --enable-languages=c,ada,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-5 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-5-amd64/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-5-amd64 --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-5-amd64 --with-arch-directory=amd64 --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) 
+COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_8b128' '-rdynamic' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-linux-gnu/5/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper -plugin-opt=-fresolution=/tmp/cc4sZVIj.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/ --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -z relro -o cmTC_8b128 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.. CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/5/crtend.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_8b128/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_8b128.dir/build.make CMakeFiles/cmTC_8b128.dir/build]
+  ignore line: [make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp']
+  ignore line: [Building C object CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/usr/bin/cc     -o CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o   -c /usr/share/cmake-3.5/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTC_8b128]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8b128.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/cc      -v CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o  -o cmTC_8b128 -rdynamic  ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/cc]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper]
+  ignore line: [Target: x86_64-linux-gnu]
+  ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 5.4.0-6ubuntu1~16.04.9' --with-bugurl=file:///usr/share/doc/gcc-5/README.Bugs --enable-languages=c,ada,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-5 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-5-amd64/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-5-amd64 --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-5-amd64 --with-arch-directory=amd64 --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu]
+  ignore line: [Thread model: posix]
+  ignore line: [gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) ]
+  ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_8b128' '-rdynamic' '-mtune=generic' '-march=x86-64']
+  link line: [ /usr/lib/gcc/x86_64-linux-gnu/5/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper -plugin-opt=-fresolution=/tmp/cc4sZVIj.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/ --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -z relro -o cmTC_8b128 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.. CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/5/crtend.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/cc4sZVIj.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [--sysroot=/] ==> ignore
+    arg [--build-id] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_x86_64] ==> ignore
+    arg [--hash-style=gnu] ==> ignore
+    arg [--as-needed] ==> ignore
+    arg [-export-dynamic] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+    arg [-zrelro] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_8b128] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o] ==> ignore
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib]
+    arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+    arg [-L/lib/../lib] ==> dir [/lib/../lib]
+    arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+    arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5/../../..] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../..]
+    arg [CMakeFiles/cmTC_8b128.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-lgcc] ==> lib [gcc]
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--no-as-needed] ==> ignore
+    arg [-lc] ==> lib [c]
+    arg [-lgcc] ==> lib [gcc]
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--no-as-needed] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/crtend.o] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o] ==> ignore
+  remove lib [gcc]
+  remove lib [gcc_s]
+  remove lib [gcc]
+  remove lib [gcc_s]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5] ==> [/usr/lib/gcc/x86_64-linux-gnu/5]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib] ==> [/usr/lib]
+  collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+  collapse library dir [/lib/../lib] ==> [/lib]
+  collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../..] ==> [/usr/lib]
+  implicit libs: [c]
+  implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/5;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib]
+  implicit fwks: []
+
+
+
+
+Detecting C [-std=c11] compiler features compiled with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f50bf/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f50bf.dir/build.make CMakeFiles/cmTC_f50bf.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f50bf.dir/feature_tests.c.o
+/usr/bin/cc    -std=c11 -o CMakeFiles/cmTC_f50bf.dir/feature_tests.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/feature_tests.c
+Linking C executable cmTC_f50bf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f50bf.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_f50bf.dir/feature_tests.c.o  -o cmTC_f50bf -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:1c_restrict
+    Feature record: C_FEATURE:1c_static_assert
+    Feature record: C_FEATURE:1c_variadic_macros
+
+
+Detecting C [-std=c99] compiler features compiled with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_dc0a9/fast"
+/usr/bin/make -f CMakeFiles/cmTC_dc0a9.dir/build.make CMakeFiles/cmTC_dc0a9.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_dc0a9.dir/feature_tests.c.o
+/usr/bin/cc    -std=c99 -o CMakeFiles/cmTC_dc0a9.dir/feature_tests.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/feature_tests.c
+Linking C executable cmTC_dc0a9
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_dc0a9.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_dc0a9.dir/feature_tests.c.o  -o cmTC_dc0a9 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:1c_restrict
+    Feature record: C_FEATURE:0c_static_assert
+    Feature record: C_FEATURE:1c_variadic_macros
+
+
+Detecting C [-std=c90] compiler features compiled with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b8367/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b8367.dir/build.make CMakeFiles/cmTC_b8367.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b8367.dir/feature_tests.c.o
+/usr/bin/cc    -std=c90 -o CMakeFiles/cmTC_b8367.dir/feature_tests.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/feature_tests.c
+Linking C executable cmTC_b8367
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b8367.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_b8367.dir/feature_tests.c.o  -o cmTC_b8367 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:0c_restrict
+    Feature record: C_FEATURE:0c_static_assert
+    Feature record: C_FEATURE:0c_variadic_macros
+Performing C SOURCE FILE Test EC_HAVE_C_INLINE succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f6617/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f6617.dir/build.make CMakeFiles/cmTC_f6617.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f6617.dir/src.c.o
+/usr/bin/cc    -DEC_HAVE_C_INLINE   -o CMakeFiles/cmTC_f6617.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_f6617
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f6617.dir/link.txt --verbose=1
+/usr/bin/cc   -DEC_HAVE_C_INLINE    CMakeFiles/cmTC_f6617.dir/src.c.o  -o cmTC_f6617 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+ typedef int foo_t;
+			static inline foo_t static_foo(){return 0;}
+			foo_t foo(){return 0;}
+			int main(int argc, char *argv[]){return 0;}
+		  
+Performing C SOURCE FILE Test C_FLAG_TEST_1 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_3ee57/fast"
+/usr/bin/make -f CMakeFiles/cmTC_3ee57.dir/build.make CMakeFiles/cmTC_3ee57.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_3ee57.dir/src.c.o
+/usr/bin/cc    -DC_FLAG_TEST_1   -pipe -o CMakeFiles/cmTC_3ee57.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_3ee57
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3ee57.dir/link.txt --verbose=1
+/usr/bin/cc   -DC_FLAG_TEST_1    CMakeFiles/cmTC_3ee57.dir/src.c.o  -o cmTC_3ee57 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+int main(void) { return 0; }
+Determining if the include file sys/types.h exists passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_fce40/fast"
+/usr/bin/make -f CMakeFiles/cmTC_fce40.dir/build.make CMakeFiles/cmTC_fce40.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_fce40.dir/CheckIncludeFile.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_fce40.dir/CheckIncludeFile.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_fce40
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fce40.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_fce40.dir/CheckIncludeFile.c.o  -o cmTC_fce40 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file stdint.h exists passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8b373/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8b373.dir/build.make CMakeFiles/cmTC_8b373.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8b373.dir/CheckIncludeFile.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_8b373.dir/CheckIncludeFile.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_8b373
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8b373.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_8b373.dir/CheckIncludeFile.c.o  -o cmTC_8b373 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file stddef.h exists passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_113c4/fast"
+/usr/bin/make -f CMakeFiles/cmTC_113c4.dir/build.make CMakeFiles/cmTC_113c4.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_113c4.dir/CheckIncludeFile.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_113c4.dir/CheckIncludeFile.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_113c4
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_113c4.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_113c4.dir/CheckIncludeFile.c.o  -o cmTC_113c4 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of char passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1a6a4/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1a6a4.dir/build.make CMakeFiles/cmTC_1a6a4.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1a6a4.dir/EC_SIZEOF_CHAR.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_1a6a4.dir/EC_SIZEOF_CHAR.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_CHAR.c
+Linking C executable cmTC_1a6a4
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1a6a4.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_1a6a4.dir/EC_SIZEOF_CHAR.c.o  -o cmTC_1a6a4 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of short passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_a3442/fast"
+/usr/bin/make -f CMakeFiles/cmTC_a3442.dir/build.make CMakeFiles/cmTC_a3442.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_a3442.dir/EC_SIZEOF_SHORT.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_a3442.dir/EC_SIZEOF_SHORT.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_SHORT.c
+Linking C executable cmTC_a3442
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a3442.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_a3442.dir/EC_SIZEOF_SHORT.c.o  -o cmTC_a3442 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of int passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_bf7e2/fast"
+/usr/bin/make -f CMakeFiles/cmTC_bf7e2.dir/build.make CMakeFiles/cmTC_bf7e2.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_bf7e2.dir/EC_SIZEOF_INT.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_bf7e2.dir/EC_SIZEOF_INT.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_INT.c
+Linking C executable cmTC_bf7e2
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bf7e2.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_bf7e2.dir/EC_SIZEOF_INT.c.o  -o cmTC_bf7e2 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of long passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_cd685/fast"
+/usr/bin/make -f CMakeFiles/cmTC_cd685.dir/build.make CMakeFiles/cmTC_cd685.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_cd685.dir/EC_SIZEOF_LONG.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_cd685.dir/EC_SIZEOF_LONG.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_LONG.c
+Linking C executable cmTC_cd685
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_cd685.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_cd685.dir/EC_SIZEOF_LONG.c.o  -o cmTC_cd685 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of long long passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_41b28/fast"
+/usr/bin/make -f CMakeFiles/cmTC_41b28.dir/build.make CMakeFiles/cmTC_41b28.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_41b28.dir/EC_SIZEOF_LONG_LONG.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_41b28.dir/EC_SIZEOF_LONG_LONG.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_LONG_LONG.c
+Linking C executable cmTC_41b28
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_41b28.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_41b28.dir/EC_SIZEOF_LONG_LONG.c.o  -o cmTC_41b28 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of float passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_67a3c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_67a3c.dir/build.make CMakeFiles/cmTC_67a3c.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_67a3c.dir/EC_SIZEOF_FLOAT.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_67a3c.dir/EC_SIZEOF_FLOAT.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_FLOAT.c
+Linking C executable cmTC_67a3c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_67a3c.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_67a3c.dir/EC_SIZEOF_FLOAT.c.o  -o cmTC_67a3c -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of double passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d9bd1/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d9bd1.dir/build.make CMakeFiles/cmTC_d9bd1.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d9bd1.dir/EC_SIZEOF_DOUBLE.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_d9bd1.dir/EC_SIZEOF_DOUBLE.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_DOUBLE.c
+Linking C executable cmTC_d9bd1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d9bd1.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_d9bd1.dir/EC_SIZEOF_DOUBLE.c.o  -o cmTC_d9bd1 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of long double passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_168e7/fast"
+/usr/bin/make -f CMakeFiles/cmTC_168e7.dir/build.make CMakeFiles/cmTC_168e7.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_168e7.dir/EC_SIZEOF_LONG_DOUBLE.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_168e7.dir/EC_SIZEOF_LONG_DOUBLE.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_LONG_DOUBLE.c
+Linking C executable cmTC_168e7
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_168e7.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_168e7.dir/EC_SIZEOF_LONG_DOUBLE.c.o  -o cmTC_168e7 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of size_t passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_adbae/fast"
+/usr/bin/make -f CMakeFiles/cmTC_adbae.dir/build.make CMakeFiles/cmTC_adbae.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_adbae.dir/EC_SIZEOF_SIZE_T.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_adbae.dir/EC_SIZEOF_SIZE_T.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_SIZE_T.c
+Linking C executable cmTC_adbae
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_adbae.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_adbae.dir/EC_SIZEOF_SIZE_T.c.o  -o cmTC_adbae -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of ssize_t passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_4fbcf/fast"
+/usr/bin/make -f CMakeFiles/cmTC_4fbcf.dir/build.make CMakeFiles/cmTC_4fbcf.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_4fbcf.dir/EC_SIZEOF_SSIZE_T.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_4fbcf.dir/EC_SIZEOF_SSIZE_T.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_SSIZE_T.c
+Linking C executable cmTC_4fbcf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4fbcf.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_4fbcf.dir/EC_SIZEOF_SSIZE_T.c.o  -o cmTC_4fbcf -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of off_t passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_0be3d/fast"
+/usr/bin/make -f CMakeFiles/cmTC_0be3d.dir/build.make CMakeFiles/cmTC_0be3d.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_0be3d.dir/EC_SIZEOF_OFF_T.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_0be3d.dir/EC_SIZEOF_OFF_T.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/EC_SIZEOF_OFF_T.c
+Linking C executable cmTC_0be3d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0be3d.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_0be3d.dir/EC_SIZEOF_OFF_T.c.o  -o cmTC_0be3d -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining size of unsigned short passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_77edf/fast"
+/usr/bin/make -f CMakeFiles/cmTC_77edf.dir/build.make CMakeFiles/cmTC_77edf.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_77edf.dir/CMAKE_SIZEOF_UNSIGNED_SHORT.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_77edf.dir/CMAKE_SIZEOF_UNSIGNED_SHORT.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckTypeSize/CMAKE_SIZEOF_UNSIGNED_SHORT.c
+Linking C executable cmTC_77edf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_77edf.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_77edf.dir/CMAKE_SIZEOF_UNSIGNED_SHORT.c.o  -o cmTC_77edf -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Performing C SOURCE FILE Test IEEE_LE succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_23d50/fast"
+/usr/bin/make -f CMakeFiles/cmTC_23d50.dir/build.make CMakeFiles/cmTC_23d50.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_23d50.dir/src.c.o
+/usr/bin/cc    -pipe -DIEEE_LE -fPIE   -o CMakeFiles/cmTC_23d50.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_23d50
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_23d50.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DIEEE_LE    CMakeFiles/cmTC_23d50.dir/src.c.o  -o cmTC_23d50 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Return value: 1
+Source file was:
+int compare(unsigned char* a,unsigned char* b) {
+         while(*a != 0) if (*(b++)!=*(a++)) return 1;
+         return 0;
+       }
+       int main(int argc,char** argv) {
+         unsigned char dc[]={0xD9,0xCC,0x67,0x93,0x80,0xDE,0x61,0x30,0};
+         double da=1.23456789e-75;
+         unsigned char* ca;
+
+         unsigned char fc[]={0x22,0x48,0x83,0x05,0};
+         float fa=1.23456789e-35;
+
+         if (sizeof(double)!=8) return 1;
+
+         ca=(unsigned char*)&da;
+         if (compare(dc,ca)) return 1;
+
+         if (sizeof(float)!=4) return 1;
+
+         ca=(unsigned char*)&fa;
+         if (compare(fc,ca)) return 1;
+
+         return 0;
+       }
+Determining if the fseek exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_ab29a/fast"
+/usr/bin/make -f CMakeFiles/cmTC_ab29a.dir/build.make CMakeFiles/cmTC_ab29a.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_ab29a.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_ab29a.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_ab29a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ab29a.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_ab29a.dir/CheckSymbolExists.c.o  -o cmTC_ab29a -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fseek
+  return ((int*)(&fseek))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the fseeko exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_90249/fast"
+/usr/bin/make -f CMakeFiles/cmTC_90249.dir/build.make CMakeFiles/cmTC_90249.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_90249.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_90249.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_90249
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_90249.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_90249.dir/CheckSymbolExists.c.o  -o cmTC_90249 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fseeko
+  return ((int*)(&fseeko))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the ftello exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_9ba0e/fast"
+/usr/bin/make -f CMakeFiles/cmTC_9ba0e.dir/build.make CMakeFiles/cmTC_9ba0e.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_9ba0e.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_9ba0e.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_9ba0e
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9ba0e.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_9ba0e.dir/CheckSymbolExists.c.o  -o cmTC_9ba0e -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef ftello
+  return ((int*)(&ftello))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the fopen exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f992e/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f992e.dir/build.make CMakeFiles/cmTC_f992e.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f992e.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_f992e.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_f992e
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f992e.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_f992e.dir/CheckSymbolExists.c.o  -o cmTC_f992e -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fopen
+  return ((int*)(&fopen))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the fmemopen exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1d512/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1d512.dir/build.make CMakeFiles/cmTC_1d512.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1d512.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_1d512.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_1d512
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1d512.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_1d512.dir/CheckSymbolExists.c.o  -o cmTC_1d512 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fmemopen
+  return ((int*)(&fmemopen))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the flock exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_295ef/fast"
+/usr/bin/make -f CMakeFiles/cmTC_295ef.dir/build.make CMakeFiles/cmTC_295ef.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_295ef.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_295ef.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_295ef
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_295ef.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_295ef.dir/CheckSymbolExists.c.o  -o cmTC_295ef -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/file.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef flock
+  return ((int*)(&flock))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the mmap exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_08aa8/fast"
+/usr/bin/make -f CMakeFiles/cmTC_08aa8.dir/build.make CMakeFiles/cmTC_08aa8.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_08aa8.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_08aa8.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_08aa8
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_08aa8.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_08aa8.dir/CheckSymbolExists.c.o  -o cmTC_08aa8 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/mman.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef mmap
+  return ((int*)(&mmap))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the posix_memalign exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f3e95/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f3e95.dir/build.make CMakeFiles/cmTC_f3e95.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f3e95.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_f3e95.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_f3e95
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f3e95.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_f3e95.dir/CheckSymbolExists.c.o  -o cmTC_f3e95 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdlib.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef posix_memalign
+  return ((int*)(&posix_memalign))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the F_GETLK exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_14851/fast"
+/usr/bin/make -f CMakeFiles/cmTC_14851.dir/build.make CMakeFiles/cmTC_14851.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_14851.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_14851.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_14851
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_14851.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_14851.dir/CheckSymbolExists.c.o  -o cmTC_14851 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_GETLK
+  return ((int*)(&F_GETLK))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the F_SETLK exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_08313/fast"
+/usr/bin/make -f CMakeFiles/cmTC_08313.dir/build.make CMakeFiles/cmTC_08313.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_08313.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_08313.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_08313
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_08313.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_08313.dir/CheckSymbolExists.c.o  -o cmTC_08313 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_SETLK
+  return ((int*)(&F_SETLK))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the F_SETLKW exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f5059/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f5059.dir/build.make CMakeFiles/cmTC_f5059.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f5059.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_f5059.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_f5059
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f5059.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_f5059.dir/CheckSymbolExists.c.o  -o cmTC_f5059 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_SETLKW
+  return ((int*)(&F_SETLKW))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the F_GETLK64 exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_9d3c6/fast"
+/usr/bin/make -f CMakeFiles/cmTC_9d3c6.dir/build.make CMakeFiles/cmTC_9d3c6.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_9d3c6.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_9d3c6.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_9d3c6
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9d3c6.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_9d3c6.dir/CheckSymbolExists.c.o  -o cmTC_9d3c6 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_GETLK64
+  return ((int*)(&F_GETLK64))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the F_SETLK64 exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_6bd30/fast"
+/usr/bin/make -f CMakeFiles/cmTC_6bd30.dir/build.make CMakeFiles/cmTC_6bd30.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_6bd30.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_6bd30.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_6bd30
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6bd30.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_6bd30.dir/CheckSymbolExists.c.o  -o cmTC_6bd30 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_SETLK64
+  return ((int*)(&F_SETLK64))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the F_SETLKW64 exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8d467/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8d467.dir/build.make CMakeFiles/cmTC_8d467.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8d467.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_8d467.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_8d467
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8d467.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_8d467.dir/CheckSymbolExists.c.o  -o cmTC_8d467 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_SETLKW64
+  return ((int*)(&F_SETLKW64))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the MAP_ANONYMOUS exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_3fa2c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_3fa2c.dir/build.make CMakeFiles/cmTC_3fa2c.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_3fa2c.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_3fa2c.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_3fa2c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3fa2c.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_3fa2c.dir/CheckSymbolExists.c.o  -o cmTC_3fa2c -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/mman.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef MAP_ANONYMOUS
+  return ((int*)(&MAP_ANONYMOUS))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the MAP_ANON exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_035f6/fast"
+/usr/bin/make -f CMakeFiles/cmTC_035f6.dir/build.make CMakeFiles/cmTC_035f6.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_035f6.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_035f6.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_035f6
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_035f6.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_035f6.dir/CheckSymbolExists.c.o  -o cmTC_035f6 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/mman.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef MAP_ANON
+  return ((int*)(&MAP_ANON))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if files assert.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_7dedc/fast"
+/usr/bin/make -f CMakeFiles/cmTC_7dedc.dir/build.make CMakeFiles/cmTC_7dedc.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_7dedc.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_7dedc.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_7dedc
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7dedc.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_7dedc.dir/CheckIncludeFiles.c.o  -o cmTC_7dedc -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files stdlib.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1aad7/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1aad7.dir/build.make CMakeFiles/cmTC_1aad7.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1aad7.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_1aad7.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_1aad7
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1aad7.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_1aad7.dir/CheckIncludeFiles.c.o  -o cmTC_1aad7 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files unistd.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b5af1/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b5af1.dir/build.make CMakeFiles/cmTC_b5af1.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b5af1.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_b5af1.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_b5af1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b5af1.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_b5af1.dir/CheckIncludeFiles.c.o  -o cmTC_b5af1 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files string.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_7c5cf/fast"
+/usr/bin/make -f CMakeFiles/cmTC_7c5cf.dir/build.make CMakeFiles/cmTC_7c5cf.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_7c5cf.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_7c5cf.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_7c5cf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7c5cf.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_7c5cf.dir/CheckIncludeFiles.c.o  -o cmTC_7c5cf -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files strings.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1a09a/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1a09a.dir/build.make CMakeFiles/cmTC_1a09a.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1a09a.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_1a09a.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_1a09a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1a09a.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_1a09a.dir/CheckIncludeFiles.c.o  -o cmTC_1a09a -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files sys/stat.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1c144/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1c144.dir/build.make CMakeFiles/cmTC_1c144.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1c144.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_1c144.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_1c144
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1c144.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_1c144.dir/CheckIncludeFiles.c.o  -o cmTC_1c144 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files sys/time.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b748f/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b748f.dir/build.make CMakeFiles/cmTC_b748f.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b748f.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_b748f.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_b748f
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b748f.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_b748f.dir/CheckIncludeFiles.c.o  -o cmTC_b748f -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files sys/types.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_83f63/fast"
+/usr/bin/make -f CMakeFiles/cmTC_83f63.dir/build.make CMakeFiles/cmTC_83f63.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_83f63.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_83f63.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_83f63
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_83f63.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_83f63.dir/CheckIncludeFiles.c.o  -o cmTC_83f63 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files malloc.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_319cd/fast"
+/usr/bin/make -f CMakeFiles/cmTC_319cd.dir/build.make CMakeFiles/cmTC_319cd.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_319cd.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_319cd.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_319cd
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_319cd.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_319cd.dir/CheckIncludeFiles.c.o  -o cmTC_319cd -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files sys/param.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d7dbb/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d7dbb.dir/build.make CMakeFiles/cmTC_d7dbb.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d7dbb.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_d7dbb.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_d7dbb
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d7dbb.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_d7dbb.dir/CheckIncludeFiles.c.o  -o cmTC_d7dbb -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files sys/mount.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_70fb3/fast"
+/usr/bin/make -f CMakeFiles/cmTC_70fb3.dir/build.make CMakeFiles/cmTC_70fb3.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_70fb3.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_70fb3.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_70fb3
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_70fb3.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_70fb3.dir/CheckIncludeFiles.c.o  -o cmTC_70fb3 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if files sys/vfs.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_469f0/fast"
+/usr/bin/make -f CMakeFiles/cmTC_469f0.dir/build.make CMakeFiles/cmTC_469f0.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_469f0.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_469f0.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_469f0
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_469f0.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_469f0.dir/CheckIncludeFiles.c.o  -o cmTC_469f0 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Performing C SOURCE FILE Test EC_HAVE_OFFT succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_94d04/fast"
+/usr/bin/make -f CMakeFiles/cmTC_94d04.dir/build.make CMakeFiles/cmTC_94d04.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_94d04.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_OFFT -fPIE   -o CMakeFiles/cmTC_94d04.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_94d04
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_94d04.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_OFFT    CMakeFiles/cmTC_94d04.dir/src.c.o  -o cmTC_94d04 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/types.h>
+int main(){ off_t l=0; return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_OFF64T succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_f2cdf/fast"
+/usr/bin/make -f CMakeFiles/cmTC_f2cdf.dir/build.make CMakeFiles/cmTC_f2cdf.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f2cdf.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_OFF64T -fPIE   -o CMakeFiles/cmTC_f2cdf.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_f2cdf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f2cdf.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_OFF64T    CMakeFiles/cmTC_f2cdf.dir/src.c.o  -o cmTC_f2cdf -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <stdio.h>
+#include <sys/types.h>
+int main(){ off64_t l=0; return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_STRUCT_STAT succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_c1908/fast"
+/usr/bin/make -f CMakeFiles/cmTC_c1908.dir/build.make CMakeFiles/cmTC_c1908.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c1908.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_STRUCT_STAT -fPIE   -o CMakeFiles/cmTC_c1908.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_c1908
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c1908.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_STRUCT_STAT    CMakeFiles/cmTC_c1908.dir/src.c.o  -o cmTC_c1908 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/stat.h>
+int main(){ struct stat s; return 0; }
+Performing C SOURCE FILE Test EC_HAVE_STRUCT_STAT64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_18d7b/fast"
+/usr/bin/make -f CMakeFiles/cmTC_18d7b.dir/build.make CMakeFiles/cmTC_18d7b.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_18d7b.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_STRUCT_STAT64 -fPIE   -o CMakeFiles/cmTC_18d7b.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_18d7b
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_18d7b.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_STRUCT_STAT64    CMakeFiles/cmTC_18d7b.dir/src.c.o  -o cmTC_18d7b -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <sys/stat.h>
+int main(){ struct stat64 s; return 0; }
+Performing C SOURCE FILE Test EC_HAVE_STAT succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_60565/fast"
+/usr/bin/make -f CMakeFiles/cmTC_60565.dir/build.make CMakeFiles/cmTC_60565.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_60565.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_STAT -fPIE   -o CMakeFiles/cmTC_60565.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_60565
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_60565.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_STAT    CMakeFiles/cmTC_60565.dir/src.c.o  -o cmTC_60565 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/stat.h>
+int main(){ struct stat s;	stat("",&s); return 0; }
+Performing C SOURCE FILE Test EC_HAVE_STAT64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d3cf1/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d3cf1.dir/build.make CMakeFiles/cmTC_d3cf1.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d3cf1.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_STAT64 -fPIE   -o CMakeFiles/cmTC_d3cf1.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_d3cf1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d3cf1.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_STAT64    CMakeFiles/cmTC_d3cf1.dir/src.c.o  -o cmTC_d3cf1 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <sys/stat.h>
+int main(){ struct stat64 s; stat64("",&s); return 0; }
+Performing C SOURCE FILE Test EC_HAVE_FSTAT succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b4b29/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b4b29.dir/build.make CMakeFiles/cmTC_b4b29.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b4b29.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FSTAT -fPIE   -o CMakeFiles/cmTC_b4b29.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_b4b29
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b4b29.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FSTAT    CMakeFiles/cmTC_b4b29.dir/src.c.o  -o cmTC_b4b29 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/stat.h>
+int main(){ struct stat s; fstat(1,&s); return 0; }
+Performing C SOURCE FILE Test EC_HAVE_FSTAT64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_71ca6/fast"
+/usr/bin/make -f CMakeFiles/cmTC_71ca6.dir/build.make CMakeFiles/cmTC_71ca6.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_71ca6.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FSTAT64 -fPIE   -o CMakeFiles/cmTC_71ca6.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_71ca6
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_71ca6.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FSTAT64    CMakeFiles/cmTC_71ca6.dir/src.c.o  -o cmTC_71ca6 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <sys/stat.h>
+int main(){ struct stat64 s; fstat64(1,&s); return 0; }
+Performing C SOURCE FILE Test EC_HAVE_FSEEKO64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1271f/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1271f.dir/build.make CMakeFiles/cmTC_1271f.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1271f.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FSEEKO64 -fPIE   -o CMakeFiles/cmTC_1271f.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_1271f
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1271f.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FSEEKO64    CMakeFiles/cmTC_1271f.dir/src.c.o  -o cmTC_1271f -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <stdio.h>
+#include <sys/types.h>
+int main(){FILE* file;off64_t l=0;fseeko64(file,l,SEEK_CUR);return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_FTELLO64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_e1a80/fast"
+/usr/bin/make -f CMakeFiles/cmTC_e1a80.dir/build.make CMakeFiles/cmTC_e1a80.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e1a80.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FTELLO64 -fPIE   -o CMakeFiles/cmTC_e1a80.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_e1a80
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e1a80.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FTELLO64    CMakeFiles/cmTC_e1a80.dir/src.c.o  -o cmTC_e1a80 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <stdio.h>
+#include <sys/types.h>
+int main(){FILE* file;off64_t l = ftello64(file);return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_LSEEK64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d981b/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d981b.dir/build.make CMakeFiles/cmTC_d981b.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d981b.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_LSEEK64 -fPIE   -o CMakeFiles/cmTC_d981b.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_d981b
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d981b.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_LSEEK64    CMakeFiles/cmTC_d981b.dir/src.c.o  -o cmTC_d981b -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <sys/types.h>
+#include <unistd.h>
+int main(){off64_t h = lseek64(0,0,SEEK_SET);return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_OPEN64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b798a/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b798a.dir/build.make CMakeFiles/cmTC_b798a.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b798a.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_OPEN64 -fPIE   -o CMakeFiles/cmTC_b798a.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_b798a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b798a.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_OPEN64    CMakeFiles/cmTC_b798a.dir/src.c.o  -o cmTC_b798a -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <fcntl.h>
+int main(){int fd = open64("name",O_RDWR|O_CREAT,0777);return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_FOPEN64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_478b2/fast"
+/usr/bin/make -f CMakeFiles/cmTC_478b2.dir/build.make CMakeFiles/cmTC_478b2.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_478b2.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FOPEN64 -fPIE   -o CMakeFiles/cmTC_478b2.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_478b2
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_478b2.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FOPEN64    CMakeFiles/cmTC_478b2.dir/src.c.o  -o cmTC_478b2 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <stdio.h>
+int main(){FILE* file = fopen64("name","w");return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_FTRUNCATE64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_2a408/fast"
+/usr/bin/make -f CMakeFiles/cmTC_2a408.dir/build.make CMakeFiles/cmTC_2a408.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_2a408.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FTRUNCATE64 -fPIE   -o CMakeFiles/cmTC_2a408.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_2a408
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2a408.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FTRUNCATE64    CMakeFiles/cmTC_2a408.dir/src.c.o  -o cmTC_2a408 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <unistd.h>
+#include <sys/types.h>
+int main(){ftruncate64(0,(off64_t)0);return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_FLOCK64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_e43e1/fast"
+/usr/bin/make -f CMakeFiles/cmTC_e43e1.dir/build.make CMakeFiles/cmTC_e43e1.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e43e1.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FLOCK64 -fPIE   -o CMakeFiles/cmTC_e43e1.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_e43e1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e43e1.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FLOCK64    CMakeFiles/cmTC_e43e1.dir/src.c.o  -o cmTC_e43e1 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <fcntl.h>
+int main(){struct flock64 l;return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_MMAP64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_e39dd/fast"
+/usr/bin/make -f CMakeFiles/cmTC_e39dd.dir/build.make CMakeFiles/cmTC_e39dd.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e39dd.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_MMAP64 -fPIE   -o CMakeFiles/cmTC_e39dd.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_e39dd
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e39dd.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_MMAP64    CMakeFiles/cmTC_e39dd.dir/src.c.o  -o cmTC_e39dd -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <sys/mman.h>
+int main(){void* addr = mmap64(0,10,PROT_READ|PROT_WRITE,MAP_PRIVATE,10,0); return 0;}
+
+Performing C SOURCE FILE Test EC_HAVE_STRUCT_STATVFS succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b8fda/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b8fda.dir/build.make CMakeFiles/cmTC_b8fda.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b8fda.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_STRUCT_STATVFS -fPIE   -o CMakeFiles/cmTC_b8fda.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_b8fda
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b8fda.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_STRUCT_STATVFS    CMakeFiles/cmTC_b8fda.dir/src.c.o  -o cmTC_b8fda -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/statvfs.h>
+int main(){ struct statvfs v; }
+Performing C SOURCE FILE Test EC_HAVE_STRUCT_STATVFS64 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_2c75b/fast"
+/usr/bin/make -f CMakeFiles/cmTC_2c75b.dir/build.make CMakeFiles/cmTC_2c75b.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_2c75b.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_STRUCT_STATVFS64 -fPIE   -o CMakeFiles/cmTC_2c75b.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_2c75b
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2c75b.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_STRUCT_STATVFS64    CMakeFiles/cmTC_2c75b.dir/src.c.o  -o cmTC_2c75b -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _LARGEFILE64_SOURCE
+#include <sys/statvfs.h>
+int main(){ struct statvfs64 v; }
+Performing C SOURCE FILE Test EC_HAVE_FOPENCOOKIE succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_7b69e/fast"
+/usr/bin/make -f CMakeFiles/cmTC_7b69e.dir/build.make CMakeFiles/cmTC_7b69e.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_7b69e.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_FOPENCOOKIE -fPIE   -o CMakeFiles/cmTC_7b69e.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_7b69e
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7b69e.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_FOPENCOOKIE    CMakeFiles/cmTC_7b69e.dir/src.c.o  -o cmTC_7b69e -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _GNU_SOURCE
+#include <stdio.h>
+int main(){ void* cookie; const char* mode; cookie_io_functions_t iof; FILE* fopencookie(void *cookie, const char *mode, cookie_io_functions_t iof); }
+Determining if the fsync exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8b5a3/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8b5a3.dir/build.make CMakeFiles/cmTC_8b5a3.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8b5a3.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_8b5a3.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_8b5a3
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8b5a3.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_8b5a3.dir/CheckSymbolExists.c.o  -o cmTC_8b5a3 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <unistd.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fsync
+  return ((int*)(&fsync))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the fdatasync exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_51cfc/fast"
+/usr/bin/make -f CMakeFiles/cmTC_51cfc.dir/build.make CMakeFiles/cmTC_51cfc.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_51cfc.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_51cfc.dir/CheckSymbolExists.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTC_51cfc
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_51cfc.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_51cfc.dir/CheckSymbolExists.c.o  -o cmTC_51cfc -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+File /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <unistd.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fdatasync
+  return ((int*)(&fdatasync))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Performing C SOURCE FILE Test EC_HAVE_DIRFD succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8da0c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8da0c.dir/build.make CMakeFiles/cmTC_8da0c.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8da0c.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_DIRFD -fPIE   -o CMakeFiles/cmTC_8da0c.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_8da0c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8da0c.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_DIRFD    CMakeFiles/cmTC_8da0c.dir/src.c.o  -o cmTC_8da0c -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/types.h>
+#include <dirent.h>
+int main(){ DIR *dirp; int i = dirfd(dirp); }
+
+Performing C SOURCE FILE Test EC_HAVE_SYSPROCFS succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8cf3c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8cf3c.dir/build.make CMakeFiles/cmTC_8cf3c.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_8cf3c.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_SYSPROCFS -fPIE   -o CMakeFiles/cmTC_8cf3c.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_8cf3c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8cf3c.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_SYSPROCFS    CMakeFiles/cmTC_8cf3c.dir/src.c.o  -o cmTC_8cf3c -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/procfs.h>
+int main(){ return 0; }
+
+Performing C SOURCE FILE Test EC_HAVE_EXECINFO_BACKTRACE succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_c44de/fast"
+/usr/bin/make -f CMakeFiles/cmTC_c44de.dir/build.make CMakeFiles/cmTC_c44de.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c44de.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_EXECINFO_BACKTRACE -fPIE   -o CMakeFiles/cmTC_c44de.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_c44de
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c44de.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_EXECINFO_BACKTRACE    CMakeFiles/cmTC_c44de.dir/src.c.o  -o cmTC_c44de -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <unistd.h>
+#include <execinfo.h>
+ int main(){ void ** buffer; int i = backtrace(buffer, 256); }
+
+Performing C SOURCE FILE Test EC_HAVE_GMTIME_R succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_6f84c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_6f84c.dir/build.make CMakeFiles/cmTC_6f84c.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_6f84c.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_GMTIME_R -fPIE   -o CMakeFiles/cmTC_6f84c.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_6f84c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6f84c.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_GMTIME_R    CMakeFiles/cmTC_6f84c.dir/src.c.o  -o cmTC_6f84c -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <time.h>
+int main(){ time_t now; time(&now); struct tm t; gmtime_r(&now,&t); }
+
+Performing C SOURCE FILE Test EC_HAVE_GETPWUID_R succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_04610/fast"
+/usr/bin/make -f CMakeFiles/cmTC_04610.dir/build.make CMakeFiles/cmTC_04610.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_04610.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_GETPWUID_R -fPIE   -o CMakeFiles/cmTC_04610.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_04610
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_04610.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_GETPWUID_R    CMakeFiles/cmTC_04610.dir/src.c.o  -o cmTC_04610 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+int main(){ char buf[4096]; struct passwd pwbuf; struct passwd *pwbufp = 0; getpwuid_r(getuid(), &pwbuf, buf, sizeof(buf), &pwbufp); }
+
+Performing C SOURCE FILE Test EC_HAVE_GETPWNAM_R succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_db0a7/fast"
+/usr/bin/make -f CMakeFiles/cmTC_db0a7.dir/build.make CMakeFiles/cmTC_db0a7.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_db0a7.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_GETPWNAM_R -fPIE   -o CMakeFiles/cmTC_db0a7.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c: In function ‘main’:
+/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c:3:20: warning: null argument where non-null required (argument 5) [-Wnonnull]
+ int main(){ struct passwd p; char line[1024]; int n = getpwnam_r("user",&p,line,sizeof(line),0); }
+                    ^
+Linking C executable cmTC_db0a7
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_db0a7.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_GETPWNAM_R    CMakeFiles/cmTC_db0a7.dir/src.c.o  -o cmTC_db0a7 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <sys/types.h>
+#include <pwd.h>
+int main(){ struct passwd p; char line[1024]; int n = getpwnam_r("user",&p,line,sizeof(line),0); }
+
+Performing C SOURCE FILE Test EC_HAVE_READDIR_R succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_76bd3/fast"
+/usr/bin/make -f CMakeFiles/cmTC_76bd3.dir/build.make CMakeFiles/cmTC_76bd3.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_76bd3.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_READDIR_R -fPIE   -o CMakeFiles/cmTC_76bd3.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_76bd3
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_76bd3.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_READDIR_R    CMakeFiles/cmTC_76bd3.dir/src.c.o  -o cmTC_76bd3 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <dirent.h>
+int main(){ DIR *dirp; struct dirent *entry; struct dirent **result; int i = readdir_r(dirp, entry, result); }
+
+Performing C SOURCE FILE Test EC_HAVE_DIRENT_D_TYPE succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b1f78/fast"
+/usr/bin/make -f CMakeFiles/cmTC_b1f78.dir/build.make CMakeFiles/cmTC_b1f78.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b1f78.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_DIRENT_D_TYPE -fPIE   -o CMakeFiles/cmTC_b1f78.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_b1f78
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b1f78.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_DIRENT_D_TYPE    CMakeFiles/cmTC_b1f78.dir/src.c.o  -o cmTC_b1f78 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <dirent.h>
+int main(){ DIR *dirp; struct dirent *entry; if(entry->d_type) { dirp = 0; } }
+
+Performing C SOURCE FILE Test EC_HAVE_GETHOSTBYNAME_R succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d9cdd/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d9cdd.dir/build.make CMakeFiles/cmTC_d9cdd.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d9cdd.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_GETHOSTBYNAME_R -fPIE   -o CMakeFiles/cmTC_d9cdd.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_d9cdd
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d9cdd.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_GETHOSTBYNAME_R    CMakeFiles/cmTC_d9cdd.dir/src.c.o  -o cmTC_d9cdd -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <netdb.h>
+int main(){ const char *name; struct hostent *ret; char *buf; struct hostent **result; size_t buflen; int *h_errnop; int i = gethostbyname_r(name,ret,buf,buflen,result,h_errnop); }
+
+Performing C SOURCE FILE Test EC_HAVE_ATTRIBUTE_CONSTRUCTOR succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_4a94f/fast"
+/usr/bin/make -f CMakeFiles/cmTC_4a94f.dir/build.make CMakeFiles/cmTC_4a94f.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_4a94f.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_ATTRIBUTE_CONSTRUCTOR -fPIE   -o CMakeFiles/cmTC_4a94f.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_4a94f
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4a94f.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_ATTRIBUTE_CONSTRUCTOR    CMakeFiles/cmTC_4a94f.dir/src.c.o  -o cmTC_4a94f -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#include <stdio.h>
+static int argc_;static char** argv_;static char** envp_;
+int main(){printf("%d", argc_);}
+__attribute__ ((__constructor__)) static void before_main(int argc, char* argv[], char* envp[]){argc_ = argc;argv_ = argv;envp_ = envp;}
+
+Performing C SOURCE FILE Test EC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV succeded with the following compile output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_a3249/fast"
+/usr/bin/make -f CMakeFiles/cmTC_a3249.dir/build.make CMakeFiles/cmTC_a3249.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_a3249.dir/test_EC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV.c.o
+/usr/bin/cc    -pipe -DEC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV -fPIE   -o CMakeFiles/cmTC_a3249.dir/test_EC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckCSource/test_EC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV.c
+Linking C executable cmTC_a3249
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a3249.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV    CMakeFiles/cmTC_a3249.dir/test_EC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV.c.o  -o cmTC_a3249 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Performing C SOURCE FILE Run EC_ATTRIBUTE_CONSTRUCTOR_INITS_ARGV succeded with the following run output:
+1:0
+Return value: 
+Source file was:
+
+            #include <stdio.h>
+            #include <string.h>
+            int main(){return 0;}
+            __attribute__ ((__constructor__))
+            static void before_main(int argc, char* argv[], char* envp[])
+            {
+                printf("%d:%d",argc, strstr(argv[0],"cmTryCompileExec")?1:0);
+            }
+Performing C SOURCE FILE Test EC_HAVE_PROCFS succeded with the following compile output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_06826/fast"
+/usr/bin/make -f CMakeFiles/cmTC_06826.dir/build.make CMakeFiles/cmTC_06826.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_06826.dir/test_EC_HAVE_PROCFS.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_PROCFS -fPIE   -o CMakeFiles/cmTC_06826.dir/test_EC_HAVE_PROCFS.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CheckCSource/test_EC_HAVE_PROCFS.c
+Linking C executable cmTC_06826
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_06826.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_PROCFS    CMakeFiles/cmTC_06826.dir/test_EC_HAVE_PROCFS.c.o  -o cmTC_06826 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Performing C SOURCE FILE Run EC_HAVE_PROCFS succeded with the following run output:
+
+Return value: 
+Source file was:
+
+            #include <sys/types.h>
+            #include <dirent.h>
+            int main()
+            {
+                DIR* d = opendir("/proc");
+                if(d)
+                    return 0;
+                else
+                    return -1;
+            }
+Determining if files dlfcn.h exist passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_e458d/fast"
+/usr/bin/make -f CMakeFiles/cmTC_e458d.dir/build.make CMakeFiles/cmTC_e458d.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e458d.dir/CheckIncludeFiles.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_e458d.dir/CheckIncludeFiles.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFiles.c
+Linking C executable cmTC_e458d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e458d.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_e458d.dir/CheckIncludeFiles.c.o  -o cmTC_e458d -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Performing C SOURCE FILE Test EC_HAVE_DLADDR succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_28f7c/fast"
+/usr/bin/make -f CMakeFiles/cmTC_28f7c.dir/build.make CMakeFiles/cmTC_28f7c.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_28f7c.dir/src.c.o
+/usr/bin/cc    -pipe -DEC_HAVE_DLADDR -fPIE   -o CMakeFiles/cmTC_28f7c.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_28f7c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_28f7c.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DEC_HAVE_DLADDR    CMakeFiles/cmTC_28f7c.dir/src.c.o  -o cmTC_28f7c -rdynamic -ldl 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+#define _GNU_SOURCE
+#include <dlfcn.h>
+int main(){ void* addr; Dl_info info; dladdr(addr, &info); }
+
+Compiling the Fortran compiler identification source file "CMakeFortranCompilerId.F" succeeded.
+Compiler: /usr/bin/gfortran 
+Build flags: 
+Id flags: -v
+
+The output was:
+0
+Driving: /usr/bin/gfortran -v CMakeFortranCompilerId.F -l gfortran -l m -shared-libgcc
+Using built-in specs.
+COLLECT_GCC=/usr/bin/gfortran
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu 5.4.0-6ubuntu1~16.04.9' --with-bugurl=file:///usr/share/doc/gcc-5/README.Bugs --enable-languages=c,ada,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-5 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-5-amd64/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-5-amd64 --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-5-amd64 --with-arch-directory=amd64 --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) 
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-linux-gnu/5/f951 CMakeFortranCompilerId.F -ffixed-form -cpp=/tmp/ccx7nLfU.f90 -quiet -v -imultiarch x86_64-linux-gnu CMakeFortranCompilerId.F -quiet -dumpbase CMakeFortranCompilerId.F -mtune=generic -march=x86-64 -auxbase CMakeFortranCompilerId -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/5/finclude -o /tmp/ccNJo5sL.s
+GNU Fortran (Ubuntu 5.4.0-6ubuntu1~16.04.9) version 5.4.0 20160609 (x86_64-linux-gnu)
+	compiled by GNU C version 5.4.0 20160609, GMP version 6.1.0, MPFR version 3.1.4, MPC version 1.0.3
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/5/../../../../x86_64-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-linux-gnu/5/finclude
+ /usr/lib/gcc/x86_64-linux-gnu/5/include
+ /usr/local/include
+ /usr/lib/gcc/x86_64-linux-gnu/5/include-fixed
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+GNU Fortran2008 (Ubuntu 5.4.0-6ubuntu1~16.04.9) version 5.4.0 20160609 (x86_64-linux-gnu)
+	compiled by GNU C version 5.4.0 20160609, GMP version 6.1.0, MPFR version 3.1.4, MPC version 1.0.3
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ as -v --64 -o /tmp/ccrdL0aF.o /tmp/ccNJo5sL.s
+GNU assembler version 2.26.1 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.26.1
+Reading specs from /usr/lib/gcc/x86_64-linux-gnu/5/libgfortran.spec
+rename spec lib to liborig
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-linux-gnu/5/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper -plugin-opt=-fresolution=/tmp/ccrudaXy.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/ --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -z relro /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.. /tmp/ccrdL0aF.o -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/5/crtend.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o
+
+
+Compilation of the Fortran compiler identification source "CMakeFortranCompilerId.F" produced "a.out"
+
+The Fortran compiler identification is GNU, found in "/metfark/metfark/metfark/libeccodes/build/CMakeFiles/3.5.1/CompilerIdFortran/a.out"
+
+Determining if the Fortran compiler works passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_83025/fast"
+/usr/bin/make -f CMakeFiles/cmTC_83025.dir/build.make CMakeFiles/cmTC_83025.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building Fortran object CMakeFiles/cmTC_83025.dir/testFortranCompiler.f.o
+/usr/bin/gfortran    -fPIE   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/testFortranCompiler.f -o CMakeFiles/cmTC_83025.dir/testFortranCompiler.f.o
+Linking Fortran executable cmTC_83025
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_83025.dir/link.txt --verbose=1
+/usr/bin/gfortran       CMakeFiles/cmTC_83025.dir/testFortranCompiler.f.o  -o cmTC_83025  
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Detecting Fortran compiler ABI info compiled with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_a29a5/fast"
+/usr/bin/make -f CMakeFiles/cmTC_a29a5.dir/build.make CMakeFiles/cmTC_a29a5.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building Fortran object CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o
+/usr/bin/gfortran    -fPIE   -c /usr/share/cmake-3.5/Modules/CMakeFortranCompilerABI.F -o CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o
+Linking Fortran executable cmTC_a29a5
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a29a5.dir/link.txt --verbose=1
+/usr/bin/gfortran    -v   CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o  -o cmTC_a29a5   
+Driving: /usr/bin/gfortran -v CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o -o cmTC_a29a5 -l gfortran -l m -shared-libgcc
+Using built-in specs.
+COLLECT_GCC=/usr/bin/gfortran
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu 5.4.0-6ubuntu1~16.04.9' --with-bugurl=file:///usr/share/doc/gcc-5/README.Bugs --enable-languages=c,ada,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-5 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-5-amd64/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-5-amd64 --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-5-amd64 --with-arch-directory=amd64 --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) 
+Reading specs from /usr/lib/gcc/x86_64-linux-gnu/5/libgfortran.spec
+rename spec lib to liborig
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a29a5' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a29a5' '-shared-libgcc' '-mtune=generic' '-march=x86-64'
+ /usr/lib/gcc/x86_64-linux-gnu/5/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper -plugin-opt=-fresolution=/tmp/ccbf1di9.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/ --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -z relro -o cmTC_a29a5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.. CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/5/crtend.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Parsed Fortran implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_a29a5/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_a29a5.dir/build.make CMakeFiles/cmTC_a29a5.dir/build]
+  ignore line: [make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp']
+  ignore line: [Building Fortran object CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o]
+  ignore line: [/usr/bin/gfortran    -fPIE   -c /usr/share/cmake-3.5/Modules/CMakeFortranCompilerABI.F -o CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o]
+  ignore line: [Linking Fortran executable cmTC_a29a5]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a29a5.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/gfortran    -v   CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o  -o cmTC_a29a5   ]
+  ignore line: [Driving: /usr/bin/gfortran -v CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o -o cmTC_a29a5 -l gfortran -l m -shared-libgcc]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/gfortran]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper]
+  ignore line: [Target: x86_64-linux-gnu]
+  ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 5.4.0-6ubuntu1~16.04.9' --with-bugurl=file:///usr/share/doc/gcc-5/README.Bugs --enable-languages=c,ada,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-5 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-5-amd64/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-5-amd64 --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-5-amd64 --with-arch-directory=amd64 --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu]
+  ignore line: [Thread model: posix]
+  ignore line: [gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) ]
+  ignore line: [Reading specs from /usr/lib/gcc/x86_64-linux-gnu/5/libgfortran.spec]
+  ignore line: [rename spec lib to liborig]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a29a5' '-shared-libgcc' '-mtune=generic' '-march=x86-64']
+  ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/5/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/5/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_a29a5' '-shared-libgcc' '-mtune=generic' '-march=x86-64']
+  link line: [ /usr/lib/gcc/x86_64-linux-gnu/5/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper -plugin-opt=-fresolution=/tmp/ccbf1di9.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/ --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -z relro -o cmTC_a29a5 /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o -L/usr/lib/gcc/x86_64-linux-gnu/5 -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/5/../../.. CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/5/crtend.o /usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/5/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/ccbf1di9.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lquadmath] ==> ignore
+    arg [-plugin-opt=-pass-through=-lm] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [--sysroot=/] ==> ignore
+    arg [--build-id] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_x86_64] ==> ignore
+    arg [--hash-style=gnu] ==> ignore
+    arg [--as-needed] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+    arg [-zrelro] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_a29a5] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crt1.o] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crti.o] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/crtbegin.o] ==> ignore
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib]
+    arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+    arg [-L/lib/../lib] ==> dir [/lib/../lib]
+    arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+    arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/5/../../..] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../..]
+    arg [CMakeFiles/cmTC_a29a5.dir/CMakeFortranCompilerABI.F.o] ==> ignore
+    arg [-lgfortran] ==> lib [gfortran]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lquadmath] ==> lib [quadmath]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lc] ==> lib [c]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/crtend.o] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu/crtn.o] ==> ignore
+  remove lib [gcc_s]
+  remove lib [gcc]
+  remove lib [gcc_s]
+  remove lib [gcc]
+  remove lib [gcc_s]
+  remove lib [gcc]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5] ==> [/usr/lib/gcc/x86_64-linux-gnu/5]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../../../lib] ==> [/usr/lib]
+  collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+  collapse library dir [/lib/../lib] ==> [/lib]
+  collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/5/../../..] ==> [/usr/lib]
+  implicit libs: [gfortran;m;quadmath;m;c]
+  implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/5;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib]
+  implicit fwks: []
+
+
+Determining if the Fortran compiler supports Fortran 90 passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_dfadf/fast"
+/usr/bin/make -f CMakeFiles/cmTC_dfadf.dir/build.make CMakeFiles/cmTC_dfadf.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building Fortran object CMakeFiles/cmTC_dfadf.dir/testFortranCompilerF90.f90.o
+/usr/bin/gfortran    -fPIE   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/testFortranCompilerF90.f90 -o CMakeFiles/cmTC_dfadf.dir/testFortranCompilerF90.f90.o
+Linking Fortran executable cmTC_dfadf
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_dfadf.dir/link.txt --verbose=1
+/usr/bin/gfortran       CMakeFiles/cmTC_dfadf.dir/testFortranCompilerF90.f90.o  -o cmTC_dfadf  
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file pthread.h exists passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_769f2/fast"
+/usr/bin/make -f CMakeFiles/cmTC_769f2.dir/build.make CMakeFiles/cmTC_769f2.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_769f2.dir/CheckIncludeFile.c.o
+/usr/bin/cc    -pipe  -fPIE   -o CMakeFiles/cmTC_769f2.dir/CheckIncludeFile.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTC_769f2
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_769f2.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe     CMakeFiles/cmTC_769f2.dir/CheckIncludeFile.c.o  -o cmTC_769f2 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Determining if the function pthread_create exists in the pthread passed with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_9c098/fast"
+/usr/bin/make -f CMakeFiles/cmTC_9c098.dir/build.make CMakeFiles/cmTC_9c098.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_9c098.dir/CheckFunctionExists.c.o
+/usr/bin/cc    -pipe -DCHECK_FUNCTION_EXISTS=pthread_create -fPIE   -o CMakeFiles/cmTC_9c098.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.5/Modules/CheckFunctionExists.c
+Linking C executable cmTC_9c098
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9c098.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_9c098.dir/CheckFunctionExists.c.o  -o cmTC_9c098 -rdynamic -lpthread 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+
+Performing C SOURCE FILE Test C_FLAG_TEST_2 succeeded with the following output:
+Change Dir: /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_87fe5/fast"
+/usr/bin/make -f CMakeFiles/cmTC_87fe5.dir/build.make CMakeFiles/cmTC_87fe5.dir/build
+make[1]: Entering directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_87fe5.dir/src.c.o
+/usr/bin/cc    -pipe -DC_FLAG_TEST_2 -fPIE   -pedantic -o CMakeFiles/cmTC_87fe5.dir/src.c.o   -c /metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_87fe5
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_87fe5.dir/link.txt --verbose=1
+/usr/bin/cc   -pipe -DC_FLAG_TEST_2    CMakeFiles/cmTC_87fe5.dir/src.c.o  -o cmTC_87fe5 -rdynamic 
+make[1]: Leaving directory '/metfark/metfark/metfark/libeccodes/build/CMakeFiles/CMakeTmp'
+
+Source file was:
+int main(void) { return 0; }

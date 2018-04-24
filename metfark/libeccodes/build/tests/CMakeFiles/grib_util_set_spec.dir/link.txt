@@ -1,0 +1,1 @@
+/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/grib_util_set_spec.dir/grib_util_set_spec.c.o  -o grib_util_set_spec -rdynamic ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

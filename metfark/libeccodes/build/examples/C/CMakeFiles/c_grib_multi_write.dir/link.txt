@@ -1,0 +1,1 @@
+/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/c_grib_multi_write.dir/grib_multi_write.c.o  -o c_grib_multi_write -rdynamic ../../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

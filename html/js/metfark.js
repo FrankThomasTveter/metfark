@@ -2011,6 +2011,13 @@ function dataToPlot(data) {
 	var graphics=plots[ii].getAttribute("graphics");
 	var cat=plots[ii].getAttribute("cat");
 	plot_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,cat:cat};
+	colnames=[];
+	var cols=plots[ii].getElementsByTagName("column");
+	for (var jj = 0; jj < cols.length; jj++) {
+	    var name=cols[jj].getAttribute("name")||"";
+	    colnames.push(name);
+	    console.log("colname(",jj,")=",name);
+	};
 	var sets=plots[ii].getElementsByTagName("set");
 	console.log("metfark: loading plot file=",path," cat=",cat," sets=",sets.length);
 	for (var jj = 0; jj < sets.length; jj++) {
@@ -2018,12 +2025,14 @@ function dataToPlot(data) {
 	    var coloc=sets[jj].getAttribute("coloc");
 	    var legend=sets[jj].getAttribute("legend");
 	    var columns=[];
-	    var clmns=sets[jj].getElementsByTagName("column");
+	    var clmns=sets[jj].getElementsByTagName("col");
 	    for (var kk = 0; kk < clmns.length; kk++) {
-		var expr=clmns[kk].getAttribute("value");
+		var expr=clmns[kk].getAttribute("value")||"";
 		columns.push(expr);
+		console.log("colname(",kk,"):",colnames[kk],"->",columns[kk]);
 	    };
 	    plot_config[path]["dataset"][name]={coloc:coloc,
+						colnames:colnames,
 						columns:columns,
 						legend:legend};
 	}
@@ -2084,10 +2093,10 @@ function dataToCat(data) {
 	     //console.log("metfark: loaded line: ",name,id,info);
 	 };
 	var clmns=cats[jj].getElementsByTagName("column");
-	if (clmns.length>0) {plot_org_cats[name]["columns"]=[];}
+	if (clmns.length>0) {plot_org_cats[name]["colnames_"]=[];}
 	 for (var kk = 0; kk < clmns.length; kk++) {
 	     var clmn=clmns[kk].getAttribute("name");
-	     plot_org_cats[name]["columns"].push(clmn);
+	     plot_org_cats[name]["colnames_"].push(clmn);
 	     console.log("metfark: loaded column: ",name,clmn);
 	 };
     };

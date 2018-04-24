@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_grib_copy_namespace_condition TRUE)
+  else()
+    set(_eccodes_f_grib_copy_namespace_condition FALSE)
+  endif()

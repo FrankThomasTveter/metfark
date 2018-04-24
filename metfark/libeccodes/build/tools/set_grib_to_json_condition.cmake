@@ -1,0 +1,5 @@
+  if(  ECCODES_INSTALL_EXTRA_TOOLS )
+    set(_grib_to_json_condition TRUE)
+  else()
+    set(_grib_to_json_condition FALSE)
+  endif()

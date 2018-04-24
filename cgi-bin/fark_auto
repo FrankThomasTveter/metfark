@@ -6,7 +6,7 @@
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=meps_syno_003d.cfg&debug=1'
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=meps_temp_030d.cfg&debug=1'
 
-./fark_auto.pl '?root=auto.cfg&password=fark&type=coloc&file=meps_temp_test.cfg&debug=1'
+./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=meps_temp_002d.cfg&debug=1'
 
 
 #wget --tries=1 -O - "http://localhost/cgi-bin/fark_auto.pl?root=auto.cfg&password=&type=plot&file=meps_syno_365d.cfg;debug=1"

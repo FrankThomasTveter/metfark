@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/metfark/metfark/metfark/libeccodes/build/eccodes-2.7.0-Source/examples/C/get_product_kind.c
+eccodes.h
+/metfark/metfark/metfark/libeccodes/build/eccodes-2.7.0-Source/examples/C/eccodes.h
+
+eccodes-2.7.0-Source/src/eccodes.h
+grib_api.h
+eccodes-2.7.0-Source/src/grib_api.h
+
+eccodes-2.7.0-Source/src/eccodes_windef.h
+
+eccodes-2.7.0-Source/src/grib_api.h
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+sys/types.h
+-
+eccodes_windef.h
+eccodes-2.7.0-Source/src/eccodes_windef.h
+sys/time.h
+-
+math.h
+-
+eccodes_version.h
+eccodes-2.7.0-Source/src/eccodes_version.h
+
+src/eccodes_version.h
+

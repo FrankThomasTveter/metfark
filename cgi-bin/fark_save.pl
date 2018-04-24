@@ -565,7 +565,7 @@ sub savePlot {
 			    $parent->setAttribute("legend",$items[2]);
 			    my $ii=3;
 			    while ($ii < $len) {
-				my $child = XML::LibXML::Element->new( 'column' );
+				my $child = XML::LibXML::Element->new( 'col' );
 				$child->setAttribute("value",$items[$ii]);
 				$parent->addChild( $child );
 				$ii++;

@@ -5,6 +5,8 @@ fark.xs
 ppport.h
 README
 t/fark.t
+lib/libeccodes.a
+lib/libeccodes_f90.a
 lib/libbufr.a
 lib/libbufrc.a
 lib/libmodel.a

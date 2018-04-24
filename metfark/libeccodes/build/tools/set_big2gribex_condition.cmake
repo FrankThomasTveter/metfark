@@ -1,0 +1,5 @@
+  if(  ECCODES_INSTALL_EXTRA_TOOLS )
+    set(_big2gribex_condition TRUE)
+  else()
+    set(_big2gribex_condition FALSE)
+  endif()

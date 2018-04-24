@@ -2,6 +2,7 @@ plot_file = "default.cfg";
 plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
 						   coloc:"coloc", 
 						   legend:"legend",
+						   colnames:["X-expression","Y-expression"],
 						   columns:["x","y"]
 						  }},
 				  attributes : { def: "default"},
@@ -11,10 +12,10 @@ plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
 				  password: "test"
 				}
 	      };
-plot_org_cats = { "Text": {"attributes":{xlabel:"X", ylabel:"Y"},
-		       "order":["xlabel","ylabel"],
-		       "lines": {1:"solid"},
-                       "columns" : ["X-expression","Y-expression"]}
+plot_org_cats = { "Text": {attributes : {xlabel:"X", ylabel:"Y"},
+	  		   order : ["xlabel","ylabel"],
+			   lines : {1:"solid"},
+			   colnames_ : ["X-expression","Y-expression"]}
 	    };
 plot_cats  ={};
 plot_order =["Text"];
@@ -108,24 +109,24 @@ function plot_expandCat(cat) {
 			plot_cats[cat]["order"].splice(index,0,newattr);
 		    }
 		} else {
-		    //console.log("Attribute mismatch '"+aa+"' != '"+attr+"'");
+		    //console.log("Attribute no match '"+aa+"' != '"+attr+"'");
 		}
 	    }
-	    for (var jj = 0; jj <  plot_cats[cat]["columns"].length;jj++) {
-		var cc=plot_cats[cat]["columns"][jj];
+	    for (var jj = 0; jj <  plot_cats[cat]["colnames_"].length;jj++) {
+		var cc=plot_cats[cat]["colnames_"][jj];
 		if (cc.match(re)) {
 		    // delete cc column
 		    console.log("Column match '"+cc+"' == '"+attr+"'");
-		    var index = plot_cats[cat]["columns"].indexOf(cc);
-		    plot_cats[cat]["columns"].splice(index, 1);
+		    var index = plot_cats[cat]["colnames_"].indexOf(cc);
+		    plot_cats[cat]["colnames_"].splice(index, 1);
 		    for (var ii=nn;ii>0;ii--) {
 			var newcol = cc.replace(re, '$1'+ii.toString()+'$2');
-			console.log("Adding column '"+newattr+"'");
+			console.log("Adding column '"+newcol+"'");
 			// add column
-			plot_cats[cat]["columns"].splice(index,0,newcol);
+			plot_cats[cat]["colnames_"].splice(index,0,newcol);
 		    }
 		}else {
-		    console.log("Column mismatch '"+cc+"' != '"+attr+"'");
+		    //console.log("Column no match '"+cc+"' != '"+attr+"'");
 		}
 	    }
 	}
@@ -192,6 +193,7 @@ function plot_setDataset(target,parameter,value) {
 function plot_setDatasetColumn(target,parameter,value) {
     var file=plot_getConfigFile();
     if (plot_config[file]["dataset"][target] == undefined) {
+	plot_config[file]["dataset"]["colnames"][target]={};
 	plot_config[file]["dataset"]["columns"][target]={};
     }
     plot_config[file]["dataset"][target][parameter]=value;
@@ -241,28 +243,28 @@ function plot_newDataset() {
     var set=document.getElementById("plotSet");
     var coloc=document.getElementById("plotColoc");
     var legend=document.getElementById("plotLegend");
-    var clmns=plot_cats[cat]["columns"];
-    var columns=[];
-    for (var ii =0; ii< clmns.length;ii++) {
+    var colnames_=plot_cats[cat]["colnames_"];
+    var clmns=[];
+    for (var ii =0; ii< colnames_.length;ii++) {
 	var itemId="plotExpression"+(ii);
 	console.log("newDataset, cleaning:",ii,itemId);
 	var item=document.getElementById(itemId);
 	if (item !== undefined && item !== null) {
-	    columns.push(item.value);
+	    clmns.push(item.value);
 	    item.value="";
 	} else {
 	    console.log("NewDataset: Undefined itemId:",itemId);
 	}
     }
     fark_last["coloc"]=coloc.value;
-    console.log("New: trg:",set.value," file:",coloc.value," columns:",columns," leg:",legend.value);
+    console.log("New: trg:",set.value," file:",coloc.value," columns:",clmns," leg:",legend.value);
     if (set.value !== "" && coloc.value !== "") {
 	if (plot_config[file] === undefined) {
 	    plot_config[file]={dataset : {},
 			       attributes : {},
 			       password: ""};
 	};
-	plot_config[file]["dataset"][set.value]={coloc:coloc.value,columns:columns,legend:legend.value};
+	plot_config[file]["dataset"][set.value]={coloc:coloc.value,colnames:colnames_,columns:clmns,legend:legend.value};
 
 	set.value="";
 	coloc.value="";
@@ -277,6 +279,7 @@ function plot_removeDataset(set) {
     var cat =plot_config[file]["cat"];
     var type=plot_cats[plot_config[file]["cat"]]["lines"][set]||"";
     var coloc=plot_config[file]["dataset"][set]["coloc"];
+    var colnames=plot_config[file]["dataset"][set]["colnames"];
     var columns=plot_config[file]["dataset"][set]["columns"];
     var legend=plot_config[file]["dataset"][set]["legend"];
     delete plot_config[file]["dataset"][set];
@@ -285,8 +288,8 @@ function plot_removeDataset(set) {
     document.getElementById("plotType").value=type;
     document.getElementById("plotColoc").value=coloc;
     document.getElementById("plotLegend").value=legend;
-    var clmns=plot_cats[cat]["columns"];
-    for (var ii =0; ii< clmns.length;ii++) {
+    var colnames_=plot_cats[cat]["colnames_"];
+    for (var ii =0; ii< colnames_.length;ii++) {
 	var itemId="plotExpression"+(ii);
 	var item=document.getElementById(itemId);
 	if (item !== null && item !== undefined) {
@@ -308,33 +311,43 @@ function plot_saveConfigFile() {
     var table=plot_config[file]["table"];
     var graphics=plot_config[file]["graphics"];
     var cat=plot_config[file]["cat"];
-    var cols=plot_cats[cat]["columns"];
+    var colnames_=plot_cats[cat]["colnames_"];
     var plotCols="";
-    for (var ii =0; ii< cols.length;ii++) {
+    for (var ii =0; ii< colnames_.length;ii++) {
 	if (plotCols.length==0) {
-	    plotCols=cols[ii];
+	    plotCols=colnames_[ii];
 	} else {
-	    plotCols=plotCols+"~"+cols[ii];
+	    plotCols=plotCols+"~"+colnames_[ii];
 	}
     }
     var plotSets="";
     var sets=plot_config[file]["dataset"];
     for (var set in sets) {
+	var colnames=sets[set]["colnames"];
+	var columns=sets[set]["columns"];
+	var panick ={};
+	for (var ii =0; ii< colnames.length;ii++) {
+	    panick[colnames]=columns[ii]||0;
+	};
 	var coloc=sets[set]["coloc"];
-	var columns="";
-	for (var ii =0; ii< cols.length;ii++) {
+	var clmns="";
+	for (var ii =0; ii< colnames_.length;ii++) {
 	    var expr;
-	    if (sets[set]["columns"] !== undefined) {
-		expr = sets[set]["columns"][ii]||"0";
+	    if (columns !== undefined) {
+		if (colnames_[ii] == colnames[ii]) {
+		    expr = columns[ii]||"0";
+		} else {
+		    expr = panick[colnames_[ii]]||0;
+		}
 	    } else {
 		expr = "0";
 	    }
-	    columns=columns + expr + "~";
+	    clmns=clmns + expr + "~";
 	}
 	var legend=sets[set]["legend"];
 	if (coloc === undefined) {coloc="";}
 	if (legend === undefined) {legend="";}
-	plotSets=plotSets + "|" + set + "~" + coloc + "~" + legend + "~" + columns;
+	plotSets=plotSets + "|" + set + "~" + coloc + "~" + legend + "~" + clmns;
     };
     var plotAttrs="";
     var order=plot_cats[cat]['order'];
@@ -366,21 +379,27 @@ function plot_saveConfigFile() {
 };
 // Transposed function...
 function plot_showDatasetTable() {
+    console.log(":::::::::: showDatasetTable");
     var file=plot_getConfigFile();
-    var data={};
     var cat=plot_config[file]["cat"];
-    var clmns=plot_cats[cat]["columns"];
+    var colnames_=plot_cats[cat]["colnames_"];
     // make column headers
     var type=[1,2,3,4,5];
     var col1=["Action","Id","Set","Colocation file","Legend"];
-    for (var ii =0; ii< clmns.length;ii++) {
-	col1.push(plot_cats[cat]["columns"][ii]);
+    for (var ii =0; ii< colnames_.length;ii++) {
+	col1.push(plot_cats[cat]["colnames_"][ii]);
 	type.push(6); //offset starts with first "6"
     }
     // make data expressions
     var data=[];
     var sets=plot_config[file]["dataset"];
     for (var set in sets) {
+	var colnames=sets[set]["colnames"];
+	var columns=sets[set]["columns"];
+	var panick ={};
+	for (var ii =0; ii< colnames.length;ii++) {
+	    panick[colnames[ii]]=columns[ii]||0;
+	};
 	var item=[-1,
 		  set,
 		  plot_cats[cat]["lines"][set]||"",
@@ -388,16 +407,25 @@ function plot_showDatasetTable() {
 		  sets[set]["legend"]
 		 ];
 	fark_last["coloc"]=sets[set]["coloc"];
-	for (var ii =0; ii< clmns.length;ii++) {
+	for (var ii =0; ii< colnames_.length;ii++) {
 	    var expr;
-	    if (sets[set]["columns"] !== undefined) {
-		expr = sets[set]["columns"][ii]||"0";
+	    if (columns !== undefined) {
+		if (colnames[ii]=="") { colnames[ii]=colnames_[ii];};
+		if (colnames_[ii] == colnames[ii]) {
+		    expr = columns[ii]||"0";
+		} else {
+		    expr = panick[colnames_[ii]]||0;
+		    colnames[ii]=colnames_[ii];
+		    columns[ii]=expr;
+		}
 	    } else {
 		expr = "0";
 	    }
 	    item.push(expr);
 	};
 	data.push(item);
+	sets[set]["colnames"]=colnames;
+	sets[set]["columns"]=columns;
     }
     var item=document.getElementById('plotDatasetTable');
     var tbody=removeTableChildren(item);
@@ -444,6 +472,7 @@ function plot_insertItem(row,type,data,jj,ii,offset) {
 	td.appendChild(btn);
 	row.appendChild(td);
     } else {
+	console.log("insertItem Inserting:",jj,ii,data[[jj]][[ii]]);
 	td=document.createElement("TD");
 	td.innerHTML=data[[jj]][[ii]];
 	row.appendChild(td);

@@ -24,6 +24,7 @@
 # Column=obs_id
 # Column=lat_deg
 # Column=lon_deg
+# Column=altitude_meter
 # Column=model_variable_n
 # Column=obs_variable_n
 #
@@ -31,59 +32,78 @@
 #
 library(farkRPackage);
 
-args <- getArguments(); 
-tablefile <- args[0];
-prefix <- args[1];
-suffix = attr$Suffix;
+print (paste("################### starting script #####################"));
 
-legs <- readComments(tablefile,"LEGENDS");
+args <- getArguments(); 
+tablefile = args[1];
+prefix = args[2];
+
+leg <- readComments(tablefile,"LEGENDS");
 attr <- readComments(tablefile,"ATTRIBUTES");
 cols <- readComments(tablefile,"COLUMNS");
 data <- readData(tablefile);
 
-# mountain data
-mnt_id <- c("22522","2981","2741","2773");
-mnt_name = "Mountain stations";
-mnt_data <- data[data%obs_id %in% mnt_id,];
+suffix = attr["Suffix",];
 
-# coastal data
-coast_id <- c("2758","2794","2949","2983");
-coast_name = "Coastal stations";
-coast_data <- data[data%obs_id %in% coast_id,];
+setcol  = "set";
+refcol  = "cycle_epoch";
+timecol = "time_epoch";
+idcol   = "obs_id";
+altcol  = "altitude_meter";
 
-# thinned data
-set.seed(1);
-thin_n = min(c(1000,nrow(data)));
-thin_name = "Thinned data";
-thin_data <- sample(data,thin_n, replace=TRUE)
+print (data[1,]);
 
-for (ii in 1:attr$_n) {
+#thres = attr["geopotential_threshold",];
+thres = 20; # ~20 meter threshold for high/low stations 
+n <- norwegian(data,idcol);
+nl <- below(data,altcol,thres,n);
+nh <- above(data,altcol,thres,n);
 
- name=attr[,get(paste0("name",ii)];
- title=attr[,get(paste0("title",ii)];
- label=attr[,get(paste0("label",ii)];
- refcol="cycle_epoch";
- timecol="time_epoch";
- obscol=paste0("obs_value",ii);
- modcol=paste0("model_value",ii);
- obslabel=paste("observation",label);
- modlabel=paste("model",label);
+for (ii in 1:attr["_n",]) {
 
- scattfile=paste0(prefix,name,"_scatter",suffix);
- print(paste0("Processing '",scattfile,"'"));
- scatterPlot(scattfile,attr,legs,thin_data,title,setcol,obscol,modcol,obslabel,modlabel);
+    file=attr[paste0("file_string",ii),];
+    title=attr[paste0("title_string",ii),];
+    label=attr[paste0("axis_string",ii),];
+    obscol=paste0("obs_variable",ii);
+    modcol=paste0("model_variable",ii);
+    obslabel=paste("observed",label);
+    modlabel=paste("modelled",label);
+    
+    ;# score plot
+    scorefile=paste0(prefix,file,"_score",suffix);
+    print(paste0("Processing '",scorefile,"'"));
+    scorePlot(scorefile,attr,leg,data,title,setcol,refcol,
+              timecol,idcol,altcol,modcol,obscol,label,
+              "Norwegian highland",nh,"Norwegian lowland",nl);
+    
+    ;# series plot
+    seriesfile=paste0(prefix,file,"_series",suffix);
+    print(paste0("Processing '",seriesfile,"'"));
+    seriesPlot(seriesfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
+               altcol,modcol,obscol,label,
+              "Norwegian highland",nh,"Norwegian lowland",nl);
 
- seriesfile=paste0(prefix,name,"_series",suffix);
- print(paste0("Processing '",seriesfile,"'"));
- seriesPlot(seriesfile,attr,legs,data,title,setcol,timecol,modcol,obscol,label);
+    ;# scatter plot
+    scattfile=paste0(prefix,file,"_scatter",suffix);
+    print(paste0("Processing '",scattfile,"'"));
+    scatterPlot(scattfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
+                altcol,obscol,modcol,obslabel,modlabel,
+                "Norwegian highland",nh,"Norwegian lowland",nl);
 
- scorefile=paste0(prefix,name,"_score",suffix);
- print(paste0("Processing '",scorefile,"'"));
- scorePlot(seriesfile,attr,legs,data,title,setcol,refcol,timecol,modcol,obscol,label);
+    ;# histogram plot
+    histfile=paste0(prefix,file,"_hist",suffix);
+    print(paste0("Processing '",histfile,"'"));
+    histPlot(histfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
+             altcol,modcol,obscol,label,
+             "Norwegian highland",nh,"Norwegian lowland",nl);
 
- histfile=paste0(prefix,name,"_hist",suffix);
- print(paste0("Processing '",histfile,"'"));
- histPlot(histfile,attr,legs,data,title,setcol,refcol,timecol,modcol,obscol,label);
-
+    ;# profile plot
+    proffile=paste0(prefix,file,"_prof",suffix);
+    print(paste0("Processing '",proffile,"'"));
+    profilePlot(proffile,attr,leg,data,title,setcol,refcol,timecol,idcol,
+             "altitude (m)",altcol,"ascending",modcol,obscol,label,
+             "Norwegian highland",nh,"Norwegian lowland",nl);
 }
+
+#warnings();
 

@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_bufr_read_tropical_cyclone_condition TRUE)
+  else()
+    set(_eccodes_f_bufr_read_tropical_cyclone_condition FALSE)
+  endif()

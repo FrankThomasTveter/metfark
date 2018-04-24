@@ -1,0 +1,5 @@
+  if(  HAVE_PNG )
+    set(_eccodes_t_grib_png_condition TRUE)
+  else()
+    set(_eccodes_t_grib_png_condition FALSE)
+  endif()

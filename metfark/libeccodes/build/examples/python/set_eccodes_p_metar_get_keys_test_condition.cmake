@@ -1,0 +1,5 @@
+  if(  HAVE_PYTHON )
+    set(_eccodes_p_metar_get_keys_test_condition TRUE)
+  else()
+    set(_eccodes_p_metar_get_keys_test_condition FALSE)
+  endif()

@@ -1,0 +1,5 @@
+  if(  ENABLE_EXTRA_TESTS )
+    set(_eccodes_t_grib_check_param_concepts_condition TRUE)
+  else()
+    set(_eccodes_t_grib_check_param_concepts_condition FALSE)
+  endif()

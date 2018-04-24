@@ -1,0 +1,5 @@
+  if(  HAVE_NETCDF )
+    set(_grib_to_netcdf_condition TRUE)
+  else()
+    set(_grib_to_netcdf_condition FALSE)
+  endif()

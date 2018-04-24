@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_grib_get_keys_condition TRUE)
+  else()
+    set(_eccodes_f_grib_get_keys_condition FALSE)
+  endif()

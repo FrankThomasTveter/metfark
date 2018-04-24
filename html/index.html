@@ -26,7 +26,7 @@
 	    <tr style="background:#09C;">
 	      <td>
 		<div id="farkModel">
-		  <button class="request" style="width:100%" onclick="model_updateData()" title="Re-load from server."><h1>Model setup</h1></button>
+		  <button class="request" style="width:100%" onclick="model_updateData()" title="Re-load from server."><h1>Model index</h1></button>
 		</div>
 	      </td>
 	    </tr>
@@ -103,7 +103,7 @@
 	    <tr style="background:#09C;">
 	      <td>
 		<div id="farkObs">
-		  <button class="request" style="width:100%" onclick="obs_updateData()" title="Re-load from server."><h1>Observation setup</h1></button>
+		  <button class="request" style="width:100%" onclick="obs_updateData()" title="Re-load from server."><h1>Observation index</h1></button>
 		</div>
 	      </td>
 	    </tr>
@@ -249,7 +249,7 @@
 	      <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('colocConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td>Model setup file:</td>
+	      <td>Model index file:</td>
 	      <td class="fill" colspan="2" width="100%">
 		<input id="colocModelConfigFile" type="text" value="" style="width:100%" disabled /> 
 		<div id="colocModelConfigFileDropdown" class="dropdown-content"></div>
@@ -257,7 +257,7 @@
 	      <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('colocModelConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td>Observation setup file:</td>
+	      <td>Observation index file:</td>
 	      <td width="100%" colspan="2" class="fill">
 		<input id="colocObsConfigFile" type="text" value="" style="width:100%" disabled/> 
 		<div id="colocObsConfigFileDropdown" class="dropdown-content"></div>
@@ -460,7 +460,7 @@
 	      <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('plotTable',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td style="white-space: nowrap;">Output graphics file:</td>
+	      <td style="white-space: nowrap;">Output prefix:</td>
 	      <td class="fill" width="100%" colspan="5">
 		<input id="plotGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="plot_setArray('graphics',this.value);"/> 
 		<div id="plotGraphicsDropdown" class="dropdown-content"></div>

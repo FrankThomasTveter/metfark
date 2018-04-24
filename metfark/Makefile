@@ -11,7 +11,7 @@
 ORDER = libxml libparse libsort libobs libmod libcoloc libplot
 #
 # A list of the files or directories that should not be 'made'
- STATIC = ice bufrtables fark CVS doc scr ice jnk hints.txt build
+ STATIC = libeccodes fark metfark bufrtables build jnk ice
 #
 #.IGNORE:
 #

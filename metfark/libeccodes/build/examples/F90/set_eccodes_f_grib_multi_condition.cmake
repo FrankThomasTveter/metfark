@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_grib_multi_condition TRUE)
+  else()
+    set(_eccodes_f_grib_multi_condition FALSE)
+  endif()

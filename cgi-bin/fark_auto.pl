@@ -26,8 +26,8 @@ print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;       # debug this script (0=omit output)
-    #fark::debug(1);  # debug observations
-    #fark::debug(2);  # debug models
+    fark::debug(1);  # debug observations
+    fark::debug(2);  # debug models
     fark::debug(3);  # debug colocation
     fark::debug(4);  # debug plot
     #fark::debug(5);  # debug parse
@@ -203,7 +203,7 @@ sub loopCls {
     my $clsLogDir=  farkdir::getRootDir($cls."_log") || 
 	farkdir::term("Invalid root directory (".$cls."_log)");
     #
-    foreach my $clsfile (keys %{$clsr}) {
+    foreach my $clsfile (sort keys %{$clsr}) {
 	my $cmd="";
 	my $xmlfile=$clsDir . $clsfile;
 	# check logfile
@@ -685,7 +685,7 @@ sub processPlot {
 	    # push columns
 	    if($debug){print "Setting columns.\n";};
 	    $fark->clearPlotColumn();
-	    my @colv=$trg->findnodes("column");
+	    my @colv=$trg->findnodes("col");
 	    for ( my $i = 0; $i < @cols; $i++) {
 		my $nam=$cols[$i]->getAttribute("name");
 		my $val=$colv[$i]->getAttribute("value");
@@ -703,15 +703,24 @@ sub processPlot {
     my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
     my $fpath=$root . $loc . $cat;
     if($debug){print "****** Make table\n";}
-    my ($tablefile, $plotfile) = $fark->makePlotTable($table,$graphics,$fpath,$test,$clsFillFile); 
+    my ($troot, $tloc, $tpriv) = farkdir::splitPattern( $table, "output" );
+    if ($tpriv ne "rw") {
+	farkdir::term("$myname Permission denied for output: $table $tpriv");
+    }
+    my ($groot, $gloc, $gpriv) = farkdir::splitPattern( $graphics, "output" );
+    if ($gpriv ne "rw") {
+	farkdir::term("$myname Permission denied for output: $graphics $gpriv");
+    }
+    my ($tablefile, $gprefix) = $fark->makePlotTable($table,$graphics,$fpath,$test,$clsFillFile); 
     #
-    if($debug){print "****** Make graphics '$tablefile' '$plotfile'\n";}
-    my $cmd="Rscript --vanilla $fpath $tablefile $plotfile $test";
-    if($debug){print "Not executing '$cmd'\n";}
-    #eval {
-    #	system $cmd; # The system command may exit, in which case it is catched by the higher level sandbox...
-    #}
+    # make sure output directory exists (done in script)
+    # my ($dir,$name)=farkdir::splitName($gprefix);
+    # farkdir::makePath($dir);# || farkdir::term("$myname unable to make: $dir"); 
     #
+    if($debug){print "****** Make graphics '$tablefile' '$gprefix'\n";}
+    my $cmd="Rscript --vanilla $fpath $tablefile $gprefix $test";
+    ##if($debug){print "Executing '$cmd'\n";}
+    eval {system $cmd;}; # The system command may exit, in which case it is catched by the higher level sandbox...
     $fark->close();
     if($debug){print "processPlot Exiting.\n";}
     return $cmd;

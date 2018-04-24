@@ -1,0 +1,5 @@
+  if(  HAVE_FORTRAN )
+    set(_eccodes_f_new_from_file_condition TRUE)
+  else()
+    set(_eccodes_f_new_from_file_condition FALSE)
+  endif()
