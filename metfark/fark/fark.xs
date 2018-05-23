@@ -52,6 +52,9 @@ void col_makexml_(int* cid, int* mid, int* oid, char* xml250, int* test,char* fi
 void col_setxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 
+void par_setshapefile_(char* fn250, char* cname11, char* crc250, int* irc, int len1, int len2, int len3);
+void par_clearshapefile_(char* crc250, int* irc, int len1);
+
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
 void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
 void plo_maketable_(int* pid, int* cid, int* mid, int* oid, char* tab250, char* gra250,char* cat250,int* test,char* fill250,char*  crc250, int* irc, int len1, int len2, int len3, int len4, int len5);
@@ -1415,6 +1418,64 @@ xs_getColocXMLFile(int pid);
       PUSHs(sv_2mortal(newSVpv(fn250,strlen(fn250))));
       free(fn250);
       free(crc250);
+
+#
+#  "setShapefile" defines output file type (r-script name)
+#      (string) type.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setShapeFile(char *fn, char *cn);
+    PREINIT:
+      char *fn250;
+      char *cn11;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      fn250 = calloc(sizeof(char), 250);
+      cn11 = calloc(sizeof(char), 11);
+      strcpy(crc250,"");
+      strcpy(fn250,fn);
+      strcpy(cn11,cn);
+      par_setshapefile_(fn250, cn11, crc250, &irc, 250, 11, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(cn11);
+      free(fn250);
+      free(crc250);
+
+#
+#  "clearShapefile" clear shape file memory
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_clearShapeFile();
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      par_clearshapefile_(crc250, &irc, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
 
 #
 #  "makeColocXML" make colocation XML file

@@ -604,30 +604,16 @@ CONTAINS
        deallocate(css%firstLoc,css%lastLoc)
     end if
     !
-    if(mod_bdeb)write(*,*)myname,'Un-Trg.'
+    if(mod_bdeb)write(*,*)myname,'Un-Trg and Un-MPO.'
     ! remove target stack
-    if (associated(css%trg80)) deallocate(css%trg80)
-    if (associated(css%trg_lent)) deallocate(css%trg_lent)
-    if (associated(css%trg_v80)) deallocate(css%trg_v80)
-    if (associated(css%trg_lenv)) deallocate(css%trg_lenv)
-    if (associated(css%trg_offset)) deallocate(css%trg_offset)
-    if (associated(css%trg_dim)) deallocate(css%trg_dim)
-    if (associated(css%trg_var)) deallocate(css%trg_var)
-    if (associated(css%trg_type)) deallocate(css%trg_type)
-    if (associated(css%trg_min80)) deallocate(css%trg_min80)
-    if (associated(css%trg_max80)) deallocate(css%trg_max80)
-    if (associated(css%trg_minval)) deallocate(css%trg_minval)
-    if (associated(css%trg_maxval)) deallocate(css%trg_maxval)
-    if (associated(css%trg_sliceset)) deallocate(css%trg_sliceset)
-    if (associated(css%trg_valset)) deallocate(css%trg_valset)
-    if (associated(css%trg_minset)) deallocate(css%trg_minset)
-    if (associated(css%trg_maxset)) deallocate(css%trg_maxset)
-    if (associated(css%trg_req)) deallocate(css%trg_req)
-    if (associated(css%trg_vok)) deallocate(css%trg_vok)
-    if (associated(css%trg_val)) deallocate(css%trg_val)
-    if (associated(css%trg_ook)) deallocate(css%trg_ook)
-    if (associated(css%trg_orm)) deallocate(css%trg_orm)
-    css%trg_set=.false.
+    call model_cleartargetlist(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from cleartargetlist.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     if (associated(css%firstTrg)) then
        ctrg => css%firstTrg%next
        do while (.not.associated(ctrg,target=css%lastTrg))
@@ -667,13 +653,6 @@ CONTAINS
           return
        end if
     end if
-    !
-    if(mod_bdeb)write(*,*)myname,'Un-MPO.'
-    if (allocated(css%mpo_var)) deallocate(css%mpo_var)
-    if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
-    if (allocated(css%mpo_req)) deallocate(css%mpo_req)
-    if (allocated(css%mpo_vok)) deallocate(css%mpo_vok)
-    if (allocated(css%mpo_val)) deallocate(css%mpo_val)
     !
     if(mod_bdeb)write(*,*)myname,'Un-PSP.',associated(css%psp)
     call model_clearPSP(css%psp,crc250,irc)
@@ -2124,6 +2103,40 @@ CONTAINS
   !
   ! update the session list over variables etc. on the target stack
   !
+  subroutine model_cleartargetlist(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    if (associated(css%trg80)) deallocate(css%trg80)
+    if (associated(css%trg_lent)) deallocate(css%trg_lent)
+    if (associated(css%trg_v80)) deallocate(css%trg_v80)
+    if (associated(css%trg_lenv)) deallocate(css%trg_lenv)
+    if (associated(css%trg_offset)) deallocate(css%trg_offset)
+    if (associated(css%trg_dim)) deallocate(css%trg_dim)
+    if (associated(css%trg_var)) deallocate(css%trg_var)
+    if (associated(css%trg_type)) deallocate(css%trg_type)
+    if (associated(css%trg_min80)) deallocate(css%trg_min80)
+    if (associated(css%trg_max80)) deallocate(css%trg_max80)
+    if (associated(css%trg_minval)) deallocate(css%trg_minval)
+    if (associated(css%trg_maxval)) deallocate(css%trg_maxval)
+    if (associated(css%trg_sliceset)) deallocate(css%trg_sliceset)
+    if (associated(css%trg_valset)) deallocate(css%trg_valset)
+    if (associated(css%trg_minset)) deallocate(css%trg_minset)
+    if (associated(css%trg_maxset)) deallocate(css%trg_maxset)
+    if (associated(css%trg_req)) deallocate(css%trg_req)
+    if (associated(css%trg_vok)) deallocate(css%trg_vok)
+    if (associated(css%trg_val)) deallocate(css%trg_val)
+    if (associated(css%trg_ook)) deallocate(css%trg_ook)
+    if (associated(css%trg_orm)) deallocate(css%trg_orm)
+    css%trg_set=.false.
+    if (allocated(css%mpo_var)) deallocate(css%mpo_var)
+    if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
+    if (allocated(css%mpo_req)) deallocate(css%mpo_req)
+    if (allocated(css%mpo_vok)) deallocate(css%mpo_vok)
+    if (allocated(css%mpo_val)) deallocate(css%mpo_val)
+    css%mpo_set=.false.
+    return
+  end subroutine model_cleartargetlist
   subroutine model_maketargetlist(css,crc250,irc)
     type(mod_session), pointer :: css !  current session
     character*250 :: crc250
@@ -3721,6 +3734,12 @@ CONTAINS
        call model_errorappendi(crc250,size(exp250))
        return
     end if
+    if (mod_bdeb) then
+       do ii=1,css%cmpo
+          write(*,'(X,A,A,I0,A)') myname,"      var(",ii,")='"//&
+               & css%mpo_var(ii)(1:css%mpo_lenv(ii))//"'"
+       end do
+    end if
     if(mod_bdeb)write(*,*)myname,'Parse.',css%cpsp,size(css%mpo_var)
     do ii=1,css%cpsp
        lene=length(exp250(ii),250,10)
@@ -4976,11 +4995,13 @@ CONTAINS
     character*50 :: pos50,loc50,val50
     integer :: lenp,lenl,lenv
     integer, external :: length
+    if(mod_bdeb)write(*,*)myname,"Entering.",v%ndim,associated(loc)
     if (v%ndim.gt.0) then
        ii=model_getLoc(v,loc,ff)
     else 
        ii=1
     end if
+    if(mod_bdeb)write(*,*)myname,"Past getLoc.",ii
     if (mod_bdeb) then
        write(loc50,'(I10)') ii
        call chop0(loc50,50,10)
@@ -5016,7 +5037,74 @@ CONTAINS
     end if
     return
   end function model_getLocValue
-
+  !
+  subroutine model_checkVariable(v,crc250,irc)
+    type(mod_variable), pointer :: v       ! variable
+    integer :: ii
+    real :: val
+    character*250 :: crc250
+    integer :: irc
+    character*25 :: myname="model_checkValue"
+    if (v%len.gt.0) then
+       select case (v%type)
+       case (nf_char)
+       case (nf_int1)
+          if (.not.allocated(v%f1)) then
+             irc=941
+             if (mod_bdeb) write(*,*)myname,'Invalid variable 1.'
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Invalid variable 1.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+          end if
+       case (nf_int2)
+          if (.not.allocated(v%f2)) then
+             irc=942
+             if (mod_bdeb) write(*,*)myname,'Invalid variable 2.'
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Invalid variable 2.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+          end if
+       case (nf_int)
+          if (.not.allocated(v%f4)) then
+             irc=943
+             if (mod_bdeb) write(*,*)myname,'Invalid variable 4.'
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Invalid variable 4.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+          end if
+       case (nf_real)
+          if (.not.allocated(v%fr)) then
+             irc=944
+             if (mod_bdeb) write(*,*)myname,'Invalid variable r.'
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Invalid variable r.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+          end if
+       case (nf_double)
+          if (.not.allocated(v%fd)) then
+             irc=945
+             if (mod_bdeb) write(*,*)myname,'Invalid variable d.'
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Invalid variable d.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+          end if
+       case DEFAULT
+          irc=946
+          if (mod_bdeb) write(*,*)myname,'Invalid variable type.'
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Invalid variable type.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+       end select
+    end if
+    return
+  end subroutine model_checkVariable
+  !
   logical function model_getValue(v,ii,val,crc250,irc)
     type(mod_variable), pointer :: v       ! variable
     integer :: ii
@@ -5024,6 +5112,13 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*25 :: myname="model_getValue"
+    if(mod_bdeb)write(*,*)myname,"Entering.",v%type,&
+         & allocated(v%f1),&
+         & allocated(v%f2),&
+         & allocated(v%f4),&
+         & allocated(v%fr),&
+         & allocated(v%fd), &
+         & v%var80(1:v%lenv)
     if (ii.lt.1.or.ii.gt.v%len) then
        model_getValue=.false.
     else
@@ -5032,31 +5127,66 @@ CONTAINS
        case (nf_char)
           model_getValue=.false.
        case (nf_int1)
-          if (v%f1(ii).eq.v%m1) then
+          if (.not.allocated(v%f1)) then
+             irc=993
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Un-allocated field f1:"//v%var80(1:v%lenv))
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          else if (v%f1(ii).eq.v%m1) then
              model_getValue=.false.
           else
              val=v%f1(ii)*v%scale
           end if
        case (nf_int2)
-          if (v%f2(ii).eq.v%m2) then
+          if (.not.allocated(v%f2)) then
+             irc=993
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Un-allocated field f2:"//v%var80(1:v%lenv))
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          else if (v%f2(ii).eq.v%m2) then
              model_getValue=.false.
           else
              val=v%f2(ii)*v%scale
           end if
        case (nf_int)
-          if (v%f4(ii).eq.v%m4) then
+          if (.not.allocated(v%f4)) then
+             irc=993
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Un-allocated field f4:"//v%var80(1:v%lenv))
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          else if (v%f4(ii).eq.v%m4) then
              model_getValue=.false.
           else
              val=v%f4(ii)*v%scale
           end if
        case (nf_real)
-          if (v%fr(ii).eq.v%mr) then
+          if (.not.allocated(v%fr)) then
+             irc=993
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Un-allocated field fr:"//v%var80(1:v%lenv))
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          else if (v%fr(ii).eq.v%mr) then
              model_getValue=.false.
           else
              val=v%fr(ii)*v%scale
           end if
        case (nf_double)
-          if (v%fd(ii).eq.v%md) then
+          if (.not.allocated(v%fd)) then
+             irc=993
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Un-allocated field fd:"//v%var80(1:v%lenv))
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          else if (v%fd(ii).eq.v%md) then
              model_getValue=.false.
           else
              val=v%fd(ii)*v%scale
@@ -5073,27 +5203,49 @@ CONTAINS
     type(mod_location),pointer :: loc
     integer :: ff
     integer ii,ll
+    character*25 :: myname="model_getLoc"
     model_getLoc=0
+    !if(mod_bdeb)write(*,*)myname,"Entering.",allocated(loc%pos),&
+    !     & allocated(v%ind),allocated(v%istart),allocated(v%icount),v%ndim
+    !if(mod_bdeb)write(*,*)myname,"Sizes.",size(loc%pos),&
+    !     & size(v%ind),size(v%istart),size(v%icount)
+    !if(mod_bdeb)write(*,*)myname,"Index.",v%ind
     do ii=v%ndim,1,-1 ! do ii=1,n
+       !if(mod_bdeb)write(*,*)myname,"Loop:",ii
+       !if(mod_bdeb)write(*,*)myname,"Var:",ii,v%ind(ii),v%istart(ii),v%icount(ii)
        if (loc%pos(v%ind(ii),ff).lt.v%istart(ii).or.&
             & (loc%pos(v%ind(ii),ff)-v%istart(ii)).ge.v%icount(ii)) return
        model_getLoc=model_getLoc*v%icount(ii) + (loc%pos(v%ind(ii),ff)-v%istart(ii))
     end do
     model_getLoc=model_getLoc+1
+    if(mod_bdeb)write(*,*)myname,"Done.",model_getLoc
     return
   end function model_getLoc
   !
   ! set position
   !
-  subroutine model_resetPos(n,ind,loc,ff)
+  subroutine model_resetPos(n,ind,loc,ff,crc250,irc)
     integer :: n          ! selected dimensions
     integer :: ind(n)
     type(mod_location), pointer :: loc
     integer :: ff ! offset
+    character*250 :: crc250
+    integer :: irc
     integer :: jj
-    do jj=1,n
-       loc%pos(ind(jj),ff)=loc%lstart(ind(jj),ff)
-    end do
+    character*25 :: myname="model_resetPos"
+    if (allocated(loc%pos)) then
+       do jj=1,n
+          loc%pos(ind(jj),ff)=loc%lstart(ind(jj),ff)
+       end do
+    else
+       irc=945
+       if (mod_bdeb) write(*,*)myname,'Invalid pos.'
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Invalid pos.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     return
   end subroutine model_resetPos
   !
@@ -6328,19 +6480,34 @@ CONTAINS
     !
     ! write value information
     !
-    if(mod_bdeb)write(*,*)myname,"Calculating ",itrg,ff
+    if(mod_bdeb)write(*,*)myname,"Calculating ",itrg,ff,associated(loc),associated(v)
     twgt=0.0D0
     tsum=0.0D0
     cnt=0
-    call model_resetPos(nout,out,loc,ff)
+    call model_resetPos(nout,out,loc,ff,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from resetPos.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     bout=.false.
     do while (.not. bout) ! OUTER DIMENSION LOOP
        pinn=0   ! previous  dimension index
-       call model_resetPos(ninn,inn,loc,ff)
+       call model_resetPos(ninn,inn,loc,ff,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from resetPos.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
        ctot=0 ! total number of grid points
        cval=0 ! number of valid grid points
        binn=.false.
        do while (.not. binn) ! INNER SEARCH LOOP
+          if(mod_bdeb)write(*,*)myname,"Calling getLocValue."
           set = model_getLocValue(v,loc,ff,val,crc250,irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
@@ -6998,11 +7165,25 @@ CONTAINS
     twgt=0.0D0
     tsum=0.0D0
     cnt=0
-    call model_resetPos(nout,out,loc,ff)
+    call model_resetPos(nout,out,loc,ff,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from resetPos.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     bout=.false.
     do while (.not. bout)
        pinn=0   ! previous  dimension index
-       call model_resetPos(ninn,inn,loc,ff)
+       call model_resetPos(ninn,inn,loc,ff,crc250,irc) 
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from resetPos.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
        ctot=0 ! total number of grid points
        cval=0 ! number of valid grid points
        binn=.false.
@@ -7637,6 +7818,16 @@ CONTAINS
     type(mod_attribute),pointer :: att
     type(mod_variable),pointer :: v
     !
+    css%currentfile => f
+    call model_clearCurrentFile(css,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from clearCurrentFile.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
     ! get number of dimension, variables, att, unlimited dimension id
     !
     if(mod_bdeb)write(*,*)myname,' Entering.'
@@ -8058,13 +8249,22 @@ CONTAINS
             & v%len,")"
     end if
     !
+    call model_clearVariable(v,crc250,irc)
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from clearVariable.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    !
     select case (v%type)
     case (nf_int1)
        if(mod_bdeb)write(*,*)myname,'Allocating Int 1.',v%len
        allocate( v%f1(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate var value.")
+          call model_errorappend(crc250,"Unable to allocate var1 value.")
           call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8085,7 +8285,7 @@ CONTAINS
        allocate( v%f2(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate var value.")
+          call model_errorappend(crc250,"Unable to allocate var2 value.")
           call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8106,7 +8306,7 @@ CONTAINS
        allocate( v%f4(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate var value.")
+          call model_errorappend(crc250,"Unable to allocate var4 value.")
           call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8129,7 +8329,7 @@ CONTAINS
        allocate( v%fr(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate var value.")
+          call model_errorappend(crc250,"Unable to allocate varr value.")
           call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8154,8 +8354,8 @@ CONTAINS
        allocate( v%fd(v%len),stat=irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Unable to allocate var value.")
-          call model_errorappendi(crc250,v%ndim)
+          call model_errorappend(crc250,"Unable to allocate vard value.")
+          call model_errorappendi8(crc250,v%len)
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
@@ -8333,7 +8533,7 @@ CONTAINS
                   & f%desc250(f%nsort),stat=irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Unable to allocate var:")
+                call model_errorappend(crc250," Unable to allocate varsort:")
                 call model_errorappendi(crc250,abs(f%nsort))
                 call model_errorappend(crc250,":")
                 call model_errorappendi(crc250,irc)

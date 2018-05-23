@@ -258,15 +258,21 @@ thin <- function(x, npoints){
 ###################### scatter plot (... -> ["label",selection]...)
 
 scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                        idcol,altcol,xcol,ycol,xlab,ylab,...) {
+                        idcol,altcol,obscol,modcol,obslab,modlab,min,max,...) {
     lst=list(...);
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
-    x <- data[,xcol];
-    y <- data[,ycol];
-    valid <- (!is.na(x) & !is.na(y));
-    print (paste("Number of stations:          ",sum(valid)));
+    if (length(ilab)==1) {
+        title=paste0("'",title,"' (model vs observation)\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"' (model vs observation)");
+    };
+    obs <- data[,obscol];
+    mod <- data[,modcol];
+    valid <- (!is.na(obs) & !is.na(mod) & obs>min & obs<max & mod>min & mod<max);
+    print (paste("Number of stations (scatter):          ",sum(valid)));
     dtgs <- getMinMaxDTGs(data,valid,timecol);
     dset <- unique(data[,setcol]);
     legs=c();
@@ -275,17 +281,17 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     stats=c();
     if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
     if (sum(valid)>1) {
-        openPlot(filename,attr);
-        xr <- range(x[valid]);
-        yr <- range(y[valid]);
+        xr <- range(obs[valid]);
+        yr <- range(mod[valid]);
         rr=range(union(xr,yr));
-        plot(xr,yr,type="n",xlab=xlab,ylab=ylab);#,tck = 0.0
-        title(paste(paste0("'",title,"'"),"(model vs observation)"));
-        for (dd in dset) {  # loop over datasets
-            for (ii in 1:length(isel)) { # loop over selections
+        openPlot(filename,attr);
+        plot(xr,yr,type="n",xlab=obslab,ylab=modlab);#,tck = 0.0
+        title(title);
+        for (ii in 1:length(isel)) { # loop over selections
+            for (dd in dset) {  # loop over datasets
                 l <- ilab[[ii]];
                 dsel <- (isel[[ii]] & data[,setcol] == dd & valid);
-                d    <- (y[dsel]-x[dsel]);
+                d    <- (mod[dsel]-obs[dsel]);
                 dme  <- round(mean(d),2);
                 dsde <- round(sd(d),2) ;
                 drms <- round(sqrt(mean(d^2)),2);
@@ -295,7 +301,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 print (paste0("Set=",dd," count=",pretty(sum(dsel))," (",l,")"));
                 if (sum(dsel) > 0) {
                     td <- thinned(data,dsel);
-                    lines(x[td],y[td],type="p",pch=dd,col=ii);
+                    lines(obs[td],mod[td],type="p",pch=dd,col=ii);
                     if (l=="") {
                         legs=append(legs,paste0(leg[dd]));
                     } else {
@@ -314,7 +320,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         if (length(legs)>0) {
             print ("Adding legend.");
             legend("topleft",legend=legs,col=cols,pch=pchs,
-                   bty="n",cex=0.75*par("cex"));
+                   bty="n",cex=0.75*par("cex"),seg.len=2.5);
             legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
         };
         closePlot();
@@ -326,15 +332,21 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### score plot
 
 scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                      idcol,altcol,modcol,obscol,lab,...) {
+                      idcol,altcol,modcol,obscol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
+    if (length(ilab)==1) {
+        title=paste0("'",title,"' SDE and BIAS (model-observation)\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"' SDE and BIAS (model-observation)");
+    };
     mod <- data[,modcol];
     obs <- data[,obscol];
-    valid <- (!is.na(mod) & !is.na(obs));
-    print (paste("Number of stations:          ",sum(valid)));
+    valid <- (!is.na(mod) & !is.na(obs) & mod>min & mod<max & obs>min & obs<max);
+    print (paste("Number of stations (score):          ",sum(valid)));
     if (sum(valid)>1) {
         if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
         dtgs <- getMinMaxDTGs(data,valid,timecol);
@@ -344,6 +356,8 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         leadu <- unique(lead[valid]);
         xl    <- list();
         ymel  <- list();
+        yobsl <- list();
+        ymodl <- list();
         ysdel <- list();
         yrmsl <- list();
         ymael <- list();
@@ -352,58 +366,32 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         il    <- list();
         xr    <- c();
         yr    <- c();
+        ys    <- c();
         statl <- list();
-        for (dd in dset) {                # loop over datasets
-            for (ii in 1:length(isel)) {  # loop over selections
-                x    <- c();
-                yme  <- c();
-                ysde <- c();
-                yrms <- c();
-                ymae <- c();
-                ycnt <- 0;
-                # overall statistics
-                dsel <-  (isel[[ii]] & data[,setcol] == dd & valid );
-                d    <- (mod[dsel]-obs[dsel]);
-                dme  <- round(mean(d),2);
-                dsde <- round(sd(d),2) ;
-                drms <- round(sqrt(mean(d^2)),2);
-                dmae <- round(mean(abs(d)),2);
-                dcnt <- pretty(sum(dsel));
-                stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
-                for (ll in sort(leadu)) {    # loop over lead times
-                    dsel <- (isel[[ii]] & data[,setcol] == dd & valid & lead == ll );
-                    if (sum(dsel)>2) {
-                        x    <- append(x,ll);
-                        d    <- (mod[dsel]-obs[dsel]);
-                        yme  <- append(yme,  mean(d) );
-                        ysde <- append(ysde, sd(d) );
-                        yrms <- append(yrms, sqrt(mean(d^2)) );
-                        ymae <- append(ymae, mean(abs(d)) );
-                        ycnt <- ycnt + length(d);
-                    };
-                };
-                if (length(x)>0) {
-                    ;### store all values... and handle range 
-                    xl    <- append(xl,list(x));
-                    ymel  <- append(ymel,list(yme));
-                    ysdel <- append(ysdel,list(ysde));
-                    yrmsl <- append(yrmsl,list(yrms));
-                    ymael <- append(ymael,list(ymae));
-                    ycntl <- append(ycntl,list(ycnt));
-                    dl    <- append(dl,list(dd));
-                    il    <- append(il,list(ii));
-                    xr    <- range( append(xr,x));
-                    yr    <- range( append(yr,yme));
-                    yr    <- range( append(yr,ysde));
-                    statl <- append(statl,list(stat));
-                };
-            };
+        for (ii in 1:length(isel)) {  # loop over selections
+            ret <- processLead(mod,obs,ilab,isel,ii,valid,dset,leadu,lead,
+                               xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
+                               dl,il,xr,yr,ys,statl);
+            xl=ret$xl;
+            ymel=ret$ymel;
+            yobsl=ret$yobsl;
+            ymodl=ret$ymodl;
+            ysdel=ret$ysdel;
+            yrmsl=ret$yrmsl;
+            ymael=ret$ymael;
+            ycntl=ret$ycntl;
+            dl=ret$dl;
+            il=ret$il;
+            xr=ret$xr;
+            yr=ret$yr;
+            ys=ret$ys;
+            statl=ret$statl;
         };
         ;# make plot
         if (length(xr)>0) { # we have data
             openPlot(filename,attr);
             plot(xr,yr,type="n",xlab=paste("Lead time (h)"),ylab=lab);#,tck = 0.0
-            title(paste(paste0("'",title,"'"),"SDE+BIAS (model-observation)"));
+            title(title);
             legs=c();
             cols=c();
             ltys=c();
@@ -420,8 +408,8 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 ii   <- il[[jj]];
                 l    <- ilab[[ii]];
                 stat <- statl[[jj]];
-                lines(x,ysde,type="l",lty=dd,col=ii,lwd=3);        # stde
-                lines(x,yme,type="l",lty=dd,col=fadeColor(ii),lwd=3); # bias
+                lines(x,ysde,type="l",lty=dd,col=ii,lwd=2);        # stde
+                lines(x,yme,type="l",lty=dd,col=fadeColor(ii),lwd=2); # bias
                 if (l=="") {
                     legs=append(legs,paste0(leg[dd]));
                 } else {
@@ -429,7 +417,7 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 }; 
                 cols=append(cols,ii);
                 ltys=append(ltys,dd);
-                lwds=append(lwds,3); # 3/0.75
+                lwds=append(lwds,2); # 3/0.75
                 stats=append(stats,stat);
             };
             lines(xr,c(0.,0.),type="l",lty=2,col=gray(0.75));
@@ -439,7 +427,7 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             if (length(legs)>0) {
                 print ("Adding legend.");
                 legend("topleft",legend=legs,col=cols,lty=ltys,lwd=lwds,
-                       bty="n",cex=0.75*par("cex"));
+                       bty="n",cex=0.75*par("cex"),seg.len=2.5);
                 legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
             };
             closePlot();
@@ -454,15 +442,21 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### series plot
     
 seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                       idcol,altcol,modcol,obscol,lab,...) {
+                       idcol,altcol,modcol,obscol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
+    if (length(ilab)==1) {
+        title=paste0("'",title,"' SDE and BIAS (model-observation)\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"' SDE and BIAS (model-observation)");
+    };
     mod <- data[,modcol];
     obs <- data[,obscol];
-    valid <- (!is.na(mod) & !is.na(obs));
-    print (paste("Number of stations:          ",sum(valid)));
+    valid <- (!is.na(mod) & !is.na(obs) & mod>min & mod<max & obs>min & obs<max);
+    print (paste("Number of stations (series):          ",sum(valid)));
     if (sum(valid)>1) {
         if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
         dtgs <- getMinMaxDTGs(data,valid,timecol);
@@ -473,6 +467,8 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         xdtg  <- getAxisDates(dtgu);
         xl    <- list();
         ymel  <- list();
+        yobsl <- list();
+        ymodl <- list();
         ysdel <- list();
         yrmsl <- list();
         ymael <- list();
@@ -481,60 +477,37 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         il    <- list();
         xr    <- c();
         yr    <- c();
+        ys    <- c();
         statl <- list();
-        for (dd in dset) {                # loop over datasets
-            for (ii in 1:length(isel)) {  # loop over selections
-                x    <- c();
-                yme  <- c();
-                ysde <- c();
-                yrms <- c();
-                ymae <- c();
-                ycnt <- 0;
-                # overall statistics
-                dsel <-  (isel[[ii]] & data[,setcol] == dd & valid );
-                d    <- (mod[dsel]-obs[dsel]);
-                dme  <- round(mean(d),2);
-                dsde <- round(sd(d),2) ;
-                drms <- round(sqrt(mean(d^2)),2);
-                dmae <- round(mean(abs(d)),2);
-                dcnt <- pretty(sum(dsel));
-                stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
-                for (ll in sort(dtgu)) {    # loop over times
-                    dsel <- (isel[[ii]] & data[,setcol] == dd & valid & dtg == ll );
-                    if (sum(dsel)>2) {
-                        x    <- append(x,ll);
-                        d    <- (mod[dsel]-obs[dsel]);
-                        yme  <- append(yme,  mean(d) );
-                        ysde <- append(ysde, sd(d) );
-                        yrms <- append(yrms, sqrt(mean(d^2)) );
-                        ymae <- append(ymae, mean(abs(d)) );
-                        ycnt <- ycnt + length(d);
-                    };
-                };
-                if (length(x)>0) {
-                    ;### store all values... and handle range 
-                    xl    <- append(xl,list(x));
-                    ymel  <- append(ymel,list(yme));
-                    ysdel <- append(ysdel,list(ysde));
-                    yrmsl <- append(yrmsl,list(yrms));
-                    ymael <- append(ymael,list(ymae));
-                    ycntl <- append(ycntl,list(ycnt));
-                    dl    <- append(dl,list(dd));
-                    il    <- append(il,list(ii));
-                    xr    <- range( append(xr,x));
-                    yr    <- range( append(yr,yme));
-                    yr    <- range( append(yr,ysde));
-                    statl <- append(statl,list(stat));
-                };
-            };
+        for (ii in 1:length(isel)) {  # loop over selections
+            ret <- processTime(mod,obs,ilab,isel,ii,valid,dset,dtgu,dtg,
+                               xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
+                               dl,il,xr,yr,ys,statl);
+            xl=ret$xl;
+            ymel=ret$ymel;
+            yobsl=ret$yobsl;
+            ymodl=ret$ymodl;
+            ysdel=ret$ysdel;
+            yrmsl=ret$yrmsl;
+            ymael=ret$ymael;
+            ycntl=ret$ycntl;
+            dl=ret$dl;
+            il=ret$il;
+            xr=ret$xr;
+            yr=ret$yr;
+            ys=ret$ys;
+            statl=ret$statl;
         };
         ;# make plot
         if (length(xr)>0) { # we have data
             ###xr <- as.POSIXct(xr, origin="1970-01-01");
+            print(paste("Plotting x=",xr," y=",ys));
+            print (xr);
+            print (ys);
             openPlot(filename,attr);
-            plot(xr,yr,type="n",ylab=lab,xlab="time",xaxt="n");
+            plot(xr,ys,type="n",ylab=lab,xlab="time",xaxt="n");
             axis(1,at=xdtg[[1]],labels=xdtg[[2]], cex.axis = .75*par("cex"));
-            title(paste(paste0("'",title,"'"),"SDE+BIAS (model-observation)"));
+            title(title);
             legs=c();
             cols=c();
             ltys=c();
@@ -552,8 +525,8 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 l    <- ilab[[ii]];
                 stat <- statl[[jj]];
                 ###x <- as.POSIXct(x, origin="1970-01-01");
-                lines(spline(x,ysde),type="l",lty=dd,col=ii,lwd=3);        # stde
-                lines(spline(x,yme),type="l",lty=dd,col=fadeColor(ii),lwd=3); # bias
+                lines(spline(x,ysde),type="l",lty=dd,col=ii,lwd=2);        # stde
+                lines(spline(x,yme),type="l",lty=dd,col=fadeColor(ii),lwd=2); # bias
                 if (l=="") {
                     legs=append(legs,paste0(leg[dd]));
                 } else {
@@ -561,7 +534,7 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 }; 
                 cols=append(cols,ii);
                 ltys=append(ltys,dd);
-                lwds=append(lwds,3); # 3/0.75
+                lwds=append(lwds,2); # 3/0.75
                 stats=append(stats,stat);
             };
             lines(xr,c(0.,0.),type="l",lty=2,col=gray(0.75));
@@ -571,7 +544,123 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             if (length(legs)>0) {
                 print ("Adding legend.");
                 legend("topleft",legend=legs,col=cols,lty=ltys,lwd=lwds,
-                       bty="n",cex=0.75*par("cex"));
+                       bty="n",cex=0.75*par("cex"),seg.len=2.5);
+                legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
+            };
+            closePlot();
+        } else {
+            print (paste("$$$ No plot data for ",filename));
+        }
+    } else {
+        print (paste("$$$ No valid data for ",filename));
+    }
+};
+
+###################### series plot
+    
+timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
+                     idcol,altcol,modcol,obscol,lab,min,max,...) {
+    lst=list(...); # "label1",selection1,"label2",selection2...
+    inp <- matrix(lst,ncol=2,byrow=TRUE);
+    ilab <- inp[,1]; # labels
+    isel <- inp[,2]; # selection
+    if (length(ilab)==1) {
+        title=paste0("'",title,"' MEAN (model) and MEAN (observation)\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"' MEAN (model) and MEAN (observation)");
+    };
+    mod <- data[,modcol];
+    obs <- data[,obscol];
+    valid <- (!is.na(mod) & !is.na(obs) & mod>min & mod<max & obs>min & obs<max);
+    print (paste("Number of stations (time):          ",sum(valid)));
+    if (sum(valid)>1) {
+        if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
+        dtgs <- getMinMaxDTGs(data,valid,timecol);
+        dset <- unique(data[,setcol]);
+        ;# make data statistics...
+        dtg   <- floor((data[,timecol]/86400.0));
+        dtgu  <- unique(dtg[valid]);
+        xdtg  <- getAxisDates(dtgu);
+        xl    <- list();
+        ymel  <- list();
+        yobsl <- list();
+        ymodl <- list();
+        ysdel <- list();
+        yrmsl <- list();
+        ymael <- list();
+        ycntl <- list();
+        dl    <- list();
+        il    <- list();
+        xr    <- c();
+        yr    <- c();
+        ys    <- c();
+        statl <- list();
+        for (ii in 1:length(isel)) {  # loop over selections
+            ret <- processTime(mod,obs,ilab,isel,ii,valid,dset,dtgu,dtg,
+                               xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
+                               dl,il,xr,yr,ys,statl);
+            xl=ret$xl;
+            ymel=ret$ymel;
+            yobsl=ret$yobsl;
+            ymodl=ret$ymodl;
+            ysdel=ret$ysdel;
+            yrmsl=ret$yrmsl;
+            ymael=ret$ymael;
+            ycntl=ret$ycntl;
+            dl=ret$dl;
+            il=ret$il;
+            xr=ret$xr;
+            yr=ret$yr;
+            ys=ret$ys;
+            statl=ret$statl;
+        };
+        ;# make plot
+        if (length(xr)>0) { # we have data
+            ###xr <- as.POSIXct(xr, origin="1970-01-01");
+            openPlot(filename,attr);
+            plot(xr,yr,type="n",ylab=lab,xlab="time",xaxt="n");
+            axis(1,at=xdtg[[1]],labels=xdtg[[2]], cex.axis = .75*par("cex"));
+            title(title);
+            legs=c();
+            cols=c();
+            ltys=c();
+            lwds=c();
+            stats=c();
+            for (jj in 1:length(dl)) {
+                x    <- xl[[jj]];
+                yme  <- ymel[[jj]];
+                yobs <- yobsl[[jj]];
+                ymod <- ymodl[[jj]];
+                ysde <- ysdel[[jj]];
+                yrms <- yrmsl[[jj]];
+                ymae <- ymael[[jj]];
+                ycnt <- ycntl[[jj]];
+                dd   <- dl[[jj]];
+                ii   <- il[[jj]];
+                l    <- ilab[[ii]];
+                stat <- statl[[jj]];
+                ###x <- as.POSIXct(x, origin="1970-01-01");
+                lines(spline(x,ymod),type="l",lty=dd,col=ii,lwd=2);        # stde
+                lines(spline(x,yobs),type="l",lty=dd,col=fadeColor(ii),lwd=2); # bias
+                if (l=="") {
+                    legs=append(legs,paste0(leg[dd]));
+                } else {
+                    legs=append(legs,paste0(leg[dd]," (",l,")"));
+                }; 
+                cols=append(cols,ii);
+                ltys=append(ltys,dd);
+                lwds=append(lwds,2); # 3/0.75
+                stats=append(stats,stat);
+            };
+            lines(xr,c(0.,0.),type="l",lty=2,col=gray(0.75));
+            info=paste("From",toString(dtgs[1]),
+                       "to",as.Date(dtgs[2],origin="1970-01-01"),paste0("(",dtgs[3],")"));
+            legend("bottomright",legend=info,bty="n",cex=0.75*par("cex"));
+            if (length(legs)>0) {
+                print ("Adding legend.");
+                legend("topleft",legend=legs,col=cols,lty=ltys,lwd=lwds,
+                       bty="n",cex=0.75*par("cex"),seg.len=2.5);
                 legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
             };
             closePlot();
@@ -586,15 +675,21 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### historgram plot
 
 histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                        idcol,altcol,modcol,obscol,lab,...) {
+                        idcol,altcol,modcol,obscol,lab,min,max,...) {
     lst=list(...);
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
-    m <- data[,modcol];
-    o <- data[,obscol];
-    valid <- (!is.na(m) & !is.na(o));
-    print (paste("Number of stations:          ",sum(valid)));
+    if (length(ilab)==1) {
+        title=paste0("'",title,"' Density (model-observation)\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"' Density (model-observation)");
+    };
+    mod <- data[,modcol];
+    obs <- data[,obscol];
+    valid <- (!is.na(mod) & !is.na(obs) & mod>min & mod<max & obs>min & obs<max);
+    print (paste("Number of stations (hist):          ",sum(valid)));
     dtgs <- getMinMaxDTGs(data,valid,timecol);
     dset <- unique(data[,setcol]);
     xl  <- list();
@@ -610,51 +705,30 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     stats= c();
     if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
     if (sum(valid)>1) {
-        h <- (m[valid]-o[valid]);
+        h <- (mod[valid]-obs[valid]);
         xlim <- range(h);
         p0 <- hist(h,nclass=200,plot=FALSE);  # plot(p0$mids,p0$density)
         #title();
-        for (dd in dset) {  # loop over datasets
-            for (ii in 1:length(isel)) { # loop over selections
-                l <- ilab[[ii]];
-                dsel <- (isel[[ii]] & data[,setcol] == dd & valid);
-                print (paste0("Set=",dd," count=",pretty(sum(dsel))," (",l,")"));
-                if (sum(dsel) > 0) {
-                    d <- m[dsel]-o[dsel];
-                    pp <- hist(d,nclass=50,plot=FALSE);
-                    x <- pp$mids;
-                    y <- pp$density;
-                    if (length(x)>0) {
-                        ;### store all values... and handle range 
-                        xl    <- append(xl,list(x));
-                        yl    <- append(yl,list(y));
-                        dl    <- append(dl,list(dd));
-                        il    <- append(il,list(ii));
-                        xr    <- range( append(xr,x));
-                        yr    <- range( append(yr,y));
-                        dme  <- round(mean(d),2);
-                        dsde <- round(sd(d),2) ;
-                        drms <- round(sqrt(mean(d^2)),2);
-                        dmae <- round(mean(abs(d)),2);
-                        dcnt <- pretty(sum(dsel));
-                        stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
-                        if (l=="") {
-                            legs=append(legs,paste0(leg[dd]));
-                        } else {
-                            legs=append(legs,paste0(leg[dd]," (",l,")"));
-                        };
-                        cols = append(cols,ii);
-                        ltys = append(ltys,dd);
-                        lwds = append(lwds,3); # 3/0.75
-                        stats= append(stats,stat);
-                    };
-                };
-            };
+        for (ii in 1:length(isel)) { # loop over selections
+            ret <- processHist(mod,obs,ilab,isel,ii,valid,dset,
+                               xl,yl,dl,il,xr,yr,legs,cols,
+                               ltys,lwds,stats);
+            xl    = ret$xl;
+            yl    = ret$yl;
+            dl    = ret$dl;
+            il    = ret$il;
+            xr    = ret$xr;
+            yr    = ret$yr;
+            legs  = ret$legs;
+            cols  = ret$cols;
+            ltys  = ret$ltys;
+            lwds  = ret$lwds;
+            stats = ret$stat;
         };
         if (length(xr)>0) { # we have data
             openPlot(filename,attr);
             plot(xr,yr,type="n",xlim=xlim,
-                 main=paste(paste0("'",title,"'"),"(model-observation)"),
+                 main=title,
                  xlab=label,
                  ylab="Density");
             for (jj in 1:length(xl)) {
@@ -662,7 +736,7 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 y    <- yl[[jj]];
                 dd   <- dl[[jj]];
                 ii   <- il[[jj]];
-                lines(spline(x,y),type="l",lty=dd,col=ii,lwd=3);
+                lines(spline(x,y),type="l",lty=dd,col=ii,lwd=2);
             };
             lines(c(0.,0.),yr,type="l",lty=2,col=gray(0.75));
             info=paste("From",toString(dtgs[1]),
@@ -671,7 +745,7 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             if (length(legs)>0) {
                 print ("Adding legend.");
                 legend("topleft",legend=legs,col=cols,lty=ltys,
-                       lwd=lwds,bty="n",cex=0.75*par("cex"));
+                       lwd=lwds,bty="n",cex=0.75*par("cex"),seg.len=2.5);
                 legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
             };
             closePlot();
@@ -684,16 +758,22 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### vertical profile plot
 
 profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                       idcol,hgtlab,hgtcol,hgtdir,modcol,obscol,lab,...) {
+                       idcol,hgtlab,hgtcol,hgtdir,modcol,obscol,lab,min,max,...) {
     nhgt <- 10; # number of height bins
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
+    if (length(ilab)==1) {
+        title=paste0("'",title,"' SDE and BIAS (model-observation)\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"' SDE and BIAS (model-observation)");
+    };
     mod <- data[,modcol];
     obs <- data[,obscol];
-    valid <- (!is.na(mod) & !is.na(obs));
-    print (paste("Number of stations:          ",sum(valid)));
+    valid <- (!is.na(mod) & !is.na(obs) & mod>min & mod<max & obs>min & obs<max);
+    print (paste("Number of stations (profile):          ",sum(valid)));
     if (sum(valid)>1) {
         if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
         dtgs <- getMinMaxDTGs(data,valid,timecol);
@@ -715,8 +795,8 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         xr    <- c();
         yr    <- c();
         statl <- list();
-        for (dd in dset) {                # loop over datasets
-            for (ii in 1:length(isel)) {  # loop over selections
+        for (ii in 1:length(isel)) {  # loop over selections
+            for (dd in dset) {                # loop over datasets
                 y    <- c();
                 xme  <- c();
                 xsde <- c();
@@ -771,7 +851,7 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             } else {
                 plot(xr,yr,type="n",xlab=lab,ylab=hgtlab,ylim=yr);
             };
-            title(paste(paste0("'",title,"'"),"SDE+BIAS (model-observation)"));
+            title(title);
             legs=c();
             cols=c();
             ltys=c();
@@ -791,8 +871,8 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 stat <- statl[[jj]];
                 ###x <- as.POSIXct(x, origin="1970-01-01");
                 #print(paste("Plotting:",jj,"X:",xsde,"Y:",y));
-                lines(xsde,y,type="l",lty=dd,col=ii,lwd=3);        # stde
-                lines(xme,y,type="l",lty=dd,col=fadeColor(ii),lwd=3); # bias
+                lines(xsde,y,type="l",lty=dd,col=ii,lwd=2);        # stde
+                lines(xme,y,type="l",lty=dd,col=fadeColor(ii),lwd=2); # bias
                 if (l=="") {
                     legs=append(legs,paste0(leg[dd]));
                 } else {
@@ -800,7 +880,7 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 }; 
                 cols=append(cols,ii);
                 ltys=append(ltys,dd);
-                lwds=append(lwds,3); # 3/0.75
+                lwds=append(lwds,2); # 3/0.75
                 stats=append(stats,stat);
             };
             lines(c(0.,0.),yr,type="l",lty=2,col=gray(0.75));
@@ -810,7 +890,7 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             if (length(legs)>0) {
                 print ("Adding legend.");
                 legend("topleft",legend=legs,col=cols,lty=ltys,lwd=lwds,
-                       bty="n",cex=0.75*par("cex"));
+                       bty="n",cex=0.75*par("cex"),seg.len=2.5);
                 legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
             };
             closePlot();
@@ -820,4 +900,204 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No valid data for ",filename));
     }
+};
+
+########################## auxiliary plot function
+
+
+processLead <- function (mod,obs,ilab,isel,ii,valid,dset,leadu,lead,
+                         xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
+                         dl,il,xr,yr,ys,statl) {
+    for (dd in dset) {                # loop over datasets
+        x    <- c();
+        yme  <- c();
+        yobs <- c();
+        ymod <- c();
+        ysde <- c();
+        yrms <- c();
+        ymae <- c();
+        ycnt <- 0;
+        ;# overall statistics
+        dsel <-  (isel[[ii]] & data[,setcol] == dd & valid );
+        d    <- (mod[dsel]-obs[dsel]);
+        dme  <- round(mean(d),2);
+        dsde <- round(sd(d),2) ;
+        drms <- round(sqrt(mean(d^2)),2);
+        dmae <- round(mean(abs(d)),2);
+        dcnt <- pretty(sum(dsel));
+        stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
+        for (ll in sort(leadu)) {    # loop over lead times
+            dsel <- (isel[[ii]] & data[,setcol] == dd & valid & lead == ll );
+            if (sum(dsel)>2) {
+                x    <- append(x,ll);
+                d    <- (mod[dsel]-obs[dsel]);
+                yme  <- append(yme,  mean(d) );
+                ysde <- append(ysde, sd(d) );
+                yobs <- append(yobs, mean(obs[dsel]) );
+                ymod <- append(ymod, mean(mod[dsel]) );
+                yrms <- append(yrms, sqrt(mean(d^2)) );
+                ymae <- append(ymae, mean(abs(d)) );
+                ycnt <- ycnt + length(d);
+            };
+        };
+        if (length(x)>0) {
+            ;### store all values... and handle range 
+            xl    <- append(xl,list(x));
+            ymel  <- append(ymel,list(yme));
+            yobsl <- append(yobsl,list(yobs));
+            ymodl <- append(ymodl,list(ymod));
+            ysdel <- append(ysdel,list(ysde));
+            yrmsl <- append(yrmsl,list(yrms));
+            ymael <- append(ymael,list(ymae));
+            ycntl <- append(ycntl,list(ycnt));
+            dl    <- append(dl,list(dd));
+            il    <- append(il,list(ii));
+            xr    <- range( append(xr,x));
+            yr    <- range( append(yr,yme));
+            yr    <- range( append(yr,ysde));
+            statl <- append(statl,list(stat));
+        };
+    };
+    return (list("xl"=xl,
+                 "ymel"=ymel,
+                 "yobsl"=yobsl,
+                 "ymodl"=ymodl,
+                 "ysdel"=ysdel,
+                 "yrmsl"=yrmsl,
+                 "ymael"=ymael,
+                 "ycntl"=ycntl,
+                 "dl"=dl,
+                 "il"=il,
+                 "xr"=xr,
+                 "yr"=yr,
+                 "statl"=statl));
+};
+
+processTime <- function (mod,obs,ilab,isel,ii,valid,dset,dtgu,dtg,
+                         xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
+                         dl,il,xr,yr,ys,statl) {
+    for (dd in dset) {                # loop over datasets
+        x    <- c();
+        yme  <- c();
+        yobs <- c();
+        ymod <- c();
+        ysde <- c();
+        ysde <- c();
+        yrms <- c();
+        ymae <- c();
+        ycnt <- 0;
+                                        # overall statistics
+        dsel <-  (isel[[ii]] & data[,setcol] == dd & valid );
+        d    <- (mod[dsel]-obs[dsel]);
+        dme  <- round(mean(d),2);
+        dsde <- round(sd(d),2) ;
+        drms <- round(sqrt(mean(d^2)),2);
+        dmae <- round(mean(abs(d)),2);
+        dcnt <- pretty(sum(dsel));
+        stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
+        for (ll in sort(dtgu)) {    # loop over times
+            dsel <- (isel[[ii]] & data[,setcol] == dd & valid & dtg == ll );
+            if (sum(dsel)>2) {
+                x    <- append(x,ll);
+                d    <- (mod[dsel]-obs[dsel]);
+                yme  <- append(yme,  mean(d) );
+                yobs <- append(yobs, mean(obs[dsel]) );
+                ymod <- append(ymod, mean(mod[dsel]) );
+                ysde <- append(ysde, sd(d) );
+                yrms <- append(yrms, sqrt(mean(d^2)) );
+                ymae <- append(ymae, mean(abs(d)) );
+                ycnt <- ycnt + length(d);
+            };
+        };
+        if (length(x)>0) {
+            ;### store all values... and handle range 
+            xl    <- append(xl,list(x));
+            ymel  <- append(ymel,list(yme));
+            yobsl <- append(yobsl,list(yobs));
+            ymodl <- append(ymodl,list(ymod));
+            ysdel <- append(ysdel,list(ysde));
+            yrmsl <- append(yrmsl,list(yrms));
+            ymael <- append(ymael,list(ymae));
+            ycntl <- append(ycntl,list(ycnt));
+            dl    <- append(dl,list(dd));
+            il    <- append(il,list(ii));
+            xr    <- range( append(xr,x));
+            yr    <- range( append(yr,yobs));
+            yr    <- range( append(yr,ymod));
+            ys    <- range( append(ys,yme));
+            ys    <- range( append(ys,ysde));
+            statl <- append(statl,list(stat));
+        };
+    };
+    return (list("xl"=xl,
+                 "ymel"=ymel,
+                 "yobsl"=yobsl,
+                 "ymodl"=ymodl,
+                 "ysdel"=ysdel,
+                 "yrmsl"=yrmsl,
+                 "ymael"=ymael,
+                 "ycntl"=ycntl,
+                 "dl"=dl,
+                 "il"=il,
+                 "xr"=xr,
+                 "yr"=yr,
+                 "ys"=ys,
+                 "statl"=statl));  
+};
+
+processHist <- function (mod,obs,ilab,isel,ii,valid,dset,
+                         xl,yl,dl,il,xr,yr,legs,cols,
+                         ltys,lwds,stats) {
+    for (dd in dset) {  # loop over datasets
+        l <- ilab[[ii]];
+        dsel <- (isel[[ii]] & data[,setcol] == dd & valid);
+        print (paste0("Set=",dd," count=",pretty(sum(dsel))," (",l,")"));
+        if (sum(dsel) > 0) {
+            d <- mod[dsel]-obs[dsel];
+            pp <- hist(d,nclass=50,plot=FALSE);
+            x <- pp$mids;
+            y <- pp$density;
+            if (length(x)>0) {
+                ;### store all values... and handle range 
+                xl    <- append(xl,list(x));
+                yl    <- append(yl,list(y));
+                dl    <- append(dl,list(dd));
+                il    <- append(il,list(ii));
+                xr    <- range( append(xr,x));
+                yr    <- range( append(yr,y));
+                dme  <- round(mean(d),2);
+                dsde <- round(sd(d),2) ;
+                drms <- round(sqrt(mean(d^2)),2);
+                dmae <- round(mean(abs(d)),2);
+                dcnt <- pretty(sum(dsel));
+                stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
+                if (l=="") {
+                    legs=append(legs,paste0(leg[dd]));
+                } else {
+                    legs=append(legs,paste0(leg[dd]," (",l,")"));
+                };
+                cols = append(cols,ii);
+                ltys = append(ltys,dd);
+                lwds = append(lwds,2); # 3/0.75
+                stats= append(stats,stat);
+            };
+        };
+    };
+    return (list("mod"=mod,
+                 "obs"=obs,
+                 "ilab"=ilab,
+                 "isel"=isel,
+                 "valid"=valid,
+                 "dset"=dset,
+                 "xl"=xl,
+                 "yl"=yl,
+                 "dl"=dl,
+                 "il"=il,
+                 "xr"=xr,
+                 "yr"=yr,
+                 "legs"=legs,
+                 "cols"=cols,
+                 "ltys"=ltys,
+                 "lwds"=lwds,
+                 "stats"=stats));
 };

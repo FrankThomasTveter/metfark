@@ -154,7 +154,7 @@ sub saveModel {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n",
+    }{message=> "Unable to save $ifile (see $logfile)\n",
       logfile=>$logfile,
       stdout=>"success"};
 }
@@ -280,7 +280,7 @@ sub saveObs {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n",
+    }{message=> "Unable to save $ifile (see /tmp/fark_save.tmp)\n",
       logfile=>"/tmp/fark_save.tmp",
       stdout=>"success"
     };
@@ -465,7 +465,7 @@ sub saveColoc {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n",
+    }{message=> "Unable to save $ifile (see /tmp/fark_save.tmp)\n",
       logfile=>"/tmp/fark_save.tmp",
       stdout=>"success",
     };
@@ -608,7 +608,7 @@ sub savePlot {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile\n",
+    }{message=> "Unable to save $ifile (see /tmp/fark_save.tmp)\n",
       logfile=>"/tmp/fark_save.tmp",
       stdout=>"success"
     };
@@ -758,7 +758,7 @@ sub saveAuto {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."' $priv");
 	}
-    }{message=> "Unable to save $ifile\n",
+    }{message=> "Unable to save $ifile (see /tmp/fark_save.tmp)\n",
       logfile=>"/tmp/fark_save.tmp",
       stdout=>"success"
     };

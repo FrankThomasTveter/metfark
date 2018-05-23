@@ -26,16 +26,17 @@ print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;       # debug this script (0=omit output)
-    fark::debug(1);  # debug observations
-    fark::debug(2);  # debug models
+    #fark::debug(1);  # debug observations
+    #fark::debug(2);  # debug models
     fark::debug(3);  # debug colocation
     fark::debug(4);  # debug plot
     #fark::debug(5);  # debug parse
 }
 #
-my $autoDir=      farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
-my $scriptDir=    farkdir::getRootDir("script") || farkdir::term("Invalid root directory (script)");
-my $lockDir=     farkdir::getRootDir("lock") || farkdir::term("Invalid root directory (lock)");
+my $shapeDir = farkdir::getRootDir("shape") || farkdir::term("Invalid root directory (shape)");
+my $autoDir  = farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
+my $scriptDir= farkdir::getRootDir("script") || farkdir::term("Invalid root directory (script)");
+my $lockDir  = farkdir::getRootDir("lock") || farkdir::term("Invalid root directory (lock)");
 #
 my $myname = basename($0);
 #
@@ -316,14 +317,33 @@ sub execCls {
     # check lockfile
     my $lockfile = $lockDir ."$cls/$clsfile.lock";
     my ($lockdir,$lockname)=farkdir::splitName($lockfile);
-    farkdir::makePath($lockdir) || farkdir::term("$myname unable to make: $lockdir"); # make sure directory exists in case we create lockfile next
+    # make sure directory exists in case we create lockfile next
+    if (farkdir::makePath($lockdir)) {
+    } elsif ($cron) { 
+	print "$myname unable to make: $lockdir";
+	return;
+    } else {
+	farkdir::term("$myname unable to make: $lockdir")
+    };
     #if($debug){print "Lockfile '$lockfile'\n";}
     if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
 	close(MLOCKFILE);
-	unlink($lockfile) || farkdir::term("$myname unable to rm '$lockfile'");
+	if (unlink($lockfile)) {
+	} elsif ($cron) {
+	    print "$myname unable to rm '$lockfile'";
+	    return;
+	} else {
+	    farkdir::term("$myname unable to rm '$lockfile'");
+	};
 	open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) || farkdir::term("$myname unable to lock '$lockfile'");
 	# this defines processing start time
-	farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
+	if (farkdir::touchFile($lockfile)) {
+	} elsif ($cron) {
+	    print "$myname unable to touch '$lockfile'";
+	    return;
+	} else {
+	    farkdir::term("$myname unable to touch '$lockfile'");
+	};
 	#system "ls -lu $lockfile";
 	chmod 0666, $lockfile;
 	my $lastStart=time();
@@ -556,6 +576,8 @@ sub processModel {
     my $test = shift;
     my $clsFillFile = shift;
     #
+    my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
+    fark->setShapeFile($shapeFile);
     my $fark=fark->open();
     &setModelConfig($fark,$node,$cachefile);
     #
@@ -586,6 +608,8 @@ sub processObs {
     my $test = shift;
     my $clsFillFile = shift;
     #
+    my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
+    fark->setShapeFile($shapeFile);
     my $fark=fark->open();
     &setObsConfig($fark,$node,$cachefile);
     #
@@ -620,6 +644,8 @@ sub processColoc {
     my $clsFillFile = shift;
     #
     if($debug){print "processColoc Entering with '$xmlfile' '$file'\n";}
+    my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
+    fark->setShapeFile($shapeFile);
     my $fark=fark->open();
     &setColocConfig($fark,$node,$modelDir,$modelCacheDir,$obsDir,$obsCacheDir);
     #
@@ -651,6 +677,8 @@ sub processPlot {
     my $graphics=$node->getAttribute("graphics");
     my $cat=$node->getAttribute("cat");
     #print "Processing plot: $xmlfile\n";
+    my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
+    fark->setShapeFile($shapeFile);
     my $fark=fark->open();
     $fark->setPlotType($cat);
     $fark->clearPlotAttributeStack();

@@ -71,7 +71,7 @@
 .\" ========================================================================
 .\"
 .IX Title "fark 3pm"
-.TH fark 3pm "2018-03-18" "perl v5.22.1" "User Contributed Perl Documentation"
+.TH fark 3pm "2018-05-23" "perl v5.22.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -628,6 +628,26 @@ Arguments:
 .PD
 .PP
 my \f(CW$xmlFile\fR = \f(CW$fark\fR\->makeColocXML($xmlPattern);
+.SS "setShapeFile"
+.IX Subsection "setShapeFile"
+setShapeFile \- set default shape file.
+.PP
+Arguments:
+.IP "(string) shape file name" 4
+.IX Item "(string) shape file name"
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->setShapeFile(\*(L"/metfark/config/shapefile/default\*(R");
+.SS "clearShapeFile"
+.IX Subsection "clearShapeFile"
+clearShapeFile \- clear shape file information.
+.PP
+\s-1EXAMPLE\s0
+.IX Subsection "EXAMPLE"
+.PP
+\&\f(CW$fark\fR\->\fIclearShapeFile()\fR;
 .SH "PLOT FUNCTIONS"
 .IX Header "PLOT FUNCTIONS"
 .SS "setPlotType"

@@ -737,7 +737,7 @@ CONTAINS
              cLoc%vlen(ii)=cdef%lenv
              read(cdef%v80(1:cdef%lenv),*,iostat=irc2) cLoc%val(ii)
              if (first) then ! Use match from defaults
-                call  colocation_pushmatch(css,cdef%n80,e250,min80,max80,crc250,irc)
+                call colocation_pushmatch(css,cdef%n80,e250,min80,max80,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,myname)
                    call colocation_errorappend(crc250,"Error return from pushMatch")
@@ -937,7 +937,7 @@ CONTAINS
        nullify(match)
        css%nmatch=css%nmatch+1
     end if
-    if(col_bdeb)write(*,*)myname,"Match: '"//n80(1:lenn)&
+    if(col_bdeb)write(*,*)myname,"Adding: '"//n80(1:lenn)&
          & //"' <-> '"//e250(1:lene)//"'",css%nmatch
     return
   end subroutine colocation_pushmatch
@@ -1412,6 +1412,11 @@ CONTAINS
     ! make lists
     if(col_bdeb)write(*,*)myname,'Make model target list.'
     if (tmod.ne.0) then
+       call model_clearTargetList(mss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"model_clearTargetList")
+          return
+       end if
        call model_makeTargetList(mss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"model_makeTargetList")
@@ -1419,6 +1424,11 @@ CONTAINS
        end if
     end if
     if (tobs.ne.0) then
+       call observation_clearTargetList(oss,crc250,irc)
+       if (irc.ne.0) then
+          call colocation_errorappend(crc250,"observation_clearTargetList")
+          return
+       end if
        call observation_makeTargetList(oss,crc250,irc)
        if (irc.ne.0) then
           call colocation_errorappend(crc250,"observation_makeTargetList")
@@ -1631,7 +1641,15 @@ CONTAINS
              return
           end if
        end if
-       ! call model_sliceTarget(mss,crc250,irc)
+       if (tobs.ne.0) then
+          if(col_bdeb)write(*,*)myname,'Clear observation location stack.'
+          call observation_clearLocStack(oss,crc250,irc)
+          if (irc.ne.0) then
+             call colocation_errorappend(crc250,"obs_clearLocStack")
+             return
+          end if
+       end if
+          ! call model_sliceTarget(mss,crc250,irc)
        ! if (irc.ne.0) then
        !    call colocation_errorappend(crc250,"model_sliceTarget")
        !    return
@@ -1680,7 +1698,7 @@ CONTAINS
                 end if
                 locid=locid+1
                 !
-                !write(*,*)myname,'Evaluate expressions.'
+                !if(col_bdeb)write(*,*)myname,'Evaluate expressions.'
                 ! evaluate experessions
                 call colocation_evalMatch(css,oss%trg_val,crc250,irc)
                 if (irc.ne.0) then
@@ -1689,7 +1707,7 @@ CONTAINS
                 end if
                 !
                 ! set observation variables...
-                !write(*,*)myname,'Set model targets.'
+                !if(col_bdeb)write(*,*)myname,'Set model values.'
                 call  model_setObsVal(mss,oss%ntrg,oss%trg_val,oss%trg_vok,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setObsVal")
@@ -1697,7 +1715,7 @@ CONTAINS
                 end if
 
                 ! set match variables...
-                !write(*,*)myname,'Set model targets.'
+                !if(col_bdeb)write(*,*)myname,'Set model targets.'
                 call  model_setTargetVal(mss,css%cMatch,css%mat_2trg,css%mat_val,&
                      & crc250,irc)
                 if (irc.ne.0) then
@@ -1707,7 +1725,7 @@ CONTAINS
                 ! check target values
                 lok=.true.
                 ! make new location from observation
-                if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
+                !if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")

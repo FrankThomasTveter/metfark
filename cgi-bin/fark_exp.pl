@@ -34,6 +34,9 @@ my ($node) = $doc->findnodes("expression/result");
 my $res="";
 my $log="";
 my ($stdout,$stderr,$irc)=("","",0);
+my $shapeDir=farkdir::getRootDir("shape") || farkdir::term("Invalid root directory (shape)");
+my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
+fark->setShapeFile($shapeFile);
 if ($debug) {
     my $fark=fark->open();
     #print "Processing '".($param->{exp}[0]//"")."'\n";

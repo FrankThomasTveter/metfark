@@ -67,6 +67,7 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 			   "/lustre/storeB/"   => "ro",
 			   "/opdata/"          => "ro",
 			   "/metfark/data/"    => "rw" }, 
+		  shape => {"/metfark/config/shape/" => "ro"},
 		  tables => {"/lustre/storeB/users/"     => "ro",        # BUFR tables
 			     "/lustre/storeB/project/"   => "ro",
 			     "/opdata/"                  => "ro",

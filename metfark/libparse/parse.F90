@@ -90,18 +90,23 @@ module parse
        cMidnight  = 36,         &
        cNow       = 37,         &
        cRound     = 38,         &
-       cSinh      = 39,         &
-       cCosh      = 40,         &
-       cTanh      = 41,         &
-       cSin       = 42,         &
-       cCos       = 43,         &
-       cTan       = 44,         &
-       cAsin      = 45,         &
-       cAcos      = 46,         &
-       cAtan2     = 47,         &
-       cAtan      = 48,         &
-       VarBegin   = 49,         &
-       VarEnd     = VarBegin+cAtan-cAbs
+       cShaperror = 39,         &
+       cShape     = 40,         &
+       ctd2q      = 41,         &
+       crh2td     = 42,         &
+       ctd2rh     = 43,         &
+       cq2rh      = 44,         &
+       cSinh      = 45,         &
+       cCosh      = 46,         &
+       cTanh      = 47,         &
+       cSin       = 48,         &
+       cCos       = 49,         &
+       cTan       = 50,         &
+       cAsin      = 51,         &
+       cAcos      = 52,         &
+       cAtan2     = 53,         &
+       cAtan      = 54,         &
+       VarBegin   = 55
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
        '-',     &
        '*',     &
@@ -138,6 +143,12 @@ module parse
        'midnight  ', &
        'now       ', &
        'round     ', &
+       'shaperror ', &
+       'shape     ', &
+       'td2q      ', &
+       'rh2td     ', &
+       'td2rh     ', &
+       'q2rh      ', &
        'sinh      ', &
        'cosh      ', &
        'tanh      ', &
@@ -148,11 +159,32 @@ module parse
        'acos      ', &
        'atan2     ', &
        'atan      ' /)
-  integer, parameter :: nconst = 3
-  CHARACTER (LEN=2), allocatable :: Const(:)
+  integer :: nconst =0
+  CHARACTER (LEN=25), allocatable :: Const(:)
   real(rn), allocatable  :: constval(:)
+  type :: parse_shape
+     integer :: index =0                    ! shape index 
+     CHARACTER(len=:), allocatable :: name  ! name of shape...
+     integer :: lenn =0                     ! length of name
+     real :: minlon,maxlon,minlat,maxlat    ! bounding box
+     logical :: offset = .false.            !
+     integer :: nll = 0                     ! number of nodes in shape
+     real, allocatable :: lat(:),lon(:)     ! shape nodes in degrees
+  end type parse_shape
+  !
+  type :: parse_shapefile
+     character*250 :: shp250=""           ! default shapefile
+     integer ::  lens = 0                   ! length of shapefile name
+     character*11 :: cname11                ! db field name
+     integer ::  lenc = 0                   ! length of db field name
+     integer ::  lenn = 0                   ! allocated length of names
+     integer :: nshp =0                   ! number of shapes
+     type(parse_shape),allocatable :: shp(:)
+  end type parse_shapefile
+  type(parse_shapefile) :: sf
+  !
   TYPE,PUBLIC ::  parse_session
-     INTEGER(is), DIMENSION(:), POINTER  :: ByteCode => null()
+     INTEGER(is), DIMENSION(:), POINTER   :: ByteCode => null()
      INTEGER                              :: ByteCodeSize
      REAL(rn),    DIMENSION(:), POINTER   :: Immed => null()
      INTEGER                              :: ImmedSize
@@ -164,6 +196,7 @@ module parse
      INTEGER                              :: ArgsSize
      INTEGER,     DIMENSION(:), POINTER   :: ArgsByte => null()
      INTEGER                              :: ArgsPtr
+     integer :: VarEnd                         ! VarBegin+nVar
      character*100 :: funcStr100=""
      integer :: lenf =0
   END TYPE parse_session
@@ -185,20 +218,33 @@ CONTAINS
     type(parse_session), pointer :: css
     character*250 :: crc250
     integer :: irc
+    integer :: ii
     character*22 :: myname ="parse_open"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if(parse_bdeb)write(*,*)myname,"Opening"
-    if (.not.allocated(const)) then
-       allocate(const(3))
-       const(1)='pi'
-       const(2)='e'
-       const(3)='na'
+    if (.not.allocated(const).or..not.allocated(constval)) then
+       if (allocated(const))deallocate(const)
+       if (allocated(constval))deallocate(constval)
+       ! create a constant variable with name shp%name... and value shp%index.XXXXXXXXXXXXXXXXXXXX
+       nconst=3 + sf%nshp
+       allocate(const(0:nconst),constval(0:nconst))
+       const(0)='unknown'
+       constval(0)=0
+       do ii=1,sf%nshp
+          const(ii)=camelCase(sf%shp(ii)%name,25)
+          constval(ii)=sf%shp(ii)%index
+          if (parse_bdeb) write(*,*) ii,nint(constval(ii)),trim(const(ii))
+       end do
+       const(1+sf%nshp)='pi'
+       const(2+sf%nshp)='e'
+       const(3+sf%nshp)='na'
+       constval(1+sf%nshp)=3.14159265359
+       constval(2+sf%nshp)=2.71828182846
+       constval(3+sf%nshp)=1.7D38
+       if(parse_bdeb)write(*,*)myname,"Added constants:",nconst
     end if
     if (.not.allocated(constval)) then
        allocate(constval(3))
-       constval(1)=3.14159265359
-       constval(2)=2.71828182846
-       constval(3)=1.7D38
     end if
     ! css must be nullified if not declared...
     if (.not.associated(css)) ALLOCATE (css)
@@ -215,6 +261,7 @@ CONTAINS
     !css%parse_uzz=ichar('Z')
     !css%parse_und=ichar('_')
     !if(parse_bdeb)write(*,*)myname,"Done"
+    css%npos=0
     call parse_initialise()
     return
   END SUBROUTINE parse_open
@@ -224,6 +271,7 @@ CONTAINS
     type(parse_session), pointer :: css
     character*250 :: crc250
     integer :: irc
+    character*22 :: myname="parse_close"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if (associated(css)) then
        IF (ASSOCIATED(css%ByteCode)) DEALLOCATE ( css%ByteCode,stat=irc)
@@ -237,6 +285,174 @@ CONTAINS
     end if
     return
   END SUBROUTINE parse_close
+  !
+  subroutine parse_clearshapefile(crc250,irc)
+    implicit none
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    character*22 :: myname="parse_clearshapefile"
+    if (parse_bdeb)write(*,*)myname,'Entering.',sf%nshp
+    if (sf%nshp.gt.0) then
+       do ii=1,sf%nshp
+          if (allocated(sf%shp(ii)%lat)) deallocate(sf%shp(ii)%lat)
+          if (allocated(sf%shp(ii)%lon)) deallocate(sf%shp(ii)%lon)
+          if (allocated(sf%shp(ii)%name)) deallocate(sf%shp(ii)%name)
+       end do
+       deallocate(sf%shp)
+    end if
+    sf%nshp=0
+    return
+  end subroutine parse_clearshapefile
+  !
+  subroutine parse_setshapefile(path250,cname11,crc250,irc)
+    USE,INTRINSIC :: ISO_C_BINDING
+    USE shape
+    implicit none
+    character*250 :: path250
+    character*11 :: cname11
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    INTEGER                         :: nvar = 0
+    !
+    TYPE(shpfileobject) :: shphandle
+    TYPE(shpobject) :: shpobj
+    INTEGER :: ii, jj, iname, lendec
+    INTEGER :: nshpr, tshpr, nfield, nrec, nd, ftype
+    REAL(kind=c_double) :: minbound(4), maxbound(4)
+    character(len=11) :: cname
+    character*22 :: myname="parse_setshapefile"
+    !
+    if(parse_bdeb)write(*,*)myname,' Entering.',irc
+    sf%shp250=path250
+    call chop0(sf%shp250,250)
+    sf%lens=length(sf%shp250,250,10)
+    sf%cname11 = cname11 !  "SOVEREIGNT"
+    sf%lenc=length(sf%cname11,11,10)
+    if (sf%lenc.eq.0) then
+       sf%cname11 =  "SOVEREIGNT"
+       sf%lenc=length(sf%cname11,11,10)
+    end if
+    if(parse_bdeb)write(*,*)myname," Path: '"//sf%shp250(1:sf%lens)//"'"
+    ! remove old shapefile data
+    call parse_clearshapefile(crc250,irc)
+    if (irc.ne.0) then
+       call parse_errorappend(crc250,myname)
+       call parse_errorappend(crc250,"Error return from clearshapeFile")
+       call parse_errorappendi(crc250,irc)
+       return
+    end if
+    ! read new shape file...
+    shphandle = shpopen(sf%shp250(1:sf%lens), 'rb')
+    ! error check
+    IF (shpfileisnull(shphandle) .OR. dbffileisnull(shphandle)) THEN
+       call parse_errorappend(crc250,myname)
+       call parse_errorappend(crc250,'Error opening '//sf%shp250(1:sf%lens)//' for reading')
+       irc=458
+       return
+    ENDIF
+    ! get general information about the shapefile object
+    CALL shpgetinfo(shphandle, nshpr, tshpr, minbound, maxbound, nfield, nrec)
+    if (parse_bdeb) then
+       write(*,*)myname,'Shpgetinfo, shapes:',nshpr
+       write(*,*)myname,'shpgetinfo, type of shapes:',tshpr,'(Polygon=',shpt_polygon,')'
+       write(*,*)myname,'shpgetinfo, number of db-fields',nfield
+       write(*,*)myname,'shpgetinfo, number of db-records',nrec
+    end if
+    ! get field "name" index
+    iname=dbfgetfieldindex (shphandle,sf%cname11)
+    if (iname.eq.-1) then
+       call parse_errorappend(crc250,myname)
+       call parse_errorappend(crc250,'Error in dbfgetfieldindex')
+       call parse_errorappendi(crc250,ii)
+       irc=458
+    end if
+    cname="" ! use iname to identify field...
+    ftype=dbfgetfieldinfo (shphandle, iname, cname, sf%lenn, lendec)
+    sf%nshp=nshpr
+    allocate(sf%shp(sf%nshp),stat=irc)
+    if (irc.ne.0) then
+       call parse_errorappend(crc250,myname)
+       call parse_errorappend(crc250,"Unable to allocate shape:")
+       call parse_errorappendi(crc250,sf%nshp)
+       call parse_errorappendi(crc250,irc)
+       return
+    end if
+    ! read the nshp shapes
+    DO ii = 1, nshpr
+       jj=ii-1
+       sf%shp(ii)%index=ii
+       allocate(character(len=sf%lenn) :: sf%shp(ii)%name)
+       if (irc.ne.0) then
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Unable to allocate shape-name:")
+          call parse_errorappendi(crc250,sf%lenn)
+          call parse_errorappendi(crc250,irc)
+          return
+       end if
+       ! read databse attribute
+       CALL dbfreadattribute(shphandle, jj, iname, sf%shp(ii)%name)
+       sf%shp(ii)%lenn=len_trim(sf%shp(ii)%name)
+       !if (trim(sf%shp(ii)%name).eq."Norway")then
+       !   do jj=1,shpobj%nvertices
+       !      write(*,*) jj, shpobj%padfx(jj),shpobj%padfy(jj)
+       !   end do
+       !end if
+       ! read the i-th shape from the shapefile object and obtain a shape object
+       shpobj = shpreadobject(shphandle, jj)
+       ! error check
+       IF (shpisnull(shpobj)) THEN
+          irc=348
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Error in shpreadobject.")
+          call parse_errorappendi(crc250,jj)
+          call parse_errorappendi(crc250,irc)
+          return
+       ENDIF
+       sf%shp(ii)%nll=shpobj%nvertices
+       allocate(sf%shp(ii)%lon(sf%shp(ii)%nll),sf%shp(ii)%lat(sf%shp(ii)%nll),stat=irc)
+       if (irc.ne.0) then
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Unable to allocate shape-ll:")
+          call parse_errorappendi(crc250,sf%shp(ii)%nll)
+          call parse_errorappendi(crc250,irc)
+          return
+       end if
+       sf%shp(ii)%index=ii
+       do jj=1,shpobj%nvertices
+          sf%shp(ii)%lon(jj)=shpobj%padfx(jj)
+          sf%shp(ii)%lat(jj)=shpobj%padfy(jj)
+       end do
+       sf%shp(ii)%minlon=shpobj%dfxmin
+       sf%shp(ii)%maxlon=shpobj%dfxmax
+       sf%shp(ii)%minlat=shpobj%dfymin
+       sf%shp(ii)%maxlat=shpobj%dfymax
+       !write(*,'(X,A,X,I0,6(X,F6.1),2X,I5,X,A,X,F6.1)') &
+       !     & 'dbfreadattribute ', ii, &
+       !     & shpobj%padfx(1),sf%shp(ii)%minlon,sf%shp(ii)%minlon, &
+       !     & shpobj%padfy(1),sf%shp(ii)%minlat,sf%shp(ii)%maxlat, &
+       !     & sf%shp(ii)%nll,trim(sf%shp(ii)%name)
+       !
+       ! now access all the components of the shape object
+       ! number of vertices
+       ! write(*,*)myname,'shpreadobject, number of vertices',ii,shpobj%nvertices
+       ! write(*,*)myname,'shpreadobject, x:',ii
+       ! write(*,*)myname,shpobj%padfx(:)
+       ! write(*,*)myname,'shpreadobject, y:',ii
+       ! write(*,*)myname,shpobj%padfy(:)
+       ! write(*,*)myname,'shpreadobject, z:',ii
+       ! write(*,*)myname,shpobj%padfz(:)
+       !
+       ! destroy the shape object to avoid memory leaks
+       ! notice that for accessing dbf attributes the shape object is not required
+       CALL shpdestroyobject(shpobj)
+    ENDDO
+    
+    ! close the shapefile object
+    CALL shpclose(shphandle)
+    !
+  end subroutine parse_setshapefile
   !
   integer function parse_type(funcstr,var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -318,6 +534,7 @@ CONTAINS
     integer, external :: length
     character*25 :: myname = "parse_parsef"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    css%varEnd=varBegin+size(var)
     Func = FuncStr                                           ! Local copy of function string
     CALL Replace ('**','^ ',Func)                            ! Exponent into 1-Char. format
     CALL RemoveSpaces (Func)                                 ! Condense function string
@@ -767,6 +984,121 @@ CONTAINS
           else
              css%Stack(SP)=dnint(css%Stack(SP))
           end if
+       CASE  (cshaperror)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+             if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
+             irc=311
+             call parse_errorappend(crc250,'Name of shape='//trim(const(nint(css%Stack(SP))))//'=')
+             call parse_errorappendi(crc250,nint(css%Stack(SP)))
+             EvalErrType=5
+             res=zero
+             RETURN
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cshape)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (ctd2q) ! td,p
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=td2q(css%Stack(SP),css%Stack(SP+1))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2q:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to td2q.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (crh2td) ! rh, t, [ice=1,0]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=rh2td(css%Stack(SP),css%Stack(SP+1))
+          else if (nargs.eq.3) then
+             css%Stack(SP)=rh2td(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rh2td:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to rh2td.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (ctd2rh) ! td, t, [ice=1,0]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=td2rh(css%Stack(SP),css%Stack(SP+1))
+          else if (nargs.eq.3) then
+             css%Stack(SP)=td2rh(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2rh:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to td2rh.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cq2rh) ! q, t, [p|1013.25]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=q2rh(css%Stack(SP),css%Stack(SP+1))
+          else if (nargs.eq.3) then
+             css%Stack(SP)=q2rh(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to q2rh:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to q2rh.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -850,12 +1182,12 @@ CONTAINS
           css%Stack(SP)=ATAN(css%Stack(SP))
        CASE  DEFAULT
           SP=SP+1
-          if (css%ByteCode(IP) .le. VarEnd) then
+          if (css%ByteCode(IP) .le. css%VarEnd) then
              ii=css%ByteCode(IP)-VarBegin+1
              if (parse_bdeb.and.ii.gt.imax)write(*,*) myname,'Invalid VAL-index:',ii,"(max=",size(val),")"
              css%Stack(SP)=Val(ii)
           else
-             css%Stack(SP)=ConstVal(css%ByteCode(IP)-VarEnd)
+             css%Stack(SP)=ConstVal(css%ByteCode(IP)-css%VarEnd)
           end if
        END SELECT
        if(parse_bdeb)then
@@ -899,12 +1231,13 @@ CONTAINS
     character*22 :: myname ="parse_evals"
     character*250 :: str250
     real(rn) :: eps
-    integer :: lens
+    integer :: lens,imax
     integer, external :: length
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    imax=size(val)
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
-         & size(val),size(set),&
+         & imax,size(set),&
          & allocated(val),allocated(set)
     if(parse_bdeb)write(*,*)myname,"Entering"
     ret=.true.
@@ -1308,6 +1641,122 @@ CONTAINS
           else
              css%Stack(SP)=dnint(css%Stack(SP))
           end if
+       CASE  (cshaperror)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+             if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
+             irc=311
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Name of shape:'//const(nint(css%Stack(SP))))
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cshape)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (ctd2q) ! td,p
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=td2q(css%Stack(SP),css%Stack(SP+1))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2q:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to td2q.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (crh2td) ! rh, t, [ice=1,0]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=rh2td(css%Stack(SP),css%Stack(SP+1))
+          else if (nargs.eq.3) then
+             css%Stack(SP)=rh2td(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rh2td:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to rh2td.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (ctd2rh) ! td, t, [ice=1,0]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=td2rh(css%Stack(SP),css%Stack(SP+1))
+          else if (nargs.eq.3) then
+             css%Stack(SP)=td2rh(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2rh:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to td2rh.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cq2rh) ! q, t, [p|1013.25]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stack(SP)=q2rh(css%Stack(SP),css%Stack(SP+1))
+          else if (nargs.eq.3) then
+             css%Stack(SP)=q2rh(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to q2rh:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to q2rh.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -1391,11 +1840,11 @@ CONTAINS
           css%Stack(SP)=ATAN(css%Stack(SP))
        CASE  DEFAULT
           SP=SP+1
-          if (css%ByteCode(IP) .le. VarEnd) then
+          if (css%ByteCode(IP) .le. css%VarEnd) then
              css%Stack(SP)=Val(css%ByteCode(IP)-VarBegin+1)
              if (.not.set(css%ByteCode(IP)-VarBegin+1)) ret=.false.
           else
-             css%Stack(SP)=ConstVal(css%ByteCode(IP)-VarEnd)
+             css%Stack(SP)=ConstVal(css%ByteCode(IP)-css%VarEnd)
           end if
        END SELECT
        if(parse_bdeb)then
@@ -1467,18 +1916,23 @@ CONTAINS
     AI = 0
     DO IP=1,css%ByteCodeSize
        if(parse_bdeb)then
+          write(*,*)myname,'Index:',ip,css%ByteCodeSize
           write(*,'(X,A,X,A,X,I3,X,I3,3X,A,3X,I0,X,I0)')myname,"Looping",&
                & IP,css%ByteCode(IP),parse_code20(css%bytecode(ip),nargs)
        end if
        SELECT CASE (css%ByteCode(IP))
        CASE (cImmed)
+          if(parse_bdeb)write(*,*)myname,'Immed enter:',SP,DP,NPOS,size(set)
           SP=SP+1
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
+                if(parse_bdeb)write(*,*)myname,'Immed eval:',SP,jj,&
+                     & associated(css%stacka),associated(css%immed)
                 css%Stacka(SP,JJ)=css%Immed(DP)
              END IF
           END DO
           DP=DP+1
+          if(parse_bdeb)write(*,*)myname,'Immed done:',SP,DP,NPOS,size(set)
        CASE   (cNeg)
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
@@ -1773,17 +2227,17 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          DO JJ=1,NPOS
-             IF(SET(JJ))THEN
-                IF (NARGS.ge.1) THEN ! 
+          IF (NARGS.ge.1) THEN ! 
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
                    if (rand()*100 .gt. css%Stacka(SP,JJ)) then
                       css%Stacka(SP,JJ)=1.0D0
                    else
                       css%Stacka(SP,JJ)=0.0D0
                    end if
-                end if
-             END IF
-          END DO
+                END IF
+             END DO
+          end if
        CASE  (cand)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -2081,16 +2535,168 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          DO JJ=1,NPOS
-             IF(SET(JJ))THEN
-                if (nargs.gt.1) then
+          if (nargs.gt.1) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
                    eps=max(1.0D-5,abs(css%Stacka(SP+1,JJ)))
                    css%Stacka(SP,JJ)=dnint(css%Stacka(SP,JJ)/eps)*eps
-                else
+                end if
+             end do
+          else
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
                    css%Stacka(SP,JJ)=dnint(css%Stacka(SP,JJ))
                 end if
-             end if
-          end do
+             end do
+          end if
+       CASE  (cshaperror)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             css%Stacka(SP,1)=shapeid(css%Stacka(SP,1),css%Stacka(SP+1,1))
+             if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stacka(sp,1))
+             irc=311
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Name of shape:'//const(nint(css%Stacka(SP,1))))
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cshape)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=shapeid(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ))
+                end if
+             end do
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (ctd2q) ! td,p
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=td2q(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ))
+                END IF
+             END DO
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2q:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to td2q.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (crh2td) ! rh, t, [ice=1,0]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=rh2td(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ))
+                END IF
+             END DO
+          else if (nargs.eq.3) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=rh2td(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ),css%Stacka(SP+2,JJ))
+                END IF
+             END DO
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rh2td:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to rh2td.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (ctd2rh) ! td, t, [ice=1,0]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=td2rh(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ))
+                END IF
+             END DO
+          else if (nargs.eq.3) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=td2rh(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ),css%Stacka(SP+2,JJ))
+                END IF
+             END DO
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2rh:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to td2rh.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cq2rh) ! q, t, [p|1013.25]
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.2) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=q2rh(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ))
+                END IF
+             END DO
+          else if (nargs.eq.3) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=q2rh(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ),css%Stacka(SP+2,JJ))
+                END IF
+             END DO
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to q2rh:",nargs
+             irc=313
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to q2rh.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -2216,7 +2822,7 @@ CONTAINS
           END DO
        CASE  DEFAULT
           SP=SP+1
-          if (css%ByteCode(IP) .le. VarEnd) then
+          if (css%ByteCode(IP) .le. css%VarEnd) then
              ii=css%ByteCode(IP)-VarBegin+1
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
@@ -2226,7 +2832,7 @@ CONTAINS
           else
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
-                   css%Stacka(SP,JJ)=ConstVal(css%ByteCode(IP)-VarEnd)
+                   css%Stacka(SP,JJ)=ConstVal(css%ByteCode(IP)-css%VarEnd)
                 END IF
              END DO
           end if
@@ -2268,7 +2874,7 @@ CONTAINS
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if(parse_bdeb)write(*,*)myname,"Entering"
     DO IP=1,css%ByteCodeSize
-       if (css%ByteCode(IP).ge.VarBegin.and.css%ByteCode(IP).le.VarEnd)then
+       if (css%ByteCode(IP).ge.VarBegin.and.css%ByteCode(IP).le.css%VarEnd)then
           set(css%ByteCode(IP)-VarBegin+1)=.true.
        end if
     END DO
@@ -2518,18 +3124,20 @@ CONTAINS
        DO in=ib,lstr                                         ! Search for name terminators
           IF (SCAN(str(in:in),'+-*/^) ,') > 0) EXIT
        END DO
-       DO j=1,SIZE(Var)
-          IF (str(ib:in-1) .eq. trim(Var(j))) THEN                     
-             n = j                                           ! Variable name found
-             IF (PARSE_BDEB) THEN
-                write(*,*) myname,"** MATCH: '"//str(ib:in-1)//"' == '"//trim(Var(j))//"'"
-             end if
-             EXIT
-             !          ELSE IF (PARSE_BDEB) THEN
-             !             write(*,*) myname,"no match: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
-             !                  & in-ib,len_trim(var(j))
-          END IF
-       END DO
+       if (allocated(var)) then
+          DO j=1,SIZE(Var)
+             IF (str(ib:in-1) .eq. trim(Var(j))) THEN                     
+                n = j                                           ! Variable name found
+                IF (PARSE_BDEB) THEN
+                   write(*,*) myname,"** MATCH: '"//str(ib:in-1)//"' == '"//trim(Var(j))//"'"
+                end if
+                EXIT
+                !          ELSE IF (PARSE_BDEB) THEN
+                !             write(*,*) myname,"no match: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
+                !                  & in-ib,len_trim(var(j))
+             END IF
+          END DO
+       end if
     END IF
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
@@ -2664,7 +3272,7 @@ CONTAINS
        else
           n = parse_VariableIndex (F, Const)
           IF (n > 0) then
-             n = VarEnd+n
+             n = css%VarEnd+n
           end if
        end if
     END IF
@@ -2732,7 +3340,7 @@ CONTAINS
        CALL parse_CompileSubstr (css, F, b+1, e-1, Var,.true.)
        RETURN
     ELSEIF (SCAN(F(b:b),calpha) > 0) THEN        
-       if (parse_bdeb) WRITE(*,*)myname,'3. Found Alphanumeric: ',F(b:b)
+       if (parse_bdeb) WRITE(*,*)myname,'3. Found Alphanumeric: ',F(b:e),allocated(var)
        n = parse_MathFunctionIndex (F(b:e))
        IF (n > 0) THEN
           b2 = b+INDEX(F(b:e),'(')-1
@@ -3288,4 +3896,254 @@ CONTAINS
     end if
     return
   end function parse_code20
+  !
+  ! CEOP Derived Parameter Equations
+  ! http://www.eol.ucar.edu/projects/ceop/dm/documents/refdata_report/eqns.html
+  
+  ! Compute the Specific Humidity  from dew point temperature (Bolton 1980):
+
+  real function td2q(td,p) ! td,p
+    real :: td,p
+    real :: e,q
+    ! Vapour pressure in mb
+    !    where:
+    !       e = vapor pressure in mb;
+    !       Td = dew point in deg C;
+    !       p = surface pressure in mb;
+    !       q = specific humidity in g/kg.
+    e= 6.112*exp((17.67*td)/(td + 243.5))
+    q= 1000*(0.622 * e)/(p - (0.378 * e))
+    td2q=q
+    return ! q
+  end function td2q
+  
+  ! Compute Dew Point Temperature (Bolton 1980):
+  
+  real function rh2td(rh,t,rice) ! rh, t, ice=NULL
+    real :: rh,t
+    real, OPTIONAL :: rice
+    logical :: ice
+    real :: es,e,td
+    !     where:
+    !      rh - relative Humidity in percent;
+    !       t - temperature in deg C
+    ! Saturation vapor pressure in mb:
+    if (present(rice)) then
+       ice=rice.ge.0.5D0
+    else
+       ice=(t.le.0.0D0)
+    end if
+    es=satVapPres(t+273.15,ice)
+    ! Vapor pressure in mb:
+    e =es * rh/100.0
+    ! Dew point in deg C
+    td=log(e/6.112)*243.5/(17.67-log(e/6.112))
+    rh2td=td
+    return ! td
+  end function rh2td
+    
+  ! Compute Relative Humidity (Bolton 1980):
+
+  real function td2rh(td,t,rice) ! td, t, ice=NULL
+    real :: td,t
+    real, optional :: rice
+    !     where:
+    !       td - dew point in deg C
+    !       t - temperature in deg C
+    logical :: ice
+    real :: es,e,rh
+    if (present(rice)) then
+       ice=rice.ge.0.5D0
+    else
+       ice=(t.le.0.0D0)
+    end if
+    es=satVapPres(t+273.15, ice)
+    ! Vapor pressure in mb;
+    e=6.112*exp((17.67*td)/(td + 243.5))
+    ! Relative Humidity in percent 
+    rh=100.0 * (e/es)
+    if (rh>100) rh=100.0D0
+    td2rh=rh
+    return ! rh
+  end function td2rh
+  
+  !  From somewhere else
+  !  GANSKE nøyaktig...
+  
+  real function q2rh(q,t,rp) ! q, t, p = 1013.25
+    real :: q, t
+    real, optional :: rp
+    real :: es,e,rh,p
+    !   Q --> RH
+    !   q - specific humidity
+    !   t - temperature in Kelvin
+    !   p - pressure
+    if (present(rp)) then
+       p=rp
+    else
+       p=1013.25
+    end if
+    es        = 6.112 * exp((17.67 * (t-273.15))/(t - 29.65))
+    e         =q * p / (0.378 * q + 0.622)
+    rh        =e / es
+    if (rh > 1) rh=1.0D0
+    if (rh < 0) rh=0.0D0
+    q2rh=rh*100.0D0
+    return ! rh*100
+  end function q2rh
+  
+  real function satVapPres(t,ice) ! t, ice
+    real :: t
+    logical :: ice
+    real :: tc,ew,log10ei,ei,e
+    !  Saturation vapour pressure above water
+    !
+    !    Guide to Meteorological Instruments and Methods of Observation (CIMO Guide)
+    !    (WMO, 2008) with t in [°C] and ew in [hPa]
+    tc =t - 273.15
+    ew =6.112*exp(17.62*(tc/(243.12 + tc)))
+    !  Saturation vapour pressure above ice
+    ! Vapor pressure over ice
+    !    Goff Gratch equation (Smithsonian Tables, 1984):
+    !
+    !    Log10 ei =  -9.09718 (273.16/T - 1)                                                             [12]
+    !                       - 3.56654 Log10(273.16/ T)
+    !                       + 0.876793 (1 - T/ 273.16)
+    !                       + Log10(6.1071)
+    !    with T in [K] and ei in [hPa]
+    tc =t - 273.15
+    ew =6.112*exp(17.62*(tc/(243.12 + tc)))
+    !  Saturation vapour pressure above ice
+    ! Vapor pressure over ice
+    !    Goff Gratch equation (Smithsonian Tables, 1984):
+    !
+    !    Log10 ei =  -9.09718 (273.16/T - 1)                                                             [12]
+    !                       - 3.56654 Log10(273.16/ T)
+    !                       + 0.876793 (1 - T/ 273.16)
+    !                       + Log10(6.1071)
+    !    with T in [K] and ei in [hPa]
+    log10ei =  -9.09718*(273.16/t - 1)&
+         & - 3.56654*log10(273.16/t) &
+         & + 0.876793*(1 - t/273.16) &
+         & + log10(6.1071)
+    ei      =   10**log10ei
+    log10ei =  -9.09718*(273.16/t - 1) &
+         & - 3.56654*log10(273.16/t) &
+         & + 0.876793*(1 - t/273.16) &
+         & + log10(6.1071)
+    ei      =   10**log10ei
+    if(ice) then
+       e=ei
+    else
+       e=ew
+    end if
+    satVapPres=e
+    return ! e
+  end function satVapPres
+  function camelCase(strIn,lens) result(strOut)
+    implicit none
+    integer :: lens
+    character(len=*), intent(in) :: strIn
+    character(len=len(strIn))    :: strBuff
+    character(len=lens)          :: strOut
+    integer :: i,j,k
+    logical :: lup
+    strBuff="";
+    k=0
+    lup=.true. ! start with uppercase
+    do i = 1, len(strIn)
+       j = iachar(strIn(i:i))
+       if (j>= iachar("a") .and. j<=iachar("z") ) then ! lower case
+          k=k+1
+          if (lup) then ! make upper case
+             strBuff(k:k) = achar(iachar(strIn(i:i))-32)
+             lup=.false.
+          else
+             strBuff(k:k) = strIn(i:i)
+          end if
+       else if (j>= iachar("A") .and. j<=iachar("Z") ) then
+          k=k+1
+          if (lup) then
+             strBuff(k:k) = strIn(i:i)
+             lup=.false.
+          else ! make lower case
+             strBuff(k:k) = achar(iachar(strIn(i:i))+32)
+          end if
+       else if (j.eq.iachar(" ")) then
+          lup=.true.
+       else
+          k=k+1
+          strBuff(k:k) = strIn(i:i)
+       end if
+    end do
+    strOut=strBuff
+  end function camelCase
+  function to_upper(strIn) result(strOut)
+    ! Adapted from http://www.star.le.ac.uk/~cgp/fortran.html (25 May 2012)
+    ! Original author: Clive Page
+    
+    implicit none
+    
+    character(len=*), intent(in) :: strIn
+    character(len=len(strIn)) :: strOut
+    integer :: i,j
+
+    do i = 1, len(strIn)
+       j = iachar(strIn(i:i))
+       if (j>= iachar("a") .and. j<=iachar("z") ) then
+          strOut(i:i) = achar(iachar(strIn(i:i))-32)
+       else
+          strOut(i:i) = strIn(i:i)
+       end if
+    end do
+    
+  end function to_upper
+  function to_lower(strIn) result(strOut)
+    ! Adapted from http://www.star.le.ac.uk/~cgp/fortran.html (25 May 2012)
+    ! Original author: Clive Page
+    
+    implicit none
+    
+    character(len=*), intent(in) :: strIn
+    character(len=len(strIn)) :: strOut
+    integer :: i,j
+    
+    do i = 1, len(strIn)
+       j = iachar(strIn(i:i))
+       if (j>= iachar("A") .and. j<=iachar("Z") ) then
+          strOut(i:i) = achar(iachar(strIn(i:i))+32)
+       else
+          strOut(i:i) = strIn(i:i)
+       end if
+    end do
+    
+  end function to_lower
+  ! returns the shape identification
+  integer function shapeid (lon,lat)
+    USE shape
+    implicit none
+    real :: lon
+    real :: lat
+    integer :: ii,inout
+    do ii=1,sf%nshp
+       inout=0
+       if (lon.ge.sf%shp(ii)%minlon.and. &
+            & lon.le.sf%shp(ii)%maxlon.and. &
+            & lat.ge.sf%shp(ii)%minlat.and. &
+            & lat.le.sf%shp(ii)%maxlat) then
+          call PNPOLY(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat,inout)
+          if (parse_bdeb) write(*,*)"Shapeid Checking shape:",ii,inout,&
+               & sf%shp(ii)%minlon,sf%shp(ii)%maxlon,&
+               & sf%shp(ii)%minlat,sf%shp(ii)%maxlat,&
+               & trim(const(ii))
+          if (inout.ge.0) then
+             shapeid=ii
+             return
+          end if
+       end if
+    end do
+    shapeid=0 ! no matching shapes
+    return
+  end function shapeid
+  !
 end module parse

@@ -114,6 +114,7 @@ module plot
      type(plot_match), pointer :: firstMatch => null()          ! linked list
      type(plot_match), pointer :: lastMatch => null()           ! linked list
      type(plot_match), pointer :: cMatch => null()              ! linked list
+     integer :: nmatch = 0
      character*250 :: fltmod250=""
      character*250 :: fltobs250=""
      !
@@ -1228,6 +1229,7 @@ CONTAINS
        nmatch => cmatch%next
        call plot_unlinkMatch(cmatch)
        call plot_deallocateMatch(cmatch)
+       set%nmatch=set%nmatch-1
        cmatch  => nmatch
     end do
     nullify(set%cmatch)
@@ -1373,6 +1375,8 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_pushmatch"
+    integer :: lenn
+    integer, external :: length
     type(plot_match), pointer :: trg !  current target
     allocate(trg,stat=irc)
     if (irc.ne.0) then
@@ -1387,6 +1391,11 @@ CONTAINS
     trg%prev => set%lastMatch%prev
     trg%prev%next => trg
     trg%next%prev => trg
+    set%nmatch=set%nmatch+1
+    if (plot_bdeb)then
+       lenn=length(n80,80,10)
+       write(*,*)myname,' Adding:',n80(1:lenn)
+    end if
     nullify(trg)
     return
   end subroutine plot_pushmatch
@@ -1590,6 +1599,7 @@ CONTAINS
       call plot_unlinkMatch(trg)
        trg=>ntrg
        plot_popmatch=.true.
+       set%nmatch=set%nmatch-1
     end if
     return
   end function plot_popmatch
@@ -1637,7 +1647,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_loopmodtrg"
-    if (plot_bdeb) write(*,*)myname,' Entering.',irc
+    !if (plot_bdeb) write(*,*)myname,' Entering.',irc
     plot_loopmodtrg=.false. ! only true if all is ok
     if (.not.associated(set%cmodtrg)) then
        set%cmodtrg =>  set%firstModtrg%next 
@@ -1654,7 +1664,7 @@ CONTAINS
        max80=set%cmodtrg%max80
        plot_loopmodtrg=.true.
     end if
-    if (plot_bdeb) write(*,*)myname,' Done.',plot_loopmodtrg
+    !if (plot_bdeb) write(*,*)myname,' Done.',plot_loopmodtrg
     return
   end function plot_loopmodtrg
   !
@@ -2106,6 +2116,18 @@ CONTAINS
        call plot_errorappend(crc250," Error return from loopMatch.")
        return
     end if
+    call colocation_clearDefaultStack(css,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from clearDefaultStack.")
+       return
+    end if
+    call colocation_clearMatchStack(css,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from clearMatchStack.")
+       return
+    end if
     return
   end subroutine plot_colImport
   !
@@ -2128,6 +2150,12 @@ CONTAINS
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
        call plot_errorappend(crc250," Error return from clearDefaultStack.")
+       return
+    end if
+    call colocation_clearMatchStack(css,crc250,irc)
+    if (irc.ne.0) then
+       call plot_errorappend(crc250,myname)
+       call plot_errorappend(crc250," Error return from clearMatchStack.")
        return
     end if
     if (plot_bdeb) write(*,*)myname,'Looping defaults.'
@@ -2163,16 +2191,10 @@ CONTAINS
     end if
     !
     if(plot_bdeb)write(*,*)myname,"Setting colocation match."
-    call colocation_clearMatchStack(css,crc250,irc)
-    if (irc.ne.0) then
-       call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," Error return from clearMatchStack.")
-       return
-    end if
     do while (plot_loopMatch(set,n80,e250,l80,u80,crc250,irc))
        if (plot_bdeb) then
           lenn=length(n80,80,10)
-          write(*,*)myname,"Inside loopMatch '"//n80(1:lenn)//"'"
+          write(*,*)myname,"Inside loopMatch '"//n80(1:lenn)//"'",set%nmatch
        end if
        call colocation_pushMatch(css,n80,e250,l80,u80,crc250,irc)
        if (irc.ne.0) then
@@ -2221,10 +2243,10 @@ CONTAINS
     integer :: lenc,lene,lenn,lenl,lent,leng
     integer :: ii,jj
     integer :: ncol
+    integer :: lcnt
     character*80, allocatable :: col80(:)
     character*250, allocatable :: exp250(:)
     !
-    write(*,*)myname,"Starting subroutine."
     if(plot_bdeb)write(*,*)myname,'Entering.',irc
     !
     ! open table file
@@ -2254,7 +2276,11 @@ CONTAINS
        call plot_errorappend(crc250,"\n")
        return
     end if
+    lcnt=0
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
+       lcnt=lcnt+1
+       !if (lcnt.eq.2) mod_bdeb=.true.
+       !parse_bdeb=mod_bdeb
        if (plot_bdeb) then
           lenn=length(name80,80,10)
           write(*,*)myname,"Inside loopSet '"//name80(1:lenn)//"'"

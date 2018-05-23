@@ -589,14 +589,6 @@ CONTAINS
        if (allocated(css%int_var)) deallocate(css%int_var)
        if (allocated(css%int_lenv)) deallocate(css%int_lenv)
        if (allocated(css%int_val)) deallocate(css%int_val)
-       ! remove any message data...
-       if (associated(css%msg)) then
-          if (allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
-          if (allocated(css%msg%trg_vok)) deallocate(css%msg%trg_vok)
-          if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
-          if (allocated(css%msg%trg_res)) deallocate(css%msg%trg_res)
-          deallocate(css%msg)
-       end if
        ! deallocate observation filter...
        if (css%lenf.ne.0) then
           call parse_close(css%psf,crc250,irc)
@@ -607,24 +599,13 @@ CONTAINS
           end if
        end if
        !
-       if (allocated(css%trg80)) deallocate(css%trg80)
-       if (allocated(css%trg_lent)) deallocate(css%trg_lent)
-       if (allocated(css%trg_pos250)) deallocate(css%trg_pos250)
-       if (allocated(css%trg_lenp)) deallocate(css%trg_lenp)
-       if (allocated(css%trg_type)) deallocate(css%trg_type)
-       if (allocated(css%trg_seq)) deallocate(css%trg_seq)
-       if (allocated(css%trg_ind)) deallocate(css%trg_ind)
-       if (associated(css%trg_psp)) deallocate(css%trg_psp)
-       if (allocated(css%trg_descr)) deallocate(css%trg_descr)
-       if (allocated(css%trg_lval)) deallocate(css%trg_lval)
-       if (allocated(css%trg_minval)) deallocate(css%trg_minval)
-       if (allocated(css%trg_maxval)) deallocate(css%trg_maxval)
-       if (allocated(css%trg_ook)) deallocate(css%trg_ook)
-       if (allocated(css%trg_orm)) deallocate(css%trg_orm)
-       if (allocated(css%trg_req)) deallocate(css%trg_req)
-       if (allocated(css%trg_val)) deallocate(css%trg_val)
-       if (allocated(css%trg_vok)) deallocate(css%trg_vok)
-       if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
+       call observation_clearTargetList(css,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250,"Error return from 'cleartargetlist'.")
+          return
+       end if
+       deallocate(css%msg)
        ! 
        css%prev%next => css%next
        css%next%prev => css%prev
@@ -1718,6 +1699,41 @@ CONTAINS
   !
   ! make target list from target chain
   !
+  subroutine observation_clearTargetList(css,crc250,irc)
+    type(obs_session), pointer :: css   ! session structure
+    character*250 :: crc250
+    integer :: irc
+    if (allocated(css%trg80)) deallocate(css%trg80)
+    if (allocated(css%trg_lent)) deallocate(css%trg_lent)
+    if (allocated(css%trg_pos250)) deallocate(css%trg_pos250)
+    if (allocated(css%trg_lenp)) deallocate(css%trg_lenp)
+    if (allocated(css%trg_type)) deallocate(css%trg_type)
+    if (allocated(css%trg_seq)) deallocate(css%trg_seq)
+    if (allocated(css%trg_ind)) deallocate(css%trg_ind)
+    if (associated(css%trg_psp)) deallocate(css%trg_psp)
+    if (allocated(css%trg_descr)) deallocate(css%trg_descr)
+    if (allocated(css%trg_lval)) deallocate(css%trg_lval)
+    if (allocated(css%trg_minval)) deallocate(css%trg_minval)
+    if (allocated(css%trg_maxval)) deallocate(css%trg_maxval)
+    if (allocated(css%trg_ook)) deallocate(css%trg_ook)
+    if (allocated(css%trg_orm)) deallocate(css%trg_orm)
+    if (allocated(css%trg_req)) deallocate(css%trg_req)
+    if (allocated(css%trg_val)) deallocate(css%trg_val)
+    if (allocated(css%trg_vok)) deallocate(css%trg_vok)
+    if (associated(css%trg_ptr)) deallocate(css%trg_ptr)
+    css%trg_set=.false.
+    ! remove any message data...
+    if (associated(css%msg)) then
+       if (allocated(css%msg%trg_val)) deallocate(css%msg%trg_val)
+       if (allocated(css%msg%trg_vok)) deallocate(css%msg%trg_vok)
+       if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
+       if (allocated(css%msg%trg_res)) deallocate(css%msg%trg_res)
+       deallocate(css%msg)
+       allocate(css%msg)
+    end if
+    return
+  end subroutine observation_clearTargetList
+  
   subroutine observation_makeTargetList(css,crc250,irc) 
     type(obs_session), pointer :: css   ! session structure
     character*250 :: crc250
@@ -2756,13 +2772,13 @@ CONTAINS
   !
   ! clear the location stack
   !
-  subroutine observation_locclear(css,crc250,irc)
+  subroutine observation_clearLocStack(css,crc250,irc)
     type(obs_session), pointer :: css !  current session
     character*250 :: crc250
     integer :: irc
     type(obs_location), pointer :: currentLoc => null()
     type(obs_location), pointer :: locNext => null()
-    character*25 :: myname="observation_locclear"
+    character*25 :: myname="observation_clearLocStack"
     integer :: ii, lens
     integer, external :: length
     if(obs_bdeb)write(*,*)myname,' Entering.'
@@ -2797,7 +2813,7 @@ CONTAINS
        return
     end if
     if(obs_bdeb)write(*,*)myname,' Done.'
-  end subroutine observation_locclear
+  end subroutine observation_clearLocStack
   !
   ! delete loc
   !
@@ -3076,8 +3092,10 @@ CONTAINS
                       if (allocated(css%msg%trg_vok)) deallocate(css%msg%trg_vok)
                       if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
                       if (allocated(css%msg%trg_res)) deallocate(css%msg%trg_res)
-                      if (associated(css%msg)) deallocate(css%msg,stat=irc)
+                   else if (obs_bdeb) then
+                      write(*,*)myname,' Not allocated: msg%trg_* ',css%msg%nobs
                    end if
+                   if (associated(css%msg)) deallocate(css%msg,stat=irc)
                    css%msg => newmsg
                 end if
                 if(obs_bdeb)write(*,*)myname,' Setting msg obs.',css%msg%nobs,&
@@ -3132,7 +3150,7 @@ CONTAINS
     if (css%flt_set) then ! check if we have an observation filter...
        ! should probably reset the parser here if msg-functions are implemented...
        if (obs_bdeb)then
-          write(*,*)myname,'Evaluating filter:',associated(css%psf),&
+          write(*,*)myname,' Evaluating filter:',associated(css%psf),&
                & css%msg%ctrg,css%msg%cobs,&
                & size(css%msg%trg_val),size(css%msg%trg_set),size(css%msg%trg_res),&
                & allocated(css%msg%trg_val),allocated(css%msg%trg_set),&
@@ -3147,6 +3165,7 @@ CONTAINS
           call observation_errorappend(crc250,"\n")
           return
        end if
+       if (obs_bdeb)write(*,*)myname,' Looping over msg:',css%msg%nobs
        do ii=1,css%msg%nobs
           if (css%msg%trg_set(ii)) then
              ! evaluate filter
@@ -4172,6 +4191,7 @@ CONTAINS
        bok=.false. ! "observation" is no good..
        observation_checkObs=.false. ! exit loop
     end if
+    if(obs_bdeb)write(*,*)myname,'Done:',irc,observation_checkObs
     IF(IRC.NE.0) THEN
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250,"Error return from eval.");
@@ -4321,11 +4341,13 @@ CONTAINS
        IF(KEL.GT.KELEM) KEL=KELEM
        if(obs_bdeb)WRITE(*,*)myname,'KSUP:',ksup(5),ksup(6),KEL, nsubset
        !
+       !write(*,*)myname,'Before BUFREX.'
        CALL BUFREX(KBUFL,KBUFF,KSUP,KSEC0 ,&
             & KSEC1,KSEC2 ,KSEC3 ,&
             & KSEC4,KEL,CNAMES,CUNITS,&
             & KVALS,VALUES,CVALS,irc)
-       !write(*,*)myname,'F:'
+       !write(*,*)myname,'After BUFREX.'
+       if(obs_bdeb)write(*,*)myname,'Done BUFREX'
        IF(IRC.NE.0) THEN
           css%currentfile%mrm(3)=css%currentfile%mrm(3)+1 ! unable to decode body
           if (css%currentfile%mrm(3).lt.10) then

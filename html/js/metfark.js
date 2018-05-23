@@ -302,6 +302,11 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"julian(<yy>,<mm>,<dd>...)","addValue('"+target+"','julian(,,,,,)');");
     addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');");
     addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');");
+    addChildButton(item,"shape(lon_deg,lat_deg)","addValue('"+target+"','shape(,)');");
+    addChildButton(item,"td2q(td_C,p_hpa)","addValue('"+target+"','td2q(td,p)');");
+    addChildButton(item,"rh2td(rh_%,t_c[,ice_0|1])","addValue('"+target+"','rh2td(rh_%,t_C)');");
+    addChildButton(item,"td2rh(td_c,t_c[,ice_0|1])","addValue('"+target+"','td2rh(td_C,t_C)');");
+    addChildButton(item,"q2rh(q_g/kg,t_k[,p_hpa])","addValue('"+target+"','q2rh(q_gkg,t_K,p_hPa)');");
     addChildButton(item,"abs()","addValue('"+target+"','abs()');");
     addChildButton(item,"exp()","addValue('"+target+"','exp()');");
     addChildButton(item,"log10()","addValue('"+target+"','log10()');");
@@ -315,6 +320,10 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"asin()","addValue('"+target+"','asin()');");
     addChildButton(item,"acos()","addValue('"+target+"','acos()');");
     addChildButton(item,"atan2(,)","addValue('"+target+"','atan2(,)');");
+    addChildButton(item,"Norway","addValue('"+target+"','Norway');");
+    addChildButton(item,"Sweden","addValue('"+target+"','Sweden');");
+    addChildButton(item,"Denmark","addValue('"+target+"','Denmark');");
+    addChildButton(item,"Finland","addValue('"+target+"','Finland');");
 };
 
 function addLogicalButtons( item, target) {

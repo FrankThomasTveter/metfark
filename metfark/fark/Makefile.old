@@ -17,7 +17,7 @@
 #     CONFIGURE_REQUIRES => {  }
 #     DEFINE => q[]
 #     INC => q[-I. -Ilib]
-#     LIBS => [q[-Llib -lobs -lmodel -lcoloc -lplot -lparse -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff]]
+#     LIBS => [q[-Llib -lobs -lmodel -lcoloc -lplot -lparse -lshape -lshapec -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff]]
 #     NAME => q[fark]
 #     PREREQ_PM => {  }
 #     TEST_REQUIRES => {  }
@@ -201,22 +201,24 @@ TO_INST_PM = check.pl \
 	lib/fark.pm \
 	lib/farkdata.pm \
 	lib/farkdir.pm \
+	lib/fortranc.mod \
 	lib/libbufr.a \
 	lib/libbufrc.a \
 	lib/libcoloc.a \
-	lib/libeccodes.a \
-	lib/libeccodes_f90.a \
 	lib/libgenc.a \
 	lib/libmodel.a \
 	lib/libobs.a \
 	lib/libparse.a \
 	lib/libplot.a \
+	lib/libshape.a \
+	lib/libshapec.a \
 	lib/libsort.a \
 	lib/model.mod \
 	lib/observations.mod \
 	lib/parse.mod \
 	lib/plot.mod \
 	lib/read_xml_primitives.mod \
+	lib/shape.mod \
 	lib/sort.mod \
 	lib/xmlparse.mod \
 	t.pl
@@ -237,16 +239,14 @@ PM_TO_BLIB = check.pl \
 	blib/lib/farkdata.pm \
 	lib/farkdir.pm \
 	blib/lib/farkdir.pm \
+	lib/fortranc.mod \
+	blib/lib/fortranc.mod \
 	lib/libbufr.a \
 	blib/lib/libbufr.a \
 	lib/libbufrc.a \
 	blib/lib/libbufrc.a \
 	lib/libcoloc.a \
 	blib/lib/libcoloc.a \
-	lib/libeccodes.a \
-	blib/lib/libeccodes.a \
-	lib/libeccodes_f90.a \
-	blib/lib/libeccodes_f90.a \
 	lib/libgenc.a \
 	blib/lib/libgenc.a \
 	lib/libmodel.a \
@@ -257,6 +257,10 @@ PM_TO_BLIB = check.pl \
 	blib/lib/libparse.a \
 	lib/libplot.a \
 	blib/lib/libplot.a \
+	lib/libshape.a \
+	blib/lib/libshape.a \
+	lib/libshapec.a \
+	blib/lib/libshapec.a \
 	lib/libsort.a \
 	blib/lib/libsort.a \
 	lib/model.mod \
@@ -269,6 +273,8 @@ PM_TO_BLIB = check.pl \
 	blib/lib/plot.mod \
 	lib/read_xml_primitives.mod \
 	blib/lib/read_xml_primitives.mod \
+	lib/shape.mod \
+	blib/lib/shape.mod \
 	lib/sort.mod \
 	blib/lib/sort.mod \
 	lib/xmlparse.mod \
@@ -374,8 +380,8 @@ MPOLLUTE =
 # fark might depend on some other libraries:
 # See ExtUtils::Liblist for details
 #
-EXTRALIBS = -L/metfark/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
-LDLOADLIBS = -L/metfark/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+EXTRALIBS = -L/metfark/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lshape -lshapec -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
+LDLOADLIBS = -L/metfark/metfark/metfark/fark/lib -lobs -lmodel -lcoloc -lplot -lparse -lshape -lshapec -lsort -lgenc -lbufr -lbufrc -lgfortran -L/usr/lib -lnetcdff
 BSLOADLIBS = 
 
 
@@ -653,8 +659,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(FIRST_MAKEFILE) $(OBJECT) \
-	  $(MAKEFILE_OLD) 
+	  $(MAKEFILE_OLD) $(OBJECT) \
+	  $(FIRST_MAKEFILE) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 
@@ -1105,22 +1111,24 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  lib/fark.pm blib/lib/fark.pm \
 	  lib/farkdata.pm blib/lib/farkdata.pm \
 	  lib/farkdir.pm blib/lib/farkdir.pm \
+	  lib/fortranc.mod blib/lib/fortranc.mod \
 	  lib/libbufr.a blib/lib/libbufr.a \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
 	  lib/libcoloc.a blib/lib/libcoloc.a \
-	  lib/libeccodes.a blib/lib/libeccodes.a \
-	  lib/libeccodes_f90.a blib/lib/libeccodes_f90.a \
 	  lib/libgenc.a blib/lib/libgenc.a \
 	  lib/libmodel.a blib/lib/libmodel.a \
 	  lib/libobs.a blib/lib/libobs.a \
 	  lib/libparse.a blib/lib/libparse.a \
 	  lib/libplot.a blib/lib/libplot.a \
+	  lib/libshape.a blib/lib/libshape.a \
+	  lib/libshapec.a blib/lib/libshapec.a \
 	  lib/libsort.a blib/lib/libsort.a \
 	  lib/model.mod blib/lib/model.mod \
 	  lib/observations.mod blib/lib/observations.mod \
 	  lib/parse.mod blib/lib/parse.mod \
 	  lib/plot.mod blib/lib/plot.mod \
 	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
+	  lib/shape.mod blib/lib/shape.mod \
 	  lib/sort.mod blib/lib/sort.mod \
 	  lib/xmlparse.mod blib/lib/xmlparse.mod \
 	  t.pl $(INST_LIB)/t.pl 

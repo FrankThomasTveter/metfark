@@ -1,0 +1,13 @@
+#! /bin/csh
+#
+rm -f output/*/*;
+R CMD build farkRPackage &&sudo R -e 'install.packages("farkRPackage_0.2.0.tar.gz", repos=NULL)' && Rscript --vanilla splus/synop syno_002d.table output/syno_002d/
+#
+  eog output/*/*.jpg
+# gthumb output/*/*.ps
+#
+#
+#
+#R CMD build farkRPackage &&sudo R -e 'install.packages("farkRPackage_0.2.0.tar.gz", repos=NULL)' && Rscript --vanilla splus/synop meps_syno_100d.table output/meps_syno_100d/&&eog output/meps_syno_100d/*.jpg
+#
+ 

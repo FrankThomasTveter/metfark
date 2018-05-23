@@ -1348,6 +1348,53 @@ sub makeColocXML {
     return ($ret,$msg);
 }
 
+=head2 setShapeFile
+
+setShapeFile - set default shape file.
+
+Arguments:
+
+=over 4
+
+=item (string) shape file name
+
+=back
+
+=head4 EXAMPLE
+
+$fark->setShapeFile("/metfark/config/shapefile/default");
+
+=cut
+
+
+sub setShapeFile {
+    my ($self,$fn,$cn)=@_;
+    if (! defined ($cn)) {$cn="SOVEREIGNT";};
+    my ($ret,$msg) = xs_setShapeFile($fn,$cn);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+
+=head2 clearShapeFile
+
+clearShapeFile - clear shape file information.
+
+=head4 EXAMPLE
+
+$fark->clearShapeFile();
+
+=cut
+
+
+sub clearShapeFile {
+    my ($self)=@_;
+    my ($ret,$msg) = xs_clearShapeFile();
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+
 ################################# PLOT  ##########################
 
 =head1 PLOT FUNCTIONS
