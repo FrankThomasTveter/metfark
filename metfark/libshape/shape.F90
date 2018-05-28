@@ -418,8 +418,8 @@ MODULE shape
        shpcomputeextents, shpwriteobject, shpdestroyobject, &
        dbfgetfieldindex, dbfgetfieldinfo, dbfaddfield, dbfisattributenull, &
        dbfgetnativefieldtype
-  PUBLIC pnpoly
-
+  PUBLIC shape_pnpoly, shape_ddpoly, shape_simplify, shape_getDist, shape_getDistBox, shape_inside
+  PUBLIC shape_rtodeg, shape_degtor
 CONTAINS
 
 
@@ -1049,12 +1049,12 @@ CONTAINS
   !
   !        METHOD
   !           A VERTICAL LINE IS DRAWN THRU THE POINT IN QUESTION. IF IT
-  !           CROSSES THE POLYGON AN ODD NUMBER OF TIMES, THEN THE
+  !           SHAPE_CROSSES THE POLYGON AN ODD NUMBER OF TIMES, THEN THE
   !           POINT IS INSIDE OF THE POLYGON.
   !
   !     ..................................................................
   !
-  SUBROUTINE pnpoly(PX,PY,N,XX,YY,INOUT)
+  SUBROUTINE shape_pnpoly(PX,PY,N,XX,YY,INOUT)
     implicit none
     integer n,inout
     REAL PX,PY,XX(N),YY(N)
@@ -1090,7 +1090,59 @@ CONTAINS
        CYCLE LOOP
     end do LOOP
     RETURN
-  END SUBROUTINE pnpoly
+  END SUBROUTINE shape_pnpoly
+  !
+  real function shape_ddpoly(PX,PY,N,XX,YY)
+    implicit none
+    integer n
+    REAL PX,PY,XX(N),YY(N)
+    LOGICAL MX,MY,NX,NY
+    INTEGER i,j,inout
+    real X(n),Y(n),mm,dd,ddmin
+    logical llmin
+    ddmin=-1.0D0
+    INOUT=-1 ! point is outside
+    if (n.le.1) return
+    DO I=1,N
+       X(I)=XX(I)-PX
+       Y(I)=YY(I)-PY
+    end do
+    llmin=.false.
+    LOOP: DO I=1,N
+       J=1+MOD(I,N)
+       dd=shape_getDist(px,py,xx(i),yy(i),xx(j),yy(j))
+       if (llmin) then
+          ddmin=min(ddmin,dd)
+       else
+          ddmin=dd
+          llmin=.true.
+       end if
+       MX=X(I).GE.0.0
+       NX=X(J).GE.0.0
+       MY=Y(I).GE.0.0
+       NY=Y(J).GE.0.0
+       IF(.NOT.((MY.OR.NY).AND.(MX.OR.NX)).OR.(MX.AND.NX)) CYCLE LOOP
+       IF(.NOT.(MY.AND.NY.AND.(MX.OR.NX).AND..NOT.(MX.AND.NX))) then
+          mm=(Y(I)*X(J)-X(I)*Y(J))/(X(J)-X(I))
+          IF(mm.lt.0) then
+             cycle loop
+          else if (mm.eq.0) then
+             inout=0 ! point is on a vertex
+             return
+          else if (mm.gt.0) then
+             INOUT=-INOUT
+             cycle loop
+          end if
+       end if
+       INOUT=-INOUT
+       CYCLE LOOP
+    end do LOOP
+    if (inout.ge.0) then
+       ddmin=0.0D0
+    end if
+    shape_ddpoly=ddmin  ! degrees
+    RETURN
+  END function shape_ddpoly
   !
   REAL(kind=8) FUNCTION length2(x)
     IMPLICIT NONE
@@ -1117,7 +1169,7 @@ CONTAINS
   !          i2       : indice of last vertex
   !          eps      : distance of simplification
   ! Output   valid(n) : boolean to know if this vertex belongs or not to the simplified polygon
-  recursive subroutine DouglasPeuckerRecursive(v, i1, i2, eps, valid)
+  recursive subroutine shape_DouglasPeuckerRecursive(v, i1, i2, eps, valid)
     implicit none
     INTEGER,INTENT(IN)                   :: i1,i2
     REAL(kind=8),INTENT(IN)              :: eps
@@ -1139,13 +1191,13 @@ CONTAINS
     ! si la distance perpenticulaire maximale est plus grande que eps, 
     ! simplifie les 2 branches [i1,imax] et [imax,i2]
     IF ( dmax > eps ) THEN
-       call DouglasPeuckerRecursive(v, i1, imax, eps, valid)
-       call DouglasPeuckerRecursive(v, imax, i2, eps, valid)
+       call shape_DouglasPeuckerRecursive(v, i1, imax, eps, valid)
+       call shape_DouglasPeuckerRecursive(v, imax, i2, eps, valid)
        ! sinon on vire tous les points entre i1 et i2   
     ELSE
        valid(i1+1:i2-1) = .FALSE.
     ENDIF
-  end subroutine DouglasPeuckerRecursive
+  end subroutine shape_DouglasPeuckerRecursive
 
   real function log2(x)
     implicit none
@@ -1159,7 +1211,7 @@ CONTAINS
   !          i2       : indice of last vertex
   !          eps      : distance of simplification
   ! Output   valid(n) : boolean to know if this vertex belongs or not to the simplified polygon
-  recursive subroutine DouglasPeuckerIteratif(v, eps, valid)
+  recursive subroutine shape_DouglasPeuckerIteratif(v, eps, valid)
     implicit none
     REAL(kind=8),INTENT(IN)              :: eps
     REAL(kind=8),DIMENSION(:,:),POINTER  :: v
@@ -1197,11 +1249,11 @@ CONTAINS
        ! si la distance perpenticulaire maximale est plus grande que eps, 
        ! simplifie les 2 branches [i1,imax] et [imax,i2]
        IF ( dmax > eps ) THEN
-          ! call DouglasPeuckerRecursive(v, i1, imax, eps, valid)
+          ! call shape_DouglasPeuckerRecursive(v, i1, imax, eps, valid)
           next_loop_index = next_loop_index + 1
           loop_index( 1, next_loop_index ) = i1
           loop_index( 2, next_loop_index ) = imax
-          ! call DouglasPeuckerRecursive(v, imax, i2, eps, valid)
+          ! call shape_DouglasPeuckerRecursive(v, imax, i2, eps, valid)
           next_loop_index = next_loop_index + 1
           loop_index( 1, next_loop_index ) = imax
           loop_index( 2, next_loop_index ) = i2
@@ -1214,45 +1266,17 @@ CONTAINS
        i2 = loop_index( 2, offset_loop_index )
     end do  ! END - do while
     deallocate(loop_index)
-  end subroutine DouglasPeuckerIteratif
-  !
-  real function sim_degtor(x)
-    implicit none
-    real(kind=8),INTENT(IN)  :: x
-    real pi
-    parameter (pi=3.14159265359)
-    sim_degtor=x*pi/180.
-  end function sim_degtor
-
-  real function sim_rtodeg(x)
-    implicit none
-    real(kind=8),INTENT(IN)  :: x
-    real pi
-    parameter (pi=3.14159265359)
-    sim_rtodeg=x*180./pi
-  end function sim_rtodeg
-  !
-  real function sim_sindeg(x)
-    implicit none
-    real(kind=8),INTENT(IN)  :: x
-    sim_sindeg=sin(sim_degtor(x))
-  end function sim_sindeg
-
-  real function sim_cosdeg(x)
-    implicit none
-    real(kind=8),INTENT(IN)  :: x
-    sim_cosdeg=cos(sim_degtor(x))
-  end function sim_cosdeg
+  end subroutine shape_DouglasPeuckerIteratif
 
   ! Does not work over 180-meridian
-  subroutine simplify(np,latlon,eps)
+  subroutine shape_simplify(np,lon,lat,eps)
     IMPLICIT NONE
-    integer :: np                          ! number of points
-    real(kind=8), allocatable :: latlon(:) ! latitude (deg)
-    real(kind=8),INTENT(IN)  :: eps                      ! tolerance in km
+    integer :: np                               ! number of points
+    real(kind=8), allocatable :: lon(:), lat(:) ! longitude, latitude (deg)
+    real(kind=8),INTENT(IN)  :: eps             ! tolerance in km
     !
     integer :: ii,jj,nnp
-    real :: pst,lat,lon
+    real :: pst
     INTEGER                                 :: nbp
     REAL(kind=8),DIMENSION(:,:),POINTER     :: points
     LOGICAL,DIMENSION(:),POINTER            :: valid
@@ -1265,7 +1289,7 @@ CONTAINS
     ! allocate(points(2,nbp))
     write(*,'(X,A,I0," (eps=",F0.1,"km)")')'SIMPLIFY Polygon started with: ',np,eps
     if (np.le.3) return
-    meet=(latlon(1).eq.latlon(np) .and. latlon(1+np).eq.latlon(2*np))
+    meet=(lat(1).eq.lat(np) .and. lon(1).eq.lon(np))
     if (meet) then
        nbp=np-1
     else
@@ -1273,13 +1297,13 @@ CONTAINS
     end if
     allocate(points(2,nbp))
     do ii=1,nbp
-       points(1,ii)=sim_degtor(latlon(ii))*re                      ! latitude
-       points(2,ii)=sim_degtor(latlon(np+ii))*re*sim_cosdeg(latlon(ii))  ! longitude
+       points(1,ii)=shape_degtor(lat(ii))*re                      ! latitude
+       points(2,ii)=shape_degtor(lon(ii))*re*shape_cosdeg(lat(ii))  ! longitude
     end do
     allocate(valid(nbp))
     valid = .TRUE.
-    call DouglasPeuckerRecursive(points, 1, nbp, eps, valid)
-    !call DouglasPeuckerIteratif(points, eps, valid)
+    call shape_DouglasPeuckerRecursive(points, 1, nbp, eps, valid)
+    !call shape_DouglasPeuckerIteratif(points, eps, valid)
     nnp=0
     do ii=1,nbp
        if (valid(ii)) nnp=nnp+1
@@ -1291,25 +1315,258 @@ CONTAINS
     jj=0
     do ii=1,nbp
        if (valid(ii)) then
-          lat=latlon(ii)
-          lon=latlon(ii+np)
           jj=jj+1
-          latlon(jj)=lat    ! latitude
-          latlon(jj+nnp)=lon ! longitude
+          lat(jj)=lat(ii)    ! latitude
+          lon(jj)=lon(ii)    ! longitude
        end if
     end do
     if (meet) then ! join end points
-       latlon(nnp)=latlon(1)     ! latitude
-       latlon(2*nnp)=latlon(1+nnp) ! longitude
+       lat(nnp)=lat(1)     ! latitude
+       lon(nnp)=lon(nnp)   ! longitude
     end if
-    do ii=1,size(latlon)-2*np
-       latlon(ii+2*nnp)=latlon(ii+2*np)
+    do ii=1,size(lat)-np ! {min,max} are stored after nodes
+       lat(jj+ii)=lat(ii+np)
+       lon(jj+ii)=lon(ii+np)
     end do
     np=nnp
     deallocate( valid )
     deallocate( points )
     return
-  end subroutine simplify
+  end subroutine shape_simplify
+  
+  logical function shape_inside(plon,plat,minlon,minlat,maxlon,maxlat)
+    implicit none
+    real plon,plat,minlon,minlat,maxlon,maxlat
+    shape_inside= (plon.ge.minlon.and. &
+         & plon.le.maxlon.and. &
+         & plat.ge.minlat.and. &
+         & plat.le.maxlat)
+    return
+  end function shape_inside
+  
+  real function shape_getDistBox(plon,plat,minlon,minlat,maxlon,maxlat)
+    implicit none
+    real plon,plat,minlon,minlat,maxlon,maxlat
+    real :: d1,d2,d3,d4
+    d1=shape_getDist(plon,plat,minlon,minlat,minlon,maxlat)
+    d2=shape_getDist(plon,plat,minlon,maxlat,maxlon,maxlat)
+    d3=shape_getDist(plon,plat,maxlon,maxlat,maxlon,minlat)
+    d4=shape_getDist(plon,plat,maxlon,minlat,minlon,minlat)
+    shape_getDistBox=min(d1,d2,d3,d4)
+    return
+  end function shape_getDistBox
+  real function shape_getDist(plon,plat,alon,alat,blon,blat)
+    ! get distance between point (P) and great circle segment (between A and B)
+    implicit none
+    real :: plat,plon,alat,alon,blat,blon ! lat and lon in degrees
+    real :: ppos(3) ! target position P
+    real :: apos(3) ! segment end-point A
+    real :: bpos(3) ! segment end-point B
+    real :: cpos(3) ! shape_cross product A-vector and B-vector 
+    real :: dpos(3) ! normal vector to AB-plane
+    real :: epos(3) ! P-vector component normal to AB-plane
+    real :: fpos(3) ! P-vector component in AB-plane 
+    real :: gpos(3) ! normalised P-vector component in AB-plane
+    real :: dist,distA,distB,ddp,ll
+    call shape_latlon2pos(plat,plon,ppos)
+    call shape_latlon2pos(alat,alon,apos)
+    call shape_latlon2pos(blat,blon,bpos)
+    cpos = shape_cross(apos,bpos)
+    ll=sqrt(dot_product(cpos,cpos))
+    if (ll.lt.1.0D-10) then ! a and b are parallell
+       ll=dot_product(bpos,apos)
+       if (ll.gt.0.0D0) then ! one point
+          shape_getDist=shape_getAngle(apos,ppos)
+       else ! undetermined great circle, undefined result, pick 180 degrees
+          shape_getDist=180.0D0
+       end if
+       return
+    else
+       dpos=shape_divide(cpos,ll) ! normalise cpos
+    end if
+    ddp = dot_product(dpos,ppos)
+    epos = shape_multiply(dpos,ddp)
+    fpos = shape_subtract(ppos,epos) ! P-vector in the AB-plane
+    ll=sqrt(dot_product(fpos,fpos))
+    if (ll.lt.1.0D-10) then ! distance is 90 degrees
+       shape_getDist=90.0D0
+       return
+    else
+       gpos=shape_divide(fpos,ll) ! normalise P-vector in AB-plane
+    end if
+    ! check if gpos is between a-pos and b-pos
+    distA=shape_getAngle(apos,gpos)
+    distB=shape_getAngle(bpos,gpos)
+    dist=shape_getAngle(apos,bpos)
+    ! write(*,*)'P-pos:',string20(ppos)
+    ! write(*,*)'A-pos:',string20(apos)
+    ! write(*,*)'B-pos:',string20(bpos)
+    ! write(*,*)'C-pos:',string20(cpos)
+    ! write(*,*)'D-pos:',string20(dpos)
+    ! write(*,*)'E-pos:',string20(epos)
+    ! write(*,*)'F-pos:',string20(fpos)
+    ! write(*,*)'G-pos:',string20(gpos)
+    ! write(*,*)'Distances:',distA,distB,dist
+    if (distA.lt.dist.and.distB.lt.dist) then ! between
+    !   write(*,*)'Between.'
+       shape_getDist=shape_getAngle(ppos,gpos)
+    else if (distA.lt.distB) then             ! A is closest
+    !   write(*,*)'A is closest.'
+       shape_getDist=shape_getAngle(ppos,apos)
+    else                                      ! B is closest
+    !   write(*,*)'B is closest.'
+       shape_getDist=shape_getAngle(ppos,bpos)
+    end if
+    return
+  end function shape_getDist
+
+  subroutine shape_latlon2pos(lat,lon,pos)
+    implicit none
+    real :: lat,lon,pos(3),rr
+    pos(3) = shape_sindeg(lat)
+    rr     = shape_cosdeg(lat)
+    pos(1) = rr*shape_cosdeg(lon)
+    pos(2) = rr*shape_sindeg(lon)
+    return
+  end subroutine shape_latlon2pos
+
+  function shape_cross(a, b)
+    real, dimension(3) :: shape_cross
+    real, dimension(3), intent(in) :: a, b
+    shape_cross(1) = a(2) * b(3) - a(3) * b(2)
+    shape_cross(2) = a(3) * b(1) - a(1) * b(3)
+    shape_cross(3) = a(1) * b(2) - a(2) * b(1)
+    return
+  end function shape_cross
+  
+  function shape_divide(a, b)
+    real, dimension(3) :: shape_divide
+    real, dimension(3), intent(in) :: a
+    real, intent(in) :: b
+    shape_divide(1) = a(1) /b
+    shape_divide(2) = a(2) /b
+    shape_divide(3) = a(3) /b
+    return
+  end function shape_divide
+
+  function shape_multiply(a, b)
+    real, dimension(3) :: shape_multiply
+    real, dimension(3), intent(in) :: a
+    real, intent(in) :: b
+    shape_multiply(1) = a(1) * b
+    shape_multiply(2) = a(2) * b
+    shape_multiply(3) = a(3) * b
+    return
+  end function shape_multiply
+  
+  function shape_subtract(a, b)
+    real, dimension(3) :: shape_subtract
+    real, dimension(3), intent(in) :: a, b
+    shape_subtract(1) = a(1) - b(1)
+    shape_subtract(2) = a(2) - b(2)
+    shape_subtract(3) = a(3) - b(3)
+    return
+  end function shape_subtract
+  
+  real function shape_getAngle(apos,bpos)
+    implicit none
+    real :: apos(3),bpos(3),dd ! assuming normalised vectors
+    dd=dot_product(apos,bpos)
+    shape_getAngle=shape_acosdeg(dd)
+    return
+  end function shape_getAngle
+  
+  character*20 function string20(pos)
+    real :: pos(3)
+    write(string20,'(F6.3,X,F6.3,X,F6.3)') pos
+  end function string20
+    
+  real function shape_degtor(x)
+    implicit none
+    real :: x
+    real :: pi
+    parameter (pi=3.14159265359)
+    shape_degtor=x*pi/180.
+  end function shape_degtor
+
+  real function shape_rtodeg(x)
+    implicit none
+    real :: x
+    real :: pi
+    parameter (pi=3.14159265359)
+    shape_rtodeg=x*180./pi
+  end function shape_rtodeg
+
+  real function shape_sindeg(x)
+    implicit none
+    real :: x
+    shape_sindeg=sin(shape_degtor(x))
+  end function shape_sindeg
+
+  real function shape_cosdeg(x)
+    implicit none
+    real :: x
+    shape_cosdeg=cos(shape_degtor(x))
+  end function shape_cosdeg
+
+  real function shape_tandeg(x)
+    implicit none
+    real :: x
+    shape_tandeg=tan(shape_degtor(x))
+  end function shape_tandeg
+
+  real function shape_asindeg(x)
+    implicit none
+    real :: x
+    shape_asindeg=shape_rtodeg(asin(x))
+  end function shape_asindeg
+
+  real function shape_acosdeg(x)
+    implicit none
+    real :: x
+    shape_acosdeg=shape_rtodeg(acos(x))
+  end function shape_acosdeg
+
+  real function shape_atandeg(x)
+    implicit none
+    real :: x
+    shape_atandeg=shape_rtodeg(atan(x))
+  end function shape_atandeg
+
+  real function atan2deg(y,x)
+    implicit none
+    real :: y,x
+    atan2deg=shape_rtodeg(atan2(y,x))
+  end function atan2deg
+
+  ! !
+  ! real function shape_degtor(x)
+  !   implicit none
+  !   real(kind=8),INTENT(IN)  :: x
+  !   real pi
+  !   parameter (pi=3.14159265359)
+  !   shape_degtor=x*pi/180.
+  ! end function shape_degtor
+
+  ! real function shape_rtodeg(x)
+  !   implicit none
+  !   real(kind=8),INTENT(IN)  :: x
+  !   real pi
+  !   parameter (pi=3.14159265359)
+  !   shape_rtodeg=x*180./pi
+  ! end function shape_rtodeg
+  ! !
+  ! real function shape_sindeg(x)
+  !   implicit none
+  !   real(kind=8),INTENT(IN)  :: x
+  !   shape_sindeg=sin(shape_degtor(x))
+  ! end function shape_sindeg
+
+  ! real function shape_cosdeg(x)
+  !   implicit none
+  !   real(kind=8),INTENT(IN)  :: x
+  !   shape_cosdeg=cos(shape_degtor(x))
+  ! end function shape_cosdeg
 
 END MODULE shape
 

@@ -302,7 +302,9 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"julian(<yy>,<mm>,<dd>...)","addValue('"+target+"','julian(,,,,,)');");
     addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');");
     addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');");
-    addChildButton(item,"shape(lon_deg,lat_deg)","addValue('"+target+"','shape(,)');");
+    addChildButton(item,"constant(id)","addValue('"+target+"','shapeinfo(,)');");
+    addChildButton(item,"precinct(lon_deg,lat_deg)","addValue('"+target+"','shapeid(,)');");
+    addChildButton(item,"vicinity(lon_deg,lat_deg,range_km)","addValue('"+target+"','vicinity(,,)');");
     addChildButton(item,"td2q(td_C,p_hpa)","addValue('"+target+"','td2q(td,p)');");
     addChildButton(item,"rh2td(rh_%,t_c[,ice_0|1])","addValue('"+target+"','rh2td(rh_%,t_C)');");
     addChildButton(item,"td2rh(td_c,t_c[,ice_0|1])","addValue('"+target+"','td2rh(td_C,t_C)');");

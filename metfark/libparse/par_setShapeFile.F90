@@ -9,10 +9,10 @@ subroutine par_setshapefile(fn250, cn11, crc250, irc)
   !write(*,*) myname, 'Entering.',irc
   call parse_setshapefile(fn250, cn11, crc250,irc)
   if (irc.ne.0) then
-     call colocation_errorappend(crc250,"|")
-     call colocation_errorappend(crc250,trim(myname))
-     call colocation_errorappend(crc250," Error return from parse_setshapefile.")
-     call colocation_errorappendi(crc250,irc)
+     call parse_errorappend(crc250,"|")
+     call parse_errorappend(crc250,trim(myname))
+     call parse_errorappend(crc250," Error return from parse_setshapefile.")
+     call parse_errorappendi(crc250,irc)
      return
   end if
   !write(*,*) myname,' Done.'

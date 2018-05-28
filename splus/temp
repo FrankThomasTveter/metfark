@@ -12,6 +12,8 @@
 #
 # Attribute=_n|1:2:3:4:5:6:7:8:9:10:11:12:13:14:15
 # Attribute=title_string_n|Title
+# Attribute=min_n|-999999
+# Attribute=max_n|+999999
 # Attribute=axis_string_n|Label
 # Attribute=file_string_n|var
 # Attribute=Orientation|landscape:portrait

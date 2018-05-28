@@ -90,23 +90,24 @@ module parse
        cMidnight  = 36,         &
        cNow       = 37,         &
        cRound     = 38,         &
-       cShaperror = 39,         &
-       cShape     = 40,         &
-       ctd2q      = 41,         &
-       crh2td     = 42,         &
-       ctd2rh     = 43,         &
-       cq2rh      = 44,         &
-       cSinh      = 45,         &
-       cCosh      = 46,         &
-       cTanh      = 47,         &
-       cSin       = 48,         &
-       cCos       = 49,         &
-       cTan       = 50,         &
-       cAsin      = 51,         &
-       cAcos      = 52,         &
-       cAtan2     = 53,         &
-       cAtan      = 54,         &
-       VarBegin   = 55
+       cShpInfo   = 39,         &
+       cShpPre     = 40,         &
+       cShpVic    = 41,         &
+       ctd2q      = 42,         &
+       crh2td     = 43,         &
+       ctd2rh     = 44,         &
+       cq2rh      = 45,         &
+       cSinh      = 46,         &
+       cCosh      = 47,         &
+       cTanh      = 48,         &
+       cSin       = 49,         &
+       cCos       = 50,         &
+       cTan       = 51,         &
+       cAsin      = 52,         &
+       cAcos      = 53,         &
+       cAtan2     = 54,         &
+       cAtan      = 55,         &
+       VarBegin   = 56
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
        '-',     &
        '*',     &
@@ -143,8 +144,9 @@ module parse
        'midnight  ', &
        'now       ', &
        'round     ', &
-       'shaperror ', &
-       'shape     ', &
+       'constant  ', &
+       'precinct  ', &
+       'vicinity  ', &
        'td2q      ', &
        'rh2td     ', &
        'td2rh     ', &
@@ -218,33 +220,41 @@ CONTAINS
     type(parse_session), pointer :: css
     character*250 :: crc250
     integer :: irc
-    integer :: ii
+    integer :: ii,nshp
     character*22 :: myname ="parse_open"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if(parse_bdeb)write(*,*)myname,"Opening"
     if (.not.allocated(const).or..not.allocated(constval)) then
        if (allocated(const))deallocate(const)
        if (allocated(constval))deallocate(constval)
-       ! create a constant variable with name shp%name... and value shp%index.XXXXXXXXXXXXXXXXXXXX
-       nconst=3 + sf%nshp
+       ! create a constant variable with name shp%name... and value shp%index
+       nshp=0
+       do ii=1,sf%nshp
+          if (sf%shp(ii)%index.eq.ii) then ! only count unique indexes
+             nshp=nshp+1
+          end if
+       end do
+       nconst=3+nshp
        allocate(const(0:nconst),constval(0:nconst))
        const(0)='unknown'
        constval(0)=0
+       nshp=0
        do ii=1,sf%nshp
-          const(ii)=camelCase(sf%shp(ii)%name,25)
-          constval(ii)=sf%shp(ii)%index
-          if (parse_bdeb) write(*,*) ii,nint(constval(ii)),trim(const(ii))
+          if (parse_bdeb) write(*,*) ">>",ii,sf%shp(ii)%index,trim(sf%shp(ii)%name)
+          if (sf%shp(ii)%index.eq.ii) then ! only count unique indexes
+             nshp=nshp+1
+             const(nshp)=camelCase(sf%shp(ii)%name,25)
+             constval(nshp)=sf%shp(ii)%index
+             if (parse_bdeb) write(*,*) "  ",nshp,nint(constval(nshp)),trim(const(nshp))
+          end if
        end do
-       const(1+sf%nshp)='pi'
-       const(2+sf%nshp)='e'
-       const(3+sf%nshp)='na'
-       constval(1+sf%nshp)=3.14159265359
-       constval(2+sf%nshp)=2.71828182846
-       constval(3+sf%nshp)=1.7D38
+       const(1+nshp)='pi'
+       const(2+nshp)='e'
+       const(3+nshp)='na'
+       constval(1+nshp)=3.14159265359
+       constval(2+nshp)=2.71828182846
+       constval(3+nshp)=1.7D38
        if(parse_bdeb)write(*,*)myname,"Added constants:",nconst
-    end if
-    if (.not.allocated(constval)) then
-       allocate(constval(3))
     end if
     ! css must be nullified if not declared...
     if (.not.associated(css)) ALLOCATE (css)
@@ -318,7 +328,7 @@ CONTAINS
     !
     TYPE(shpfileobject) :: shphandle
     TYPE(shpobject) :: shpobj
-    INTEGER :: ii, jj, iname, lendec
+    INTEGER :: ii, jj, kk, iname, lendec
     INTEGER :: nshpr, tshpr, nfield, nrec, nd, ftype
     REAL(kind=c_double) :: minbound(4), maxbound(4)
     character(len=11) :: cname
@@ -394,9 +404,15 @@ CONTAINS
        ! read databse attribute
        CALL dbfreadattribute(shphandle, jj, iname, sf%shp(ii)%name)
        sf%shp(ii)%lenn=len_trim(sf%shp(ii)%name)
+       nameloop: do kk=1,ii
+          if (sf%shp(ii)%name.eq.sf%shp(kk)%name) then
+             sf%shp(ii)%index=kk
+             exit nameloop
+          end if
+       end do nameloop
        !if (trim(sf%shp(ii)%name).eq."Norway")then
-       !   do jj=1,shpobj%nvertices
-       !      write(*,*) jj, shpobj%padfx(jj),shpobj%padfy(jj)
+       !   do kk=1,shpobj%nvertices
+       !      write(*,*) kk, shpobj%padfx(kk),shpobj%padfy(kk)
        !   end do
        !end if
        ! read the i-th shape from the shapefile object and obtain a shape object
@@ -419,7 +435,6 @@ CONTAINS
           call parse_errorappendi(crc250,irc)
           return
        end if
-       sf%shp(ii)%index=ii
        do jj=1,shpobj%nvertices
           sf%shp(ii)%lon(jj)=shpobj%padfx(jj)
           sf%shp(ii)%lat(jj)=shpobj%padfy(jj)
@@ -484,7 +499,7 @@ CONTAINS
        parse_type=parse_constant
        return
     end if
-    DO ii=1,SIZE(Var)
+    DO ii=lbound(var,1),ubound(var,1)
        IF (trim(func) .eq. trim(Var(ii))) THEN                     
           parse_type=parse_internal
           return
@@ -534,7 +549,7 @@ CONTAINS
     integer, external :: length
     character*25 :: myname = "parse_parsef"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    css%varEnd=varBegin+size(var)
+    css%varEnd=varBegin+ubound(var,1)-lbound(var,1)+1
     Func = FuncStr                                           ! Local copy of function string
     CALL Replace ('**','^ ',Func)                            ! Exponent into 1-Char. format
     CALL RemoveSpaces (Func)                                 ! Condense function string
@@ -984,15 +999,14 @@ CONTAINS
           else
              css%Stack(SP)=dnint(css%Stack(SP))
           end if
-       CASE  (cshaperror)
+       CASE  (cShpInfo)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          if (nargs.eq.2) then
-             css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+          if (nargs.eq.1) then
              if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
              irc=311
-             call parse_errorappend(crc250,'Name of shape='//trim(const(nint(css%Stack(SP))))//'=')
+             call parse_errorappend(crc250,'Name='//trim(getname25(css%Stack(SP)))//'=')
              call parse_errorappendi(crc250,nint(css%Stack(SP)))
              EvalErrType=5
              res=zero
@@ -1008,12 +1022,29 @@ CONTAINS
              res=zero
              RETURN
           end if
-       CASE  (cshape)
+       CASE  (cShpPre)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           if (nargs.eq.2) then
              css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cShpVic)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.3) then
+             css%Stack(SP)=vicinity(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
@@ -1641,16 +1672,15 @@ CONTAINS
           else
              css%Stack(SP)=dnint(css%Stack(SP))
           end if
-       CASE  (cshaperror)
+       CASE  (cShpInfo)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          if (nargs.eq.2) then
-             css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+          if (nargs.eq.1) then
              if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
              irc=311
              call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Name of shape:'//const(nint(css%Stack(SP))))
+             call parse_errorappend(crc250,'Name='//getname25(css%Stack(SP)))
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
@@ -1666,12 +1696,29 @@ CONTAINS
              res=zero
              RETURN
           end if
-       CASE  (cshape)
+       CASE  (cShpPre)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           if (nargs.eq.2) then
              css%Stack(SP)=shapeid(css%Stack(SP),css%Stack(SP+1))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cShpVic)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.3) then
+             css%Stack(SP)=vicinity(css%Stack(SP),css%Stack(SP+1),css%Stack(SP+2))
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
@@ -2549,16 +2596,15 @@ CONTAINS
                 end if
              end do
           end if
-       CASE  (cshaperror)
+       CASE  (cShpInfo)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          if (nargs.eq.2) then
-             css%Stacka(SP,1)=shapeid(css%Stacka(SP,1),css%Stacka(SP+1,1))
+          if (nargs.eq.1) then
              if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stacka(sp,1))
              irc=311
              call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Name of shape:'//const(nint(css%Stacka(SP,1))))
+             call parse_errorappend(crc250,'Name='//getname25(css%Stacka(SP,1)))
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
              res=zero
@@ -2574,7 +2620,7 @@ CONTAINS
              res=zero
              RETURN
           end if
-       CASE  (cshape)
+       CASE  (cShpPre)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
@@ -2582,6 +2628,27 @@ CONTAINS
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
                    css%Stacka(SP,JJ)=shapeid(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ))
+                end if
+             end do
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
+             irc=310
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cShpVic)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.3) then
+             DO JJ=1,NPOS
+                IF(SET(JJ))THEN
+                   css%Stacka(SP,JJ)=vicinity(css%Stacka(SP,JJ),css%Stacka(SP+1,JJ),css%Stacka(SP+2,JJ))
                 end if
              end do
           else
@@ -3115,7 +3182,7 @@ CONTAINS
     character*25 :: myname = "parse_VariableIndex"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     n = 0
-    if(parse_bdeb)write(*,*)myname,"Entering: '"//trim(str)//"'",ibegin,size(var)
+    if(parse_bdeb)write(*,*)myname,"Entering: '"//trim(str)//"'",ibegin,lbound(var,1),ubound(var,1)
     lstr = LEN_TRIM(str)
     IF (lstr > 0) THEN
        DO ib=1,lstr                                          ! Search for first character in str
@@ -3125,7 +3192,7 @@ CONTAINS
           IF (SCAN(str(in:in),'+-*/^) ,') > 0) EXIT
        END DO
        if (allocated(var)) then
-          DO j=1,SIZE(Var)
+          DO j=lbound(var,1),ubound(Var,1)
              IF (str(ib:in-1) .eq. trim(Var(j))) THEN                     
                 n = j                                           ! Variable name found
                 IF (PARSE_BDEB) THEN
@@ -3326,16 +3393,7 @@ CONTAINS
     nargs=0
     if (parse_bdeb) write(*,*) myname,'** Processing:',F(b:e)
     if (b.gt.e) return ! nothing to do
-    IF (F(b:b) == '+') THEN                              ! Case 1: F(b:e) = '+...'
-       if (parse_bdeb) WRITE(*,*)myname,'1. F(b:e) = "+..."'
-       CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
-       RETURN
-    ELSEIF (F(b:b) == '-') THEN
-       if (parse_bdeb) WRITE(*,*)myname,'3. Found Minus'
-       CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
-       CALL parse_AddCompiledByte (css, cNeg)
-       RETURN
-    ELSEIF (parse_CompletelyEnclosed (F, b, e)) THEN               ! Case 2: F(b:e) = '(...)'
+    IF (parse_CompletelyEnclosed (F, b, e)) THEN               ! Case 2: F(b:e) = '(...)'
        if (parse_bdeb) WRITE(*,*)myname,'2. F(b:e) = "(...)"',F(b:e)
        CALL parse_CompileSubstr (css, F, b+1, e-1, Var,.true.)
        RETURN
@@ -3383,6 +3441,19 @@ CONTAINS
           END IF
        END DO
     end if
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    ! Check for signs
+    !----- -------- --------- --------- --------- --------- --------- --------- -------
+    IF (F(b:b) == '+') THEN                              ! Case 1: F(b:e) = '+...'
+       if (parse_bdeb) WRITE(*,*)myname,'1. F(b:e) = "+..."'
+       CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
+       RETURN
+    ELSEIF (F(b:b) == '-') THEN
+       if (parse_bdeb) WRITE(*,*)myname,'3. Found Minus'
+       CALL parse_CompileSubstr (css, F, b+1, e, Var,comma)
+       CALL parse_AddCompiledByte (css, cNeg)
+       RETURN
+    END IF
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Check for operator in substring: check only base level (k=0), exclude expr. in ()
     !----- -------- --------- --------- --------- --------- --------- --------- -------    
@@ -4131,13 +4202,13 @@ CONTAINS
             & lon.le.sf%shp(ii)%maxlon.and. &
             & lat.ge.sf%shp(ii)%minlat.and. &
             & lat.le.sf%shp(ii)%maxlat) then
-          call PNPOLY(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat,inout)
+          call shape_pnpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat,inout)
           if (parse_bdeb) write(*,*)"Shapeid Checking shape:",ii,inout,&
                & sf%shp(ii)%minlon,sf%shp(ii)%maxlon,&
                & sf%shp(ii)%minlat,sf%shp(ii)%maxlat,&
                & trim(const(ii))
           if (inout.ge.0) then
-             shapeid=ii
+             shapeid=sf%shp(ii)%index
              return
           end if
        end if
@@ -4145,5 +4216,82 @@ CONTAINS
     shapeid=0 ! no matching shapes
     return
   end function shapeid
+  ! returns the closest shape identification
+  integer function vicinity (lon,lat,eps)
+    USE shape
+    implicit none
+    real :: lon ! longitude in degrees
+    real :: lat ! latitude in degrees
+    real :: eps ! tolerance in km
+    integer :: ii,inout
+    real :: dd, dbbox, epr
+    logical lbbox
+    integer ibbox
+    epr=abs(shape_rtodeg(eps/6371.0D0)) ! km -> deg
+    lbbox=.false.
+    ibbox=0
+    do ii=1,sf%nshp
+       inout=0
+       if (shape_inside(lon,lat,&
+            & sf%shp(ii)%minlon,sf%shp(ii)%minlat, &
+            & sf%shp(ii)%maxlon,sf%shp(ii)%maxlat)) then ! 
+          ! do fine calculations, dd
+          dd = shape_ddpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat)
+          !write(*,*)'VICINITY:',ii,dd,trim(sf%shp(ii)%name)
+          if (lbbox) then
+             if (dd.lt.dbbox) then ! not necessary: .and.dd.lt.epr
+                dbbox=dd
+                ibbox=sf%shp(ii)%index
+             end if
+          else if (dd.lt.epr) then
+             lbbox=.true.
+             dbbox=dd
+             ibbox=sf%shp(ii)%index
+          end if
+       else
+          ! get distance to bounding-box
+          dd=shape_getDist(lon,lat,&
+               & sf%shp(ii)%minlon,sf%shp(ii)%minlat, &
+               & sf%shp(ii)%maxlon,sf%shp(ii)%maxlat)
+          if (lbbox) then
+             if (dd.ge.0.0D0.and.dd.lt.dbbox) then ! skip if bounding-box already too far away
+                dd = shape_ddpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat)
+                !write(*,*)'Vicinity:',ii,dd,trim(sf%shp(ii)%name)
+                if (dd.ge.0.0D0.and.dd.lt.dbbox) then ! not necessary: .and.dd.lt.epr
+                   dbbox=dd
+                   ibbox=sf%shp(ii)%index
+                end if
+             end if
+          else
+             if (dd.ge.0.0D0.and.dd.lt.epr) then ! skip if bounding-box already too far away
+                dd = shape_ddpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat)
+                !write(*,*)'Vicinity:',ii,dd,trim(sf%shp(ii)%name)
+                if (dd.ge.0.0D0.and.dd.lt.epr) then ! 
+                   lbbox=.true.
+                   dbbox=dd
+                   ibbox=sf%shp(ii)%index
+                end if
+             end if
+          end if
+       end if
+    end do
+    !if (ibbox.ne.0) write(*,*)'VICINITY:',ibbox,trim(sf%shp(ibbox)%name)
+    vicinity=ibbox
+    return
+  end function vicinity
+  !
+  character*25 function getname25(rr)
+    implicit none
+    real :: rr
+    integer :: jj
+    do jj=1,size(constval)
+       if (abs(constval(jj)-rr).lt.1.0D-5) then
+          getname25=const(jj)
+          return
+       end if
+    end do
+    getname25="undefined"
+    return
+  end function getname25
   !
 end module parse
