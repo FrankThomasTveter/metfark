@@ -4,6 +4,7 @@ subroutine plo_setdebug(ideb)
   use colocation
   use plot
   use parse
+  use shape
   implicit none
   integer :: ideb
   logical :: bdeb
@@ -42,6 +43,12 @@ subroutine plo_setdebug(ideb)
         parse_bdeb=.true.
      else
         parse_bdeb=.false.
+     end if
+  else if (abs(ideb).eq.6) then ! shape
+     if (ideb.gt.0) then
+        shape_bdeb=.true.
+     else
+        shape_bdeb=.false.
      end if
   end if
   return

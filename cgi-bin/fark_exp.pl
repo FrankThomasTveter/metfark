@@ -23,6 +23,7 @@ my $debug=0;
 if (defined $param->{debug}[0]) {
     $debug=1;
     fark::debug(5);  # debug parse
+    fark::debug(6);  # debug shape
 }
 #
 $XML::LibXML::skipXMLDeclaration = 1;

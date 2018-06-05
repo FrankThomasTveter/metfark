@@ -205,6 +205,8 @@ TO_INST_PM = check.pl \
 	lib/libbufr.a \
 	lib/libbufrc.a \
 	lib/libcoloc.a \
+	lib/libeccodes.a \
+	lib/libeccodes_f90.a \
 	lib/libgenc.a \
 	lib/libmodel.a \
 	lib/libobs.a \
@@ -247,6 +249,10 @@ PM_TO_BLIB = check.pl \
 	blib/lib/libbufrc.a \
 	lib/libcoloc.a \
 	blib/lib/libcoloc.a \
+	lib/libeccodes.a \
+	blib/lib/libeccodes.a \
+	lib/libeccodes_f90.a \
+	blib/lib/libeccodes_f90.a \
 	lib/libgenc.a \
 	blib/lib/libgenc.a \
 	lib/libmodel.a \
@@ -1115,6 +1121,8 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  lib/libbufr.a blib/lib/libbufr.a \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
 	  lib/libcoloc.a blib/lib/libcoloc.a \
+	  lib/libeccodes.a blib/lib/libeccodes.a \
+	  lib/libeccodes_f90.a blib/lib/libeccodes_f90.a \
 	  lib/libgenc.a blib/lib/libgenc.a \
 	  lib/libmodel.a blib/lib/libmodel.a \
 	  lib/libobs.a blib/lib/libobs.a \

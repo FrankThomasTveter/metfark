@@ -250,7 +250,12 @@ sub makeRoot {
     my @dirs=keys %{$farkdirs{$cls}};
     if (@dirs) {
 	if (! -d $dirs[0] && $farkdirs{$cls}{$dirs[0]} eq "rw") { 
-	    return makePath($dirs[0]);
+	    if (makePath($dirs[0])) {
+		chmod 0777, $dirs[0];
+		return $dirs[0];
+	    } else {
+		return;
+	    }
 	};
     }
     return 0; # fail

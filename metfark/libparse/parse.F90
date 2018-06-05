@@ -90,8 +90,8 @@ module parse
        cMidnight  = 36,         &
        cNow       = 37,         &
        cRound     = 38,         &
-       cShpInfo   = 39,         &
-       cShpPre     = 40,         &
+       cVarName   = 39,         &
+       cShpPre    = 40,         &
        cShpVic    = 41,         &
        ctd2q      = 42,         &
        crh2td     = 43,         &
@@ -144,7 +144,7 @@ module parse
        'midnight  ', &
        'now       ', &
        'round     ', &
-       'constant  ', &
+       'name      ', &
        'precinct  ', &
        'vicinity  ', &
        'td2q      ', &
@@ -168,22 +168,33 @@ module parse
      integer :: index =0                    ! shape index 
      CHARACTER(len=:), allocatable :: name  ! name of shape...
      integer :: lenn =0                     ! length of name
-     real :: minlon,maxlon,minlat,maxlat    ! bounding box
+     real :: minxx,maxxx,minyy,maxyy    ! bounding box
+     real :: map(3,3), minzz, maxrad
      logical :: offset = .false.            !
      integer :: nll = 0                     ! number of nodes in shape
-     real, allocatable :: lat(:),lon(:)     ! shape nodes in degrees
+     real, allocatable :: yy(:),xx(:)       ! shape node in degrees
+     integer :: npos = 0                    ! number of pos nodes in shape
+     real, allocatable :: pos(:,:)          ! position of nodes
+     real :: mimi(3),mima(3),mami(3),mama(3)! bounding box (lon,lat)
   end type parse_shape
   !
   type :: parse_shapefile
-     character*250 :: shp250=""           ! default shapefile
+     character*250 :: shp250=""             ! default shapefile
      integer ::  lens = 0                   ! length of shapefile name
      character*11 :: cname11                ! db field name
      integer ::  lenc = 0                   ! length of db field name
      integer ::  lenn = 0                   ! allocated length of names
-     integer :: nshp =0                   ! number of shapes
+     integer :: nshp =0                     ! number of shapes
      type(parse_shape),allocatable :: shp(:)
+     real ::    shapeidlat = -999.0D0
+     real ::    shapeidlon = -999.0D0
+     integer :: shapeid = 0
+     real ::    vicinitylat = -999.0D0
+     real ::    vicinitylon = -999.0D0
+     integer :: vicinity = 0
   end type parse_shapefile
   type(parse_shapefile) :: sf
+
   !
   TYPE,PUBLIC ::  parse_session
      INTEGER(is), DIMENSION(:), POINTER   :: ByteCode => null()
@@ -198,6 +209,8 @@ module parse
      INTEGER                              :: ArgsSize
      INTEGER,     DIMENSION(:), POINTER   :: ArgsByte => null()
      INTEGER                              :: ArgsPtr
+     character(len=:), allocatable        :: cbuff   ! some functions write to the string buffer
+     integer                              :: clen=0  ! length of cbuff
      integer :: VarEnd                         ! VarBegin+nVar
      character*100 :: funcStr100=""
      integer :: lenf =0
@@ -305,8 +318,9 @@ CONTAINS
     if (parse_bdeb)write(*,*)myname,'Entering.',sf%nshp
     if (sf%nshp.gt.0) then
        do ii=1,sf%nshp
-          if (allocated(sf%shp(ii)%lat)) deallocate(sf%shp(ii)%lat)
-          if (allocated(sf%shp(ii)%lon)) deallocate(sf%shp(ii)%lon)
+          if (allocated(sf%shp(ii)%xx)) deallocate(sf%shp(ii)%xx)
+          if (allocated(sf%shp(ii)%yy)) deallocate(sf%shp(ii)%yy)
+          if (allocated(sf%shp(ii)%pos)) deallocate(sf%shp(ii)%pos)
           if (allocated(sf%shp(ii)%name)) deallocate(sf%shp(ii)%name)
        end do
        deallocate(sf%shp)
@@ -325,14 +339,16 @@ CONTAINS
     integer :: irc
     integer, external :: length
     INTEGER                         :: nvar = 0
-    !
     TYPE(shpfileobject) :: shphandle
     TYPE(shpobject) :: shpobj
     INTEGER :: ii, jj, kk, iname, lendec
     INTEGER :: nshpr, tshpr, nfield, nrec, nd, ftype
     REAL(kind=c_double) :: minbound(4), maxbound(4)
+    real :: rr
     character(len=11) :: cname
     character*22 :: myname="parse_setshapefile"
+    real :: north(3) =(/0.0D0,0.0D0,1.0D0/)
+    logical :: first
     !
     if(parse_bdeb)write(*,*)myname,' Entering.',irc
     sf%shp250=path250
@@ -427,7 +443,9 @@ CONTAINS
           return
        ENDIF
        sf%shp(ii)%nll=shpobj%nvertices
-       allocate(sf%shp(ii)%lon(sf%shp(ii)%nll),sf%shp(ii)%lat(sf%shp(ii)%nll),stat=irc)
+       sf%shp(ii)%npos=shpobj%nvertices
+       allocate(sf%shp(ii)%xx(sf%shp(ii)%nll),sf%shp(ii)%yy(sf%shp(ii)%nll),&
+            & sf%shp(ii)%pos(3,sf%shp(ii)%npos),stat=irc)
        if (irc.ne.0) then
           call parse_errorappend(crc250,myname)
           call parse_errorappend(crc250,"Unable to allocate shape-ll:")
@@ -436,17 +454,104 @@ CONTAINS
           return
        end if
        do jj=1,shpobj%nvertices
-          sf%shp(ii)%lon(jj)=shpobj%padfx(jj)
-          sf%shp(ii)%lat(jj)=shpobj%padfy(jj)
+          call shape_lonlat2pos(shpobj%padfx(jj),shpobj%padfy(jj),&
+               & sf%shp(ii)%pos(1,jj))
        end do
-       sf%shp(ii)%minlon=shpobj%dfxmin
-       sf%shp(ii)%maxlon=shpobj%dfxmax
-       sf%shp(ii)%minlat=shpobj%dfymin
-       sf%shp(ii)%maxlat=shpobj%dfymax
+       ! get map center
+       sf%shp(ii)%map(1,3)=0.0D0
+       sf%shp(ii)%map(2,3)=0.0D0
+       sf%shp(ii)%map(3,3)=0.0D0
+       do jj=1,sf%shp(ii)%npos
+          sf%shp(ii)%map(1,3)=sf%shp(ii)%map(1,3)+sf%shp(ii)%pos(1,jj)
+          sf%shp(ii)%map(2,3)=sf%shp(ii)%map(2,3)+sf%shp(ii)%pos(2,jj)
+          sf%shp(ii)%map(3,3)=sf%shp(ii)%map(3,3)+sf%shp(ii)%pos(3,jj)
+       end do
+       rr=dsqrt(shape_dot(sf%shp(ii)%map(1,3),sf%shp(ii)%map(1,3)))
+       if (rr.lt.1.0D-10) then ! shape covers half the world...
+          irc=843
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Great circle shape: "//trim(sf%shp(ii)%name))
+          call parse_errorappendi(crc250,ii)
+          return
+       end if
+       sf%shp(ii)%map(1,3)=sf%shp(ii)%map(1,3)/rr
+       sf%shp(ii)%map(2,3)=sf%shp(ii)%map(2,3)/rr
+       sf%shp(ii)%map(3,3)=sf%shp(ii)%map(3,3)/rr
+       call shape_cross(north,sf%shp(ii)%map(1,3),sf%shp(ii)%map(1,1))
+       rr=dsqrt(shape_dot(sf%shp(ii)%map(1,1),sf%shp(ii)%map(1,1)))
+       ! get vector along X-axis (west): map(:,1)
+       if (rr.lt.1.0D-10) then ! shape center is towards north pole
+          sf%shp(ii)%map(1,1)=1.0D0
+          sf%shp(ii)%map(2,1)=0.0D0
+          sf%shp(ii)%map(3,1)=0.0D0
+       else
+          sf%shp(ii)%map(1,1)=sf%shp(ii)%map(1,1)/rr
+          sf%shp(ii)%map(2,1)=sf%shp(ii)%map(2,1)/rr
+          sf%shp(ii)%map(3,1)=sf%shp(ii)%map(3,1)/rr
+       end if
+       ! get vector along Y-axis (north): map(:,2)
+       call shape_cross(sf%shp(ii)%map(1,3),sf%shp(ii)%map(1,1),sf%shp(ii)%map(1,2))
+       rr=dsqrt(shape_dot(sf%shp(ii)%map(1,2),sf%shp(ii)%map(1,2)))
+       if (rr.lt.1.0D-10) then ! error
+          irc=845
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Failed sanity check: "//trim(sf%shp(ii)%name))
+          call parse_errorappendi(crc250,ii)
+          return
+       else ! not necessary... in theory
+          sf%shp(ii)%map(1,2)=sf%shp(ii)%map(1,2)/rr
+          sf%shp(ii)%map(2,2)=sf%shp(ii)%map(2,2)/rr
+          sf%shp(ii)%map(3,2)=sf%shp(ii)%map(3,2)/rr
+       end if
+       first=.true.
+       do jj=1,sf%shp(ii)%npos
+          sf%shp(ii)%xx(jj)=shape_dot(sf%shp(ii)%map(1,1),sf%shp(ii)%pos(1,jj))
+          sf%shp(ii)%yy(jj)=shape_dot(sf%shp(ii)%map(1,2),sf%shp(ii)%pos(1,jj))
+          if (first) then
+             first=.false.
+             sf%shp(ii)%minzz=shape_dot(sf%shp(ii)%map(1,3),sf%shp(ii)%pos(1,jj))
+             sf%shp(ii)%minxx=sf%shp(ii)%xx(jj)
+             sf%shp(ii)%minyy=sf%shp(ii)%yy(jj)
+             sf%shp(ii)%maxxx=sf%shp(ii)%xx(jj)
+             sf%shp(ii)%maxyy=sf%shp(ii)%yy(jj)
+          else
+             sf%shp(ii)%minzz=min(sf%shp(ii)%minzz,&
+                  & shape_dot(sf%shp(ii)%map(1,3),sf%shp(ii)%pos(1,jj)))
+             sf%shp(ii)%minxx=min(sf%shp(ii)%minxx,sf%shp(ii)%xx(jj))
+             sf%shp(ii)%minyy=min(sf%shp(ii)%minyy,sf%shp(ii)%yy(jj))
+             sf%shp(ii)%maxxx=max(sf%shp(ii)%maxxx,sf%shp(ii)%xx(jj))
+             sf%shp(ii)%maxyy=max(sf%shp(ii)%maxyy,sf%shp(ii)%yy(jj))
+          end if
+       end do
+       sf%shp(ii)%maxrad=acos(sf%shp(ii)%minzz)
+       if (parse_bdeb)write(*,'(4(X,F10.3),X,A)') &
+            & shape_rtodeg(sf%shp(ii)%maxrad),(sf%shp(ii)%map(1,jj),jj=1,3), &
+            & trim(sf%shp(ii)%name)
+       if (sf%shp(ii)%minzz.lt.0.0D0) then ! shape covers more than half the world...
+          if (parse_bdeb) then
+             do jj=1,sf%shp(ii)%npos
+                write(*,*)myname,'Pos:',jj,sf%shp(ii)%pos(1,jj),sf%shp(ii)%pos(2,jj),sf%shp(ii)%pos(3,jj)
+             end do
+             write(*,*)myname,'Center:',sf%shp(ii)%map(1,3),sf%shp(ii)%map(2,3),sf%shp(ii)%map(3,3)
+             write(*,*)myname,'Minzz:',sf%shp(ii)%minzz,trim(sf%shp(ii)%name)
+          end if
+          irc=844
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Too large shape: "//trim(sf%shp(ii)%name))
+          call parse_errorappendi(crc250,ii)
+          return
+       end if
+       if (first) then ! shape has no nodes
+          irc=899
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Too small shape: "//trim(sf%shp(ii)%name))
+          call parse_errorappendi(crc250,ii)
+          return
+       end if
        !write(*,'(X,A,X,I0,6(X,F6.1),2X,I5,X,A,X,F6.1)') &
        !     & 'dbfreadattribute ', ii, &
-       !     & shpobj%padfx(1),sf%shp(ii)%minlon,sf%shp(ii)%minlon, &
-       !     & shpobj%padfy(1),sf%shp(ii)%minlat,sf%shp(ii)%maxlat, &
+       !     & shpobj%padfx(1),sf%shp(ii)%minxx,sf%shp(ii)%minxx, &
+       !     & shpobj%padfy(1),sf%shp(ii)%minyy,sf%shp(ii)%maxyy, &
        !     & sf%shp(ii)%nll,trim(sf%shp(ii)%name)
        !
        ! now access all the components of the shape object
@@ -566,6 +671,22 @@ CONTAINS
     return
   END SUBROUTINE parse_parsef
   !
+  logical function parse_string(css, cbuff) result (ret)
+    IMPLICIT NONE
+    type(parse_session), pointer,INTENT(IN) :: css
+    character(len=:), allocatable,INTENT(OUT):: cbuff   ! some functions write to the string buffer
+    ret=(css%clen.ne.0)
+    if (allocated(cbuff)) deallocate(cbuff)
+    if (ret) then
+       allocate(character(len=len_trim(css%cbuff)) :: cbuff)
+       cbuff=trim(css%cbuff)
+    end if
+    if (parse_bdeb .and. ret) then
+       write(*,*)'Parse_string Found: "'//cbuff//'"',css%clen
+    end if
+    return
+  end function parse_string
+  !
   FUNCTION parse_evalf (css, Val, crc250,irc) RESULT (res)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Evaluate bytecode of ith function for the values passed in array Val(:)
@@ -592,6 +713,7 @@ CONTAINS
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     imax=size(val)
+    css%clen=0
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",imax,allocated(val)
     DP = 1
     SP = 0
@@ -999,18 +1121,16 @@ CONTAINS
           else
              css%Stack(SP)=dnint(css%Stack(SP))
           end if
-       CASE  (cShpInfo)
+       CASE  (cVarName)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           if (nargs.eq.1) then
              if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
-             irc=311
-             call parse_errorappend(crc250,'Name='//trim(getname25(css%Stack(SP)))//'=')
-             call parse_errorappendi(crc250,nint(css%Stack(SP)))
-             EvalErrType=5
-             res=zero
-             RETURN
+             if (allocated(css%cbuff)) deallocate(css%cbuff)
+             css%clen=25
+             allocate(character(len=css%clen) :: css%cbuff)
+             css%cbuff=trim(getname25(css%Stack(SP)))
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
              irc=312
@@ -1267,6 +1387,7 @@ CONTAINS
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     imax=size(val)
+    css%clen=0
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
          & imax,size(set),&
          & allocated(val),allocated(set)
@@ -1672,19 +1793,16 @@ CONTAINS
           else
              css%Stack(SP)=dnint(css%Stack(SP))
           end if
-       CASE  (cShpInfo)
+       CASE  (cVarName)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           if (nargs.eq.1) then
              if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
-             irc=311
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Name='//getname25(css%Stack(SP)))
-             call parse_errorappend(crc250,"\n")
-             EvalErrType=5
-             res=zero
-             RETURN
+             if (allocated(css%cbuff)) deallocate(css%cbuff)
+             css%clen=25
+             allocate(character(len=css%clen) :: css%cbuff)
+             css%cbuff=trim(getname25(css%Stack(SP)))
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
              irc=312
@@ -1941,6 +2059,7 @@ CONTAINS
     integer, external :: length
     character*12 :: myname ="parse_evala"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    css%clen=0
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
          & ctrg, cpos, npos, size(val),size(set),size(res),&
          & allocated(val),allocated(set),allocated(res)
@@ -1963,6 +2082,7 @@ CONTAINS
     AI = 0
     DO IP=1,css%ByteCodeSize
        if(parse_bdeb)then
+          NARGS=css%ArgsByte(AI+1)
           write(*,*)myname,'Index:',ip,css%ByteCodeSize
           write(*,'(X,A,X,A,X,I3,X,I3,3X,A,3X,I0,X,I0)')myname,"Looping",&
                & IP,css%ByteCode(IP),parse_code20(css%bytecode(ip),nargs)
@@ -2596,19 +2716,16 @@ CONTAINS
                 end if
              end do
           end if
-       CASE  (cShpInfo)
+       CASE  (cVarName)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           if (nargs.eq.1) then
              if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stacka(sp,1))
-             irc=311
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Name='//getname25(css%Stacka(SP,1)))
-             call parse_errorappend(crc250,"\n")
-             EvalErrType=5
-             res=zero
-             RETURN
+             if (allocated(css%cbuff)) deallocate(css%cbuff)
+             css%clen=25
+             allocate(character(len=css%clen) :: css%cbuff)
+             css%cbuff=trim(getname25(css%Stacka(SP,1)))
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
              irc=312
@@ -4196,24 +4313,44 @@ CONTAINS
     real :: lon
     real :: lat
     integer :: ii,inout
+    real :: pos(3),xx,yy,zz
+    if (abs(sf%shapeidlat-lat).lt.1.0D-6.and. &
+         & abs(sf%shapeidlon-lon).lt.1.0D-6) then
+       shapeid=sf%shapeid
+       if (parse_bdeb) write(*,*)"Shapeid Using cache:",lat,lon,shapeid
+       return
+    end if
     do ii=1,sf%nshp
        inout=0
-       if (lon.ge.sf%shp(ii)%minlon.and. &
-            & lon.le.sf%shp(ii)%maxlon.and. &
-            & lat.ge.sf%shp(ii)%minlat.and. &
-            & lat.le.sf%shp(ii)%maxlat) then
-          call shape_pnpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat,inout)
-          if (parse_bdeb) write(*,*)"Shapeid Checking shape:",ii,inout,&
-               & sf%shp(ii)%minlon,sf%shp(ii)%maxlon,&
-               & sf%shp(ii)%minlat,sf%shp(ii)%maxlat,&
-               & trim(const(ii))
-          if (inout.ge.0) then
-             shapeid=sf%shp(ii)%index
-             return
+       call shape_lonlat2pos(lon,lat,pos)
+       zz=shape_dot(sf%shp(ii)%map(1,3),pos)
+       if (zz.ge.sf%shp(ii)%minzz) then
+          xx=shape_dot(sf%shp(ii)%map(1,1),pos)
+          yy=shape_dot(sf%shp(ii)%map(1,2),pos)
+          if (xx.ge.sf%shp(ii)%minxx.and. &
+               & xx.le.sf%shp(ii)%maxxx.and. &
+               & yy.ge.sf%shp(ii)%minyy.and. &
+               & yy.le.sf%shp(ii)%maxyy) then
+             call shape_pnpoly(xx,yy,sf%shp(ii)%npos,&
+                  & sf%shp(ii)%xx,sf%shp(ii)%yy,inout)
+             if (parse_bdeb) write(*,*)"Shapeid Checking shape:",ii,inout,&
+                  & sf%shp(ii)%minxx,sf%shp(ii)%maxxx,&
+                  & sf%shp(ii)%minyy,sf%shp(ii)%maxyy,&
+                  & trim(sf%shp(ii)%name)
+             if (inout.ge.0) then
+                shapeid=sf%shp(ii)%index
+                sf%shapeid=shapeid
+                sf%shapeidlat=lat
+                sf%shapeidlon=lon
+                return
+             end if
           end if
        end if
     end do
     shapeid=0 ! no matching shapes
+    sf%shapeid=shapeid
+    sf%shapeidlat=lat
+    sf%shapeidlon=lon
     return
   end function shapeid
   ! returns the closest shape identification
@@ -4227,65 +4364,79 @@ CONTAINS
     real :: dd, dbbox, epr
     logical lbbox
     integer ibbox
-    epr=abs(shape_rtodeg(eps/6371.0D0)) ! km -> deg
-    lbbox=.false.
-    ibbox=0
+    real :: pos(3),rr,xx,yy,zz
+    ! first check if position is inside a polygon...
+    if (abs(sf%vicinitylat-lat).lt.1.0D-6.and. &
+         & abs(sf%vicinitylon-lon).lt.1.0D-6) then
+       vicinity=sf%vicinity
+       if (parse_bdeb) write(*,*)"Vicinity Using cache:",lat,lon,vicinity
+       return
+    end if
     do ii=1,sf%nshp
        inout=0
-       if (shape_inside(lon,lat,&
-            & sf%shp(ii)%minlon,sf%shp(ii)%minlat, &
-            & sf%shp(ii)%maxlon,sf%shp(ii)%maxlat)) then ! 
-          ! do fine calculations, dd
-          dd = shape_ddpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat)
-          !write(*,*)'VICINITY:',ii,dd,trim(sf%shp(ii)%name)
-          if (lbbox) then
-             if (dd.lt.dbbox) then ! not necessary: .and.dd.lt.epr
-                dbbox=dd
-                ibbox=sf%shp(ii)%index
-             end if
-          else if (dd.lt.epr) then
-             lbbox=.true.
-             dbbox=dd
-             ibbox=sf%shp(ii)%index
-          end if
-       else
-          ! get distance to bounding-box
-          dd=shape_getDist(lon,lat,&
-               & sf%shp(ii)%minlon,sf%shp(ii)%minlat, &
-               & sf%shp(ii)%maxlon,sf%shp(ii)%maxlat)
-          if (lbbox) then
-             if (dd.ge.0.0D0.and.dd.lt.dbbox) then ! skip if bounding-box already too far away
-                dd = shape_ddpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat)
-                !write(*,*)'Vicinity:',ii,dd,trim(sf%shp(ii)%name)
-                if (dd.ge.0.0D0.and.dd.lt.dbbox) then ! not necessary: .and.dd.lt.epr
-                   dbbox=dd
-                   ibbox=sf%shp(ii)%index
-                end if
-             end if
-          else
-             if (dd.ge.0.0D0.and.dd.lt.epr) then ! skip if bounding-box already too far away
-                dd = shape_ddpoly(lon,lat,sf%shp(ii)%nll,sf%shp(ii)%lon,sf%shp(ii)%lat)
-                !write(*,*)'Vicinity:',ii,dd,trim(sf%shp(ii)%name)
-                if (dd.ge.0.0D0.and.dd.lt.epr) then ! 
-                   lbbox=.true.
-                   dbbox=dd
-                   ibbox=sf%shp(ii)%index
-                end if
+       call shape_lonlat2pos(lon,lat,pos)
+       zz=shape_dot(sf%shp(ii)%map(1,3),pos)
+       if (zz.ge.sf%shp(ii)%minzz) then
+          xx=shape_dot(sf%shp(ii)%map(1,1),pos)
+          yy=shape_dot(sf%shp(ii)%map(1,2),pos)
+          if (xx.ge.sf%shp(ii)%minxx.and. &
+               & xx.le.sf%shp(ii)%maxxx.and. &
+               & yy.ge.sf%shp(ii)%minyy.and. &
+               & yy.le.sf%shp(ii)%maxyy) then
+             call shape_pnpoly(xx,yy,sf%shp(ii)%npos,&
+                  & sf%shp(ii)%xx,sf%shp(ii)%yy,inout)
+             if (parse_bdeb) write(*,*)"Vicinity Checking shape:",ii,inout,&
+                  & sf%shp(ii)%minxx,sf%shp(ii)%maxxx,&
+                  & sf%shp(ii)%minyy,sf%shp(ii)%maxyy,&
+                  & trim(sf%shp(ii)%name)
+             if (inout.ge.0) then ! position inside shape, we are done...
+                vicinity=sf%shp(ii)%index
+                sf%vicinity=vicinity
+                sf%vicinitylat=lat
+                sf%vicinitylon=lon
+                return
              end if
           end if
        end if
     end do
-    !if (ibbox.ne.0) write(*,*)'VICINITY:',ibbox,trim(sf%shp(ibbox)%name)
+    ! find closest polygon (in cartesian coordinates)
+    ! We mix distance on cirle with distance through circle..
+    call shape_lonlat2pos(lon,lat,pos) ! radius==1
+    dbbox=abs(eps/6371.0D0) ! km -> rad
+    if(parse_bdeb)write(*,*)'VICINITY limit:',dbbox
+    lbbox=.false.
+    ibbox=0
+    do ii=1,sf%nshp ! loop over shapes
+       ! get distance to bounding box
+       dd=acos(shape_dot(pos,sf%shp(ii)%map(1,3)))
+       if (dd.lt.1.57D0.and.dd-sf%shp(ii)%maxrad.lt.dbbox) then ! check bounding-box
+          if(parse_bdeb)write(*,'(X,A,I3,X,A,4(X,F5.2))')'Vicinity close: ',&
+               & ii,trim(sf%shp(ii)%name),dbbox,dd,shape_rtodeg(dd),shape_rtodeg(sf%shp(ii)%maxrad)
+          dd = shape_ddpoly(pos,sf%shp(ii)%npos,sf%shp(ii)%pos)
+          if(parse_bdeb)write(*,'(X,A,I3,X,A,3(X,F5.2))')'                ',&
+               & ii,trim(sf%shp(ii)%name),dbbox,dd,shape_rtodeg(dd)
+          if (dd.ge.0.0D0.and.dd.lt.dbbox) then
+             dbbox=dd
+             ibbox=sf%shp(ii)%index
+          end if
+       end if
+    end do
+    if(parse_bdeb) then
+       if (ibbox.ne.0) write(*,*)'VICINITY finally:',ibbox,trim(sf%shp(ibbox)%name)
+    end if
     vicinity=ibbox
+    sf%vicinity=vicinity
+    sf%vicinitylat=lat
+    sf%vicinitylon=lon
     return
   end function vicinity
   !
-  character*25 function getname25(rr)
+  character*25 function getname25(val)
     implicit none
-    real :: rr
+    real :: val
     integer :: jj
-    do jj=1,size(constval)
-       if (abs(constval(jj)-rr).lt.1.0D-5) then
+    do jj=lbound(constval,1),ubound(constval,1)
+       if (abs(constval(jj)-val).lt.1.0D-5) then
           getname25=const(jj)
           return
        end if

@@ -1494,7 +1494,11 @@ function coloc_debugExp(f,t) {
 		      if (results.length > 0 ) {
 			  var val=(results[0].getAttribute("value")||"");
 			  //titem.innerHTML=val;
-			  titem.innerHTML=Number(val).toString();
+			  if (isNaN(val)) {
+			      titem.innerHTML=String(val);
+			  } else {
+			      titem.innerHTML=Number(val).toString();
+			  };
 		      };
 		  };
 		  documentLog.innerHTML="";

@@ -43,7 +43,7 @@ MODULE shape
   USE,INTRINSIC :: ISO_C_BINDING
   USE fortranc
   IMPLICIT NONE
-
+  logical     :: shape_bdeb=.false.
   INTEGER,PARAMETER :: shpt_null = 0 !< Series of constants for specifying type of new shape datasets with \a shpcreate, null shape
   INTEGER,PARAMETER :: shpt_point = 1 !< points
   INTEGER,PARAMETER :: shpt_arc = 3 !< arcs (Polylines, possible in parts)
@@ -65,7 +65,6 @@ MODULE shape
   INTEGER,PARAMETER :: ftdouble = 2 !< numeric field with decimals
   INTEGER,PARAMETER :: ftlogical = 3 !< LOGICAL field
   INTEGER,PARAMETER :: ftinvalid = 4 !< not a recognised field TYPE
-
 
   !> Object describing a shapefile dataset.
   !! Its components are private so they should not be manipulated
@@ -419,7 +418,8 @@ MODULE shape
        dbfgetfieldindex, dbfgetfieldinfo, dbfaddfield, dbfisattributenull, &
        dbfgetnativefieldtype
   PUBLIC shape_pnpoly, shape_ddpoly, shape_simplify, shape_getDist, shape_getDistBox, shape_inside
-  PUBLIC shape_rtodeg, shape_degtor
+  PUBLIC shape_rtodeg, shape_degtor, shape_lonlat2pos, shape_bdeb
+  PUBLIC shape_dot,shape_multiply,shape_divide,shape_cross
 CONTAINS
 
 
@@ -1054,19 +1054,62 @@ CONTAINS
   !
   !     ..................................................................
   !
-  SUBROUTINE shape_pnpoly(PX,PY,N,XX,YY,INOUT)
+  SUBROUTINE shape_pnpoly(PX,PY,N,X,Y,INOUT)
+    ! Run semi-infinite ray horizontally (increasing x, fixed y)
+    ! out from the test point, and count how many edges it crosses.
+    ! At each crossing, the ray switches between inside and outside.
+    ! This is called the Jordan curve theorem. 
+    implicit none
+    integer n,inout
+    REAL PX,PY,X(N),Y(N),MM
+    LOGICAL MX,MY,NX,NY
+    INTEGER i,j
+    INOUT=-1 ! point is outside
+    if (n.le.1) return
+    i=1
+    j=2
+    LOOP: DO I=1,N
+       J=1+MOD(I,N)
+       mx=x(i).ge.px
+       nx=x(j).ge.px
+       my=y(i).ge.py
+       ny=y(j).ge.py
+       ! find out if segment crosses horisontal ray to the right og the point
+       if ((my.and..not.ny).or.(.not.ny.and.my)) then ! crosses left or right
+          if ((mx.and..not.nx).or.(.not.mx.and.nx)) then ! may cross right
+             MM=(px-x(i))-(x(j)-x(i))*(py-y(i))/(y(j)-y(i))
+             if (abs(mm).lt.1.0D-10) then ! point on segment (undetermined)
+                inout=0
+                if (shape_bdeb)write(*,*) 'Segment crossing:',i,x(i)-px,y(i)-py,j,x(j)-px,y(j)-py,inout
+                return
+             else if (MM .lt. 0.0D0) then ! crosses right of point
+                inout=-inout
+                if (shape_bdeb)write(*,*) 'Proximity crossing:',i,x(i)-px,y(i)-py,j,x(j)-px,y(j)-py,inout
+             end if
+          else if (mx.and.nx) then ! crosses right of point for sure
+             inout=-inout
+             if (shape_bdeb)write(*,*) 'Clear crossing:',i,x(i)-px,y(i)-py,j,x(j)-px,y(j)-py,inout
+          end if
+       end if
+    end do LOOP
+  end SUBROUTINE shape_pnpoly
+  SUBROUTINE shape_pnpoly_old(PX,PY,N,XX,YY,INOUT)
     implicit none
     integer n,inout
     REAL PX,PY,XX(N),YY(N)
     LOGICAL MX,MY,NX,NY
-    INTEGER i,j
+    INTEGER i,j, old
     real X(n),Y(n),mm
+    old=-10
     INOUT=-1 ! point is outside
     if (n.le.1) return
     DO I=1,N
        X(I)=XX(I)-PX
        Y(I)=YY(I)-PY
     end do
+    i=1
+    j=2
+    if (shape_bdeb)write(*,*) 'Loop:',i,x(i),y(i),j,x(j),y(j),inout
     LOOP: DO I=1,N
        J=1+MOD(I,N)
        MX=X(I).GE.0.0
@@ -1076,6 +1119,7 @@ CONTAINS
        IF(.NOT.((MY.OR.NY).AND.(MX.OR.NX)).OR.(MX.AND.NX)) CYCLE LOOP
        IF(.NOT.(MY.AND.NY.AND.(MX.OR.NX).AND..NOT.(MX.AND.NX))) then
           mm=(Y(I)*X(J)-X(I)*Y(J))/(X(J)-X(I))
+          if (shape_bdeb)write(*,*) 'MM:',mm,inout
           IF(mm.lt.0) then
              cycle loop
           else if (mm.eq.0) then
@@ -1083,64 +1127,40 @@ CONTAINS
              return
           else if (mm.gt.0) then
              INOUT=-INOUT
+             if (shape_bdeb)write(*,*) 'Loop:',i,x(i),y(i),j,x(j),y(j),inout
              cycle loop
           end if
        end if
        INOUT=-INOUT
+       if (shape_bdeb)write(*,*) 'Loop:',i,x(i),y(i),j,x(j),y(j),inout
        CYCLE LOOP
     end do LOOP
     RETURN
-  END SUBROUTINE shape_pnpoly
+  END SUBROUTINE shape_pnpoly_old
   !
-  real function shape_ddpoly(PX,PY,N,XX,YY)
+  real function shape_ddpoly(POS,N,XPOS)
+    ! gives smalles distance to cartesian polygon
     implicit none
     integer n
-    REAL PX,PY,XX(N),YY(N)
-    LOGICAL MX,MY,NX,NY
-    INTEGER i,j,inout
-    real X(n),Y(n),mm,dd,ddmin
+    real pos(3),xpos(3,n)
+    INTEGER i,j
+    real dd,ddmin
     logical llmin
-    ddmin=-1.0D0
-    INOUT=-1 ! point is outside
-    if (n.le.1) return
-    DO I=1,N
-       X(I)=XX(I)-PX
-       Y(I)=YY(I)-PY
-    end do
+    shape_ddpoly=-1.0D0
     llmin=.false.
+    ddmin=-1.0D0
+    if (n.le.1) return
     LOOP: DO I=1,N
        J=1+MOD(I,N)
-       dd=shape_getDist(px,py,xx(i),yy(i),xx(j),yy(j))
+       dd=shape_getDist(pos,xpos(1,i),xpos(1,j))
        if (llmin) then
           ddmin=min(ddmin,dd)
        else
           ddmin=dd
           llmin=.true.
        end if
-       MX=X(I).GE.0.0
-       NX=X(J).GE.0.0
-       MY=Y(I).GE.0.0
-       NY=Y(J).GE.0.0
-       IF(.NOT.((MY.OR.NY).AND.(MX.OR.NX)).OR.(MX.AND.NX)) CYCLE LOOP
-       IF(.NOT.(MY.AND.NY.AND.(MX.OR.NX).AND..NOT.(MX.AND.NX))) then
-          mm=(Y(I)*X(J)-X(I)*Y(J))/(X(J)-X(I))
-          IF(mm.lt.0) then
-             cycle loop
-          else if (mm.eq.0) then
-             inout=0 ! point is on a vertex
-             return
-          else if (mm.gt.0) then
-             INOUT=-INOUT
-             cycle loop
-          end if
-       end if
-       INOUT=-INOUT
-       CYCLE LOOP
     end do LOOP
-    if (inout.ge.0) then
-       ddmin=0.0D0
-    end if
-    shape_ddpoly=ddmin  ! degrees
+    shape_ddpoly=ddmin
     RETURN
   END function shape_ddpoly
   !
@@ -1287,7 +1307,7 @@ CONTAINS
     ! of the first point to avoid a division by 0 in 'perpendicularDistance()'
     ! nbp = 10
     ! allocate(points(2,nbp))
-    write(*,'(X,A,I0," (eps=",F0.1,"km)")')'SIMPLIFY Polygon started with: ',np,eps
+    if(shape_bdeb)write(*,'(X,A,I0," (eps=",F0.1,"km)")')'SIMPLIFY Polygon started with: ',np,eps
     if (np.le.3) return
     meet=(lat(1).eq.lat(np) .and. lon(1).eq.lon(np))
     if (meet) then
@@ -1310,7 +1330,7 @@ CONTAINS
     end do
     if (meet) nnp=nnp+1
     pst=100.0D0*real(nnp)/real(max(1,nbp))
-    write(*,'(X,A,I0," (",F0.1,"%)")')'SIMPLIFY Polygon ended with: ',nnp,pst
+    if (shape_bdeb)write(*,'(X,A,I0," (",F0.1,"%)")')'SIMPLIFY Polygon ended with: ',nnp,pst
     !
     jj=0
     do ii=1,nbp
@@ -1344,83 +1364,47 @@ CONTAINS
     return
   end function shape_inside
   
-  real function shape_getDistBox(plon,plat,minlon,minlat,maxlon,maxlat)
+  real function shape_getDistBox(pos,mimi,mima,mami,mama)
     implicit none
-    real plon,plat,minlon,minlat,maxlon,maxlat
+    real pos(3),mimi(3),mima(3),mami(3),mama(3)
     real :: d1,d2,d3,d4
-    d1=shape_getDist(plon,plat,minlon,minlat,minlon,maxlat)
-    d2=shape_getDist(plon,plat,minlon,maxlat,maxlon,maxlat)
-    d3=shape_getDist(plon,plat,maxlon,maxlat,maxlon,minlat)
-    d4=shape_getDist(plon,plat,maxlon,minlat,minlon,minlat)
+    d1=shape_getDist(pos,mimi,mima)
+    d2=shape_getDist(pos,mima,mama)
+    d3=shape_getDist(pos,mama,mami)
+    d4=shape_getDist(pos,mami,mimi)
     shape_getDistBox=min(d1,d2,d3,d4)
     return
   end function shape_getDistBox
-  real function shape_getDist(plon,plat,alon,alat,blon,blat)
-    ! get distance between point (P) and great circle segment (between A and B)
+  real function shape_getDist(p,a,b)
+    ! get distance between point (P) and segment (between A and B)
     implicit none
-    real :: plat,plon,alat,alon,blat,blon ! lat and lon in degrees
-    real :: ppos(3) ! target position P
-    real :: apos(3) ! segment end-point A
-    real :: bpos(3) ! segment end-point B
-    real :: cpos(3) ! shape_cross product A-vector and B-vector 
-    real :: dpos(3) ! normal vector to AB-plane
-    real :: epos(3) ! P-vector component normal to AB-plane
-    real :: fpos(3) ! P-vector component in AB-plane 
-    real :: gpos(3) ! normalised P-vector component in AB-plane
-    real :: dist,distA,distB,ddp,ll
-    call shape_latlon2pos(plat,plon,ppos)
-    call shape_latlon2pos(alat,alon,apos)
-    call shape_latlon2pos(blat,blon,bpos)
-    cpos = shape_cross(apos,bpos)
-    ll=sqrt(dot_product(cpos,cpos))
-    if (ll.lt.1.0D-10) then ! a and b are parallell
-       ll=dot_product(bpos,apos)
-       if (ll.gt.0.0D0) then ! one point
-          shape_getDist=shape_getAngle(apos,ppos)
-       else ! undetermined great circle, undefined result, pick 180 degrees
-          shape_getDist=180.0D0
+    real :: p(3)
+    real :: a(3)
+    real :: b(3)
+    real :: ab(3) ! A-B
+    real :: ap(3) ! A-P
+    real :: bp(3) ! B-P
+    real :: dab,dd,r
+    call shape_subtract(b,a,ab)
+    call shape_subtract(p,a,ap)
+    dab=dot_product(ab,ab)
+    if (dab.lt.1.0D-10) then ! A and B are identical
+       shape_getDist=dsqrt(dot_product(ap,ap))
+    else
+       dd=dot_product(ab,ap)
+       r=dd/dab
+       if (r.le.0.0D0) then ! a is closest
+          shape_getDist=sqrt(dot_product(ap,ap))
+       else if (r.ge.1.0D0) then ! b=closest
+          call shape_subtract(p,b,bp)
+          shape_getDist=sqrt(dot_product(bp,bp))
+       else ! between a and b
+          shape_getDist=sqrt(max(0.0D0,dot_product(ap,ap) - dab*(R**2)))
        end if
-       return
-    else
-       dpos=shape_divide(cpos,ll) ! normalise cpos
-    end if
-    ddp = dot_product(dpos,ppos)
-    epos = shape_multiply(dpos,ddp)
-    fpos = shape_subtract(ppos,epos) ! P-vector in the AB-plane
-    ll=sqrt(dot_product(fpos,fpos))
-    if (ll.lt.1.0D-10) then ! distance is 90 degrees
-       shape_getDist=90.0D0
-       return
-    else
-       gpos=shape_divide(fpos,ll) ! normalise P-vector in AB-plane
-    end if
-    ! check if gpos is between a-pos and b-pos
-    distA=shape_getAngle(apos,gpos)
-    distB=shape_getAngle(bpos,gpos)
-    dist=shape_getAngle(apos,bpos)
-    ! write(*,*)'P-pos:',string20(ppos)
-    ! write(*,*)'A-pos:',string20(apos)
-    ! write(*,*)'B-pos:',string20(bpos)
-    ! write(*,*)'C-pos:',string20(cpos)
-    ! write(*,*)'D-pos:',string20(dpos)
-    ! write(*,*)'E-pos:',string20(epos)
-    ! write(*,*)'F-pos:',string20(fpos)
-    ! write(*,*)'G-pos:',string20(gpos)
-    ! write(*,*)'Distances:',distA,distB,dist
-    if (distA.lt.dist.and.distB.lt.dist) then ! between
-    !   write(*,*)'Between.'
-       shape_getDist=shape_getAngle(ppos,gpos)
-    else if (distA.lt.distB) then             ! A is closest
-    !   write(*,*)'A is closest.'
-       shape_getDist=shape_getAngle(ppos,apos)
-    else                                      ! B is closest
-    !   write(*,*)'B is closest.'
-       shape_getDist=shape_getAngle(ppos,bpos)
     end if
     return
   end function shape_getDist
-
-  subroutine shape_latlon2pos(lat,lon,pos)
+  subroutine shape_lonlat2pos(lon,lat,pos)
     implicit none
     real :: lat,lon,pos(3),rr
     pos(3) = shape_sindeg(lat)
@@ -1428,45 +1412,52 @@ CONTAINS
     pos(1) = rr*shape_cosdeg(lon)
     pos(2) = rr*shape_sindeg(lon)
     return
-  end subroutine shape_latlon2pos
+  end subroutine shape_lonlat2pos
 
-  function shape_cross(a, b)
-    real, dimension(3) :: shape_cross
+  subroutine shape_cross(a, b, c)
     real, dimension(3), intent(in) :: a, b
-    shape_cross(1) = a(2) * b(3) - a(3) * b(2)
-    shape_cross(2) = a(3) * b(1) - a(1) * b(3)
-    shape_cross(3) = a(1) * b(2) - a(2) * b(1)
+    real, dimension(3), intent(out) :: c
+    c(1) = a(2) * b(3) - a(3) * b(2)
+    c(2) = a(3) * b(1) - a(1) * b(3)
+    c(3) = a(1) * b(2) - a(2) * b(1)
     return
-  end function shape_cross
+  end subroutine shape_cross
   
-  function shape_divide(a, b)
-    real, dimension(3) :: shape_divide
+  subroutine shape_divide(a, b, c)
     real, dimension(3), intent(in) :: a
     real, intent(in) :: b
-    shape_divide(1) = a(1) /b
-    shape_divide(2) = a(2) /b
-    shape_divide(3) = a(3) /b
+    real, dimension(3), intent(out) :: c
+    c(1) = a(1) /b
+    c(2) = a(2) /b
+    c(3) = a(3) /b
     return
-  end function shape_divide
+  end subroutine shape_divide
 
-  function shape_multiply(a, b)
-    real, dimension(3) :: shape_multiply
+  subroutine shape_multiply(a, b, c)
     real, dimension(3), intent(in) :: a
     real, intent(in) :: b
-    shape_multiply(1) = a(1) * b
-    shape_multiply(2) = a(2) * b
-    shape_multiply(3) = a(3) * b
+    real, dimension(3), intent(out) :: c
+    c(1) = a(1) * b
+    c(2) = a(2) * b
+    c(3) = a(3) * b
     return
-  end function shape_multiply
+  end subroutine shape_multiply
   
-  function shape_subtract(a, b)
-    real, dimension(3) :: shape_subtract
-    real, dimension(3), intent(in) :: a, b
-    shape_subtract(1) = a(1) - b(1)
-    shape_subtract(2) = a(2) - b(2)
-    shape_subtract(3) = a(3) - b(3)
+  real function shape_dot(a, b)
+    real, dimension(3), intent(in) :: a
+    real, dimension(3), intent(in) :: b
+    shape_dot = a(1)*b(1) + a(2)*b(2) + a(3)*b(3)
     return
-  end function shape_subtract
+  end function shape_dot
+  
+  subroutine shape_subtract(a, b, c)
+    real, dimension(3), intent(in) :: a, b
+    real, dimension(3), intent(out) :: c
+    c(1) = a(1) - b(1)
+    c(2) = a(2) - b(2)
+    c(3) = a(3) - b(3)
+    return
+  end subroutine shape_subtract
   
   real function shape_getAngle(apos,bpos)
     implicit none

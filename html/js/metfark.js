@@ -302,8 +302,8 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"julian(<yy>,<mm>,<dd>...)","addValue('"+target+"','julian(,,,,,)');");
     addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');");
     addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');");
-    addChildButton(item,"constant(id)","addValue('"+target+"','shapeinfo(,)');");
-    addChildButton(item,"precinct(lon_deg,lat_deg)","addValue('"+target+"','shapeid(,)');");
+    addChildButton(item,"name(value)","addValue('"+target+"','name()');");
+    addChildButton(item,"precinct(lon_deg,lat_deg)","addValue('"+target+"','precinct(,)');");
     addChildButton(item,"vicinity(lon_deg,lat_deg,range_km)","addValue('"+target+"','vicinity(,,)');");
     addChildButton(item,"td2q(td_C,p_hpa)","addValue('"+target+"','td2q(td,p)');");
     addChildButton(item,"rh2td(rh_%,t_c[,ice_0|1])","addValue('"+target+"','rh2td(rh_%,t_C)');");
@@ -1613,6 +1613,10 @@ function showDropdown(target, arg = "") {
 		};
 	    };
 	}
+    } else if (target.substr(0,13) === 'plotDebugExp') {
+	removeChildren(item);
+	addLogicalButtons(item,target);
+	addFunctionButtons(item,target);
     } else if (target === 'autoType') { //***********************************
 	removeChildren(item);
 	addChildButton(item,"model","showValue('"+target+"','model');");
@@ -2428,6 +2432,37 @@ function removeSubstring(str,start,stop) {
     return out;
 }
 
+function debugExp(f,t) {
+    var fitem=document.getElementById(f);
+    var titem=document.getElementById(t);
+    var expin=fitem.value;
+    titem.innerHTML="";
+    documentLog.innerHTML="Sent debug-exp request:"+expin;
+    $.get("cgi-bin/fark_exp.pl",{exp:expin},
+	  function(data, status){
+	      if (status === "success" && data !== null) {
+		  var errors=data.getElementsByTagName("error");
+		  if (errors.length > 0 ) {
+		      console.log("Error:",data);
+		      var msg=(errors[0].getAttribute("message")||"");
+		      alert("Unable to evaluate expression:"+expin+"\n"+msg);
+		  } else {
+		      var results=data.getElementsByTagName("result");
+		      if (results.length > 0 ) {
+			  var val=(results[0].getAttribute("value")||"");
+			  //titem.innerHTML=val;
+			  if (isNaN(val)) {
+			      titem.innerHTML=String(val);
+			  } else {
+			      titem.innerHTML=Number(val).toString();
+			  };
+		      };
+		  };
+		  documentLog.innerHTML="";
+	      };
+	  }
+	 );
+};
 
 Array.prototype.extend = function (other_array) {
     /* you should include a test to check whether other_array really is an array */

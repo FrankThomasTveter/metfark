@@ -24,6 +24,7 @@
 # Column=cycle_epoch
 # Column=time_epoch
 # Column=obs_id
+# Column=area
 # Column=lat_deg
 # Column=lon_deg
 # Column=altitude_meter
@@ -53,6 +54,7 @@ setcol  = "set";
 refcol  = "cycle_epoch";
 timecol = "time_epoch";
 idcol   = "obs_id";
+areacol = "area";
 altcol  = "altitude_meter";
 
 dset <- unique(data[,setcol]);

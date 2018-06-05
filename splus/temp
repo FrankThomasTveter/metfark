@@ -24,6 +24,7 @@
 # Column=cycle_epoch
 # Column=time_epoch
 # Column=obs_id
+# Column=area
 # Column=lat_deg
 # Column=lon_deg
 # Column=pressure_hpa
@@ -52,7 +53,8 @@ setcol  = "set";
 refcol  = "cycle_epoch";
 timecol = "time_epoch";
 idcol   = "obs_id";
-altcol   = "altitude_meter";
+areacol = "area";
+altcol  = "altitude_meter";
 pcol   = "pressure_hpa";
 
 

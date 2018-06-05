@@ -1259,9 +1259,12 @@ CONTAINS
     REAL(rn)                                       :: res
     INTEGER                                        :: i
     REAL(rn)                                       :: a
+    character(len=:), allocatable        :: cbuff   ! some functions write to the string buffer
     type(parse_session),pointer :: pss => null()
     integer :: lene
     integer, external :: length
+    character*50 :: s2
+    integer :: len2,lenb
     !--------- -------- --------- --------- --------- --------- --------- --------- -----
     !
     if (col_bdeb) write(*,*) myname,'Entering.',irc
@@ -1283,7 +1286,17 @@ CONTAINS
        call colocation_errorappend(crc250,"\n")
        return
     end if
-    write(exp250,*) res
+    if (parse_string(pss,cbuff)) then
+       if (allocated(cbuff)) then
+          exp250=cbuff
+          deallocate(cbuff)
+       else
+          exp250="No string available"
+       end if
+    else
+       call colocation_wash(res,s2,len2)
+       exp250=s2(1:len2)
+    end if
     call chop0(exp250,250)
     if (col_bdeb) write(*,*) myname,'Done.',irc,res
     call parse_close (pss,crc250,irc) ! open parse session
@@ -1329,8 +1342,8 @@ CONTAINS
     integer :: lena,lenc,lene,lenn,lenl
     integer, external :: length
     integer :: irc2
-    real:: val(ncol)            ! internal column values
-    logical:: vok(ncol)            ! internal column values
+    character*50:: cval50(ncol)    ! internal column string
+    integer:: clen(ncol)           ! internal column string lengths
     type(col_location),pointer :: cloc
     !
     integer :: mod_cnt=0
@@ -1803,7 +1816,7 @@ CONTAINS
           end if
           !
           if (lok) then
-             call model_evalExpr(mss,ncol,val,vok,crc250,irc)
+             call model_evalExpr(mss,ncol,cval50,clen,crc250,irc)
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,"evalExpr")
                 return
@@ -1815,16 +1828,10 @@ CONTAINS
              end if
              fill=fillx
              do ii=1,ncol
-                if (vok(ii)) then
-                   call colocation_wash(val(ii),s2,len2)
-                else
-                   s2="NA"
-                   len2=2
-                end if
                 if (ii.ne.ncol) then
-                   write(ounit,"(X,A)",advance="no") s2(1:len2)
+                   write(ounit,"(X,A)",advance="no") cval50(ii)(1:clen(ii))
                 else
-                   write(ounit,"(X,A)") s2(1:len2)
+                   write(ounit,"(X,A)") cval50(ii)(1:clen(ii))
                 end if
              end do
              if(col_bdeb.and.locid.lt.100)then
@@ -1832,10 +1839,8 @@ CONTAINS
                      & myname,'MPO:',mss%mpo_val
                 write(*,'(2(X,A),100(X,L1))')&
                      & myname,'mpo:',mss%mpo_vok
-                write(*,'(2(X,A),100(X,F0.1))')&
-                     & myname,'VAL:',val
-                write(*,'(2(X,A),100(X,L1))')&
-                     & myname,'val:',vok
+                write(*,'(2(X,A),100(X,A))')&
+                     & myname,'VAL:',(cval50(ii)(1:clen(ii)),ii=1,ncol)
              end if
           end if
        end do

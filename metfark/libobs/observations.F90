@@ -5404,7 +5404,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname="observation_checkDescr"
-    integer :: ii
+    integer :: ii,jj
     logical bok1,bok2
     if(obs_bdeb) write(*,*)myname,'Entering.',css%ntarget,css%category,ksec1(6),css%subcategory,ksec1(7)
     bok=.true.
@@ -5430,20 +5430,37 @@ CONTAINS
                 end if
                 if (bok) then
                    if (ktdexp(css%trg_seq(ii)).ne.css%trg_descr(ii)) then
-                      if(obs_bdeb)write(*,*)myname,'Failed sanity:',ii,ktdexp(css%trg_seq(ii)),&
-                           &css%trg_descr(ii)
+                      if(obs_bdeb)then
+                         do jj=1,css%ntarget
+                            if (ktdexp(css%trg_seq(jj)).ne.css%trg_descr(jj)) then
+                               write(*,'(X,I3,X,A20,I8,A,I0,A)') &
+                                    & jj,css%trg80(jj)(1:css%trg_lent(jj))//'=',css%trg_descr(jj),&
+                                    & ' (',ktdexp(css%trg_seq(jj)),') !!'
+                            else 
+                               write(*,'(X,I3,X,A20,I8,A,I0,A)') &
+                                    & jj,css%trg80(jj)(1:css%trg_lent(jj))//'=',css%trg_descr(jj),&
+                                    & ' (',ktdexp(css%trg_seq(jj)),')'
+                            end if
+                         end do
+                         write(*,'(X,A,3(2X,A,I0))')&
+                              & myname,'Failed sanity:',ii,&
+                              & css%trg80(ii)(1:css%trg_lent(ii))//'=',css%trg_descr(ii),&
+                              & ' found=',ktdexp(css%trg_seq(ii))
+                      end if
+                      
                       bok2=.false.
                       css%currentfile%hint80(7)=css%trg80(ii)(1:25)
                       bok=.false.
-                      ! bah... abort anyway...
-                      irc=945
-                      call observation_errorappend(crc250,myname)
-                      call observation_errorappend(crc250,"Failed sanity check for target "// &
-                           & css%trg80(ii)(1:css%trg_lent(ii))//",")
-                      call observation_errorappendi(crc250,css%trg_descr(ii))
-                      call observation_errorappend(crc250,"!=")
-                      call observation_errorappendi(crc250,ktdexp(css%trg_seq(ii)))
-                      RETURN
+                      ! ! bah... abort anyway...
+                      ! irc=945
+                      ! call observation_errorappend(crc250,myname)
+                      ! call observation_errorappendi(crc250,ii)
+                      ! call observation_errorappend(crc250,"Failed sanity check for target "// &
+                      !      & css%trg80(ii)(1:css%trg_lent(ii))//",")
+                      ! call observation_errorappendi(crc250,css%trg_descr(ii))
+                      ! call observation_errorappend(crc250,"!=")
+                      ! call observation_errorappendi(crc250,ktdexp(css%trg_seq(ii)))
+                      ! RETURN
                    end if
                 end if
              case (parse_internal)

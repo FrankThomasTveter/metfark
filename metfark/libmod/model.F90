@@ -3765,25 +3765,41 @@ CONTAINS
   !
   ! evaluate expressions
   !
-  subroutine model_evalExpr(css,nexp,val,set,crc250,irc)
+  subroutine model_evalExpr(css,nexp,cval50,clen,crc250,irc)
     use parse
     implicit none
     type(mod_session), pointer :: css !  current session
     integer :: nexp
-    real :: val(nexp)
-    logical :: set(nexp)
+    character*50 :: cval50(nexp)
+    integer :: clen(nexp)
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="model_evalExpr"
+    real :: val(nexp)
+    logical :: set(nexp)
+    character(len=:), allocatable :: cbuff   ! parse string buffer
     integer :: ii
     do ii=1,css%cpsp
-       call parse_evals(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,val(ii),set(ii),crc250,irc)
+       call parse_evals(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,&
+            & val(ii),set(ii),crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Error return from evals.")
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
+       end if
+       if (set(ii)) then
+          if (parse_string(css%psp(ii)%ptr,cbuff)) then
+             cval50(ii)=cbuff
+             clen(ii)=len_trim(cbuff)
+             deallocate(cbuff)
+          else
+             call model_wash(val(ii),cval50(ii),clen(ii))
+          end if
+       else
+          cval50(ii)="NA"
+          clen(ii)=2
        end if
     end do
     return

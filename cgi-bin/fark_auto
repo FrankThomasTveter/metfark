@@ -4,7 +4,7 @@
 # ;debug=1
 
 
-./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=syno_002d.cfg'
+./fark_auto.pl '?root=auto.cfg&password=&type=model&file=ecmwf_030d.cfg&debug=1'
 
 #wget --tries=1 -O - "http://localhost/cgi-bin/fark_auto.pl?root=auto.cfg&password=&type=plot&file=meps_syno_365d.cfg"
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc.cfg'

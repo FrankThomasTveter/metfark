@@ -73,9 +73,10 @@ $(TARGETS):
 clean:
 	@echo "Cleaning:" `pwd`
 	@$(shell rm -f *.o *~ *.bak*) 
-	$(MAKE) $(LS_COMPILE) TARGET=$@
+	@$(shell $(MAKE) $(LS_COMPILE) TARGET=$@)
 
 $(LS_COMPILE):     FORCE 
+	@echo "Cleaning:" $@
 	@$(shell rm -f *~ *.bak*) 
 	cd $@ && $(MAKE) $(TARGET)
 

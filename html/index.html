@@ -409,7 +409,7 @@
 		      <div id="colocDebugExpDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('colocDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn">&#9776;</button></td>
-		    <td style="min-width:25px;width:25px" align="center"><button onclick="coloc_debugExp('colocDebugExp','colocDebugRes')">&#8594;</button></td>
+		    <td style="min-width:25px;width:25px" align="center"><button onclick="debugExp('colocDebugExp','colocDebugRes')">&#8594;</button></td>
 		    <td width="20%" id="colocDebugRes">0</td>
 		  </tr>
 		</table>
@@ -483,6 +483,22 @@
 	      <td colspan="6"><table border="2" id="plotDatasetTable"> 
 		  <tbody/>
 	      </table></td>
+	    </tr>
+	    <tr id="plotDebugExpression">
+	      <td>Debug expression:</td>
+	      <td colspan="6"> 
+		<table width="100%" border="1" id="debugExpression"> 
+		  <tr>
+		    <td class="fill">
+		      <input id="plotDebugExp" value="">
+		      <div id="plotDebugExpDropdown" class="dropdown-content"></div>
+		    </td>
+		    <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('plotDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn">&#9776;</button></td>
+		    <td style="min-width:25px;width:25px" align="center"><button onclick="debugExp('plotDebugExp','plotDebugRes')">&#8594;</button></td>
+		    <td width="20%" id="plotDebugRes">0</td>
+		  </tr>
+		</table>
+	      </td>
 	    </tr>
 	  </table>
 	  <table width="100%">
