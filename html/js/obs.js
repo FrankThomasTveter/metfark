@@ -277,6 +277,7 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     inp.setAttribute("value",pos);
     //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','pos',this.value);");
+    inp.setAttribute("title","Position in BUFR sequence");
     td.appendChild(inp);
     row.appendChild(td);
     // make select-pos column  ***************************
@@ -299,7 +300,7 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",descr);
-    inp.setAttribute("title","Position in BUFR sequence");
+    inp.setAttribute("title","BUFR descriptor");
     if (color !== "") {
 	inp.setAttribute("style","color:"+color);
     }
@@ -312,6 +313,7 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",info);
+    inp.setAttribute("title","Information");
     //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','info',this.value);");
     td.appendChild(inp);

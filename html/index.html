@@ -200,7 +200,7 @@
 			     title="Show scanned <BUFR sub-types>">&#9776;</button></td>
 		    <td align="right">Info:</td>
 		    <td class="fill">
-		      <input id="obsTypeInfo" type="text" value="" style="width:100%" onblur="obs_setArray('typeInfo',this.value)"/> 
+		      <input id="obsTypeInfo" type="text" value="" style="width:100%" onblur="obs_setArray('typeInfo',this.value)" title="Information"/> 
 		    </td>
 		  </tr>
 		</table>
@@ -439,7 +439,7 @@
 		<table>
 		  <tr>
 		    <td width="100%">
-		      <textarea id="colocObsFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArrayPar('obsConfigFile','filter',this.value)" title="Filter observations using <obervation targets> only. This filter is applied to each BUFR message. A BUFR message may contain several observations (locations). The observation is rejected if the filter expression returns 0."></textarea>
+		      <textarea id="colocObsFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArrayPar('obsConfigFile','filter',this.value)" title="Observation filter using <obervation targets> only. This filter is applied to each BUFR message. A BUFR message may contain several observations (locations). The observation is rejected if the filter expression returns 0."></textarea>
 		      <div id="colocObsFilterDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="right">
@@ -463,14 +463,14 @@
 	    </td></tr>
 	    <tr id="displayColocModelFilter">
 	      <td valign="top">
-		Model filter:
+		Location filter:
 	      </td>
 	      <td>
 		<table>
 		  <tr>
 		    <td width="100%">
 		      <textarea id="colocModelFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArray('filter',this.value)"
-				title="Filter locations using <observation targets> and <model targets>. This filter is applied to each observation (location). The observation is rejected if the filter expression returns 0."></textarea>
+				title="Location filter using <observation targets> and <model targets>. This filter is applied to each observation (location). The observation is rejected if the filter expression returns 0."></textarea>
 		      <div id="colocModelFilterDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="right">
