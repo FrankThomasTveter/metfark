@@ -1795,12 +1795,14 @@ function dataToModel(data) {
 	    model_config[path]["files"]=[];
 	    for (var jj = 0; jj < files.length; jj++) {
 		var sname=files[jj].getAttribute("name");
-		var sage=files[jj].getAttribute("age");
-		var ssize=files[jj].getAttribute("size");
-		console.log("Found stack file:",sname,' (',path,')');
-		model_config[path]["files"].push([sname,sage,ssize]);
+		if (sname !== undefined && sname !== null) {
+		    var sage=files[jj].getAttribute("age");
+		    var ssize=files[jj].getAttribute("size");
+		    console.log("Found stack file:",sname,' (',path,')');
+		    model_config[path]["files"].push([sname,sage,ssize]);
+		    model_config[path]["stack"]=sname;
+		}
 	    }
-	    model_config[path]["stack"]=files[0].getAttribute("name");
 	} else if (model_config[path]["files"] === undefined) {
 	    model_config[path]["files"]=[];
 	}
@@ -1903,11 +1905,13 @@ function dataToObs(data) {
 	    obs_config[path]["files"]=[];
 	    for (var jj = 0; jj < files.length; jj++) {
 		var sname=files[jj].getAttribute("name");
-		var sage=files[jj].getAttribute("age");
-		var ssize=files[jj].getAttribute("size");
-		obs_config[path]["files"].push([sname,sage,ssize]);
+		if (sname !== undefined && sname !== null) {
+		    var sage=files[jj].getAttribute("age");
+		    var ssize=files[jj].getAttribute("size");
+		    obs_config[path]["files"].push([sname,sage,ssize]);
+		    obs_config[path]["stack"]=sname;
+		}
 	    };
-	    obs_config[path]["stack"]=files[0].getAttribute("name");
 	} else if (obs_config[path]["files"] === undefined) {
 	    obs_config[path]["files"]=[];
 	}

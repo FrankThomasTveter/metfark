@@ -1,4 +1,7 @@
 #! /bin/csh
-./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_OBS_BUFR%2F2017%2F01%2F01'
+./fark_dir.pl '?type=model&file=meps%2Fmember0_030d.cfg_x&password=&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2Fmeps%2F2016&filterDirMin=&filterDirMax=30&filterFile=meps_extracted_%5Cd_%5Cdkm_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5CdT%5Cd%5CdZ.nc&indexTarget=time_trg&indexVariable=time'
 #
-#./fark_dir.pl '?cmd=ls&cls=data&path=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2FDNMI_AROME_METCOOP%2F2017%2F01%2F'
+#
+#
+#
+

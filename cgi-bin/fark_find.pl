@@ -99,15 +99,15 @@ sub findModel {
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
     	farkdir::sandbox {
+	    $node->setAttribute("password",        $password//"");
+	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterDirMin",    $filterDirMin // "");
+	    $node->setAttribute("filterDirMax",    $filterDirMax // "");
+	    $node->setAttribute("filterFile",      $filterFile//"");
+	    $node->setAttribute("indexTarget",     $indexTarget//"");
+	    $node->setAttribute("indexVariable",   $indexVariable//"");
 	    my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
 	    if (@files) {
-		$node->setAttribute("password",        $password//"");
-		$node->setAttribute("filterDir",       $filterDir//"");
-		$node->setAttribute("filterDirMin",    $filterDirMin // "");
-		$node->setAttribute("filterDirMax",    $filterDirMax // "");
-		$node->setAttribute("filterFile",      $filterFile//"");
-		$node->setAttribute("indexTarget",     $indexTarget//"");
-		$node->setAttribute("indexVariable",   $indexVariable//"");
 		$node->setAttribute("hits",            scalar @files);
 		foreach my $sfile (@files) {
 		    my $parent = XML::LibXML::Element->new( 'stack' );
@@ -129,6 +129,8 @@ sub findModel {
 		    };
 		}
 	    } else {
+		my $parent = XML::LibXML::Element->new( 'stack' );
+		$node->addChild( $parent );
 		return "No files found.";
 	    }
 	}{message=>"Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax",
@@ -334,19 +336,19 @@ sub findObs {
     $node->setAttribute("location",  $loc//"");
     $node->setAttribute("status",    $priv//"");
     if ($filterpriv eq "ro" || $filterpriv eq "rw") {
+	$node->setAttribute("password",        $password//"");
+	$node->setAttribute("filterDir",       $filterDir//"");
+	$node->setAttribute("filterDirMin",    $filterDirMin // "");
+	$node->setAttribute("filterDirMax",    $filterDirMax // "");
+	$node->setAttribute("filterFile",      $filterFile//"");
+	$node->setAttribute("tablePath",       $table//"");
+	$node->setAttribute("bufrType",        $bufrType//"");
+	$node->setAttribute("subType",         $subType//"");
+	$node->setAttribute("typeInfo",        $typeInfo//"");
+	$node->setAttribute("indexTarget",     $indexTarget//"");
+	$node->setAttribute("indexExp",        $indexExp//"");
 	my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
 	if (@files) {
-	    $node->setAttribute("password",        $password//"");
-	    $node->setAttribute("filterDir",       $filterDir//"");
-	    $node->setAttribute("filterDirMin",    $filterDirMin // "");
-	    $node->setAttribute("filterDirMax",    $filterDirMax // "");
-	    $node->setAttribute("filterFile",      $filterFile//"");
-	    $node->setAttribute("tablePath",       $table//"");
-	    $node->setAttribute("bufrType",        $bufrType//"");
-	    $node->setAttribute("subType",         $subType//"");
-	    $node->setAttribute("typeInfo",        $typeInfo//"");
-	    $node->setAttribute("indexTarget",     $indexTarget//"");
-	    $node->setAttribute("indexExp",        $indexExp//"");
 	    $node->setAttribute("hits",            scalar @files);
 	    foreach my $spath (@files) {
 		my $parent = XML::LibXML::Element->new( 'stack' );

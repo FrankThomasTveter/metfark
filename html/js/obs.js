@@ -258,6 +258,7 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     var btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","obs_removeTarget('"+target+"')");
     btn.setAttribute("style","width:100%");
+    btn.setAttribute("title","Remove observation target");
     //var t=document.createTextNode("--");
     //btn.appendChild(t);
     btn.innerHTML="&#45";
@@ -283,6 +284,7 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     td.setAttribute("style","min-width:25px;width:25px");
     td.setAttribute("align","center");
     var btn=document.createElement("BUTTON");
+    btn.setAttribute("title","Move target up");
     btn.setAttribute("onclick","obs_targetUp('"+ii+"');obs_show();");
     //btn.setAttribute("style","width:100%");
     //var t=document.createTextNode("--");
@@ -297,6 +299,7 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     inp=document.createElement("INPUT");
     inp.setAttribute("type","text");
     inp.setAttribute("value",descr);
+    inp.setAttribute("title","Position in BUFR sequence");
     if (color !== "") {
 	inp.setAttribute("style","color:"+color);
     }

@@ -270,6 +270,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     var btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_removeFile(this.parentNode.parentNode,'"+type+"','"+file+"')");
     btn.setAttribute("style","width:100%");
+    btn.setAttribute("title","Remove automatic job");
     var t=document.createTextNode("-");
     btn.appendChild(t);
     td.appendChild(btn);
@@ -307,6 +308,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     btn.setAttribute("onclick","auto_testNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","test");
     btn.innerHTML="&#9762"
+    btn.setAttribute("title","Test now");
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);
@@ -319,6 +321,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     btn.setAttribute("onclick","auto_runNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","run");
     btn.innerHTML="&#9762"
+    btn.setAttribute("title","Run now");
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);

@@ -464,6 +464,7 @@ function plot_insertItem(row,type,data,jj,ii,offset) {
 	td=document.createElement("TD");
 	td.setAttribute("style","min-width:25px;width:25px;");
 	var btn=document.createElement("BUTTON");
+	btn.setAttribute("title","Remove data-set");
 	btn.setAttribute("onclick","plot_removeDataset('"
 			 + data[[jj]][[1]]+"')");
 	btn.setAttribute("style","width:100%");
@@ -489,6 +490,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td.setAttribute("style","width:100%");
 	//td.setAttribute("style","min-width:25px;width:25px");
 	btn=document.createElement("BUTTON");
+	btn.setAttribute("title","Add data-set");
 	btn.setAttribute("onclick","plot_newDataset()");
 	btn.setAttribute("style","width:100%");
 	btn.innerHTML="&#43";
@@ -508,6 +510,7 @@ function plot_insertNew(row,type,ii,offset) {
 	inp.setAttribute("value","");
 	inp.setAttribute("style","width:100%");
 	inp.setAttribute("onblur","");
+	inp.setAttribute("title","Data set id");
 	td.appendChild(inp);
 	div=document.createElement("DIV");
 	div.setAttribute("id","plotSetDropdown");
@@ -518,6 +521,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td=document.createElement("TD");
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
+	btn.setAttribute("title","Show available identifications");
 	btn.setAttribute("onclick","showDropdown('plotSet',document.getElementById('plotSet').value)");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
@@ -548,6 +552,7 @@ function plot_insertNew(row,type,ii,offset) {
 	inp.setAttribute("value","");
 	inp.setAttribute("style","width:100%");
 	inp.setAttribute("onblur","");
+	inp.setAttribute("title","Colocation file");
 	td.appendChild(inp);
 	div=document.createElement("DIV");
 	div.setAttribute("id","plotColocDropdown");
@@ -558,6 +563,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td=document.createElement("TD");
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
+	btn.setAttribute("title","Show available colocation <setup files>");
 	btn.setAttribute("onclick","showDropdown('plotColoc',document.getElementById('plotColoc').value)");
 	btn.setAttribute("class","dropbtn");
     btn.innerHTML="&#9776";
@@ -574,6 +580,7 @@ function plot_insertNew(row,type,ii,offset) {
 	inp.setAttribute("value","");
 	inp.setAttribute("style","width:100%");
 	inp.setAttribute("onblur","");
+	inp.setAttribute("title","Plot legend");
 	td.appendChild(inp);
 	row.appendChild(td);
     } else if (type[[ii]] == 6) { // expression
@@ -589,6 +596,7 @@ function plot_insertNew(row,type,ii,offset) {
 	inp.setAttribute("value","");
 	inp.setAttribute("style","width:100%");
 	inp.setAttribute("onblur","");
+	inp.setAttribute("title","Expression using <model targets> or <observation targets>");
 	td.appendChild(inp);
 	div=document.createElement("DIV");
 	div.setAttribute("id",itemId+"Dropdown");
@@ -599,6 +607,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td=document.createElement("TD");
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
+	btn.setAttribute("title","Show available <model targets>, <observation targets> and functions");
 	btn.setAttribute("onclick","showDropdown('"+itemId
 			 + "',document.getElementById('"+itemId+"').value)");
 	btn.setAttribute("class","dropbtn");
@@ -645,6 +654,7 @@ function plot_insertAttributeRow(item,cat,attr,value,val) {
     inp.setAttribute("type","text");
     inp.setAttribute("value",value);
     inp.setAttribute("style","width:100%");
+    inp.setAttribute("title","Attribute value. Visible as a comment in table-file.");
     if (dup) {
 	inp.setAttribute("onblur","plot_setAttribute('"+attr+"',this.value);plot_setCat('"+cat+"');plot_show();");
     } else {
@@ -665,6 +675,7 @@ function plot_insertAttributeRow(item,cat,attr,value,val) {
 	td.setAttribute("align","center");
 	td.setAttribute("style","min-width:25px;width:25px");
 	btn=document.createElement("BUTTON");
+	btn.setAttribute("title","Show available attribute values");
 	btn.setAttribute("onclick","showDropdown('"+itemId+"',document.getElementById('"+itemId+"').value)");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
