@@ -331,7 +331,13 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     if (status !== "") {
 	td.setAttribute("style","color:blue");
     }
-    td.innerHTML=last;
+    var a = document.createElement('a');
+    var linkText = document.createTextNode(last);
+    a.appendChild(linkText);
+    a.title = "View last log-file and error-file";
+    a.href = "cgi-bin/fark_log.pl?type="+type+"&file="+file;
+    a.target ="_blank";
+    td.appendChild(a);
     row.appendChild(td);
     // make INFO column
     td=document.createElement("TD");

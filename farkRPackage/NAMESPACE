@@ -1,5 +1,5 @@
 #
-export(getArguments,readComments,readData,scatterPlot,seriesPlot,timePlot,scorePlot,histPlot,profilePlot,norwegian,below,above);
+export(getArguments,readComments,readData,scatterPlot,seriesPlot,timePlot,scorePlot,histPlot,profilePlot,overlap,equals,below,above);
 #
 
 

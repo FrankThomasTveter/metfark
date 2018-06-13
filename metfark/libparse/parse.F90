@@ -91,23 +91,24 @@ module parse
        cNow       = 37,         &
        cRound     = 38,         &
        cVarName   = 39,         &
-       cShpPre    = 40,         &
-       cShpVic    = 41,         &
-       ctd2q      = 42,         &
-       crh2td     = 43,         &
-       ctd2rh     = 44,         &
-       cq2rh      = 45,         &
-       cSinh      = 46,         &
-       cCosh      = 47,         &
-       cTanh      = 48,         &
-       cSin       = 49,         &
-       cCos       = 50,         &
-       cTan       = 51,         &
-       cAsin      = 52,         &
-       cAcos      = 53,         &
-       cAtan2     = 54,         &
-       cAtan      = 55,         &
-       VarBegin   = 56
+       cValidRange= 40,         &
+       cShpPre    = 41,         &
+       cShpVic    = 42,         &
+       ctd2q      = 43,         &
+       crh2td     = 44,         &
+       ctd2rh     = 45,         &
+       cq2rh      = 46,         &
+       cSinh      = 47,         &
+       cCosh      = 48,         &
+       cTanh      = 49,         &
+       cSin       = 50,         &
+       cCos       = 51,         &
+       cTan       = 52,         &
+       cAsin      = 53,         &
+       cAcos      = 54,         &
+       cAtan2     = 55,         &
+       cAtan      = 56,         &
+       VarBegin   = 57
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
        '-',     &
        '*',     &
@@ -145,6 +146,7 @@ module parse
        'now       ', &
        'round     ', &
        'name      ', &
+       'range     ', &
        'precinct  ', &
        'vicinity  ', &
        'td2q      ', &
@@ -1142,6 +1144,30 @@ CONTAINS
              res=zero
              RETURN
           end if
+       CASE  (cValidRange)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.3) then
+             if (parse_bdeb) write(*,*)"*** Found range-check"
+             if (css%Stack(SP).lt.css%Stack(SP+1).or.&
+                  & css%Stack(SP).gt.css%Stack(SP+2)) then
+                if (allocated(css%cbuff)) deallocate(css%cbuff)
+                css%clen=2
+                allocate(character(len=css%clen) :: css%cbuff)
+                css%cbuff="NA"
+             end if
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to validRange:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to validRange.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
        CASE  (cShpPre)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -1808,6 +1834,30 @@ CONTAINS
              irc=312
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cValidRange)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.3) then
+             if (parse_bdeb) write(*,*)"*** Found range-check"
+             if (css%Stack(SP).lt.css%Stack(SP+1).or.&
+                  & css%Stack(SP).gt.css%Stack(SP+2)) then
+                if (allocated(css%cbuff)) deallocate(css%cbuff)
+                css%clen=2
+                allocate(character(len=css%clen) :: css%cbuff)
+                css%cbuff="NA"
+             end if
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rangeCheck:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to rangeCheck.')
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2731,6 +2781,32 @@ CONTAINS
              irc=312
              call parse_errorappend(crc250,myname)
              call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cValidRange)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.3) then
+             if (parse_bdeb) write(*,*)"*** Found validRange"
+             DO JJ=1,NPOS
+                if (css%StackA(SP,JJ).lt.css%Stacka(SP+1,JJ).or.&
+                  & css%Stacka(SP,JJ).gt.css%Stacka(SP+2,JJ)) then
+                   if (allocated(css%cbuff)) deallocate(css%cbuff)
+                   css%clen=25
+                   allocate(character(len=css%clen) :: css%cbuff)
+                   css%cbuff=trim(getname25(css%Stacka(SP,1)))
+                end if
+             end do
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to validRange:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname)
+             call parse_errorappend(crc250,'Unexpected number of arguments to validRange.')
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5

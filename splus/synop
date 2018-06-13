@@ -23,7 +23,8 @@
 #
 # Column=cycle_epoch
 # Column=time_epoch
-# Column=obs_id
+# Column=obs_file_id
+# Column=msg_id
 # Column=area
 # Column=lat_deg
 # Column=lon_deg
@@ -44,7 +45,10 @@ prefix = args[2];
 leg <- readComments(tablefile,"LEGENDS");
 attr <- readComments(tablefile,"ATTRIBUTES");
 cols <- readComments(tablefile,"COLUMNS");
-data <- readData(tablefile);
+print (paste("Reading data from ",tablefile));
+raw <- readData(tablefile);
+
+#raw <- raw[1:1000,];
 
 attr
 
@@ -57,15 +61,19 @@ idcol   = "obs_id";
 areacol = "area";
 altcol  = "altitude_meter";
 
-dset <- unique(data[,setcol]);
-
-print (data[1,]);
+dset <- unique(raw[,setcol]);
 
 #thres = attr["geopotential_threshold",];
 thres = 20; # ~20 meter threshold for high/low stations 
-n <- norwegian(data,idcol);
-nl <- below(data,altcol,thres,n);
-nh <- above(data,altcol,thres,n);
+nw <- equals(raw,areacol,"Norway");
+
+print ("Extracting overlapping data.");
+data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id"),nw);
+
+print (paste("Total cnt:",length(data[,1])));
+
+nl <- below(data,altcol,thres);
+nh <- above(data,altcol,thres);
 
 for (ii in 1:attr["_n",]) {
 
@@ -81,80 +89,80 @@ for (ii in 1:attr["_n",]) {
     
     ;# score plot highland
     scorefile=paste0(prefix,file,"_score_hl",suffix);
-    print(paste0("Processing '",scorefile,"'"));
-    scorePlot(scorefile,attr,leg,data,title,setcol,refcol,
-              timecol,idcol,altcol,modcol,obscol,label,min,max,
+    print(paste0("Processing (highland) '",scorefile,"'"));
+    scorePlot(scorefile,attr,leg,data,title,setcol,refcol,timecol,
+              idcol,altcol,obscol,modcol,label,min,max,
               "Norwegian highland",nh);
     
     ;# score plot lowland
     scorefile=paste0(prefix,file,"_score_ll",suffix);
-    print(paste0("Processing '",scorefile,"'"));
-    scorePlot(scorefile,attr,leg,data,title,setcol,refcol,
-              timecol,idcol,altcol,modcol,obscol,label,min,max,
+    print(paste0("Processing (lowland) '",scorefile,"'"));
+    scorePlot(scorefile,attr,leg,data,title,setcol,refcol,timecol,
+              idcol,altcol,obscol,modcol,label,min,max,
               "Norwegian lowland",nl);
     
     ;# series plot
     seriesfile=paste0(prefix,file,"_series_hl",suffix);
-    print(paste0("Processing '",seriesfile,"'"));
+    print(paste0("Processing (highland) '",seriesfile,"'"));
     seriesPlot(seriesfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-               altcol,modcol,obscol,label,min,max,
+               altcol,obscol,modcol,label,min,max,
               "Norwegian highland",nh);
 
     ;# series plot
     seriesfile=paste0(prefix,file,"_series_ll",suffix);
-    print(paste0("Processing '",seriesfile,"'"));
+    print(paste0("Processing (lowland) '",seriesfile,"'"));
     seriesPlot(seriesfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-               altcol,modcol,obscol,label,min,max,
+               altcol,obscol,modcol,label,min,max,
               "Norwegian lowland",nl);
 
     ;# time plot
     timefile=paste0(prefix,file,"_time_hl",suffix);
-    print(paste0("Processing '",timefile,"'"));
+    print(paste0("Processing (highland) '",timefile,"'"));
     timePlot(timefile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-               altcol,modcol,obscol,label,min,max,
+               altcol,obscol,modcol,label,min,max,
               "Norwegian highland",nh);
 
     ;# time plot
     timefile=paste0(prefix,file,"_time_ll",suffix);
-    print(paste0("Processing '",timefile,"'"));
+    print(paste0("Processing (lowland) '",timefile,"'"));
     timePlot(timefile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-               altcol,modcol,obscol,label,min,max,
+               altcol,obscol,modcol,label,min,max,
               "Norwegian lowland",nl);
 
     ;# scatter plot
     scattfile=paste0(prefix,file,"_scatter_hl",suffix);
-    print(paste0("Processing '",scattfile,"'"));
+    print(paste0("Processing (highland) '",scattfile,"'"));
     scatterPlot(scattfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
                 altcol,obscol,modcol,obslabel,modlabel,min,max,
                 "Norwegian highland",nh);
 
     ;# scatter plot
     scattfile=paste0(prefix,file,"_scatter_ll",suffix);
-    print(paste0("Processing '",scattfile,"'"));
+    print(paste0("Processing (lowland) '",scattfile,"'"));
     scatterPlot(scattfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
                 altcol,obscol,modcol,obslabel,modlabel,min,max,
                 "Norwegian lowland",nl);
 
     ;# histogram plot
     histfile=paste0(prefix,file,"_hist_hl",suffix);
-    print(paste0("Processing '",histfile,"'"));
+    print(paste0("Processing (highland) '",histfile,"'"));
     histPlot(histfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-             altcol,modcol,obscol,label,min,max,
+             altcol,obscol,modcol,label,min,max,
              "Norwegian highland",nh);
 
     ;# histogram plot
     histfile=paste0(prefix,file,"_hist_ll",suffix);
-    print(paste0("Processing '",histfile,"'"));
+    print(paste0("Processing (lowland) '",histfile,"'"));
     histPlot(histfile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-             altcol,modcol,obscol,label,min,max,
+             altcol,obscol,modcol,label,min,max,
              "Norwegian lowland",nl);
 
     ;# profile plot
     proffile=paste0(prefix,file,"_prof",suffix);
     print(paste0("Processing '",proffile,"'"));
-    profilePlot(proffile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-             "altitude (m)",altcol,"ascending",modcol,obscol,label,min,max,
-             "Norwegian highland",nh,"Norwegian lowland",nl);
+    profilePlot(proffile,attr,leg,data,title,setcol,refcol,timecol,
+                idcol,"altitude (m)",altcol,"ascending",obscol,modcol,label,min,max,
+                "Norwegian highland",nh,"Norwegian lowland",nl);
 }
 
 #warnings();

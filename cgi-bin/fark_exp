@@ -5,7 +5,7 @@
 #
 #   10*isabove(1,-2,3*isabove(4,5))+6
 #&debug=1
-./fark_exp.pl '?exp=name(vicinity(-20,60,1000))'
+./fark_exp.pl '?exp=1*2'
 #./fark_exp.pl '?exp=constant(pi)'
 # '?exp=(1000%2F10)%2B2'
 #

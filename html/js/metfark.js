@@ -279,82 +279,108 @@ function getChild(item,target) {
     //console.log("getChild Done",tail);
     return;
 }
-function addChildButton(item,text,onclick,cls) {
+function addChildButton(item,text,onclick,title) {
     var btn=document.createElement("BUTTON");
     var t=document.createTextNode(text);
     var br=document.createElement("BR");
     btn.appendChild(t);
     btn.setAttribute("onclick",onclick);
     btn.setAttribute("style","width:100%");
-    if (typeof cls !== 'undefined') {btn.setAttribute("class",cls);};
+    if (title !== undefined) {
+	btn.setAttribute("title",title);
+	console.log("Title='" + title + "'");
+    };
     item.appendChild(btn);
     item.appendChild(br);
 };
-function addTargetButton( item, target, trg, cls) {
-    if (typeof cls !== 'undefined') {
-	addChildButton(item,trg,"addValue('"+target+"','"+trg+"');",cls);
-    } else {
-	addChildButton(item,trg,"addValue('"+target+"','"+trg+"');");
-    }
+function addChildButtonShaded(item,text,onclick,title) {
+    var btn=document.createElement("BUTTON");
+    var t=document.createTextNode(text);
+    var br=document.createElement("BR");
+    btn.appendChild(t);
+    btn.setAttribute("onclick",onclick);
+    btn.setAttribute("style","width:100%");
+    btn.setAttribute("class","shaded");
+    if (title !== undefined) {
+	btn.setAttribute("title",title);
+	console.log("Title='" + title + "'");
+    };
+    item.appendChild(btn);
+    item.appendChild(br);
+};
+function addChildText(item,text) {
+    var t=document.createTextNode(text);
+    var br=document.createElement("BR");
+    item.appendChild(t);
+    item.appendChild(br);
+};
+function addTargetButton( item, target, trg, title) {
+    addChildButton(item,trg,"addValue('"+target+"','"+trg+"');",title);
+}
+function addTargetButtonShaded( item, target, trg, title) {
+    addChildButtonShaded(item,trg,"addValue('"+target+"','"+trg+"');",title);
 }
 function addFunctionButtons( item, target) {
-    addChildButton(item,"sec1970(<yy>,<mm>,<dd>...)","addValue('"+target+"','sec1970(,,,,,)');");
-    addChildButton(item,"julian(<yy>,<mm>,<dd>...)","addValue('"+target+"','julian(,,,,,)');");
-    addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');");
-    addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');");
-    addChildButton(item,"name(value)","addValue('"+target+"','name()');");
-    addChildButton(item,"precinct(lon_deg,lat_deg)","addValue('"+target+"','precinct(,)');");
-    addChildButton(item,"vicinity(lon_deg,lat_deg,range_km)","addValue('"+target+"','vicinity(,,)');");
-    addChildButton(item,"td2q(td_C,p_hpa)","addValue('"+target+"','td2q(td,p)');");
-    addChildButton(item,"rh2td(rh_%,t_c[,ice_0|1])","addValue('"+target+"','rh2td(rh_%,t_C)');");
-    addChildButton(item,"td2rh(td_c,t_c[,ice_0|1])","addValue('"+target+"','td2rh(td_C,t_C)');");
-    addChildButton(item,"q2rh(q_g/kg,t_k[,p_hpa])","addValue('"+target+"','q2rh(q_gkg,t_K,p_hPa)');");
-    addChildButton(item,"abs()","addValue('"+target+"','abs()');");
-    addChildButton(item,"exp()","addValue('"+target+"','exp()');");
-    addChildButton(item,"log10()","addValue('"+target+"','log10()');");
-    addChildButton(item,"log()","addValue('"+target+"','log()');");
-    addChildButton(item,"sqrt()","addValue('"+target+"','sqrt()');");
-    addChildButton(item,"min(...)","addValue('"+target+"','min(,)');");
-    addChildButton(item,"max(...)","addValue('"+target+"','max(,)');");
-    addChildButton(item,"sin()","addValue('"+target+"','sin()');");
-    addChildButton(item,"cos()","addValue('"+target+"','cos()');");
-    addChildButton(item,"tan()","addValue('"+target+"','tan()');");
-    addChildButton(item,"asin()","addValue('"+target+"','asin()');");
-    addChildButton(item,"acos()","addValue('"+target+"','acos()');");
-    addChildButton(item,"atan2(,)","addValue('"+target+"','atan2(,)');");
-    addChildButton(item,"Norway","addValue('"+target+"','Norway');");
-    addChildButton(item,"Sweden","addValue('"+target+"','Sweden');");
-    addChildButton(item,"Denmark","addValue('"+target+"','Denmark');");
-    addChildButton(item,"Finland","addValue('"+target+"','Finland');");
+    addChildButton(item,"sec1970(<yy>,<mm>,<dd>...)","addValue('"+target+"','sec1970(,,,,,)');","Seconds since 1970 (function)");
+    addChildButton(item,"julian(<yy>,<mm>,<dd>...)","addValue('"+target+"','julian(,,,,,)');","Julian days (function)");
+    addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');","Midnight in seconds since 1970 (function)");
+    addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');","Start of request in seconds since 1970 (function)");
+    addChildButton(item,"name(value)","addValue('"+target+"','name()');","Name of constant (function)");
+    addChildButton(item,"range(value,min,max)","addValue('"+target+"','range()');","Returns NA if value is outside range (function)");
+    addChildButton(item,"precinct(lon_deg,lat_deg)","addValue('"+target+"','precinct(,)');","Find area-identification of location (function)");
+    addChildButton(item,"vicinity(lon_deg,lat_deg,range_km)","addValue('"+target+"','vicinity(,,)');","Find area-identification of location\n and its vicinity (function)");
+    addChildButton(item,"td2q(td_C,p_hpa)","addValue('"+target+"','td2q(td,p)');","Convert dew-point-temperature to specific-humidity (function)");
+    addChildButton(item,"rh2td(rh_%,t_c[,ice_0|1])","addValue('"+target+"','rh2td(rh_%,t_C)');","Convert relative-humidity to dew-point-temperature (function)");
+    addChildButton(item,"td2rh(td_c,t_c[,ice_0|1])","addValue('"+target+"','td2rh(td_C,t_C)');","Convert dew-point-temperature to relative-humidity (function)");
+    addChildButton(item,"q2rh(q_g/kg,t_k[,p_hpa])","addValue('"+target+"','q2rh(q_gkg,t_K,p_hPa)');","Convert specific-humidity to relative-humidity (function)");
+    addChildButton(item,"abs()","addValue('"+target+"','abs()');","Absolute  (function)");
+    addChildButton(item,"exp()","addValue('"+target+"','exp()');","Exponential (function)");
+    addChildButton(item,"log10()","addValue('"+target+"','log10()');","Logarithm base 10 (function)");
+    addChildButton(item,"log()","addValue('"+target+"','log()');","Natural logarithm (function)");
+    addChildButton(item,"sqrt()","addValue('"+target+"','sqrt()');","Square root (function)");
+    addChildButton(item,"min(...)","addValue('"+target+"','min(,)');","Minimum (function)");
+    addChildButton(item,"max(...)","addValue('"+target+"','max(,)');","Maximum (function)");
+    addChildButton(item,"sin()","addValue('"+target+"','sin()');","Sine (function)");
+    addChildButton(item,"cos()","addValue('"+target+"','cos()');","Cosine (function)");
+    addChildButton(item,"tan()","addValue('"+target+"','tan()');","Tangens (function)");
+    addChildButton(item,"asin()","addValue('"+target+"','asin()');","Arc-sine (function)");
+    addChildButton(item,"acos()","addValue('"+target+"','acos()');","Arc-cosine (function)");
+    addChildButton(item,"atan2(,)","addValue('"+target+"','atan2(,)');","Arc-tangens (function)");
+    addChildButton(item,"Norway","addValue('"+target+"','Norway');","Area identification for Norway (constant)");
+    addChildButton(item,"Sweden","addValue('"+target+"','Sweden');","Area identification for Sweden (constant)");
+    addChildButton(item,"Denmark","addValue('"+target+"','Denmark');","Area identification for Denmark (constant)");
+    addChildButton(item,"Finland","addValue('"+target+"','Finland');","Area identification for Finland (constant)");
 };
 
 function addLogicalButtons( item, target) {
-    addChildButton(item,"msgmax(var(:))","addValue('"+target+"','msgmax()');");
-    addChildButton(item,"msgmin(var(:))","addValue('"+target+"','msgmin()');");
-    addChildButton(item,"msgclosest(var(:),trg1,trg2...)","addValue('"+target+"','msgclosest(,,)');");
-    addChildButton(item,"ismember(var,trg1,trg2...)","addValue('"+target+"','ismember(,,)');");
-    addChildButton(item,"isabove(var,max1,max2...)","addValue('"+target+"','isabove(,)');");
-    addChildButton(item,"isbelow(var,min1,min2...)","addValue('"+target+"','isbelow(,)');");
-    addChildButton(item,"isbetween(var,max1,min1,min2...)","addValue('"+target+"','isbetween(,,)');");
-    addChildButton(item,"thinned(percent_thinned)","addValue('"+target+"','thinned(0.0)');");
-    addChildButton(item,"and(l1,l2,l3...)","addValue('"+target+"','and(,)');");
-    addChildButton(item,"or(l1,l2,l3...)","addValue('"+target+"','or(,)');");
-    addChildButton(item,"not(l1,l2,l3...)","addValue('"+target+"','not(,)');");
+    addChildButton(item,"msgmax(var(:))","addValue('"+target+"','msgmax()');","Maximum value of target in BUFR message (function)");
+    addChildButton(item,"msgmin(var(:))","addValue('"+target+"','msgmin()');","Minimum value of target in BUFR message (function)");
+    addChildButton(item,"msgclosest(var(:),trg1,trg2...)","addValue('"+target+"','msgclosest(,,)');","Value of target in BUFR message closest to (trg1,trg2...) (function)");
+    addChildButton(item,"ismember(var,trg1,trg2...)","addValue('"+target+"','ismember(,,)');","Check if var equals (trg1,trg2...) (function)");
+    addChildButton(item,"isabove(var,max1,max2...)","addValue('"+target+"','isabove(,)');","Check if var is above (max1,max2...) (function)");
+    addChildButton(item,"isbelow(var,min1,min2...)","addValue('"+target+"','isbelow(,)');","Check if var is below (min1,min2...) (function)");
+    addChildButton(item,"isbetween(var,max1,min1,min2...)","addValue('"+target+"','isbetween(,,)');","Check if var is between (max,min1,min2..) (function)");
+    addChildButton(item,"thinned(percent_thinned)","addValue('"+target+"','thinned(0.0)');","Randomly returns 1 or 0 (function)");
+    addChildButton(item,"and(l1,l2,l3...)","addValue('"+target+"','and(,)');","Checks if (l1,l2,l3...) all are different from 0 (function)");
+    addChildButton(item,"or(l1,l2,l3...)","addValue('"+target+"','or(,)');","Checks if at least one of (l1,l2,l3...) are different from 0 (function)");
+    addChildButton(item,"not(l1,l2,l3...)","addValue('"+target+"','not(,)');","Checks if at least one of (l1,l2,l3...) equals 0 (function)");
 }
 
 function addWildcardButtons( item, target) {
-    addChildButton(item,"YY (year)","addValue('"+target+"','YY');");
-    addChildButton(item,"MM (month)","addValue('"+target+"','MM');");
-    addChildButton(item,"DD (day)","addValue('"+target+"','DD');");
-    addChildButton(item,"HH (hour)","addValue('"+target+"','HH');");
-    addChildButton(item,"MI (minute)","addValue('"+target+"','MI');");
-    addChildButton(item,"SS (second)","addValue('"+target+"','SS');");
+    addChildButton(item,"YY (year)","addValue('"+target+"','YY');","year wildcard");
+    addChildButton(item,"MM (month)","addValue('"+target+"','MM');","month wildcard");
+    addChildButton(item,"DD (day)","addValue('"+target+"','DD');","day wildcard");
+    addChildButton(item,"HH (hour)","addValue('"+target+"','HH');","hour wildcard");
+    addChildButton(item,"MI (minute)","addValue('"+target+"','MI');","minute wildcard");
+    addChildButton(item,"SS (second)","addValue('"+target+"','SS');","second wildcard");
 };
 function showDropdown(target, arg = "") {
     var dropdown=target + 'Dropdown';
     var item=document.getElementById(dropdown);
     console.log("Table='" + item.style.display + "'  target='"+target+"'");
     item.classList.toggle("show");
+    removeChildren(item);
+    addChildText(item,"Processing...");
     if (item.style.display === 'block' ) {return;}
     console.log("Dropdown arg='"+arg+"'");
     if (target === 'modelConfigFile') { //***********************************
@@ -363,6 +389,7 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -371,6 +398,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -381,32 +409,40 @@ function showDropdown(target, arg = "") {
 		var parent=dirs[0];
 		if (parent != null) {
 		    var dd=parent;
-		    addChildButton(item,"<up>","model_setConfigFile('"+dd+"');");
+		    addChildButton(item,"<up>","model_setConfigFile('"+dd+"');","Change to parent <directory>");
+		    added=true;
 		}
 		if (args.length == 1) {
 		    //console.log("Arg ret:",ret);
 		    if (root["type"] == "dir" && root["loc"] != "") {
-			addChildButton(item,"<rmdir>","model_rmdir('"+args[0]+"');");
+			addChildButton(item,"<rmdir>","model_rmdir('"+args[0]+"');","Remove <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
-			addChildButton(item,"<rmfile>","model_rmfile('"+args[0]+"');");
+			addChildButton(item,"<rmfile>","model_rmfile('"+args[0]+"');","Remove <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 			if (looksLikeFile(args[0])) {
-			    addChildButton(item,"<mkfile>","model_mkfile('"+args[0]+"');model_show();");
+			    addChildButton(item,"<mkfile>","model_mkfile('"+args[0]+"');model_show();","Make <file>");
+			    added=true;
 			} else {
-			    addChildButton(item,"<mkdir>","model_mkdir('"+args[0]+"');");
+			    addChildButton(item,"<mkdir>","model_mkdir('"+args[0]+"');","Make <directory>");
+			    added=true;
 			}
 		    }
 		} else if (args.length == 2) {
 		    if (root["type"] == "dir") {
-			addChildButton(item,"<cpdir>","model_cpdir('"+args[0]+"','"+args[1]+"');");
+			addChildButton(item,"<cpdir>","model_cpdir('"+args[0]+"','"+args[1]+"');","Copy <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
-			addChildButton(item,"<cpfile>","model_cpfile('"+args[0]+"','"+args[1]+"');model_setConfigFile('"+args[2]+"');model_show();");
+			addChildButton(item,"<cpfile>","model_cpfile('"+args[0]+"','"+args[1]+"');model_setConfigFile('"+args[2]+"');model_show();","Copy <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 		    }
 		};
 		//for (var model in model_config) {
 		//console.log("Adding config button: ",model);
 		//addChildButton(item,model,"model_setConfigFile('"+model+"');model_show();");
+		// added=true;
 		//}
 		// add directories...
 		for (var ii=1;ii<dirs.length;ii++) {
@@ -420,8 +456,15 @@ function showDropdown(target, arg = "") {
 		    //  dd=dd + file;
 		    //}
 		    console.log("Adding dir button: ",dd,ii,dirs[ii]);
-		    addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();");
-		}
+		    if (looksLikeFile(dd)) {
+			addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();","Use <file>");
+			added=true;
+		    } else {
+			addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();","Change <directory>");
+			added=true;
+		    }
+		};
+		if (! added) {addChildText(item,"No data available...");}
 	    };
 	    documentLog.innerHTML="";
 	});
@@ -435,8 +478,10 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path,filter:filter},
 	      function(data, status){
 		  removeChildren(item);
+		  var added=false;
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      item.classList.toggle("show");
 		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
 		      alert("Unable to list: "+path+"\n"+msg);
@@ -451,14 +496,21 @@ function showDropdown(target, arg = "") {
 			  if (parent != null) {
 			      var dd=root+parent;
 			      addChildButton(item,"<up>",
-					     "model_setArray('filterDir','"+dd+"');model_show();");
+					     "model_setArray('filterDir','"+dd+"');model_show();","Change to parent <directory>");
+			      added=true;
 			  };
 			  var dirs=ls[0].getElementsByTagName("dir");
 			  console.log("Found dir entries: ",dirs.length);
 			  for (var ii=0; ii< dirs.length; ii++) {
 			      var dd = dirs[ii].getAttribute("path");
 			      console.log("Adding dir button: ",dd);
-			      addChildButton(item,dd,"model_setArray('filterDir','"+dd+"');model_show();");
+			      if (looksLikeFile(dd)) {
+				  addChildButton(item,dd,"model_setArray('filterDir','"+dd+"');model_show();","Use <file>");
+				  added=true;
+			      } else {
+				  addChildButton(item,dd,"model_setArray('filterDir','"+dd+"');model_show();","Change <directory>");
+				  added=true;
+			      }
 			  };
 			  var patts=ls[0].getElementsByTagName("pattern");
 			  console.log("Found file entries: ",patts.length);
@@ -467,7 +519,8 @@ function showDropdown(target, arg = "") {
 			      var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd,rr);
-				  addChildButton(item,dd,"model_setArray('filterFile','"+rr+"');model_show();",'shaded');
+				  addChildButtonShaded(item,dd,"model_setArray('filterFile','"+rr+"');model_show();","Copy <pattern> to filter");
+				  added=true;
 			      };
 			  };
 			  var fils=ls[0].getElementsByTagName("file");
@@ -477,11 +530,13 @@ function showDropdown(target, arg = "") {
 			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd,":",size,":");
-				  addChildButton(item,size+" "+dd,"model_setArray('filterFile','"+dd+"');model_show();");
+				  addChildButton(item,size+" "+dd,"model_setArray('filterFile','"+dd+"');model_show();","Copy <file name> to filter");
+				  added=true;
 			      };
 			  };
 		      };
 		  };
+		  if (! added) {addChildText(item,"No data available...");}
 		  documentLog.innerHTML="";
 	      });
     } else if (target === 'modelFilterFile') { //***********************************
@@ -508,6 +563,7 @@ function showDropdown(target, arg = "") {
 		  if (status == "success") {
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
+			  item.classList.toggle("show");
 			  console.log("Error:",data);
 			  var msg=(errors[0].getAttribute("message")||"");
 			  alert("Unable to peek at: "+filterDir+" "+filterFile+" (file:"+file+")\n"+msg);
@@ -515,13 +571,16 @@ function showDropdown(target, arg = "") {
 			  dataToArray(data,status,documentLog);
 			  setInnerHTML('modelPatternHits',model_config[file]["hits"]);
 			  removeChildren(item);
+			  var added=false;
 			  var len=model_config[file]["files"].length;
 			  for (var ii=0; ii<len;ii++) {
 			      var sfile=model_config[file]["files"][ii][0];
 			      var sage=parseFloat(model_config[file]["files"][ii][1]).toFixed(2);
 			      var ssize=model_config[file]["files"][ii][2];
-			      addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","model_fileFind('"+sfile+"');");
+			      addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","model_fileFind('"+sfile+"');","Scan <model file>");
+			      added=true;
 			  }
+			  if (! added) {addChildText(item,"No data available...");}
 		      };
 		      documentLog.innerHTML="";
 		  }
@@ -530,6 +589,7 @@ function showDropdown(target, arg = "") {
     } else if (target === 'modelIndex') { //***********************************
 	var file=model_getConfigFile();
 	removeChildren(item);
+	var added=false;
  	if (model_config[file] !== undefined) {
 	    var variables=model_config[file]["variables"];
 	    if (variables !== undefined) {
@@ -537,16 +597,19 @@ function showDropdown(target, arg = "") {
 		    var fullname=variable;
 		    var dims=model_config[file]["variables"][variable];
 		    if (dims != null) {fullname=fullname+"("+dims+")";};
-		    addChildButton(item,fullname,"model_setArray('indexVariable','"+variable+"');model_show();");
+		    addChildButton(item,fullname,"model_setArray('indexVariable','"+variable+"');model_show();","Select <model variable>");
+		    added=true;
 		}
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'obsConfigFile') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent obs-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -555,6 +618,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -566,32 +630,40 @@ function showDropdown(target, arg = "") {
 		var parent=dirs[0];
 		if (parent != null) {
 		    var dd=parent;
-		    addChildButton(item,"<up>","obs_setConfigFile('"+dd+"');");
+		    addChildButton(item,"<up>","obs_setConfigFile('"+dd+"');","Change to parent <directory>");
+		    added=true;
 		}
 		if (args.length == 1) {
 		    //console.log("Arg ret:",ret);
 		    if (root["type"] == "dir" && root["loc"] != "") {
-			addChildButton(item,"<rmdir>","obs_rmdir('"+args[0]+"');");
+			addChildButton(item,"<rmdir>","obs_rmdir('"+args[0]+"');","Remove <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
-			addChildButton(item,"<rmfile>","obs_rmfile('"+args[0]+"');");
+			addChildButton(item,"<rmfile>","obs_rmfile('"+args[0]+"');","Remove <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 			if (looksLikeFile(args[0])) {
-			    addChildButton(item,"<mkfile>","obs_mkfile('"+args[0]+"');obs_show();");
+			    addChildButton(item,"<mkfile>","obs_mkfile('"+args[0]+"');obs_show();","Make <file>");
+			    added=true;
 			} else {
-			    addChildButton(item,"<mkdir>","obs_mkdir('"+args[0]+"');");
+			    addChildButton(item,"<mkdir>","obs_mkdir('"+args[0]+"');","Make <directory>");
+			    added=true;
 			}
 		    }
 		} else if (args.length == 2) {
 		    if (root["type"] == "dir") {
-			addChildButton(item,"<cpdir>","obs_cpdir('"+args[0]+"','"+args[1]+"');");
+			addChildButton(item,"<cpdir>","obs_cpdir('"+args[0]+"','"+args[1]+"');","Copy <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
-			addChildButton(item,"<cpfile>","obs_cpfile('"+args[0]+"','"+args[1]+"');obs_setConfigFile('"+args[2]+"');obs_show();");
+			addChildButton(item,"<cpfile>","obs_cpfile('"+args[0]+"','"+args[1]+"');obs_setConfigFile('"+args[2]+"');obs_show();","Copy <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 		    }
 		};
 		//for (var obs in obs_config) {
 		//console.log("Adding config button: ",obs);
 		//addChildButton(item,obs,"obs_setConfigFile('"+obs+"');obs_show();");
+		//added=true;
 		//}
 		for (var ii=1;ii<dirs.length;ii++) {
 		    var dir=dirs[ii];
@@ -604,8 +676,15 @@ function showDropdown(target, arg = "") {
 		    //dd=dd + file;
 		    //}
 		    console.log("Adding dir button: ",dd);
-		    addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();");
+		    if (looksLikeFile(dd)) {
+			addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();","Use <file>");
+			added=true;
+		    } else {
+			addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();","Change <directory>");
+			added=true;
+		    }
 		}
+		if (! added) {addChildText(item,"No data available...");}
 	    }
 	    documentLog.innerHTML="";
 	});
@@ -614,8 +693,10 @@ function showDropdown(target, arg = "") {
 	//     dataToArray(data,status,documentLog);
 	//     //console.log("Updating dropdown for ",target);
 	//     removeChildren(item);
+	//     var added=false;
 	//     for (var obs in obs_config) {
 	// 	addChildButton(item,obs,"obs_setConfigFile('"+obs+"');obs_show();");
+	//      added=true;
 	//     };
 	//     documentLog.innerHTML="";
 	// });
@@ -629,8 +710,10 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path,filter:filter},
 	      function(data, status){
 		  removeChildren(item);
+		  var added=false;
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      item.classList.toggle("show");
 		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
 		      alert("Unable to list: "+path+"\n"+msg);
@@ -645,14 +728,16 @@ function showDropdown(target, arg = "") {
 			  if (parent != null) {
 			      var dd=root+parent;
 			      addChildButton(item,"<up>",
-					     "obs_setArray('filterDir','"+dd+"');obs_show();");
+					     "obs_setArray('filterDir','"+dd+"');obs_show();","Change to parent <directory>");
+			      added=true;
 			  };
 			  var dirs=ls[0].getElementsByTagName("dir");
 			  console.log("Found dir entries: ",dirs.length);
 			  for (var ii=0; ii< dirs.length; ii++) {
 			      var dd = dirs[ii].getAttribute("path");
 			      console.log("Adding dir button: ",dd);
-			      addChildButton(item,dd,"obs_setArray('filterDir','"+dd+"');obs_show();");
+			      addChildButton(item,dd,"obs_setArray('filterDir','"+dd+"');obs_show();","Change <directory>");
+			      added=true;
 			  };
 			  var patts=ls[0].getElementsByTagName("pattern");
 			  console.log("Found file entries: ",patts.length);
@@ -661,7 +746,8 @@ function showDropdown(target, arg = "") {
 			      var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd,rr);
-				  addChildButton(item,dd,"obs_setArray('filterFile','"+rr+"');obs_show();",'shaded');
+				  addChildButtonShaded(item,dd,"obs_setArray('filterFile','"+rr+"');obs_show();","Copy <pattern> to filter");
+				  added=true;
 			      };
 			  };
 			  var fils=ls[0].getElementsByTagName("file");
@@ -671,11 +757,13 @@ function showDropdown(target, arg = "") {
 			      var size = fils[ii].getAttribute("size")
 			      if (dd !== '') {
 				  console.log("Adding file button: ",dd);
-				  addChildButton(item,size+" "+dd,"obs_setArray('filterFile','"+dd+"');obs_show();");
+				  addChildButton(item,size+" "+dd,"obs_setArray('filterFile','"+dd+"');obs_show();","Copy <file name> to filter");
+				  added=true;
 			      };
 			  };
 		      };
 		  };
+		  if (! added) {addChildText(item,"No data available...");}
 		  documentLog.innerHTML="";
 	      });
     } else if (target === 'obsFilterFile') { //***********************************
@@ -720,6 +808,7 @@ function showDropdown(target, arg = "") {
 		  if (status == "success") {
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
+			  item.classList.toggle("show");
 			  console.log("Error:",data);
 			  var msg=(errors[0].getAttribute("message")||"");
 			  alert("Unable to peek at: "+filterDir+" "+filterFile+" (file:"+file+")\n"+msg);
@@ -727,13 +816,16 @@ function showDropdown(target, arg = "") {
 			  dataToArray(data,status,documentLog);
 			  setInnerHTML('obsPatternHits',obs_config[file]["hits"]);
 			  removeChildren(item);
+			  var added=false;
 			  var len=obs_config[file]["files"].length;
 			  for (var ii=0; ii<len;ii++) {
 			      var sfile=obs_config[file]["files"][ii][0];
 			      var sage=parseFloat(obs_config[file]["files"][ii][1]).toFixed(2);
 			      var ssize=obs_config[file]["files"][ii][2];
-			      addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","obs_fileFind('"+sfile+"');");
+			      addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","obs_fileFind('"+sfile+"');","Scan <observation file>");
+			      added=true;
 			  }
+			  if (! added) {addChildText(item,"No data available...");}
 		      };
 		      documentLog.innerHTML="";
 		  }
@@ -747,8 +839,10 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
+		  var added=false;
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      item.classList.toggle("show");
 		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
 		      alert("Unable to list: "+path+"\n"+msg);
@@ -763,41 +857,26 @@ function showDropdown(target, arg = "") {
 			  if (parent != null) {
 			      var dd=root+parent;
 			      addChildButton(item,"<up>",
-					     "obs_setArray('tablePath','"+dd+"');obs_show();");
+					     "obs_setArray('tablePath','"+dd+"');obs_show();","Change to parent <directory>");
+			      added=true;
 			  };
 			  var dirs=ls[0].getElementsByTagName("dir");
 			  console.log("Found dir entries: ",dirs.length);
 			  for (var ii=0; ii< dirs.length; ii++) {
 			      var dd = dirs[ii].getAttribute("path");
 			      console.log("Adding dir button: ",dd);
-			      addChildButton(item,dd,"obs_setArray('tablePath','"+dd+"');obs_show();");
-			  };
-			  var patts=ls[0].getElementsByTagName("pattern");
-			  console.log("Found file entries: ",patts.length);
-			  for (var ii=0; ii< patts.length; ii++) {
-			      var rr = getFile(patts[ii].getAttribute("regexp"));
-			      var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd,rr);
-				  addChildButton(item,dd,"obs_setArray('filterFile','"+rr+"');obs_show();",'shaded');
-			      };
-			  };
-			  var fils=ls[0].getElementsByTagName("file");
-			  console.log("Found file entries: ",fils.length);
-			  for (var ii=0; ii< fils.length; ii++) {
-			      var dd = getFile(fils[ii].getAttribute("path"));
-			      if (dd !== '') {
-				  console.log("Adding file button: ",dd);
-				  addChildButton(item,dd,"");
-			      };
+			      addChildButton(item,dd,"obs_setArray('tablePath','"+dd+"');obs_show();","Change <directory>");
+			      added=true;
 			  };
 		      };
 		  };
+		  if (! added) {addChildText(item,"No data available...");}
 		  documentLog.innerHTML="";
 	      });
     } else if (target === 'obsBufrType') {  //***********************************
 	var file=obs_getConfigFile();
 	removeChildren(item);
+	var added=false;
 	if (obs_config[file] !== undefined) {
 	    var bufr=obs_config[file]["bufr"];
 	    if (bufr !== undefined) {
@@ -808,14 +887,17 @@ function showDropdown(target, arg = "") {
 		    if (cnt !== "") {
 			ccnt=" ("+cnt+")";
 		    }
-		    addChildButton(item,bufrType+" "+info+ccnt,"obs_setArray('bufrType','"+bufrType+"');showValue('obsBufrType','"+bufrType+"');");
+		    addChildButton(item,bufrType+" "+info+ccnt,"obs_setArray('bufrType','"+bufrType+"');showValue('obsBufrType','"+bufrType+"');","Use <BUFR type>");
+		    added=true;
 		}
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'obsSubType') {  //***********************************
 	var file=obs_getConfigFile();
 	var bufrType=obs_config[file]["bufrType"];
 	removeChildren(item);
+	var added=false;
 	if (obs_config[file] !== undefined) {
 	    var bufr=obs_config[file]["bufr"];
 	    if (bufr !== undefined) {
@@ -827,16 +909,19 @@ function showDropdown(target, arg = "") {
 			if (cnt !== "") {
 			    ccnt=" ("+cnt+")";
 			}
-			addChildButton(item,subType+" : "+info+ccnt,"obs_setArray('subType','"+subType+"');obs_setArray('typeInfo','"+info+"');showValue('obsSubType','"+subType+"');showValue('obsTypeInfo','"+info+"');");
+			addChildButton(item,subType+" : "+info+ccnt,"obs_setArray('subType','"+subType+"');obs_setArray('typeInfo','"+info+"');showValue('obsSubType','"+subType+"');showValue('obsTypeInfo','"+info+"');","Use <BUFR sub type>");
+			added=true;
 		    }
 		}
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'obsIndexPOS') { //***********************************
 	var file=obs_getConfigFile();
 	var bufrType=obs_config[file]["bufrType"];
 	var subType=obs_config[file]["subType"];
 	removeChildren(item);
+	var added=false;
 	if (bufrType !== undefined && bufrType !== "" &&
 	    subType !== undefined && subType !== "" && subType !== "info" &&subType !== "cnt" &&
 	    obs_config[file] !== undefined && 
@@ -854,31 +939,38 @@ function showDropdown(target, arg = "") {
 			var value="";
 		    };
 		    if (descr == "31001") {
-			addChildButton(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","shaded");
+			addChildButtonShaded(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","use <BUFR delayed replicator>");
+			added=true;
 		    } else {
-			addChildButton(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');");
+			addChildButton(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","Use <BUFR sequence element>");
+			added=true;
 		    }
 		}
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'obsIndexExp') { //***********************************
 	var file=obs_getConfigFile();
 	var bufrType=obs_config[file]["bufrType"];
 	var subType=obs_config[file]["subType"];
 	removeChildren(item);
+	var added=false;
 	if ( obs_config[file] !== undefined &&
 	     obs_config[file]["targets"] !== undefined ) {
 	    for (var target in obs_config[file]["targets"]) {
-		addChildButton(item,target,"addValue('obsIndexExp','"+target+"');");
+		addChildButton(item,target,"addValue('obsIndexExp','"+target+"');","observation target");
+		added=true;
 	    }
 	    addFunctionButtons(item,target);
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'colocConfigFile') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -887,6 +979,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -900,38 +993,46 @@ function showDropdown(target, arg = "") {
 		    var dd=parent;
 		    console.log("Adding <up> button: '"+dd+"'");
 		    //addChildButton(item,"<up>","coloc_setConfigFile('"+dd+"');coloc_show();");
-		    addChildButton(item,"<up>","coloc_setConfigFile2('"+dd+"');");
+		    addChildButton(item,"<up>","coloc_setConfigFile2('"+dd+"');","Change to parent <directory>");
+		    added=true;
 		}
 		if (args.length == 1) {
 		    //console.log("Arg ret:",ret);
 		    if (root["type"] == "dir" && root["loc"] != "") {
 			console.log("Adding <rmdir> button: ",args[0]);
-			addChildButton(item,"<rmdir>","coloc_rmdir('"+args[0]+"');");
+			addChildButton(item,"<rmdir>","coloc_rmdir('"+args[0]+"');","Remove <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
 			console.log("Adding <rmfile> button: ",args[0]);
-			addChildButton(item,"<rmfile>","coloc_rmfile('"+args[0]+"');");
+			addChildButton(item,"<rmfile>","coloc_rmfile('"+args[0]+"');","Remove <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 			if (looksLikeFile(args[0])) {
 			    console.log("Adding <mkfile> button: ",args[0]);
-			    addChildButton(item,"<mkfile>","coloc_mkfile('"+args[0]+"');coloc_show();");
+			    addChildButton(item,"<mkfile>","coloc_mkfile('"+args[0]+"');coloc_show();","Make <file>");
+			    added=true;
 			} else {
 			    console.log("Adding <mkdir> button: ",args[0]);
-			    addChildButton(item,"<mkdir>","coloc_mkdir('"+args[0]+"');");
+			    addChildButton(item,"<mkdir>","coloc_mkdir('"+args[0]+"');","Make <directory>");
+			    added=true;
 			}
 		    }
 		} else if (args.length == 2) {
 		    if (root["type"] == "dir") {
 			console.log("Adding <cpdir> button: ",args[0],args[1]);
-			addChildButton(item,"<cpdir>","coloc_cpdir('"+args[0]+"','"+args[1]+"');");
+			addChildButton(item,"<cpdir>","coloc_cpdir('"+args[0]+"','"+args[1]+"');","Copy <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
 			console.log("Adding <cpfile> button: ",args[0],args[1]);
-			addChildButton(item,"<cpfile>","coloc_cpfile('"+args[0]+"','"+args[1]+"');coloc_setConfigFile('"+args[2]+"');coloc_show();");
+			addChildButton(item,"<cpfile>","coloc_cpfile('"+args[0]+"','"+args[1]+"');coloc_setConfigFile('"+args[2]+"');coloc_show();","Copy <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 		    }
 		};
 		//for (var coloc in coloc_config) {
 		//console.log("Adding config button: ",coloc);
 		//addChildButton(item,coloc,"coloc_setConfigFile('"+coloc+"');coloc_show();");
+		//added=true;
 		//}
 		for (var ii=1;ii<dirs.length;ii++) {
 		    var dir=dirs[ii];
@@ -944,8 +1045,15 @@ function showDropdown(target, arg = "") {
 		    //  dd=dd + file;
 		    //}
 		    console.log("Adding button: ",dd);
-		    addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();");
+		    if (looksLikeFile(dd)) {
+			addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();","Use <file>");
+			added=true;
+		    } else {
+			addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();","Change <directory>");
+			added=true;
+		    }
 		}
+		if (! added) {addChildText(item,"No data available...");}
 	    }
 	    documentLog.innerHTML="";
 	});
@@ -954,8 +1062,10 @@ function showDropdown(target, arg = "") {
 	//     dataToArray(data,status,documentLog);
 	//     //console.log("Updating dropdown for ",target);
 	//     removeChildren(item);
+	//     var added=false;
 	//     for (var coloc in coloc_config) {
 	// 	addChildButton(item,coloc,"coloc_setConfigFile('"+coloc+"');coloc_show();");
+	//      added=true;
 	//     }
 	//     documentLog.innerHTML="";
 	// });
@@ -965,6 +1075,7 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -973,6 +1084,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		//console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -985,7 +1097,8 @@ function showDropdown(target, arg = "") {
 		if (parent != null) {
 		    var dd=parent;
 		    console.log("Adding up button: ",dd);
-		    addChildButton(item,"<up>","coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_show();");
+		    addChildButton(item,"<up>","coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_show();","Change to parent <directory");
+		    added=true;
 		}
 		for (var ii=1;ii<dirs.length;ii++) {
 		    var dir=dirs[ii];
@@ -998,38 +1111,53 @@ function showDropdown(target, arg = "") {
 		    //     dd=dd + file;
 		    // }
 		    console.log("Adding dir button: ",dd);
-		    addChildButton(item,dd,"coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_updateModelData('"+dd+"');coloc_show();");
+		    if (looksLikeFile(dd)) {
+			addChildButton(item,dd,"coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_updateModelData('"+dd+"');coloc_show();","Use <model setup file>");
+			added=true;
+		    } else {
+			addChildButton(item,dd,"coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_updateModelData('"+dd+"');coloc_show();","Change <directory>");
+			added=true;
+		    }
+		    added=true;
 		}
 		// for (var model in model_config) {
 		// 	addChildButton(item,model,"coloc_setConfig('modelConfigFile','file','"+model+"');coloc_show();");
+		//      added=true;
 		// }
-		addChildButton(item,"<none>","coloc_setConfig('modelConfigFile','file','');coloc_show();");
+		addChildButton(item,"<none>","coloc_setConfig('modelConfigFile','file','');coloc_show();","Do not use model data");
+		added=true;
+		if (! added) {addChildText(item,"No data available...");}
 	    }
 	    documentLog.innerHTML="";
 	});
     } else if (target === 'colocModelTargetVariable') { //***********************************
 	var file=coloc_getModelConfigFile();
 	removeChildren(item);
+	var added=false;
  	if (model_config[file] !== undefined) {
 	    for (var dim in model_config[file]["dimensions"]) {
 		var dimname=dim;
 		var dimv=model_config[file]["dimensions"][dim];
 		if (dimv!= null) {dimname="("+dimname+") 1:"+dimv;};
-		addChildButton(item,dimname,"showValue('colocModelTargetVariable','("+dim+")');",'shaded');
+		addChildButtonShaded(item,dimname,"showValue('colocModelTargetVariable','("+dim+")');","Use <model dimension>");
+		added=true;
 	    }
 	    for (var variable in model_config[file]["variables"]) {
 		var fullname=variable;
 		var dims=model_config[file]["variables"][variable];
 		if (dims!= null) {fullname=fullname+"("+dims+")";};
-		addChildButton(item,fullname,"showValue('colocModelTargetVariable','"+variable+"');");
+		addChildButton(item,fullname,"showValue('colocModelTargetVariable','"+variable+"');","Use <model variable>");
+		added=true;
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'colocObsConfigFile') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent obs-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -1038,6 +1166,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		//console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -1050,7 +1179,8 @@ function showDropdown(target, arg = "") {
 		if (parent != null) {
 		    var dd=parent;
 		    console.log("Adding up button: ",dd);
-		    addChildButton(item,"<up>","coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_show();");
+		    addChildButton(item,"<up>","coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_show();","Change to parent <directory>");
+		    added=true;
 		}
 		for (var ii=1;ii<dirs.length;ii++) {
 		    var dir=dirs[ii];
@@ -1063,12 +1193,21 @@ function showDropdown(target, arg = "") {
 		    //     dd=dd + file;
 		    // }
 		    console.log("Adding dir button: ",dd);
-		    addChildButton(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();");
+		    if (looksLikeFile(dd)) {
+			addChildButton(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();","Use <file>");
+			added=true;
+		    } else {
+			addChildButton(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();","Change <directory>");
+			added=true;
+		    }
 		}
 		// for (var obs in obs_config) {
 		// 	addChildButton(item,obs,"coloc_setConfig('obsConfigFile','file','"+obs+"');coloc_show();");
+		//      added=true;
 		// }
-		addChildButton(item,"<none>","coloc_setConfig('obsConfigFile','file','');coloc_show();");
+		addChildButton(item,"<none>","coloc_setConfig('obsConfigFile','file','');coloc_show();","Do not use observation data");
+		added=true;
+		if (! added) {addChildText(item,"No data available...");}
 	    }
 	    documentLog.innerHTML="";
 	});
@@ -1080,8 +1219,10 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
+		  var added=false;
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      item.classList.toggle("show");
 		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
 		      alert("Unable to list: "+arg+"\n"+msg);
@@ -1089,6 +1230,7 @@ function showDropdown(target, arg = "") {
 		      addWildcardButtons(item,target);
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
+			  item.classList.toggle("show");
 			  var msg=(errors[0].getAttribute("message")||"");
 			  console.log("Error:"+path+"  "+msg);
 			  //alert("Unable to list: "+path+"\n"+msg);
@@ -1103,14 +1245,16 @@ function showDropdown(target, arg = "") {
 			      if (parent != null) {
 				  var dd=root+parent;
 				  addChildButton(item,"<up>",
-						 "coloc_setArray('xml','"+dd+"');coloc_show();");
+						 "coloc_setArray('xml','"+dd+"');coloc_show();","Change to parent <directory>");
+				  added=true;
 			      };
 			      var dirs=ls[0].getElementsByTagName("dir");
 			      console.log("Found dir entries: ",dirs.length);
 			      for (var ii=0; ii< dirs.length; ii++) {
 				  var dd = dirs[ii].getAttribute("path");
 				  console.log("Adding dir button: ",dd);
-				  addChildButton(item,dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
+				  addChildButton(item,dd,"coloc_setArray('xml','"+dd+"');coloc_show();","Change <directory>");
+				  added=true;
 			      };
 			      var patts=ls[0].getElementsByTagName("pattern");
 			      console.log("Found file entries: ",patts.length);
@@ -1119,7 +1263,8 @@ function showDropdown(target, arg = "") {
 				  var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
 				  if (dd !== '') {
 				      console.log("Adding file button: ",dd,rr);
-				      addChildButton(item,dd,"coloc_setArray('xml','"+rr+"');coloc_show();",'shaded');
+				      addChildButtonShaded(item,dd,"coloc_setArray('xml','"+rr+"');coloc_show();","Use <pattern>");
+				      added=true;
 				  };
 			      };
 			      var fils=ls[0].getElementsByTagName("file");
@@ -1129,12 +1274,14 @@ function showDropdown(target, arg = "") {
 				  var size = fils[ii].getAttribute("size")
 				  if (dd !== '') {
 				      console.log("Adding file button: ",dd,ii);
-				      addChildButton(item,size+" "+dd,"coloc_setArray('xml','"+dd+"');coloc_show();");
+				      addChildButton(item,size+" "+dd,"coloc_setArray('xml','"+dd+"');coloc_show();","Use <file>");
+				      added=true;
 				  };
 			      };
 			  };
 		      };
 		  };
+		  if (! added) {addChildText(item,"No data available...");}
 		  documentLog.innerHTML="";
 	      });
     } else if (target === 'colocObsPOS') { //***********************************
@@ -1144,6 +1291,7 @@ function showDropdown(target, arg = "") {
 	    var bufrType = obs_config[file]["bufrType"];
 	    var subType = obs_config[file]["subType"];
 	    removeChildren(item);
+	    var added=false;
 	    if (bufrType !== undefined && bufrType !== "" &&
 		subType !== undefined && subType !== "" && subType !== "info" &&subType !== "cnt" &&
 		obs_config[file] !== undefined && 
@@ -1161,41 +1309,54 @@ function showDropdown(target, arg = "") {
 			    var value="";
 			};
 			if (descr == "31001") {
-			    addChildButton(item,pos+" : "+descr + info + value,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');","shaded");
+			    addChildButtonShaded(item,pos+" : "+descr + info + value,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');","use <BUFR delayed replicator>");
+			    added=true;
 			} else {
-			    addChildButton(item,pos+" : "+descr + info + value,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');");
+			    addChildButton(item,pos+" : "+descr + info + value,"showValue('colocObsPOS','"+pos+"');showValue('colocObsDESCR','"+descr+"');showValue('colocObsInfo','"+info+"');","Use <BUFR sequence element>");
+			    added=true;
 			}
 		    }
 		}
-		// add internal variables...
-		addChildButton(item," mid (Model File id)","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Model file id');",'shaded');
-		addChildButton(item," oid (Observation File id)","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Observation file id');",'shaded');
-		addChildButton(item," bid (Bufr message id)","showValue('colocObsPOS','bid');showValue('colocObsDESCR','');showValue('colocObsInfo','Bufr message id');",'shaded');
-		addChildButton(item," sid (Sub message id)","showValue('colocObsPOS','sid');showValue('colocObsDESCR','');showValue('colocObsInfo','Sub message id');",'shaded');
-		addChildButton(item," lid (Location id)","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Location id');",'shaded');
 		// add dimensions...
  		if (model_config[mfile] !== undefined) {
 		    for (var dim in model_config[mfile]["dimensions"]) {
 			var dimname=dim;
 			var dimv=model_config[mfile]["dimensions"][dim];
 			if (dimv !=  null) {
-			    addChildButton(item,"Duplicate (1:"+dimname+"="+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
-					   "showValue('colocObsInfo','Duplicate (1:"+dimname+"="+dimv+")');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');");
+			    addChildButtonShaded(item,dimname + "-duplicator (1:"+dimv+")","showValue('colocObsPOS','');showValue('colocObsDESCR','');"+
+					   "showValue('colocObsInfo','"+dimname+"-duplicator (1:"+dimv+")');showValue('colocObsMin','1');showValue('colocObsMax','"+dimname+"');","Duplicate observation");
+			    added=true;
 			}
 		    }
 		}
 	    }
+	    // add internal variables...
+	    addChildButton(item," mid: Model file index position","showValue('colocObsPOS','mid');showValue('colocObsDESCR','');showValue('colocObsInfo','Model file index position');",
+			   "Model file identification (internal variable)");
+	    addChildButton(item," oid: Observation file index position","showValue('colocObsPOS','oid');showValue('colocObsDESCR','');showValue('colocObsInfo','Observation file index position');",
+			   "Observation file identification (internal variable)");
+	    addChildButton(item," bid: BUFR message number in observation file","showValue('colocObsPOS','bid');showValue('colocObsDESCR','');showValue('colocObsInfo','BUFR message number in observation file');",
+			   "BUFR message identification (internal variable)");
+	    addChildButton(item," sid: Observation number in BUFR message","showValue('colocObsPOS','sid');showValue('colocObsDESCR','');showValue('colocObsInfo','Observation number in BUFR message');",
+			   "Observation identification  (internal variable)");
+	    addChildButton(item," lid: Location number in BUFR message","showValue('colocObsPOS','lid');showValue('colocObsDESCR','');showValue('colocObsInfo','Location number in BUFR message');",
+			   "Location identification (internal variabe)");
+	    added=true;
+	    if (! added) {addChildText(item,"No data available...");}
 	}
     } else if (target === 'matchModelTargetName') { //***********************************
 	var file=coloc_getConfigFile();
 	removeChildren(item);
+	var added=false;
 	if ( coloc_config[file] !== undefined &&
 	     coloc_config[file]["modelConfigFile"]["targets"] !== undefined 
 	   ) {
 	    for (var t in coloc_config[file]["modelConfigFile"]["targets"]) {
-		addChildButton(item,t,"showValue('matchModelTargetName','"+t+"');");
+		addChildButton(item,t,"showValue('matchModelTargetName','"+t+"');","<model target>");
+		added=true;
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target.substr(0,15) === 'matchExpression') {
 	var cnt = target.substring(15);
 	var file = coloc_getConfigFile();
@@ -1203,44 +1364,55 @@ function showDropdown(target, arg = "") {
 	var ofile = coloc_getObsConfigFile();
 	console.log("mfile:" + mfile);
 	removeChildren(item);
+	var added=false;
 	if ( coloc_config[file] !== undefined &&
 	     model_config[mfile] !== undefined &&
 	     obs_config[ofile] !== undefined
 	   ) {
 	    if (cnt == 0) {
 		var indexTrg=obs_config[ofile]["indexTarget"];
-		addChildButton(item,indexTrg,"addValue('"+target+"','"+indexTrg+"');coloc_addConfig('modelConfigFile','exp','"+indexTrg+"');","shaded");
+		addChildButtonShaded(item,indexTrg,"addValue('"+target+"','"+indexTrg+"');coloc_addConfig('modelConfigFile','exp','"+indexTrg+"');","Observation index target (see observation index)");
+		added=true;
 	    } else {
 		var trg=coloc_config[file]["modelConfigFile"]["targeto"][cnt-1];
 		for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
-		    addChildButton(item,t,"addValue('"+target+"','"+t+"');coloc_addConfigFilesTarget('modelConfigFile','"+trg+"','exp','"+t+"');");
+		    addChildButton(item,t,"addValue('"+target+"','"+t+"');coloc_addConfigFilesTarget('modelConfigFile','"+trg+"','exp','"+t+"');","Model target");
+		    added=true;
 		}
 	    }
 	}
 	addFunctionButtons(item,target);
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target.substr(0,13) === 'colocDebugExp') {
 	removeChildren(item);
+	var added=false;
 	addLogicalButtons(item,target);
 	addFunctionButtons(item,target);
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'colocObsFilter') {
 	var file = coloc_getConfigFile();
 	var mfile = coloc_getModelConfigFile();
 	var ofile = coloc_getObsConfigFile();
 	removeChildren(item);
+	var added=false;
 	if ( obs_config[ofile] !== undefined
 	   ) {
 	    for (var t in obs_config[ofile]["targets"]) {
-		addTargetButton(item,target,t);
+		addTargetButton(item,target,t,"Observation target (see observation index)");
 	    }
-	    addTargetButton(item,target,obs_config[ofile]["indexTarget"],"shaded");
+	    addTargetButtonShaded(item,target,obs_config[ofile]["indexTarget"],"Observation index target (see observation index)");
 	};
 	if ( coloc_config[file] !== undefined ) {
 	    for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
-		addTargetButton(item,target,t);
+		addTargetButton(item,target,t,"Observation target");
 	    }
 	};
 	addLogicalButtons(item,target);
 	addFunctionButtons(item,target);
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'colocModelFilter') {
 	var file = coloc_getConfigFile();
 	var mfile = coloc_getModelConfigFile();
@@ -1248,37 +1420,43 @@ function showDropdown(target, arg = "") {
 	var mod=(mfile !== "");
 	var obs=(ofile !== "");
 	removeChildren(item);
+	var added=false;
 	if(mod) {
 	    if ( model_config[mfile] !== undefined ) {
-		addTargetButton(item,target,model_config[mfile]["indexTarget"],"shaded");
+		addTargetButtonShaded(item,target,model_config[mfile]["indexTarget"],"model index target (see model index)");
 	    }
 	    if ( coloc_config[file] !== undefined ) {
 		for (var t in coloc_config[file]["modelConfigFile"]["targets"]) {
-		    addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+		    addChildButton(item,t,"addValue('"+target+"','"+t+"');","Model target");
+		    added=true;
 		}
 	    }
 	}
 	if (obs) {
 	    if ( obs_config[ofile] !== undefined) {
 		for (var t in obs_config[ofile]["targets"]) {
-		    addTargetButton(item,target,t);
+		    addTargetButton(item,target,t,"observation target (see observation index)");
 		}
-		addTargetButton(item,target,obs_config[ofile]["indexTarget"],"shaded");
+		addTargetButtonShaded(item,target,obs_config[ofile]["indexTarget"],"observation index target (see observation index)");
 	    };
 	    if ( coloc_config[file] !== undefined ) {
 		for (var t in coloc_config[file]["obsConfigFile"]["targets"]) {
-		    addChildButton(item,t,"addValue('"+target+"','"+t+"');");
+		    addChildButton(item,t,"addValue('"+target+"','"+t+"');","Observation target");
+		    added=true;
 		}
 	    };
 	};
 	addLogicalButtons(item,target);
 	addFunctionButtons(item,target);
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'plotConfigFile') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent plot-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"plot",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -1287,6 +1465,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -1299,26 +1478,33 @@ function showDropdown(target, arg = "") {
 		if (parent != null) {
 		    var dd=parent;
 		    console.log("Adding up button: ",dd);
-		    addChildButton(item,"<up>","plot_setConfigFile('"+dd+"');");
+		    addChildButton(item,"<up>","plot_setConfigFile('"+dd+"');","Change to parent <directory>");
+		    added=true;
 		}
 		if (args.length == 1) {
 		    //console.log("Arg ret:",ret);
 		    if (root["type"] == "dir" && root["loc"] != "") {
-			addChildButton(item,"<rmdir>","plot_rmdir('"+args[0]+"');");
+			addChildButton(item,"<rmdir>","plot_rmdir('"+args[0]+"');","Remove <directory>");
+			added=true;
 		    } else if (root["type"] == "file") {
-			addChildButton(item,"<rmfile>","plot_rmfile('"+args[0]+"');");
+			addChildButton(item,"<rmfile>","plot_rmfile('"+args[0]+"');","Remove <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 			if (looksLikeFile(args[0])) {
-			    addChildButton(item,"<mkfile>","plot_mkfile('"+args[0]+"');plot_show();");
+			    addChildButton(item,"<mkfile>","plot_mkfile('"+args[0]+"');plot_show();","Make <file>");
+			    added=true;
 			} else {
-			    addChildButton(item,"<mkdir>","plot_mkdir('"+args[0]+"');");
+			    addChildButton(item,"<mkdir>","plot_mkdir('"+args[0]+"');","Make <directory>");
+			    added=true;
 			}
 		    }
 		} else if (args.length == 2) {
 		    if (root["type"] == "dir") {
-			addChildButton(item,"<cpdir>","plot_cpdir('"+args[0]+"','"+args[1]+"');");
+			addChildButton(item,"<cpdir>","plot_cpdir('"+args[0]+"','"+args[1]+"');","Copy <diretory>");
+			added=true;
 		    } else if (root["type"] == "file") {
-			addChildButton(item,"<cpfile>","plot_cpfile('"+args[0]+"','"+args[1]+"');plot_setConfigFile('"+args[2]+"');");
+			addChildButton(item,"<cpfile>","plot_cpfile('"+args[0]+"','"+args[1]+"');plot_setConfigFile('"+args[2]+"');","Copy <file>");
+			added=true;
 		    } else if (root["type"] == "unknown") {
 		    }
 		};
@@ -1333,8 +1519,15 @@ function showDropdown(target, arg = "") {
 		    //  dd=dd + file;
 		    //}
 		    console.log("Adding dir button: ",dd);
-		    addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();");
+		    if (looksLikeFile(dd)) {
+			addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();","Use <file>");
+			added=true;
+		    } else {
+			addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();","Change <directory>");
+			added=true;
+		    }
 		}
+		if (! added) {addChildText(item,"No data available...");}
 	    };
 	    documentLog.innerHTML="";
 	});
@@ -1342,16 +1535,19 @@ function showDropdown(target, arg = "") {
 	var args=getArgs(arg);
 	//documentLog.innerHTML="Sent cat-load request.";
 	//$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
-	    //var ret=dataToArray(data,status,documentLog);
-	    //var root=ret[0];
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    for (var cat in plot_org_cats) {
-		console.log("Adding config button: ",cat);
-		addChildButton(item,cat,"plot_setCat('"+cat+"');showValue('plotCat','"+cat+"');plot_show()");
-	    }
-	    //documentLog.innerHTML="";
+	//var ret=dataToArray(data,status,documentLog);
+	//var root=ret[0];
+	console.log("Updating dropdown for ",target);
+	removeChildren(item);
+	var added=false;
+	for (var cat in plot_org_cats) {
+	    console.log("Adding config button: ",cat);
+	    addChildButton(item,cat,"plot_setCat('"+cat+"');showValue('plotCat','"+cat+"');plot_show()","Plot category");
+	    added=true;
+	}
+	//documentLog.innerHTML="";
 	//});
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'plotTable') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent dir-load request.";
@@ -1360,8 +1556,10 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
+		  var added=false;
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      item.classList.toggle("show");
 		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
 		      alert("Unable to list: "+arg+"\n"+msg);
@@ -1369,6 +1567,7 @@ function showDropdown(target, arg = "") {
 		      addWildcardButtons(item,target);
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
+			  item.classList.toggle("show");
 			  var msg=(errors[0].getAttribute("message")||"");
 			  console.log("Error:"+path+"  "+msg);
 			  //alert("Unable to list: "+path+"\n"+msg);
@@ -1383,14 +1582,16 @@ function showDropdown(target, arg = "") {
 			      if (parent != null) {
 				  var dd=root+parent;
 				  addChildButton(item,"<up>",
-						 "plot_setArray('table','"+dd+"');plot_show();");
+						 "plot_setArray('table','"+dd+"');plot_show();","Change to parent <directory>");
+				  added=true;
 			      };
 			      var dirs=ls[0].getElementsByTagName("dir");
 			      console.log("Found dir entries: ",dirs.length);
 			      for (var ii=0; ii< dirs.length; ii++) {
 				  var dd = dirs[ii].getAttribute("path");
 				  console.log("Adding dir button: ",dd);
-				  addChildButton(item,dd,"plot_setArray('table','"+dd+"');plot_show();");
+				  addChildButton(item,dd,"plot_setArray('table','"+dd+"');plot_show();","Change <directory>");
+				  added=true;
 			      };
 			      var patts=ls[0].getElementsByTagName("pattern");
 			      console.log("Found file entries: ",patts.length);
@@ -1398,8 +1599,9 @@ function showDropdown(target, arg = "") {
 				  var rr = getFile(patts[ii].getAttribute("regexp"));
 				  var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
 				  if (dd !== '') {
-				      console.log("Adding file button: ",dd,rr);
-				      addChildButton(item,dd,"plot_setArray('table','"+rr+"');plot_show();",'shaded');
+				      console.log("Adding pattern button: ",dd,rr);
+				      addChildButtonShaded(item,dd,"plot_setArray('table','"+rr+"');plot_show();","Use pattern");
+				      added=true;
 				  };
 			      };
 			      var fils=ls[0].getElementsByTagName("file");
@@ -1409,12 +1611,14 @@ function showDropdown(target, arg = "") {
 				  var size = fils[ii].getAttribute("size")
 				  if (dd !== '') {
 				      console.log("Adding file button: ",dd,ii);
-				      addChildButton(item,size+" "+dd,"plot_setArray('table','"+dd+"');plot_show();");
+				      addChildButton(item,size+" "+dd,"plot_setArray('table','"+dd+"');plot_show();","Use <file>");
+				      added=true;
 				  };
 			      };
 			  };
 		      };
 		  };
+		  if (! added) {addChildText(item,"No data available...");}
 		  documentLog.innerHTML="";
 	      });
     } else if (target === 'plotGraphics') { //***********************************
@@ -1425,8 +1629,10 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path},
 	      function(data, status){
 		  removeChildren(item);
+		  var added=false;
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
+		      item.classList.toggle("show");
 		      console.log("Error:",data);
 		      var msg=(errors[0].getAttribute("message")||"");
 		      alert("Unable to list: "+arg+"\n"+msg);
@@ -1434,6 +1640,7 @@ function showDropdown(target, arg = "") {
 		      addWildcardButtons(item,target);
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
+			  item.classList.toggle("show");
 			  var msg=(errors[0].getAttribute("message")||"");
 			  console.log("Error:"+path+"  "+msg);
 			  //alert("Unable to list: "+path+"\n"+msg);
@@ -1448,14 +1655,16 @@ function showDropdown(target, arg = "") {
 			      if (parent != null) {
 				  var dd=root+parent;
 				  addChildButton(item,"<up>",
-						 "plot_setArray('graphics','"+dd+"');plot_show();");
+						 "plot_setArray('graphics','"+dd+"');plot_show();","Change to parent <directory>");
+				  added=true;
 			      };
 			      var dirs=ls[0].getElementsByTagName("dir");
 			      console.log("Found dir entries: ",dirs.length);
 			      for (var ii=0; ii< dirs.length; ii++) {
 				  var dd = dirs[ii].getAttribute("path");
 				  console.log("Adding dir button: ",dd);
-				  addChildButton(item,dd,"plot_setArray('graphics','"+dd+"');plot_show();");
+				  addChildButton(item,dd,"plot_setArray('graphics','"+dd+"');plot_show();","Change <directory>");
+				  added=true;
 			      };
 			      var patts=ls[0].getElementsByTagName("pattern");
 			      console.log("Found file entries: ",patts.length);
@@ -1464,7 +1673,8 @@ function showDropdown(target, arg = "") {
 				  var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
 				  if (dd !== '') {
 				      console.log("Adding file button: ",dd,rr);
-				      addChildButton(item,dd,"plot_setArray('graphics','"+rr+"');plot_show();",'shaded');
+				      addChildButtonShaded(item,dd,"plot_setArray('graphics','"+rr+"');plot_show();","Use <pattern>");
+				      added=true;
 				  };
 			      };
 			      var fils=ls[0].getElementsByTagName("file");
@@ -1474,38 +1684,43 @@ function showDropdown(target, arg = "") {
 				  var size = fils[ii].getAttribute("size")
 				  if (dd !== '') {
 				      console.log("Adding file button: ",dd,ii);
-				      addChildButton(item,size+" "+dd,"plot_setArray('graphics','"+dd+"');plot_show();");
+				      addChildButton(item,size+" "+dd,"plot_setArray('graphics','"+dd+"');plot_show();","Use <file>");
+				      added=true;
 				  };
 			      };
 			  };
 		      };
 		  };
+		  if (! added) {addChildText(item,"No data available...");}
 		  documentLog.innerHTML="";
 	      });
     } else if (target === 'plotSet') { //***********************************
 	var args=getArgs(arg);
 	//documentLog.innerHTML="Sent line-load request.";
 	//$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args},function(data, status){
-	    //var ret=dataToArray(data,status,documentLog);
-	    //var root=ret[0];
-	    console.log("Updating dropdown for ",target);
-	    removeChildren(item);
-	    var file=plot_getConfigFile();
-	    console.log("Looking for file:",file);
-	    var cat=plot_config[file]["cat"];
-	    for (var line in plot_cats[cat]["lines"]) {
-		console.log("Adding config button: ",line);
-		addChildButton(item,line+" ("+plot_cats[cat]["lines"][line]+")","showValue('plotSet','"+line+"');showValue('plotType',plot_cats['"+cat+"'][\"lines\"]['"+line+"']);");
-	    }
+	//var ret=dataToArray(data,status,documentLog);
+	//var root=ret[0];
+	console.log("Updating dropdown for ",target);
+	removeChildren(item);
+	var added=false;
+	var file=plot_getConfigFile();
+	console.log("Looking for file:",file);
+	var cat=plot_config[file]["cat"];
+	for (var line in plot_cats[cat]["lines"]) {
+	    console.log("Adding config button: ",line);
+	    addChildButton(item,line+" ("+plot_cats[cat]["lines"][line]+")","showValue('plotSet','"+line+"');showValue('plotType',plot_cats['"+cat+"'][\"lines\"]['"+line+"']);","Data set identification");
+	    added=true;
+	}
+	if (! added) {addChildText(item,"No data available...");}
 	//documentLog.innerHTML="";
-	//});
-
+	//})}
     } else if (target === 'plotColoc') { //***********************************
 	var args=getArgs(arg);
 	documentLog.innerHTML="Sent coloc-load request.";
 	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -1514,6 +1729,7 @@ function showDropdown(target, arg = "") {
 		var root=ret[0]||{};
 		console.log("Updating dropdown for ",target);
 		removeChildren(item);
+		var added=false;
 		if (args.length >0 && looksLikeFile(args[0])) {
 		    var file=getFile(args[0]);
 		} else {
@@ -1526,10 +1742,12 @@ function showDropdown(target, arg = "") {
 		if (parent != null) {
 		    var dd=parent;
 		    console.log("Adding up: ",dd);
-		    addChildButton(item,"<up>","showValue('plotColoc','"+dd+"');");
+		    addChildButton(item,"<up>","showValue('plotColoc','"+dd+"');","Change to parent <directory>");
+		    added=true;
 		} else {
 		    console.log("Adding clear: ",dd);
-		    addChildButton(item,"<up>","showValue('plotColoc','');");
+		    addChildButton(item,"<up>","showValue('plotColoc','');","Change to root <directory>");
+		    added=true;
 		}
 		if (dirs.length > 0) {
 		    for (var ii=1;ii<dirs.length;ii++) {
@@ -1545,17 +1763,20 @@ function showDropdown(target, arg = "") {
 			    //}
 			    console.log("Adding dir button: ",dd,ii);
 			    // colocation file 'dd' must be 'loaded' if it is selected....!!!
-			    addChildButton(item,dd,"showValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');");
+			    addChildButton(item,dd,"showValue('plotColoc','"+dd+"');plot_loadColoc('"+dd+"');","Change <directory>");
+			    added=true;
 			}
 		    }
 		}
-		console.log("There: ",dirs);
+		if (! added) {addChildText(item,"No data available...");}
+		//console.log("There: ",dirs);
 	    };
 	    documentLog.innerHTML="";
 	});
     } else if (target.substr(0,14) === 'plotExpression') { //***********************************
 	var cnt = target.substring(14);
 	removeChildren(item);
+	var added=false;
 	var cfile=plot_getColocConfigFile();
 	var mfile=plot_getModelConfigFile();
 	var ofile=plot_getObsConfigFile();
@@ -1565,13 +1786,13 @@ function showDropdown(target, arg = "") {
 	if (mod) {
 	    if (model_config[mfile]!== undefined) {
 		var indexTarget=model_config[mfile]["indexTarget"];
-		addTargetButton(item,target,indexTarget,"shaded");
+		addTargetButtonShaded(item,target,indexTarget,"model index target (see model index)");
 	    };
 	    // list model trgs in coloc_config
  	    if (coloc_config[cfile] !== undefined) {
 		var trgs=coloc_config[cfile]["modelConfigFile"]["targets"];
 		for (var trg in trgs) {
-		    addTargetButton(item,target,trg);
+		    addTargetButton(item,target,trg,"model target");
 		};
 	    };
 	};
@@ -1580,20 +1801,22 @@ function showDropdown(target, arg = "") {
 	    if (obs_config[ofile] !== undefined) {
 		var trgs=obs_config[ofile]["targets"];
 		for (var trg in trgs) {
-		    addTargetButton(item,target,trg);
+		    addTargetButton(item,target,trg,"observation target (see observation index)");
 		};
 		trg = obs_config[ofile]["indexTarget"];
-		addTargetButton(item,target,trg,"shaded");
+		addTargetButtonShaded(item,target,trg,"observation index target (see observation index)");
 	    }
 	    // list obs trgs in coloc_config
  	    if (coloc_config[cfile] !== undefined) {
 		var trgs=coloc_config[cfile]["obsConfigFile"]["targets"];
 		for (var trg in trgs) {
-		    addTargetButton(item,target,trg);
+		    addTargetButton(item,target,trg,"observation target");
 		};
 	    };
 	};
 	addFunctionButtons(item,target);
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target.substr(0,13) === 'plotAttribute') { //***********************************
 	var attr = target.substring(13);
 	var file=plot_getConfigFile();
@@ -1603,26 +1826,36 @@ function showDropdown(target, arg = "") {
 	var radio=val instanceof Array; // should we have radio button?
 	var dup=(attr.substr(0,1) === "_");
 	removeChildren(item);
+	var added=false;
 	if (radio) {
 	    for (var vv=0; vv < val.length;vv++) {
 		console.log("Attribute '",attr,"' value  ",vv,val[vv]);
 		if (dup) {
-		    addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');plot_setCat('"+cat+"');plot_show();");
+		    addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');plot_setCat('"+cat+"');plot_show();","Use <attribute duplicator>");
+		    added=true;
 		} else {
-		    addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');");
+		    addChildButton(item,val[vv],"plot_setAttribute('"+attr+"','"+val[vv]+"');","Use <attribute value>");
+		    added=true;
 		};
 	    };
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target.substr(0,13) === 'plotDebugExp') {
 	removeChildren(item);
+	var added=false;
 	addLogicalButtons(item,target);
 	addFunctionButtons(item,target);
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}
     } else if (target === 'autoType') { //***********************************
 	removeChildren(item);
-	addChildButton(item,"model","showValue('"+target+"','model');");
-	addChildButton(item,"observation","showValue('"+target+"','obs');");
-	addChildButton(item,"colocation","showValue('"+target+"','coloc');");
-	addChildButton(item,"plot","showValue('"+target+"','plot');");
+	var added=false;
+	addChildButton(item,"model","showValue('"+target+"','model');","Maintain model index");
+	addChildButton(item,"observation","showValue('"+target+"','obs');","Maintain observation index");
+	addChildButton(item,"colocation","showValue('"+target+"','coloc');","Make colocation XML");
+	addChildButton(item,"plot","showValue('"+target+"','plot');","Make plot table and graphics");
+	added=true;
+	if (! added) {addChildText(item,"No data available...");}	
     } else if (target === 'autoConfigFile') { //***********************************
 	var type=document.getElementById("autoType").value // "obs";
 	var args=getArgs(arg);
@@ -1630,6 +1863,7 @@ function showDropdown(target, arg = "") {
 	$.get("cgi-bin/fark_load.pl",{type:type,arg:args},function(data, status){
 	    var errors=data.getElementsByTagName("error");
 	    if (errors.length > 0 ) {
+		item.classList.toggle("show");
 		console.log("Error:",data);
 		var msg=(errors[0].getAttribute("message")||"");
 		alert("Unable to list: "+arg+"\n"+msg);
@@ -1637,12 +1871,14 @@ function showDropdown(target, arg = "") {
 		var ret=dataToArray(data,status,documentLog);
 		var errors=data.getElementsByTagName("error");
 		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
 		    var msg=(errors[0].getAttribute("message")||"");
 		    alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
 		} else if (ret[0] !== undefined) {
 		    var root=ret[0]||{};
 		    console.log("Updating dropdown for ",target);
 		    removeChildren(item);
+		    var added=false;
 		    if (args.length >0 && looksLikeFile(args[0])) {
 			var file=getFile(args[0]);
 		    } else {
@@ -1655,10 +1891,12 @@ function showDropdown(target, arg = "") {
 		    if (parent != null) {
 			var dd=parent;
 			console.log("Adding up: ",dd);
-			addChildButton(item,"<up>","showValue('autoConfigFile','"+dd+"');");
+			addChildButton(item,"<up>","showValue('autoConfigFile','"+dd+"');","Change to parent <directory>");
+			added=true;
 		    } else {
 			console.log("Adding clear: ",dd);
-			addChildButton(item,"<up>","showValue('autoConfigFile','');");
+			addChildButton(item,"<up>","showValue('autoConfigFile','');","Change to root <directory>");
+			added=true;
 		    }
 		    if (dirs.length > 0) {
 			for (var ii=1;ii<dirs.length;ii++) {
@@ -1673,10 +1911,17 @@ function showDropdown(target, arg = "") {
 				//dd=dd + file;
 				//}
 				console.log("Adding dir button: ",dd,ii);
-				addChildButton(item,dd,"showValue('autoConfigFile','"+dd+"');");
+				if (looksLikeFile(dd)) {
+				    addChildButton(item,dd,"showValue('autoConfigFile','"+dd+"');","Use <file>");
+				    added=true;
+				} else {
+				    addChildButton(item,dd,"showValue('autoConfigFile','"+dd+"');","Change <directory>");
+				    added=true;
+				};
 			    }
 			}
 		    }
+		    if (! added) {addChildText(item,"No data available...");}
 		} else {
 		    console.log("Undefined root.");
 		}
@@ -1687,14 +1932,18 @@ function showDropdown(target, arg = "") {
 	var type=document.getElementById("autoType").value // "obs";
 	var args=getArgs(arg);
 	removeChildren(item);
+	var added=false;
 	for (var ii=0;ii<auto_cron.length;ii++) {
 	    var cron=auto_cron[ii];
 	    if (cron === "") {
-		addChildButton(item,"<never>","showValue('autoCron','"+cron+"');");
+		addChildButton(item,"<never>","showValue('autoCron','"+cron+"');","Never run job");
+		added=true;
 	    } else {
-		addChildButton(item,cron,"showValue('autoCron','"+cron+"');");
+		addChildButton(item,cron,"showValue('autoCron','"+cron+"');","Run job <interval>");
+		added=true;
 	    }
 	}
+	if (! added) {addChildText(item,"No data available...");}
     } else {
 	console.log("Unknown dropdown target:", target);
     }

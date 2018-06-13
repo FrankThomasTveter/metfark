@@ -97,16 +97,54 @@ closePlot <- function() {
 #   return (c(mean(d),sd(d),sqrt(mean(d^2)),mean(abs(d)),length(d)));
 #}
 
-norwegian <- function(data,idcol,ll) {
-  s <- data[,idcol];
+# return the data with only overlapping data present in all sets...
+overlap <- function (data,setcol,selcols,nw) {
+    trgcol = "index";
+    if (missing(nw)) {
+        len=length(data[,1]);
+        index=1:len;
+        datin=cbind(data,index);
+    } else {
+        datn=data[nw,];
+        len=length(datn[,1]);
+        index=1:len;
+        datin=cbind(datn,index);
+    }
+    datix = datin[,append(c(setcol,trgcol),selcols)];
+    sets=unique(datix[,setcol]);
+    setlist=list();
+    for (ss in sets) {
+        sel = (datix[,setcol]==ss);
+        newtrg=paste0(trgcol,ss);
+        dd = datix[sel,];
+        colnames(dd)[colnames(dd)==trgcol] <- newtrg;
+        print (paste("Set",ss," found cnt:",length(dd[,1])));
+        setlist=append(setlist,list(dd));
+    }
+    indxs = Reduce(function(x, y) merge(x, y, by=selcols), setlist)
+    print (paste("Initial cnt:",length(indxs[,1])));
+    ind=c();
+    for (ss in sets) {
+        newtrg=paste0(trgcol,ss);
+        indx = indxs[,newtrg];
+        print (paste("Set",ss," using cnt:",length(indx)));
+        ind=c(ind,indx);
+    }
+    print (paste("Total used cnt:",length(ind)));
+    return (datin[ind,]);
+}
+
+
+equals <- function(data,areacol,trg,ll) {
+  a <- data[,areacol];
   if (missing(ll)) {
-     output <- (s>=1000 & s < 2000);
+     output <- (! is.na(a) & a == trg);
   } else {
-     output <- (s>=1000 & s < 2000 & ll);
+     output <- (! is.na(a) & a == trg & ll);
   }
   if (sum(output)==0) {
-      print ("No norwegian stations found. Stations:");
-      print(unique(data[,idcol]));
+      print (paste("No ",trg," stations found. Stations:"));
+      print(unique(data[,areacol]));
   }
   return (output);
 }
@@ -115,9 +153,9 @@ below <- function(data,altcol,thres,ll) {
   g <- as.numeric(data[,altcol]);
   t <- as.numeric(thres);
   if (missing(ll)) {
-     output <- (g <= t);
+     output <- (! is.na(g) & g  <= t);
   } else {
-     output <- (g <= t & ll);
+     output <- (! is.na(g) & g <= t & ll);
   }
   return (output);
 }
@@ -126,9 +164,9 @@ above <- function(data,altcol,thres,ll) {
   g <- as.numeric(data[,altcol]);
   t <- as.numeric(thres);
   if (missing(ll)) {
-     output <- (g > t);
+     output <- (! is.na(g) & g > t);
   } else {
-     output <- (g > t & ll);
+     output <- (! is.na(g) & g > t & ll);
   }
   return (output);
 }
@@ -159,7 +197,7 @@ getMinMaxDTGs <- function (data,ll,col) {
     ma <- max(data[ll,col]);
     mid= toString(getDTG(mi));
     mad= toString(getDTG(ma));
-    print (paste("Found date:",mid));
+    print (paste("Found dates from:",mid," to ",mad));
     return (c(mid,mad,prettyTime(ma-mi)));
 }
 
@@ -332,7 +370,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### score plot
 
 scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                      idcol,altcol,modcol,obscol,lab,min,max,...) {
+                      idcol,altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
@@ -368,6 +406,7 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         yr    <- c();
         ys    <- c();
         statl <- list();
+        print (paste("Looping:          ",length(isel)));
         for (ii in 1:length(isel)) {  # loop over selections
             ret <- processLead(mod,obs,ilab,isel,ii,valid,dset,leadu,lead,
                                xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
@@ -442,7 +481,7 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### series plot
     
 seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                       idcol,altcol,modcol,obscol,lab,min,max,...) {
+                       idcol,altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
@@ -559,7 +598,7 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### series plot
     
 timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                     idcol,altcol,modcol,obscol,lab,min,max,...) {
+                     idcol,altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
@@ -641,8 +680,8 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 l    <- ilab[[ii]];
                 stat <- statl[[jj]];
                 ###x <- as.POSIXct(x, origin="1970-01-01");
-                lines(spline(x,ymod),type="l",lty=dd,col=ii,lwd=2);        # stde
-                lines(spline(x,yobs),type="l",lty=dd,col=fadeColor(ii),lwd=2); # bias
+                lines(spline(x,ymod),type="l",lty=dd,col=ii,lwd=2);            # model
+                lines(spline(x,yobs),type="l",lty=dd,col=fadeColor(ii),lwd=3); # observations
                 if (l=="") {
                     legs=append(legs,paste0(leg[dd]));
                 } else {
@@ -675,7 +714,7 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### historgram plot
 
 histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                        idcol,altcol,modcol,obscol,lab,min,max,...) {
+                        idcol,altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...);
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
@@ -736,7 +775,7 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 y    <- yl[[jj]];
                 dd   <- dl[[jj]];
                 ii   <- il[[jj]];
-                lines(spline(x,y),type="l",lty=dd,col=ii,lwd=2);
+                lines(x,y,type="l",lty=dd,col=ii,lwd=2);
             };
             lines(c(0.,0.),yr,type="l",lty=2,col=gray(0.75));
             info=paste("From",toString(dtgs[1]),
@@ -758,7 +797,7 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### vertical profile plot
 
 profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                       idcol,hgtlab,hgtcol,hgtdir,modcol,obscol,lab,min,max,...) {
+                       idcol,hgtlab,hgtcol,hgtdir,obscol,modcol,lab,min,max,...) {
     nhgt <- 10; # number of height bins
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
@@ -772,15 +811,15 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     };
     mod <- data[,modcol];
     obs <- data[,obscol];
-    valid <- (!is.na(mod) & !is.na(obs) & mod>min & mod<max & obs>min & obs<max);
+    hgt <- as.numeric(data[,hgtcol]);
+    valid <- (!is.na(mod) & !is.na(obs) & ! is.na(hgt) &
+              mod>min & mod<max & obs>min & obs<max);
     print (paste("Number of stations (profile):          ",sum(valid)));
     if (sum(valid)>1) {
         if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
         dtgs <- getMinMaxDTGs(data,valid,timecol);
         dset <- unique(data[,setcol]);
         ;# make data statistics...
-        hgt   <- (data[,hgtcol]);
-        #print (unique(hgt));
         bhgt  <- quantile(hgt,probs = seq(0, 1, by = 1.0/nhgt),na.rm=TRUE)
         qhgt  <- findInterval(hgt,bhgt);
         ;# initialise data arrays...
@@ -813,8 +852,13 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 dcnt <- pretty(sum(dsel));
                 stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
                 #print(paste("Sel:",ii," stat:",stat));
+                #print (hgt);
+                #print (qhgt);
+                #print (bhgt);
                 for (ll in 1:nhgt) {    # loop over heights
-                    dsel <- (isel[[ii]] & data[,setcol] == dd & valid & qhgt == ll );
+                    dsel <- (isel[[ii]] & data[,setcol] == dd & valid & !is.na(qhgt) & qhgt == ll );
+                    #print (paste("Level:",ll));
+                    #print (hgt[dsel]);
                     if (sum(dsel)>2) {
                         y    <- append(y,mean(hgt[dsel]));
                         d    <- (mod[dsel]-obs[dsel]);
@@ -908,6 +952,7 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 processLead <- function (mod,obs,ilab,isel,ii,valid,dset,leadu,lead,
                          xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,
                          dl,il,xr,yr,ys,statl) {
+    print (paste("Processing lead"));
     for (dd in dset) {                # loop over datasets
         x    <- c();
         yme  <- c();
@@ -926,6 +971,7 @@ processLead <- function (mod,obs,ilab,isel,ii,valid,dset,leadu,lead,
         dmae <- round(mean(abs(d)),2);
         dcnt <- pretty(sum(dsel));
         stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
+        #print (is.na(isel[[ii]]));
         for (ll in sort(leadu)) {    # loop over lead times
             dsel <- (isel[[ii]] & data[,setcol] == dd & valid & lead == ll );
             if (sum(dsel)>2) {

@@ -1091,6 +1091,63 @@ CONTAINS
     return
   end function plot_popset
   !
+  ! check that sets are comparable (TRUE=ok)
+  logical function plot_checkSets(pss)
+    implicit none
+    type(plot_session), pointer :: pss !  current session
+    type(plot_set),pointer :: cSet
+    logical ::first
+    first = .true.
+    plot_checkSets=.false.
+    if (.not.associated(pss)) return
+    cSet => pss%firstSet%next
+    do while (.not.associated(cSet,target=pss%lastSet))
+       if (first) then
+          first=.false.
+       else if (.not.plot_checkObsTrg(pss%firstSet%next,cSet)) then
+          if(plot_bdeb)write(*,*)'Obs targets differ.'
+          return
+       else if (pss%firstSet%next%category.ne.cSet%category) then
+          if(plot_bdeb)write(*,*)'BUFR categories differ:',&
+               & pss%firstSet%next%category,cSet%category
+          return
+       else if (pss%firstSet%next%subcategory.ne.cSet%subcategory) then
+          if(plot_bdeb)write(*,*)'BUFR sub-categories differ:',&
+               & pss%firstSet%next%subcategory,cSet%subcategory
+          return
+       end if
+       cSet => cSet%next
+    end do
+    plot_checkSets=.true.
+    return
+  end function plot_checkSets
+  !
+  ! compare observation targets of the two sets (TRUE=ok)
+  logical function plot_checkObsTrg(set1,set2)
+    implicit none
+    type(plot_set),pointer :: set1,set2
+    type(plot_obstrg),pointer :: t1,t2
+    integer :: ii
+    plot_checkObsTrg=.false.
+    t1 => set1%firstObsTrg%next
+    t2 => set1%firstObsTrg%next
+    ii=0
+    do while (.not.associated(t1,set1%lastObsTrg))
+       ii=ii+1
+       if (t1%pos250.ne.t2%pos250) then
+          if(plot_bdeb)write(*,*)'Positions differ.',ii
+          return
+       else if (t1%descr80.ne.t2%descr80) then
+          if(plot_bdeb)write(*,*)'Descriptors differ.',ii
+          return
+       end if
+       t1=>t1%next
+       t2=>t2%next
+    end do
+    plot_checkObsTrg=.true.
+    return
+  end function plot_checkObsTrg
+  !
   ! loop over sets from the top without deleting them...
   logical function plot_loopSet(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc)
     use model
@@ -2275,6 +2332,12 @@ CONTAINS
        call plot_errorappendi(crc250,irc)
        call plot_errorappend(crc250,"\n")
        return
+    end if
+    !
+    if(plot_bdeb)then
+       if (plot_checkSets(pss))then
+          write(*,*)myname,'Observation targets differ...'
+       end if
     end if
     lcnt=0
     do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))

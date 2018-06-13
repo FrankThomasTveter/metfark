@@ -23,7 +23,8 @@
 #
 # Column=cycle_epoch
 # Column=time_epoch
-# Column=obs_id
+# Column=obs_file_id
+# Column=obs_location
 # Column=area
 # Column=lat_deg
 # Column=lon_deg
@@ -59,7 +60,7 @@ pcol   = "pressure_hpa";
 
 
 #thres = attr["geopotential_threshold",];
-n <- norwegian(data,idcol);
+n <- equals(data,areacol,"Norway");
 
 #if (sum(n) < 1) { stop ("No norwegian stations found.");};
 

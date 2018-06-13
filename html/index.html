@@ -358,10 +358,10 @@
 		      <button onclick="showDropdown('colocModelTargetVariable',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn"
 			      title="Show <model dimensions> and <model variables>"> &#9776;</button></td>
 		    <td class="fill">
-		      <input id="colocModelTargetMin" type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')" title="Minimum target value. Observations with values below this threshold are rejected."/>
+		      <input id="colocModelTargetMin" type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')" title="Minimum <BUFR sequence item> value. Observations with values below this threshold are rejected. &#13; (Duplicator: start value)"/>
 		    </td>
 		    <td class="fill">
-		      <input id="colocModelTargetMax" type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')" title="Maximum target value. Observations with values above this threshold are rejected."/>
+		      <input id="colocModelTargetMax" type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')" title="Maximum <BUFR sequence item> value. Observations with values above this threshold are rejected. &#13; (Duplicator: stop value)"/>
 		    </td>
 		  </tr>
 		</table>
@@ -414,20 +414,20 @@
 		      <input id="colocObsTargetName" type="text" value="" title="Observation target name"/> 
 		    </td>
 		    <td class="fill">
-		      <input id="colocObsPOS" type="text" value="" title="Position in BUFR sequence.&#13; * Blank: searches for the next occurence of the descriptor.&#13; * An integer (or expression): indicates a specific position.&#13; * A single variable: stores the position of the next occurence of the descriptor."/> 
+		      <input id="colocObsPOS" type="text" value="" title="BUFR sequence position:&#13; * Blank: searches for the next occurence of the descriptor.&#13; * An integer code (or expression): indicates a specific position.&#13; * A single variable: stores the position of the next occurence of the descriptor.&#13;Duplicator:&#13; * Blank&#13;Internal variable:&#13; * name of variable"/> 
 		      <div id="colocObsPOSDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
 		      <button onclick="showDropdown('colocObsPOS',this.parentNode.parentNode.children[2].children[0].value)"
-			      class="dropbtn" title="Show scanned BUFR sequence, internal variables and <model dimensions>" >&#9776;</button></td>
+			      class="dropbtn" title="Show scanned BUFR sequence, duplicators and internal variables" >&#9776;</button></td>
 		    <td class="fill"><input id="colocObsDESCR" type="text" value=""
-					    title="BUFR descriptor"/></td>
+					    title="BUFR sequence descriptor:&#13; * integer code&#13;Duplicator:&#13; * Blank&#13;Internal variable:&#13; * Blank"/></td>
 		    <td class="fill"><input id="colocObsInfo" type="text" value=""
 					    title="Information"/></td>
 		    <td class="fill"><input id="colocObsMin" type="text" value=""
-					    title="Minimum target value. Observations with values below this threshold are rejected."/></td>
+					    title="Minimum target value:&#13; * Observations with values below this threshold are rejected&#13;Duplicator:&#13; * Duplicator start index&#13;Internal variable:&#13; * Blank"/></td>
 		    <td class="fill"><input id="colocObsMax" type="text" value=""
-					    title="Maximum target value. Observations with values above this threshold are rejected."/></td>
+					    title="Maximum target value:&#13; * Observations with values above this threshold are rejected&#13;Duplicator:&#13; * Duplicator stop index&#13;Internal variable:&#13; * Blank"/></td>
 		  </tr>
 		</table>
 	    </td></tr>

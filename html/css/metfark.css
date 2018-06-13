@@ -63,7 +63,7 @@ cursor: pointer;
 text-align: left;
 }
 button:hover, button:focus {
-    background-color: #0cf;
+ background-color: #0cf;
 }
 .test {
     background-color: yellow;

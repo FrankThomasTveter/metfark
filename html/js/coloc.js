@@ -253,34 +253,39 @@ function coloc_newObsTarget(item) {
 	    var maximum=item.parentNode.parentNode.children[7].children[0].value;
 	    var bufrType = obs_config[ofile]["bufrType"];
 	    var subType = obs_config[ofile]["subType"];
-	    if (name !== "" && ((pos !== "" && bufrType !== "" && subType !== "") || (minimum != "" && maximum != ""))) {
-		var file= coloc_getConfigFile();
-		if (coloc_config[file] === undefined) {
-		    coloc_config[file]={modelConfigFile:{targets:{},targeto:[],def:{}},
-					obsConfigFile:{targets:{},targeto:[]},
-					host:"fark.met.no",
-					password:""};
-		};
-		if (coloc_config[file]["obsConfigFile"]["targets"][name] === undefined) {
-		    coloc_config[file]["obsConfigFile"]["targeto"].push(name);
+	    if (name !== "") {
+		if ((pos !== "" && bufrType !== "" && subType !== "") || (minimum != "" && maximum != "")) {
+		    var file= coloc_getConfigFile();
+		    if (coloc_config[file] === undefined) {
+			coloc_config[file]={modelConfigFile:{targets:{},targeto:[],def:{}},
+					    obsConfigFile:{targets:{},targeto:[]},
+					    host:"fark.met.no",
+					    password:""};
+		    };
+		    if (coloc_config[file]["obsConfigFile"]["targets"][name] === undefined) {
+			coloc_config[file]["obsConfigFile"]["targeto"].push(name);
+		    }
+		    coloc_config[file]["obsConfigFile"]["targets"][name]={};
+		    coloc_config[file]["obsConfigFile"]["targets"][name]["pos"]=(pos || "");
+		    coloc_config[file]["obsConfigFile"]["targets"][name]["descr"]=(descr || "");
+		    coloc_config[file]["obsConfigFile"]["targets"][name]["info"]=(info || "");
+		    coloc_config[file]["obsConfigFile"]["targets"][name]["min"]=(minimum || "");
+		    coloc_config[file]["obsConfigFile"]["targets"][name]["max"]=(maximum || "");
+		    coloc_configEd++;
+		    //coloc_showObsTargetTable();
+		    coloc_show();
+		    item.parentNode.parentNode.children[1].children[0].value="";
+		    item.parentNode.parentNode.children[2].children[0].value="";
+		    item.parentNode.parentNode.children[4].children[0].value="";
+		    item.parentNode.parentNode.children[5].children[0].value="";
+		    item.parentNode.parentNode.children[6].children[0].value="";
+		    item.parentNode.parentNode.children[7].children[0].value="";
+		} else {
+		    alert("Invalid: position ('"+pos+"'), BUFR type ('"+bufrType+"'), subType ('"+
+			  subType+"'), minimum('"+minimum+"'), maximum('"+maximum+"') detected.");
 		}
-		coloc_config[file]["obsConfigFile"]["targets"][name]={};
-		coloc_config[file]["obsConfigFile"]["targets"][name]["pos"]=(pos || "");
-		coloc_config[file]["obsConfigFile"]["targets"][name]["descr"]=(descr || "");
-		coloc_config[file]["obsConfigFile"]["targets"][name]["info"]=(info || "");
-		coloc_config[file]["obsConfigFile"]["targets"][name]["min"]=(minimum || "");
-		coloc_config[file]["obsConfigFile"]["targets"][name]["max"]=(maximum || "");
-		coloc_configEd++;
-		//coloc_showObsTargetTable();
-		coloc_show();
-		item.parentNode.parentNode.children[1].children[0].value="";
-		item.parentNode.parentNode.children[2].children[0].value="";
-		item.parentNode.parentNode.children[4].children[0].value="";
-		item.parentNode.parentNode.children[5].children[0].value="";
-		item.parentNode.parentNode.children[6].children[0].value="";
-		item.parentNode.parentNode.children[7].children[0].value="";
 	    } else {
-		alert("Invalid: name ('"+name+"'), position ('"+pos+"'), BUFR type ('"+bufrType+"') or subType ('"+subType+"') detected.");
+		alert("Invalid: name ('"+name+"') detected.");
 	    }
 	} else {
 	    alert("'"+name+"' already used in obs config file: '"+ofile+"'");

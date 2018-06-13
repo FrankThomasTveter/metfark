@@ -287,7 +287,7 @@ module observations
      integer                         :: nint = 0        ! number of internal variables
      CHARACTER (LEN=80), allocatable :: int_var(:)      ! internal variable name
      integer,            allocatable :: int_lenv(:)     ! internal variable name length
-     !     REAL(rn),           allocatable :: int_val(:)      ! internal variable values
+     !REAL(rn),           allocatable :: int_val(:)      ! internal variable values
      REAL,               allocatable :: int_val(:)      ! internal variable values
      !
      ! locations
@@ -329,10 +329,10 @@ module observations
      logical :: reportsReady=.false.    ! are reported data ready for use
      !
      ! output identification...
-     integer :: fid = 0 ! file id (index number)
-     integer :: mid = 0 ! message id in file
-     integer :: oid = 0 ! observation id in file
-     integer :: lid = 0 ! location id in file
+     !integer :: fid = 0 ! file id (index number)
+     !integer :: mid = 0 ! message id in file
+     !integer :: oid = 0 ! observation id in file
+     !integer :: lid = 0 ! location id in file
      !
      type(obs_session), pointer :: prev => null()         ! linked list
      type(obs_session), pointer :: next => null()         ! linked list
@@ -452,9 +452,9 @@ CONTAINS
     !
     css%int_val(1)=0 ! model file id
     css%int_val(2)=0 ! observation file id
-    css%int_val(3)=0 ! message id
-    css%int_val(4)=0 ! obs id
-    css%int_val(5)=1 ! location id
+    css%int_val(3)=0 ! message id (for each file)
+    css%int_val(4)=0 ! obs id (for each message)
+    css%int_val(5)=0 ! location id (for each message)
     ! reports
     allocate(css%firstReport,css%lastReport,stat=irc)
     if (irc.ne.0) then
@@ -2229,9 +2229,9 @@ CONTAINS
        end if
     end do
     css%int_val(2)=css%currentFileIndex ! observation file id
-    css%int_val(3)=1
-    css%int_val(4)=1
-    css%int_val(5)=1
+    css%int_val(3)=0 ! message id
+    css%int_val(4)=0 ! obs id
+    css%int_val(5)=0 ! location id
     observation_loopFileStack=found
     if (obs_bdeb)write(*,*)myname,' Done:',found,css%currentFileSortIndex,&
          & associated(css%currentFile)
@@ -2381,9 +2381,9 @@ CONTAINS
     css%currentFileSortIndex=0
     css%currentFileIndex=0
     css%int_val(2)=css%currentFileIndex ! observation file id
-    css%int_val(3)=1
-    css%int_val(4)=1
-    css%int_val(5)=1
+    css%int_val(3)=0 ! message id
+    css%int_val(4)=0 ! obs id
+    css%int_val(5)=0 ! location id
   end subroutine observation_stackfirst
   !
   subroutine observation_findStackLimits(css,ind_lval,ind_minval,ind_maxval,crc250,irc)
@@ -2450,9 +2450,9 @@ CONTAINS
     end if
     css%currentFileIndex=0
     css%int_val(2)=css%currentFileIndex ! observation file id
-    css%int_val(3)=1
-    css%int_val(4)=1
-    css%int_val(5)=1
+    css%int_val(3)=0 ! message id
+    css%int_val(4)=0 ! obs id
+    css%int_val(5)=0 ! location id
     if (obs_bdeb)write(*,*)myname,' Done.', css%sortLimitsOk,&
          & css%leftFileSortIndex, css%rightFileSortIndex,css%nFileIndexes
     return
@@ -3013,10 +3013,6 @@ CONTAINS
           exit LOOP
        end if
     end do LOOP
-    if (bok)then
-       if(obs_bdeb)write(*,*)myname,"INCREMENTING lid:",css%int_val
-       css%int_val(5)=css%int_val(5)+1 ! obs id
-    end if
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
     return
@@ -3060,6 +3056,7 @@ CONTAINS
        if(obs_bdeb)write(*,*)myname,' Checking obs.',bok
        if (bok) then
           OBS : DO ! loop over message observations
+             css%int_val(4)=css%int_val(4)+1 ! obs id
              if (observation_checkObs(css,bbok,crc250,irc)) then
                 cnt=cnt+1
                 css%msg%nobs=css%msg%nobs+1
@@ -3131,7 +3128,6 @@ CONTAINS
        end if
        if (css%msg%nobs.ne.0.or..not.bok) exit MSG ! valid obs in matrix
     end do MSG
-    if (bok) css%int_val(4)=css%int_val(4)+1 ! obs id
     if(obs_bdeb)write(*,*)myname,' OOK.',css%currentFile%ook
     if(obs_bdeb)write(*,*)myname,' Done.',bok,cnt,isubset,nsubset
     return
@@ -3197,7 +3193,8 @@ CONTAINS
     if (bok) then
        css%msg%iobs=css%msg%iobs+1
        do while (css%msg%iobs.le.css%msg%nobs)
-          if (css%msg%trg_set(css%msg%iobs)) then
+          css%int_val(5)=css%int_val(5)+1 ! location id
+          if (css%msg%trg_set(css%msg%iobs)) then ! passed msg-check?
              css%msg%vobs=css%msg%vobs-1
              do ii=1,css%msg%ctrg
                 css%trg_val(ii)=css%msg%trg_val(ii,css%msg%iobs)
@@ -4260,7 +4257,7 @@ CONTAINS
     end do
     css%int_val(3)=0 ! message id
     css%int_val(4)=0 ! obs id
-    css%int_val(5)=1 ! location id
+    css%int_val(5)=0 ! location id
     call observation_clearCat(css%currentFile)
     fopen=.true.
     return
@@ -4302,6 +4299,8 @@ CONTAINS
        bread=.true. ! new message in memory
        css%currentfile%nmessage=css%currentfile%nmessage+1
        css%int_val(3)=css%int_val(3)+1 ! message id
+       css%int_val(4)=0 ! location id
+       css%int_val(5)=0 ! location id
        !     PRINT*,'----------------------------------',N,' ',KBUFL
        KBUFL=KBUFL/NBYTPW+1
        !

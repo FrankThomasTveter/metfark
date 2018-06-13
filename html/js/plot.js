@@ -75,6 +75,10 @@ function plot_setArray(parameter,value) {
 function plot_expandCat(cat) {
     var file=plot_getConfigFile();
     plot_cats[cat]=goclone(plot_org_cats[cat]);
+    if (plot_org_cats[cat] ===undefined) {
+	console.log("Missing category:",cat);
+	return;
+    };
     for (var attr in plot_org_cats[cat]["attributes"]) {
 	console.log("Found org attribute:",attr);
     }
@@ -161,10 +165,13 @@ function plot_setCat(value) {
     if (value===undefined) {
 	value=plot_config[file]["cat"]
     };
+    plot_expandCat(value);
+    if (plot_cats[value] === undefined) {
+	console.log("Attempt to set undefined plot-category:",value);
+	return;
+    }
     //console.log("File:",file,parameter,plot_config[file]);
     plot_config[file]["cat"]=value;
-    //
-    plot_expandCat(value);
     // sync file and cat attributes
     for (var attr in plot_config[file]["attributes"]) {
 	if (plot_cats[value]===undefined || 
@@ -382,13 +389,18 @@ function plot_showDatasetTable() {
     console.log(":::::::::: showDatasetTable");
     var file=plot_getConfigFile();
     var cat=plot_config[file]["cat"];
-    var colnames_=plot_cats[cat]["colnames_"];
-    // make column headers
-    var type=[1,2,3,4,5];
-    var col1=["Action","Id","Set","Colocation file","Legend"];
-    for (var ii =0; ii< colnames_.length;ii++) {
-	col1.push(plot_cats[cat]["colnames_"][ii]);
-	type.push(6); //offset starts with first "6"
+    var colnames_={};
+    var type=[];
+    var col1=[];
+    if (plot_cats[cat] !== undefined) {
+	colnames_=plot_cats[cat]["colnames_"];
+	// make column headers
+	type=[1,2,3,4,5];
+	col1=["Action","Id","Set","Colocation file","Legend"];
+	for (var ii =0; ii< colnames_.length;ii++) {
+	    col1.push(plot_cats[cat]["colnames_"][ii]);
+	    type.push(6); //offset starts with first "6"
+	}
     }
     // make data expressions
     var data=[];
@@ -400,9 +412,15 @@ function plot_showDatasetTable() {
 	for (var ii =0; ii< colnames.length;ii++) {
 	    panick[colnames[ii]]=columns[ii]||0;
 	};
+	var pset="";
+	if (plot_cats[cat] !== undefined) {
+	    pset=plot_cats[cat]["lines"][set];
+	} else {
+	    console.log("Undefined category:",cat);
+	};
 	var item=[-1,
 		  set,
-		  plot_cats[cat]["lines"][set]||"",
+		  pset,
 		  sets[set]["coloc"],
 		  sets[set]["legend"]
 		 ];
@@ -622,7 +640,12 @@ function plot_insertNew(row,type,ii,offset) {
 function plot_showAttributesTable() {
     var file=plot_getConfigFile();
     var cat=plot_config[file]["cat"];
-    var order=plot_cats[cat]['order'];
+    var order=[];
+    if (plot_cats[cat] !== undefined) {
+	order=plot_cats[cat]['order'];;
+    } else {
+	console.log("Undefined category:",cat);
+    }
     var item=document.getElementById('plotAttributesTable');
     var head=removeTableChildFrom(item,"labelsPlotAttribute");
     var value=plot_config[file]['attributes'];

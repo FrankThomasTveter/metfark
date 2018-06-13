@@ -153,12 +153,13 @@ sub splitDir {
     # get abs path
     if (defined $tdir && -d $tdir) { # total path
 	my $adir = abs_path( $tdir ); # absolute total path
+	#print "splitDir abs: $tdir -> $adir\n";
 	if (defined $adir) {
 	    $priv = "denied";
 	    foreach my $k (keys %{$farkdirs{$cls}}) {
 		my $kk = substr($k,0,-1); # remove last "/" from "%farkdirs" directory name
 		#print "Checking $adir~$kk $priv\n";
-		if ( $tdir =~ /^$kk\/?(.*)$/) {
+		if ( $adir =~ /^$kk\/?(.*)$/) {
 		    $root = $k;
 		    $loc = $1;
 		    $loc =~ s/\/+/\//g;
