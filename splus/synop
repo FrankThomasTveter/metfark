@@ -70,10 +70,10 @@ nw <- equals(raw,areacol,"Norway");
 print ("Extracting overlapping data.");
 data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id"),nw);
 
-print (paste("Total cnt:",length(data[,1])));
+print (paste("Splitting data"));
 
-nl <- below(data,altcol,thres);
-nh <- above(data,altcol,thres);
+nl <- below(data[[1]],altcol,thres);
+nh <- above(data[[1]],altcol,thres);
 
 for (ii in 1:attr["_n",]) {
 

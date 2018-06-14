@@ -608,9 +608,9 @@ sub savePlot {
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
 	}
-    }{message=> "Unable to save $ifile (see /tmp/fark_save.tmp)\n",
-      logfile=>"/tmp/fark_save.tmp",
-      stdout=>"success"
+    }{message =>  "Unable to save $ifile (see /tmp/fark_save.tmp)\n",
+      logfile => "/tmp/fark_save.tmp",
+      stdout  => "success"
     };
 }
 

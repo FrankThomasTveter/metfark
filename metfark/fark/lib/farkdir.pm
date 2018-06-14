@@ -527,6 +527,7 @@ sub sandbox (&@) {
 	    && ! $blk );
     if (defined $log && $log) {
 	&restore_streams();
+	$merged=&message_file($log);
 	if ($print eq "always"  || ($print eq "success" && $ok)) {
 	    &print_file($log);
 	    if ($cmd) {print $cmd;}
@@ -540,8 +541,8 @@ sub sandbox (&@) {
     # handle errors...
     if (! $ok) {
 	my $message=$msg;
-	if ($merged =~ m/<error message='(.*)'\/>/g) {
-	    $message=$1;
+	if ($merged) {
+	    $message=$merged;
 	} elsif ($core){
 	    $message = $msg . " (Process $pid dumped core.)";
 	}elsif($sig){
@@ -555,6 +556,7 @@ sub sandbox (&@) {
 	} elsif ($blk) {
 	    $message=$msg . " [$cmd]";
 	};
+	if ($debug) {print "Message: $message\n";};
 	if ($term) {
 	    $term->($message);
 	} elsif ($debug) {
@@ -1238,6 +1240,19 @@ sub print_file
 	print "$row\n";
     };
     if ($debug) {print "*** End of '$filename' ***\n";};    
+}
+
+sub message_file
+{
+    my ($filename)=@_;
+    open(my $fh, '<:encoding(UTF-8)', $filename)
+	or die "Could not open file '$filename' $!";
+    
+    while (my $row = <$fh>) {
+	if ($row =~ m/<error message='(.*)'\/>/g) {
+	    return $1;
+	};
+    };
 }
 
 1;
