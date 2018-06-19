@@ -53,6 +53,7 @@ void col_setxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, in
 void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, int len2);
 
 void par_setshapefile_(char* fn250, char* cname11, char* crc250, int* irc, int len1, int len2, int len3);
+void par_simplifyshapes_(char* tol20, char* crc250, int* irc, int len1, int len2);
 void par_clearshapefile_(char* crc250, int* irc, int len1);
 
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
@@ -1450,6 +1451,35 @@ xs_setShapeFile(char *fn, char *cn);
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(cn11);
       free(fn250);
+      free(crc250);
+
+#
+#  "simplifyShapes" simplifies shapes with specified tolerance in km
+#      (string) tolerance in km.
+#   Return array:
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_simplifyShapes(char *tol);
+    PREINIT:
+      char *tol20;
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      tol20 = calloc(sizeof(char), 20);
+      strcpy(crc250,"");
+      strcpy(tol20,tol);
+      par_simplifyshapes_(tol20, crc250, &irc, 20, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(tol20);
       free(crc250);
 
 #

@@ -1547,6 +1547,7 @@ CONTAINS
     else
        newTarget%ind=0
     end if
+    nullify(newTarget)
     !if(obs_bdeb)write(*,*)myname,' Done.',trg
     return
   end subroutine observation_pushTarget

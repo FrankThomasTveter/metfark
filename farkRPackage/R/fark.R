@@ -41,6 +41,7 @@ readComments <- function (filename,name) {
        };  
        output <- matrix(vals, nrow=n, ncol=1);
        rownames(output)<-nams;
+       rm(nams);rm(vals);
      }
    }
    close(con);
@@ -110,18 +111,20 @@ overlap <- function (raw,setcol,selcols,sel) {
         len=length(rawsel[,1]);
         index=1:len;
         rawind=cbind(rawsel,index);
-    }
+    };
     rawsub = rawind[,append(c(setcol,trgcol),selcols)];
+    rm(len,index,rawind);gc(); # free memory
     sets=unique(rawsub[,setcol]);
     setlist=list();
     for (ss in sets) {
-        sel = (rawsub[,setcol]==ss);
+        selt = (rawsub[,setcol]==ss);
         newtrg=paste0(trgcol,ss);
-        rawset = rawsub[sel,];
+        rawset = rawsub[selt,];
         colnames(rawset)[colnames(rawset)==trgcol] <- newtrg;
         print (paste("Set",ss," found cnt:",length(rawset[,1])));
         setlist=append(setlist,list(rawset));
-    }
+    };
+    rm(newtrg,rawsub,selt,rawset);gc(); # free memory
     rawmerge = Reduce(function(x, y) merge(x, y, by=selcols), setlist)
     print (paste("Initial cnt:",length(rawmerge[,1])));
     data=list();
@@ -135,6 +138,7 @@ overlap <- function (raw,setcol,selcols,sel) {
             data=append(data,list(rawsel[selind,]));
         };
     }
+    rm (newtrg,selind,setlist,rawmerge,rawsel);gc(); # free memory
     return (data);  # return a list of sets that have overlapping data
 }
 
@@ -251,7 +255,8 @@ getAxisDates <- function (dtgs) {
             }
             os=ns;
         }
-    }
+    };
+    rm(req,cc,ss,ot,ll,ts,os,ns,ff);gc(); # free memory
     #print(paste("Xvalue=",xx," Dtg=",dd));
     return (list(xx,dd));
 }
@@ -308,6 +313,7 @@ getValid <- function (data,obscol,modcol,min,max) {
         valid <- (valid & !is.na(obs) & !is.na(mod) & obs>min & obs<max & mod>min & mod<max);
         print (paste("Valid:",sum(valid)));
     }
+    rm(lend,lenv,obs,mod);gc(); # free memory
     return (valid);
 }    
 getValidHgt <- function (data,obscol,modcol,hgtcol,min,max) {
@@ -322,6 +328,7 @@ getValidHgt <- function (data,obscol,modcol,hgtcol,min,max) {
         valid <- (valid & !is.na(obs) & !is.na(mod) & ! is.na(hgt)
             & obs>min & obs<max & mod>min & mod<max);
     }
+    rm(lend,lenv,obs,mod,hgt);gc(); # free memory
     return (valid);
 }    
 
@@ -413,6 +420,10 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No data for ",filename));
     }
+    rm(lst,inp,ilab,isel,title,valid,legs,cols,pcshs,stats);
+    rm(set,obs,mod,xr,yr,rr,l,d,dme,dsde,drms,dmae,dcnt,stat);
+    rm(xl,yl,xr,yr,rr,dsel,td,dd);gc(); # free memory
+
 };
 
 ###################### score plot
@@ -526,6 +537,10 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No valid data for ",filename));
     }
+    rm(lst,inp,ilab,isel,title,valid,lead,leadu);
+    rm (xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,setl,il,xr,yr,ys,statl);
+    rm(set,obs,mod,ret,legs,cols,ltys,lwds,stats);
+    rm(x,yme,ysde,yrms,ymae,ycnt,ss,ii,l,stat,cols,ltys,lwds,info);gc();
 };
 
 ###################### series plot
@@ -645,6 +660,10 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No valid data for ",filename));
     }
+    rm(lst,inp,ilab,isel,title,valid,dtgs,dtg,dtgu,xdtg);
+    rm (xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,setl,il,xr,yr,ys,statl);
+    rm(set,obs,mod,ret,legs,cols,ltys,lwds,stats);
+    rm(x,yme,ysde,yrms,ymae,ycnt,ss,ii,l,stat,cols,ltys,lwds,info);gc();
 };
 
 ###################### series plot
@@ -763,6 +782,10 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No valid data for ",filename));
     }
+    rm(lst,inp,ilab,isel,title,valid,dtgs,dtg,dtgu,xdtg);
+    rm (xl,ymel,yobsl,ymodl,ysdel,yrmsl,ymael,ycntl,setl,il,xr,yr,ys,statl);
+    rm(set,obs,mod,ret,legs,cols,ltys,lwds,stats);
+    rm(x,yme,ysde,yrms,ymae,ycnt,ss,ii,l,stat,cols,ltys,lwds,info);gc();
 };
 
 ###################### historgram plot
@@ -845,6 +868,10 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No data for ",filename));
     }
+    rm(lst,inp,ilab,isel,title,valid);
+    rm (xl,yl,setl,il,xr,yr,statl);
+    rm(set,obs,mod,ret,legs,cols,ltys,lwds,stats);
+    rm(info);gc();
 };
 
 ###################### vertical profile plot
@@ -996,6 +1023,12 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
     } else {
         print (paste("$$$ No valid data for ",filename));
     }
+    rm(nhgt,lst,inp,ilab,isel,title,valid,dtgs,hgt,bhgt,qhgt);
+    rm(yl,xmel,xsdel,xrmsl,xmael,xcntl,setl,il,xr,yr,statl);
+    rm(set,obs,mod,ret,legs,cols,ltys,lwds,stats);
+    rm(y,xme,xsde,xrms,xmae,xcnt);
+    rm(dsel,d,dme,dsde,drms,dmae,dcnt,y,d);
+    rm(ss,ii,l,stat,cols,ltys,lwds,info);gc();
 };
 
 ########################## auxiliary plot function
@@ -1054,6 +1087,8 @@ processLead <- function (mod,obs,ilab,isel,ii,valid,set,leadu,lead,
         yr    <- range( append(yr,ysde));
         statl <- append(statl,list(stat));
     };
+    rm(x,yme,yobs,ymod,ysde,yrms,ymae,ycnt);
+    rm(dsel,d,dme,dsde,drms,dmae,dcnt,stat);gc();
     return (list("xl"=xl,
                  "ymel"=ymel,
                  "yobsl"=yobsl,
@@ -1123,6 +1158,8 @@ processTime <- function (mod,obs,ilab,isel,ii,valid,set,dtgu,dtg,
         ys    <- range( append(ys,ysde));
         statl <- append(statl,list(stat));
     };
+    rm(x,yme,yobs,ymod,ysde,yrms,ymae,ycnt);
+    rm(dsel,d,dme,dsde,drms,dmae,dcnt,stat);gc();
     return (list("xl"=xl,
                  "ymel"=ymel,
                  "yobsl"=yobsl,
@@ -1175,12 +1212,12 @@ processHist <- function (mod,obs,ilab,isel,ii,valid,set,
             stats= append(stats,stat);
         };
     };
+    rm(l,dsel,d,pp,x,y);gc();
     return (list("mod"=mod,
                  "obs"=obs,
                  "ilab"=ilab,
                  "isel"=isel,
                  "valid"=valid,
-                 "dset"=dset,
                  "xl"=xl,
                  "yl"=yl,
                  "setl"=setl,

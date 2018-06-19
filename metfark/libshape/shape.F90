@@ -66,6 +66,12 @@ MODULE shape
   INTEGER,PARAMETER :: ftlogical = 3 !< LOGICAL field
   INTEGER,PARAMETER :: ftinvalid = 4 !< not a recognised field TYPE
 
+  TYPE shpSeg
+     real :: spos(3), epos(3)
+     type(shpSeg), pointer :: prev => null()
+     type(shpSeg), pointer :: next => null()
+  END type shpSeg
+  
   !> Object describing a shapefile dataset.
   !! Its components are private so they should not be manipulated
   !! directly.
@@ -100,6 +106,12 @@ MODULE shape
      REAL(kind=c_double) :: dfymax=0.0_c_double !< upper bound in y dimension
      REAL(kind=c_double) :: dfzmax=0.0_c_double !< upper bound in z dimension
      REAL(kind=c_double) :: dfmmax=0.0_c_double !< upper bound in measure dimension
+     logical            ,POINTER :: valid(:)=>NULL() !< is node valid
+     logical            ,POINTER :: actual(:)=>NULL() !< is segment actual
+     integer :: nseg=0
+     type(shpSeg), pointer :: currentSegment => null()
+     type(shpSeg), pointer :: firstSegment => null()
+     type(shpSeg), pointer :: lastSegment => null()
   END TYPE shpobject
 
   !TYPE(shpfileobject),PARAMETER :: shpfileobject_null = shpfileobject(0, 0)
@@ -414,10 +426,10 @@ MODULE shape
   PUBLIC dbfreadattribute, dbfwriteattribute
   PUBLIC shpopen, shpfileisnull, dbffileisnull, shpcreate, shpgetinfo, &
        shpreadobject, shpisnull, shpclose, shpcreatesimpleobject, shpcreateobject, &
-       shpcomputeextents, shpwriteobject, shpdestroyobject, &
+       shpcomputeextents, shpwriteobject, shpdestroyobject, shpretraceobject,shpLoopSegment,&
        dbfgetfieldindex, dbfgetfieldinfo, dbfaddfield, dbfisattributenull, &
        dbfgetnativefieldtype
-  PUBLIC shape_pnpoly, shape_ddpoly, shape_simplify, shape_getDist, shape_getDistBox, shape_inside
+  PUBLIC shape_pnpoly, shape_ddpoly, shape_getDist, shape_getDistBox, shape_inside
   PUBLIC shape_rtodeg, shape_degtor, shape_lonlat2pos, shape_bdeb
   PUBLIC shape_dot,shape_multiply,shape_divide,shape_cross
 CONTAINS
@@ -562,7 +574,7 @@ CONTAINS
   !> It closes all the files associated with the shapefile dataset.
   SUBROUTINE shpclose(hshp)
     TYPE(shpfileobject),INTENT(inout) :: hshp !< shapefile object to be closed
-
+    
     IF (.NOT.shpfileisnull(hshp)) THEN
        CALL shpclose_orig(hshp%shpfile_orig)
        hshp%shpfile_orig = c_null_ptr
@@ -571,10 +583,30 @@ CONTAINS
        CALL dbfclose(hshp%dbffile_orig)
        hshp%dbffile_orig = c_null_ptr
     ENDIF
-
+    
   END SUBROUTINE shpclose
 
-
+  subroutine shpClearSegment(shpObj)
+    TYPE(shpobject),INTENT(inout) :: shpObj !< shapefile object to be closed
+    type(shpSeg), pointer :: cs, ocs
+    if (.not.associated(shpObj%firstSegment).or..not.associated(shpObj%lastSegment))then
+       if (associated(shpObj%firstSegment))deallocate(shpObj%firstSegment)
+       if (associated(shpObj%lastSegment))deallocate(shpObj%lastSegment)
+       allocate(shpObj%firstSegment,shpObj%lastSegment)
+    else
+       cs => shpObj%firstSegment%next
+       do while (.not.associated(cs,target=shpObj%lastSegment))
+          ocs => cs%next
+          deallocate(cs)
+          cs => ocs
+       end do
+    end if
+    shpObj%nseg=0
+    shpObj%firstSegment%next => shpObj%lastSegment
+    shpObj%lastSegment%prev => shpObj%firstSegment
+    return
+  end subroutine shpClearSegment
+  
   !> It creates a new shape object, simple version.
   !! It creates a new shape object and returns it as a variable of type
   !! \a shpobject; the object has x,y,z coordinates with no measure and
@@ -664,6 +696,12 @@ CONTAINS
   SUBROUTINE shpdestroyobject(psobject)
     TYPE(shpobject) :: psobject !< shape object to be destroyed
 
+    call shpClearSegment(psObject)
+    if (associated(psObject%firstSegment)) deallocate(psObject%firstSegment)
+    if (associated(psObject%lastSegment)) deallocate(psObject%lastSegment)
+    nullify(psObject%currentSegment)
+    if (associated(psObject%valid)) deallocate(psObject%valid)
+    if (associated(psObject%actual)) deallocate(psObject%actual)
     IF (c_associated(psobject%shpobject_orig)) THEN
        CALL shpdestroyobject_orig(psobject%shpobject_orig)
     ENDIF
@@ -688,6 +726,7 @@ CONTAINS
 
     INTEGER :: ier
 
+    if (shape_bdeb) write(*,*) "Rewinding rings in shape."
     ier = shprewindobject_int(hshp%shpfile_orig, psobject%shpobject_orig, &
          C_LOC(psobject))
     IF (ier == 0) THEN
@@ -698,7 +737,29 @@ CONTAINS
 
   END FUNCTION shprewindobject
 
-
+  logical function shpLoopSegment(shpObj,spos,epos)
+    TYPE(shpobject) :: shpObj !< shape object to be destroyed
+    real :: spos(3),epos(3)
+    if (.not.associated(shpObj%currentSegment)) then
+       shpObj%currentSegment =>  shpObj%firstSegment%next 
+    else
+       shpObj%currentSegment =>  shpObj%currentSegment%next
+    end if
+    if (associated(shpObj%currentSegment,target=shpObj%lastSegment)) then
+       nullify(shpObj%currentSegment)
+       shploopSegment=.false.
+    else
+       spos(1)=shpObj%currentSegment%spos(1)
+       spos(2)=shpObj%currentSegment%spos(2)
+       spos(3)=shpObj%currentSegment%spos(3)
+       epos(1)=shpObj%currentSegment%epos(1)
+       epos(2)=shpObj%currentSegment%epos(2)
+       epos(3)=shpObj%currentSegment%epos(3)
+       shploopSegment=.true.
+    end if
+    return
+  end function shpLoopSegment
+  
   !> It returns the index of the field matching the name.
   !! The comparison is case insensitive, however lengths must match
   !! exactly. It returns -1 if the field is not found or if the shape
@@ -969,6 +1030,108 @@ CONTAINS
 
   END SUBROUTINE shpsetobjectfortran
 
+  subroutine shpReTraceObject(hshp, shpobj,leps,eps)
+    implicit none
+    TYPE(shpfileobject),INTENT(inout) :: hshp !< shapefile object to read from
+    TYPE(shpobject),INTENT(inout) :: shpobj !< shape object to test
+    logical :: leps
+    real :: eps
+    !
+    logical :: cl    ! last node in ring
+    integer :: cii   ! start index
+    real :: cpos(3)  ! start node of ring
+    logical :: ol    ! does previous ring exist
+    integer :: oii   ! stop index
+    real :: opos(3)  ! stop node of previous ring
+    type(shpSeg), pointer :: cs
+    integer :: ii
+    call shpClearSegment(shpobj)
+    ol=.false.   ! previous ring does not exist
+    oii=0
+    cl=.true.    ! should we start a new ring?
+    cii=0
+    if (shape_bdeb) write(*,*)'Initial number of vertices:',&
+         & shpobj%nvertices,leps
+    if (associated(shpobj%valid)) deallocate(shpobj%valid)
+    if (associated(shpobj%actual)) deallocate(shpobj%actual)
+    allocate(shpobj%valid(shpobj%nvertices),&
+         & shpobj%actual(shpobj%nvertices))
+    do ii=1,shpobj%nvertices
+       shpobj%valid(ii) = .TRUE.
+       shpobj%actual(ii)= .TRUE.
+    end do
+    do ii=1,shpobj%nvertices
+       if (cl) then
+          cl=.false. ! do not start a new ring until we find end of this ring
+          if (ol) then ! add segment c->o to front of list
+             allocate(cs)
+             cs%spos(1)=shpobj%padfx(ii) ! start point
+             cs%spos(2)=shpobj%padfy(ii)
+             cs%spos(3)=shpobj%padfz(ii)
+             cs%epos(1)=opos(1) ! end point
+             cs%epos(2)=opos(2)
+             cs%epos(3)=opos(3)
+             ! add to front of list
+             shpObj%nseg=shpObj%nseg+1
+             cs%next=>shpObj%firstSegment%next
+             cs%prev=>shpObj%firstSegment
+             shpObj%firstSegment%next%prev => cs
+             shpObj%firstSegment%next => cs
+             nullify(cs)
+             ! simplify ring...
+             if (leps) then
+                call shape_simplify(shpObj,cii,oii,eps)
+             end if
+          end if
+          cii=ii
+          cpos(1)=shpobj%padfx(ii)
+          cpos(2)=shpobj%padfy(ii)
+          cpos(3)=shpobj%padfz(ii)
+       else if (cpos(1).eq.shpobj%padfx(ii).and.cpos(2).eq.shpobj%padfy(ii)) then
+          shpObj%actual(ii)=.false. ! next segment is not actual
+          cl=.true. ! start a new ring
+          ol=.true. ! previous ring exists
+          oii=ii
+          opos(1)=shpobj%padfx(ii)
+          opos(2)=shpobj%padfy(ii)
+          opos(3)=shpobj%padfz(ii)
+          if (leps) then
+             call shape_simplify(shpObj,cii,oii,eps)
+          end if
+       end if
+    end do 
+    if (.not.cl ) then ! last ring was not closed properly
+       if (leps) then
+          oii=ii
+          call shape_simplify(shpObj,cii,oii,eps)
+       end if
+       ! close ring
+       allocate(cs)
+       cs%spos(1)=shpobj%padfx(ii)! start point
+       cs%spos(2)=shpobj%padfy(ii)
+       cs%spos(3)=shpobj%padfz(ii)
+       cs%epos(1)=cpos(1) ! end point
+       cs%epos(2)=cpos(2)
+       cs%epos(3)=cpos(3)
+       ! add to front of list
+       shpObj%nseg=shpObj%nseg+1
+       cs%next=>shpObj%firstSegment%next
+       cs%prev=>shpObj%firstSegment
+       shpObj%firstSegment%next%prev => cs
+       shpObj%firstSegment%next => cs
+       nullify(cs)
+    end if
+    ! check if rings are already closed (if so delete all segments)
+    if (shpObj%nseg .gt. 0) then
+       if (shpObj%firstSegment%next%spos(1).eq.shpObj%lastSegment%prev%epos(1).and. &
+            shpObj%firstSegment%next%spos(2).eq.shpObj%lastSegment%prev%epos(2).and. &
+            shpObj%firstSegment%next%spos(3).eq.shpObj%lastSegment%prev%epos(3)) then
+          call shpClearSegment(shpObj)
+       end if
+    end if
+    return
+  end subroutine shpReTraceObject
+  
   ! SUBROUTINE PNPOLY C
   ! PURPOSE
   ! TO DETERMINE WHETHER A POINT IS INSIDE A POLYGON
@@ -1063,7 +1226,7 @@ CONTAINS
     integer n,inout
     REAL PX,PY,X(N),Y(N),MM
     LOGICAL MX,MY,NX,NY
-    INTEGER i,j
+    INTEGER :: i,j,unt,cnt=0
     INOUT=-1 ! point is outside
     if (n.le.1) return
     i=1
@@ -1075,7 +1238,7 @@ CONTAINS
        my=y(i).ge.py
        ny=y(j).ge.py
        ! find out if segment crosses horisontal ray to the right og the point
-       if ((my.and..not.ny).or.(.not.ny.and.my)) then ! crosses left or right
+       if ((my.and..not.ny).or.(.not.my.and.ny)) then ! crosses left or right
           if ((mx.and..not.nx).or.(.not.mx.and.nx)) then ! may cross right
              MM=(px-x(i))-(x(j)-x(i))*(py-y(i))/(y(j)-y(i))
              if (abs(mm).lt.1.0D-10) then ! point on segment (undetermined)
@@ -1085,6 +1248,8 @@ CONTAINS
              else if (MM .lt. 0.0D0) then ! crosses right of point
                 inout=-inout
                 if (shape_bdeb)write(*,*) 'Proximity crossing:',i,x(i)-px,y(i)-py,j,x(j)-px,y(j)-py,inout
+             else
+                if (shape_bdeb)write(*,*) 'Close crossing:',i,x(i)-px,y(i)-py,j,x(j)-px,y(j)-py,inout
              end if
           else if (mx.and.nx) then ! crosses right of point for sure
              inout=-inout
@@ -1092,6 +1257,26 @@ CONTAINS
           end if
        end if
     end do LOOP
+    if (shape_bdeb) then
+       cnt=cnt+1
+       unt=10+mod(cnt,50)
+       if (inout.eq.-1) then
+          write(*,*) 'Outside:',px,py,inout,unt
+       else if (inout.eq.0) then
+          write(*,*) 'Border:',px,py,inout,unt
+       else
+          write(*,*) 'Inside:',px,py,inout,unt
+       end if
+       DO I=1,N
+          J=1+MOD(I,N)
+          mx=x(i).ge.px
+          nx=x(j).ge.px
+          my=y(i).ge.py
+          ny=y(j).ge.py
+          write(unt,'(2(2X,I0,X,2(F12.5),2L1))') i,x(i)-px,y(i)-py,mx,my,&
+               & j,x(j)-px,y(j)-py,nx,ny
+       end do
+    end if
   end SUBROUTINE shape_pnpoly
   SUBROUTINE shape_pnpoly_old(PX,PY,N,XX,YY,INOUT)
     implicit none
@@ -1138,11 +1323,12 @@ CONTAINS
     RETURN
   END SUBROUTINE shape_pnpoly_old
   !
-  real function shape_ddpoly(POS,N,XPOS)
+  real function shape_ddpoly(POS,N,XPOS,ACTUAL)
     ! gives smalles distance to cartesian polygon
     implicit none
     integer n
     real pos(3),xpos(3,n)
+    logical actual(n)
     INTEGER i,j
     real dd,ddmin
     logical llmin
@@ -1152,12 +1338,14 @@ CONTAINS
     if (n.le.1) return
     LOOP: DO I=1,N
        J=1+MOD(I,N)
-       dd=shape_getDist(pos,xpos(1,i),xpos(1,j))
-       if (llmin) then
-          ddmin=min(ddmin,dd)
-       else
-          ddmin=dd
-          llmin=.true.
+       if (actual(i)) then
+          dd=shape_getDist(pos,xpos(1,i),xpos(1,j))
+          if (llmin) then
+             ddmin=min(ddmin,dd)
+          else
+             ddmin=dd
+             llmin=.true.
+          end if
        end if
     end do LOOP
     shape_ddpoly=ddmin
@@ -1289,13 +1477,13 @@ CONTAINS
   end subroutine shape_DouglasPeuckerIteratif
 
   ! Does not work over 180-meridian
-  subroutine shape_simplify(np,lon,lat,eps)
+  subroutine shape_simplify(shpobj,cii,oii,eps)
     IMPLICIT NONE
-    integer :: np                               ! number of points
-    real(kind=8), allocatable :: lon(:), lat(:) ! longitude, latitude (deg)
-    real(kind=8),INTENT(IN)  :: eps             ! tolerance in km
+    TYPE(shpobject),INTENT(inout) :: shpobj     ! shape object to simplify
+    integer :: cii,oii                          ! start end vertice index
+    real :: eps                                 ! tolerance in km
     !
-    integer :: ii,jj,nnp
+    integer :: ii
     real :: pst
     INTEGER                                 :: nbp
     REAL(kind=8),DIMENSION(:,:),POINTER     :: points
@@ -1307,50 +1495,29 @@ CONTAINS
     ! of the first point to avoid a division by 0 in 'perpendicularDistance()'
     ! nbp = 10
     ! allocate(points(2,nbp))
-    if(shape_bdeb)write(*,'(X,A,I0," (eps=",F0.1,"km)")')'SIMPLIFY Polygon started with: ',np,eps
-    if (np.le.3) return
-    meet=(lat(1).eq.lat(np) .and. lon(1).eq.lon(np))
+    meet=(shpobj%padfx(cii).eq.shpobj%padfx(oii) .and. &
+         & shpobj%padfy(cii).eq.shpobj%padfy(oii))
     if (meet) then
-       nbp=np-1
+       nbp=oii-cii
     else
-       nbp=np
+       nbp=oii-cii-1
     end if
-    allocate(points(2,nbp))
+    if (nbp.le.3) return
+    allocate(points(2,nbp),valid(nbp))
     do ii=1,nbp
-       points(1,ii)=shape_degtor(lat(ii))*re                      ! latitude
-       points(2,ii)=shape_degtor(lon(ii))*re*shape_cosdeg(lat(ii))  ! longitude
+       points(1,ii)=shape_degtor(shpobj%padfy(ii))*re                      ! latitude
+       points(2,ii)=shape_degtor(shpobj%padfx(ii))*re*shape_cosdeg(shpobj%padfy(ii))  ! longitude
+       valid(ii)=.true.
     end do
-    allocate(valid(nbp))
-    valid = .TRUE.
     call shape_DouglasPeuckerRecursive(points, 1, nbp, eps, valid)
+    do ii=cii,nbp+cii-1
+       shpobj%valid(ii)=valid(ii-cii+1)
+    end do
+    shpobj%valid(cii)=.true.
+    if (meet) shpobj%valid(oii)=.true.
     !call shape_DouglasPeuckerIteratif(points, eps, valid)
-    nnp=0
-    do ii=1,nbp
-       if (valid(ii)) nnp=nnp+1
-    end do
-    if (meet) nnp=nnp+1
-    pst=100.0D0*real(nnp)/real(max(1,nbp))
-    if (shape_bdeb)write(*,'(X,A,I0," (",F0.1,"%)")')'SIMPLIFY Polygon ended with: ',nnp,pst
-    !
-    jj=0
-    do ii=1,nbp
-       if (valid(ii)) then
-          jj=jj+1
-          lat(jj)=lat(ii)    ! latitude
-          lon(jj)=lon(ii)    ! longitude
-       end if
-    end do
-    if (meet) then ! join end points
-       lat(nnp)=lat(1)     ! latitude
-       lon(nnp)=lon(nnp)   ! longitude
-    end if
-    do ii=1,size(lat)-np ! {min,max} are stored after nodes
-       lat(jj+ii)=lat(ii+np)
-       lon(jj+ii)=lon(ii+np)
-    end do
-    np=nnp
-    deallocate( valid )
     deallocate( points )
+    deallocate( valid )
     return
   end subroutine shape_simplify
   

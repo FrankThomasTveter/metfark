@@ -30,7 +30,7 @@ if (defined $param->{debug}[0]) {
     #fark::debug(2);  # debug models
     #fark::debug(3);  # debug colocation
     #fark::debug(4);  # debug plot
-    fark::debug(5);  # debug parse
+    #fark::debug(5);  # debug parse
 }
 #
 my $shapeDir = farkdir::getRootDir("shape") || farkdir::term("Invalid root directory (shape)");
@@ -576,8 +576,10 @@ sub processModel {
     my $test = shift;
     my $clsFillFile = shift;
     #
+    my $tolerance = "10.0";            # shape tolerance in km
+    fark->simplifyShapes($tolerance);  # simplify shapes
     my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
-    fark->setShapeFile($shapeFile);
+    fark->setShapeFile($shapeFile);    # read shape file
     my $fark=fark->open();
     &setModelConfig($fark,$node,$cachefile);
     #
@@ -608,6 +610,8 @@ sub processObs {
     my $test = shift;
     my $clsFillFile = shift;
     #
+    my $tolerance = "10.0";            # shape tolerance in km
+    fark->simplifyShapes($tolerance);  # simplify shapes
     my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
     fark->setShapeFile($shapeFile);
     my $fark=fark->open();
@@ -644,6 +648,8 @@ sub processColoc {
     my $clsFillFile = shift;
     #
     if($debug){print "processColoc Entering with '$xmlfile' '$file'\n";}
+    my $tolerance = "10.0";            # shape tolerance in km
+    fark->simplifyShapes($tolerance);  # simplify shapes
     my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
     fark->setShapeFile($shapeFile);
     my $fark=fark->open();
@@ -677,6 +683,8 @@ sub processPlot {
     my $graphics=$node->getAttribute("graphics");
     my $cat=$node->getAttribute("cat");
     #print "Processing plot: $xmlfile\n";
+    my $tolerance = "10.0";            # shape tolerance in km
+    fark->simplifyShapes($tolerance);  # simplify shapes
     my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
     fark->setShapeFile($shapeFile);
     my $fark=fark->open();

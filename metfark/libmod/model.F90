@@ -1887,6 +1887,7 @@ CONTAINS
        end do
        if (bok) then
           cnt=cnt+1
+          nullify(newFile)
        else
           irc=0
           if (mod_bdeb)write(*,*)myname,'System error! Deleting Invalid entry:',ii
@@ -2337,16 +2338,16 @@ CONTAINS
        if (associated(css%obs_req)) deallocate(css%obs_req)
        if (associated(css%obs_vok)) deallocate(css%obs_vok)
        if (associated(css%obs_val)) deallocate(css%obs_val)
-    end if
-    css%cobs=nn
-    allocate(css%obs_var(css%cobs),css%obs_lenv(css%cobs),&
-         & css%obs_req(css%cobs),css%obs_vok(css%cobs),&
-         & css%obs_val(css%cobs),stat=irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Unable to allocate 'obs'.")
-       call model_errorappend(crc250,"\n")
-       return
+       css%cobs=nn
+       allocate(css%obs_var(css%cobs),css%obs_lenv(css%cobs),&
+            & css%obs_req(css%cobs),css%obs_vok(css%cobs),&
+            & css%obs_val(css%cobs),stat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250,"Unable to allocate 'obs'.")
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
     do ii=1,css%cobs
        css%obs_var(ii)=var(ii)
@@ -2392,14 +2393,14 @@ CONTAINS
        call model_errorappendi(crc250,css%cobs)
        call model_errorappend(crc250,"\n")
        return
-    end if
-    css%cobs=nn
-    allocate(css%obs_val(css%cobs),css%obs_vok(css%cobs),stat=irc)
-    if (irc.ne.0) then
-       call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Unable to allocate 'obs'.")
-       call model_errorappend(crc250,"\n")
-       return
+       !    css%cobs=nn
+       !    allocate(css%obs_val(css%cobs),css%obs_vok(css%cobs),stat=irc)
+       !    if (irc.ne.0) then
+       !       call model_errorappend(crc250,myname)
+       !       call model_errorappend(crc250,"Unable to allocate 'obs'.")
+       !       call model_errorappend(crc250,"\n")
+       !       return
+       !    end if
     end if
     do ii=1,css%cobs
        css%obs_val(ii)=val(ii)

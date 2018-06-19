@@ -11,6 +11,8 @@ module parse
   logical     :: parse_init=.false.
   real(rn)    :: secperday = 86400.0D0
   integer,dimension(8) :: val8    
+  real    :: eps  = 0.0D0
+  logical :: leps = .false.
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Fortran 90 function parser v1.1
@@ -178,6 +180,7 @@ module parse
      integer :: npos = 0                    ! number of pos nodes in shape
      real, allocatable :: pos(:,:)          ! position of nodes
      real :: mimi(3),mima(3),mami(3),mama(3)! bounding box (lon,lat)
+     logical, allocatable :: actual(:)      ! is segment actual
   end type parse_shape
   !
   type :: parse_shapefile
@@ -279,6 +282,7 @@ CONTAINS
     if (associated(css%Stacka)) deallocate(css%Stacka)
     if (associated(css%Wrka)) deallocate(css%Wrka)
     if (associated(css%ArgsByte)) deallocate(css%ArgsByte)
+    if (allocated(css%cbuff)) deallocate(css%cbuff)
     NULLIFY (css%ByteCode,css%Immed,css%Stack,css%Stacka,css%Wrka,css%ArgsByte)
     !css%parse_laa=ichar('a')
     !css%parse_lzz=ichar('z')
@@ -302,34 +306,15 @@ CONTAINS
        IF (ASSOCIATED(css%ByteCode)) DEALLOCATE ( css%ByteCode,stat=irc)
        IF (ASSOCIATED(css%Immed))    DEALLOCATE ( css%Immed,   stat=irc)
        IF (ASSOCIATED(css%Stack))    DEALLOCATE ( css%Stack,   stat=irc)
-       IF (ASSOCIATED(css%ArgsByte)) DEALLOCATE ( css%ArgsByte,stat=irc)
        IF (ASSOCIATED(css%Stacka))   DEALLOCATE ( css%Stacka,  stat=irc)
        IF (ASSOCIATED(css%Wrka))     DEALLOCATE ( css%Wrka,    stat=irc)
+       IF (ASSOCIATED(css%ArgsByte)) DEALLOCATE ( css%ArgsByte,stat=irc)
+       if (allocated(css%cbuff)) deallocate(css%cbuff)
        deallocate(css,stat=irc)
        nullify(css)
     end if
     return
   END SUBROUTINE parse_close
-  !
-  subroutine parse_clearshapefile(crc250,irc)
-    implicit none
-    character*250 :: crc250
-    integer :: irc
-    integer :: ii
-    character*22 :: myname="parse_clearshapefile"
-    if (parse_bdeb)write(*,*)myname,'Entering.',sf%nshp
-    if (sf%nshp.gt.0) then
-       do ii=1,sf%nshp
-          if (allocated(sf%shp(ii)%xx)) deallocate(sf%shp(ii)%xx)
-          if (allocated(sf%shp(ii)%yy)) deallocate(sf%shp(ii)%yy)
-          if (allocated(sf%shp(ii)%pos)) deallocate(sf%shp(ii)%pos)
-          if (allocated(sf%shp(ii)%name)) deallocate(sf%shp(ii)%name)
-       end do
-       deallocate(sf%shp)
-    end if
-    sf%nshp=0
-    return
-  end subroutine parse_clearshapefile
   !
   subroutine parse_setshapefile(path250,cname11,crc250,irc)
     USE,INTRINSIC :: ISO_C_BINDING
@@ -351,6 +336,7 @@ CONTAINS
     character*22 :: myname="parse_setshapefile"
     real :: north(3) =(/0.0D0,0.0D0,1.0D0/)
     logical :: first
+    real :: spos(3),epos(3)
     !
     if(parse_bdeb)write(*,*)myname,' Entering.',irc
     sf%shp250=path250
@@ -444,10 +430,29 @@ CONTAINS
           call parse_errorappendi(crc250,irc)
           return
        ENDIF
-       sf%shp(ii)%nll=shpobj%nvertices
-       sf%shp(ii)%npos=shpobj%nvertices
+       ! rewind shape-rings..
+       call shpretraceobject(shphandle,shpobj,leps,eps)
+       !
+       sf%shp(ii)%nll=shpobj%nseg
+       do jj=1,shpobj%nvertices
+          if (shpobj%valid(jj)) then
+             sf%shp(ii)%nll=sf%shp(ii)%nll+1
+          end if
+       end do
+       if(parse_bdeb)write(*,*)'Number of segments:',shpobj%nvertices,&
+            & '+',shpobj%nseg,'->',sf%shp(ii)%nll
+       if (sf%shp(ii)%nll.lt.3) then ! sanity check
+          irc=945
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Invalid shape-ll:")
+          call parse_errorappendi(crc250,sf%shp(ii)%nll)
+          call parse_errorappend(crc250,":")
+          call parse_errorappendi(crc250,irc)
+          return
+       end if
+       sf%shp(ii)%npos=sf%shp(ii)%nll
        allocate(sf%shp(ii)%xx(sf%shp(ii)%nll),sf%shp(ii)%yy(sf%shp(ii)%nll),&
-            & sf%shp(ii)%pos(3,sf%shp(ii)%npos),stat=irc)
+            & sf%shp(ii)%pos(3,sf%shp(ii)%npos),sf%shp(ii)%actual(sf%shp(ii)%npos),stat=irc)
        if (irc.ne.0) then
           call parse_errorappend(crc250,myname)
           call parse_errorappend(crc250,"Unable to allocate shape-ll:")
@@ -455,9 +460,20 @@ CONTAINS
           call parse_errorappendi(crc250,irc)
           return
        end if
+       kk=0
        do jj=1,shpobj%nvertices
-          call shape_lonlat2pos(shpobj%padfx(jj),shpobj%padfy(jj),&
-               & sf%shp(ii)%pos(1,jj))
+          if (shpobj%valid(jj)) then
+             kk=kk+1
+             call shape_lonlat2pos(shpobj%padfx(jj),shpobj%padfy(jj),&
+                  & sf%shp(ii)%pos(1,kk))
+             sf%shp(ii)%actual(kk)=shpobj%actual(jj)
+          end if
+       end do
+       do while (shpLoopSegment(shpobj,spos,epos))
+          kk=kk+1
+          call shape_lonlat2pos(epos(1),epos(2),&
+               & sf%shp(ii)%pos(1,kk))
+          sf%shp(ii)%actual(kk)=.false.
        end do
        ! get map center
        sf%shp(ii)%map(1,3)=0.0D0
@@ -575,6 +591,50 @@ CONTAINS
     CALL shpclose(shphandle)
     !
   end subroutine parse_setshapefile
+  !
+  subroutine parse_simplifyShapes(tol20,crc250,irc)
+    use shape
+    implicit none
+    character*20 :: tol20
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii,lent
+    integer, external :: length
+    character*22 :: myname="parse_simplifyShapes"
+    call chop0(tol20,20)
+    lent=length(tol20,20,10)
+    read (tol20(1:lent),*,iostat=irc) eps
+    if (irc.ne.0) then
+       call parse_errorappend(crc250,myname)
+       call parse_errorappend(crc250,'Invalid tolerance:')
+       call parse_errorappendr(crc250,eps)
+       call parse_errorappend(crc250,"\n")
+       return
+    end if
+    leps=.true.
+    if (parse_bdeb) write(*,*)myname,'Tolerance:',eps
+    return
+  end subroutine parse_simplifyShapes
+  !
+  subroutine parse_clearshapefile(crc250,irc)
+    implicit none
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    character*22 :: myname="parse_clearshapefile"
+    if (parse_bdeb)write(*,*)myname,'Entering.',sf%nshp
+    if (sf%nshp.gt.0) then
+       do ii=1,sf%nshp
+          if (allocated(sf%shp(ii)%xx)) deallocate(sf%shp(ii)%xx)
+          if (allocated(sf%shp(ii)%yy)) deallocate(sf%shp(ii)%yy)
+          if (allocated(sf%shp(ii)%pos)) deallocate(sf%shp(ii)%pos)
+          if (allocated(sf%shp(ii)%name)) deallocate(sf%shp(ii)%name)
+       end do
+       deallocate(sf%shp)
+    end if
+    sf%nshp=0
+    return
+  end subroutine parse_clearshapefile
   !
   integer function parse_type(funcstr,var,crc250,irc)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -4407,9 +4467,12 @@ CONTAINS
                & xx.le.sf%shp(ii)%maxxx.and. &
                & yy.ge.sf%shp(ii)%minyy.and. &
                & yy.le.sf%shp(ii)%maxyy) then
+             if (parse_bdeb) write(*,*)"shapeid Checking shape:",ii,&
+                  & sf%shp(ii)%index,sf%shp(ii)%npos, &
+                  & trim(sf%shp(ii)%name)
              call shape_pnpoly(xx,yy,sf%shp(ii)%npos,&
                   & sf%shp(ii)%xx,sf%shp(ii)%yy,inout)
-             if (parse_bdeb) write(*,*)"Shapeid Checking shape:",ii,inout,&
+             if (parse_bdeb) write(*,*)"Shapeid checked shape:",ii,inout,&
                   & sf%shp(ii)%minxx,sf%shp(ii)%maxxx,&
                   & sf%shp(ii)%minyy,sf%shp(ii)%maxyy,&
                   & trim(sf%shp(ii)%name)
@@ -4459,9 +4522,12 @@ CONTAINS
                & xx.le.sf%shp(ii)%maxxx.and. &
                & yy.ge.sf%shp(ii)%minyy.and. &
                & yy.le.sf%shp(ii)%maxyy) then
+             if (parse_bdeb) write(*,*)"vicinity Checking shape:",ii,&
+                  & sf%shp(ii)%index,sf%shp(ii)%npos, &
+                  & trim(sf%shp(ii)%name)
              call shape_pnpoly(xx,yy,sf%shp(ii)%npos,&
                   & sf%shp(ii)%xx,sf%shp(ii)%yy,inout)
-             if (parse_bdeb) write(*,*)"Vicinity Checking shape:",ii,inout,&
+             if (parse_bdeb) write(*,*)"vicinity Checking shape:",ii,inout,&
                   & sf%shp(ii)%minxx,sf%shp(ii)%maxxx,&
                   & sf%shp(ii)%minyy,sf%shp(ii)%maxyy,&
                   & trim(sf%shp(ii)%name)
@@ -4488,7 +4554,7 @@ CONTAINS
        if (dd.lt.1.57D0.and.dd-sf%shp(ii)%maxrad.lt.dbbox) then ! check bounding-box
           if(parse_bdeb)write(*,'(X,A,I3,X,A,4(X,F5.2))')'Vicinity close: ',&
                & ii,trim(sf%shp(ii)%name),dbbox,dd,shape_rtodeg(dd),shape_rtodeg(sf%shp(ii)%maxrad)
-          dd = shape_ddpoly(pos,sf%shp(ii)%npos,sf%shp(ii)%pos)
+          dd = shape_ddpoly(pos,sf%shp(ii)%npos,sf%shp(ii)%pos,sf%shp(ii)%actual)
           if(parse_bdeb)write(*,'(X,A,I3,X,A,3(X,F5.2))')'                ',&
                & ii,trim(sf%shp(ii)%name),dbbox,dd,shape_rtodeg(dd)
           if (dd.ge.0.0D0.and.dd.lt.dbbox) then

@@ -61,14 +61,14 @@ idcol   = "obs_id";
 areacol = "area";
 altcol  = "altitude_meter";
 
-dset <- unique(raw[,setcol]);
-
 #thres = attr["geopotential_threshold",];
 thres = 20; # ~20 meter threshold for high/low stations 
 nw <- equals(raw,areacol,"Norway");
 
 print ("Extracting overlapping data.");
 data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id"),nw);
+
+rm(raw);gc(); # free memory
 
 print (paste("Splitting data"));
 

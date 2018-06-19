@@ -1376,6 +1376,33 @@ sub setShapeFile {
 }
 
 
+=head2 simplifyShapes
+
+simplifyShapes - simplify shapes using specified tolerance in km
+
+Arguments:
+
+=over 4
+
+=item (string) tolerance in km
+
+=back
+
+=head4 EXAMPLE
+
+$fark->simplifyShapes("10");
+
+=cut
+
+
+sub simplifyShapes {
+    my ($self,$tol)=@_;
+    my ($ret,$msg) = xs_simplifyShapes($tol);
+    if ($ret != 0) {die $msg;}
+    return;
+}
+
+
 =head2 clearShapeFile
 
 clearShapeFile - clear shape file information.
