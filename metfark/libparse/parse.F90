@@ -13,6 +13,7 @@ module parse
   integer,dimension(8) :: val8    
   real    :: eps  = 0.0D0
   logical :: leps = .false.
+  real    :: t0 = 273.15
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Fortran 90 function parser v1.1
@@ -100,17 +101,19 @@ module parse
        crh2td     = 44,         &
        ctd2rh     = 45,         &
        cq2rh      = 46,         &
-       cSinh      = 47,         &
-       cCosh      = 48,         &
-       cTanh      = 49,         &
-       cSin       = 50,         &
-       cCos       = 51,         &
-       cTan       = 52,         &
-       cAsin      = 53,         &
-       cAcos      = 54,         &
-       cAtan2     = 55,         &
-       cAtan      = 56,         &
-       VarBegin   = 57
+       ck2c       = 47,         &
+       cc2k       = 48,         &
+       cSinh      = 49,         &
+       cCosh      = 50,         &
+       cTanh      = 51,         &
+       cSin       = 52,         &
+       cCos       = 53,         &
+       cTan       = 54,         &
+       cAsin      = 55,         &
+       cAcos      = 56,         &
+       cAtan2     = 57,         &
+       cAtan      = 58,         &
+       VarBegin   = 59
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
        '-',     &
        '*',     &
@@ -155,6 +158,8 @@ module parse
        'rh2td     ', &
        'td2rh     ', &
        'q2rh      ', &
+       'k2c       ', &
+       'c2k       ', &
        'sinh      ', &
        'cosh      ', &
        'tanh      ', &
@@ -1336,6 +1341,16 @@ CONTAINS
              res=zero
              RETURN
           end if
+       CASE  (ck2c)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=css%Stack(SP)-t0
+       CASE  (cc2k)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=css%Stack(SP)+t0
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -2032,6 +2047,16 @@ CONTAINS
              res=zero
              RETURN
           end if
+       CASE  (ck2c)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=css%Stack(SP)-t0
+       CASE  (cc2k)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=css%Stack(SP)+t0
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -3017,6 +3042,24 @@ CONTAINS
              res=zero
              RETURN
           end if
+       CASE  (ck2c)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=css%Stacka(SP,JJ)-t0
+             END IF
+          END DO
+       CASE  (cc2k)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             IF(SET(JJ))THEN
+                css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+t0
+             END IF
+          END DO
        CASE  (cSinh)
           AI=AI+1
           NARGS=css%ArgsByte(AI)

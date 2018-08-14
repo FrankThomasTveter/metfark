@@ -1267,6 +1267,7 @@ CONTAINS
        else
           write(*,*) 'Inside:',px,py,inout,unt
        end if
+#ifdef JNK
        DO I=1,N
           J=1+MOD(I,N)
           mx=x(i).ge.px
@@ -1276,6 +1277,7 @@ CONTAINS
           write(unt,'(2(2X,I0,X,2(F12.5),2L1))') i,x(i)-px,y(i)-py,mx,my,&
                & j,x(j)-px,y(j)-py,nx,ny
        end do
+#endif
     end if
   end SUBROUTINE shape_pnpoly
   SUBROUTINE shape_pnpoly_old(PX,PY,N,XX,YY,INOUT)

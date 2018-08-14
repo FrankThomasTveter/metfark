@@ -7,8 +7,8 @@ getArguments <- function () {
    args = commandArgs(trailingOnly=TRUE);
    if (length(args)==0) {
       print ("At least one argument must be supplied (using defaults).");
-     args[1] = "meps_syno_003d.table";
-     args[2] = "output/meps_syno_003d/";
+     args[1] = "syno_002d.table";
+     args[2] = "output/syno_002d/";
    } else if (length(args)==1) {
      # default output file
      args[2] = "output/";
@@ -50,10 +50,21 @@ readComments <- function (filename,name) {
    return (output);
 }
 
+grepFile <- function (filename,pattern,suffix) {
+    if (missing(suffix)) {suffix=pattern;};
+    fileout=paste0(filename,suffix);
+    print(paste("Pattern:",pattern));
+    cmd = paste("grep ",paste0("'",pattern,"'"),filename,">",fileout);
+    print(paste("Processing:",cmd));
+    system(cmd);
+    return(fileout);
+}
+
 readData <- function (filename) {
     data <- read.table(filename,header=TRUE);
     return (data);
 }
+
 
 getFormat <- function(attributes) {
   return (toString(attributes["Format",1]));
@@ -261,8 +272,12 @@ getAxisDates <- function (dtgs) {
     return (list(xx,dd));
 }
 
-fadeColor <- function(n) { # fade to "white"
-    return (colorRampPalette(c(palette()[[n]],"white"))(3)[[2]]);
+fadeColor <- function(n,i) { # fade to "white"
+    if (missing(i)) {
+        return (colorRampPalette(c(palette()[[n]],"white"))(3)[[2]]);
+    } else {
+        return (colorRampPalette(c(palette()[[n]],"white"))(i+1)[[i]]);
+    }
 };
 
 transColor <- function(n) { # transparent color
@@ -316,7 +331,7 @@ getValid <- function (data,obscol,modcol,min,max) {
     rm(lend,lenv,obs,mod);gc(); # free memory
     return (valid);
 }    
-getValidHgt <- function (data,obscol,modcol,hgtcol,min,max) {
+getValidPred <- function (data,obscol,modcol,predcol,min,max) {
     lend=length(data);
     lenv=0;
     if (lend > 0) {lenv=length(data[[1]][,1]) };
@@ -324,27 +339,219 @@ getValidHgt <- function (data,obscol,modcol,hgtcol,min,max) {
     for (dd in 1:length(data)) {
         obs <- data[[dd]][,obscol];
         mod <- data[[dd]][,modcol];
-        hgt <- as.numeric(data[[dd]][,hgtcol]);
-        valid <- (valid & !is.na(obs) & !is.na(mod) & ! is.na(hgt)
+        pred <- as.numeric(data[[dd]][,predcol]);
+        valid <- (valid & !is.na(obs) & !is.na(mod) & ! is.na(pred)
             & obs>min & obs<max & mod>min & mod<max);
     }
-    rm(lend,lenv,obs,mod,hgt);gc(); # free memory
+    rm(lend,lenv,obs,mod,pred);gc(); # free memory
     return (valid);
 }    
+
+###################### score plot
+
+predictorPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
+                          predlab,predcol,preddir,obscol,modcol,lab,min,max,...) {
+    npred <- 10; # number of height bins
+    lst=list(...); # "label1",selection1,"label2",selection2...
+    inp <- matrix(lst,ncol=2,byrow=TRUE);
+    ilab <- inp[,1]; # labels
+    isel <- inp[,2]; # selection
+    if (length(ilab)==1) {
+        title=paste0("'",title,"'\n",ilab[[1]]);
+        ilab[[1]]="";
+    } else {
+        title=paste0("'",title,"'");
+    };
+    valid <- getValidPred(data,obscol,modcol,predcol,min,max);
+    print (paste("Number of stations (profile):          ",sum(valid)));
+    if (sum(valid)>1) {
+        if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
+        dtgs <- getMinMaxDTGs(data[[1]][valid,timecol]);
+        ;# make data statistics...
+        pred   <- as.numeric(data[[1]][,predcol]);
+        bpred  <- quantile(pred,probs = seq(0, 1, by = 1.0/npred),na.rm=TRUE)
+        qpred  <- findInterval(pred,bpred);
+        fact   <- c();
+        for (pp in 1:npred) {
+            fact[[pp]] = 1/(bpred[[pp+1]]-bpred[[pp]]);
+        }
+        #print (paste("Factor:",fact));
+        ;# initialise data arrays...
+        yl    <- list();
+        xmel  <- list();
+        xsdel <- list();
+        xrmsl <- list();
+        xmael <- list();
+        xcntl <- list();
+        ycntl <- list();
+        setl  <- list();
+        il    <- list();
+        xr    <- c();
+        yr    <- c();
+        statl <- list();
+        for (ii in 1:length(isel)) {  # loop over selections
+            for (dd in 1:length(data)) {  # loop over datasets
+                set=data[[dd]][1,setcol];
+                obs <- data[[dd]][,obscol];
+                mod <- data[[dd]][,modcol];
+                y    <- c();
+                xme  <- c();
+                xsde <- c();
+                xrms <- c();
+                xmae <- c();
+                xcnt <- c();
+                ycnt <- c();
+                ;# overall statistics
+                dsel <-  (isel[[ii]] & valid );
+                d    <- (mod[dsel]-obs[dsel]);
+                dme  <- round(mean(d),2);
+                dsde <- round(sd(d),2) ;
+                drms <- round(sqrt(mean(d^2)),2);
+                dmae <- round(mean(abs(d)),2);
+                dcnt <- pretty(sum(dsel));
+                stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
+                #print(paste("Sel:",ii," stat:",stat));
+                #print (pred);
+                #print (qpred);
+                #print (bpred);
+                first=TRUE;
+                lastx=0;
+                lasty=0;
+                for (ll in 1:npred) {    # loop over heights
+                    dsel <- (isel[[ii]] & valid & !is.na(qpred) & qpred == ll );
+                    #print (paste("Level:",ll));
+                    #print (pred[dsel]);
+                    if (sum(dsel)>2) {
+                        if (first) {
+                            xcnt <- append(xcnt,0);
+                            ycnt <- append(ycnt,bpred[[ll]]);
+                            first=FALSE;
+                        }
+                        y    <- append(y,mean(pred[dsel]));
+                        d    <- (mod[dsel]-obs[dsel]);
+                        xme  <- append(xme,  mean(d) );
+                        xsde <- append(xsde, sd(d) );
+                        xrms <- append(xrms, sqrt(mean(d^2)) );
+                        xmae <- append(xmae, mean(abs(d)) );
+                        xcnt <- append(xcnt,length(d)*fact[[ll]]);
+                        xcnt <- append(xcnt,length(d)*fact[[ll]]);
+                        ycnt <- append(ycnt,bpred[[ll]]);
+                        ycnt <- append(ycnt,bpred[[ll+1]]);
+                        lasty=bpred[[ll+1]]
+                    };
+                };
+                if (! first) {
+                    xcnt <- append(xcnt,lastx);
+                    ycnt <- append(ycnt,lasty);
+                };
+                if (length(y)>0) {
+                    ;### store all values... and handle range 
+                    xm=max(xcnt);
+                    xcnt=xcnt/xm;
+                    yl    <- append(yl,list(y));
+                    xmel  <- append(xmel,list(xme));
+                    xsdel <- append(xsdel,list(xsde));
+                    xrmsl <- append(xrmsl,list(xrms));
+                    xmael <- append(xmael,list(xmae));
+                    xcntl <- append(xcntl,list(xcnt));
+                    ycntl <- append(ycntl,list(ycnt));
+                    setl  <- append(setl,list(set));
+                    il    <- append(il,list(ii));
+                    yr    <- range( append(yr,y));
+                    #yr    <- range( append(ycnt,y));
+                    xr    <- range( append(xr,xme));
+                    xr    <- range( append(xr,xsde));
+                    statl <- append(statl,list(stat));
+                };
+            };
+        };
+        ;# make plot
+        if (length(yr)>0) { # we have data
+            ###xr <- as.POSIXct(xr, origin="1970-01-01");
+            openPlot(filename,attr);
+            if (preddir == "descending") {
+                plot(yr,xr,type="n",ylab=paste(lab,"SDE and BIAS, model-observation"),xlab=predlab,xlim=rev(yr),las=1);
+            } else {
+                plot(yr,xr,type="n",ylab=paste(lab,"SDE and BIAS, model-observation"),xlab=predlab,xlim=yr,las=1);
+            };
+            title(title);
+            legs=c();
+            cols=c();
+            ltys=c();
+            lwds=c();
+            stats= c();
+            #print(paste("Selections:",length(setl)));
+            for (jj in 1:length(setl)) {
+                y    <- yl[[jj]];
+                xme  <- xmel[[jj]];
+                xsde <- xsdel[[jj]];
+                xrms <- xrmsl[[jj]];
+                xmae <- xmael[[jj]];
+                xcnt <- xcntl[[jj]];
+                ycnt <- ycntl[[jj]];
+                ss   <- setl[[jj]];
+                ii   <- il[[jj]];
+                l    <- ilab[[ii]];
+                stat <- statl[[jj]];
+                xcnt=(xcnt*0.1 - 0.035)*(xr[[2]]-xr[[1]]) + xr[[1]];
+###x <- as.POSIXct(x, origin="1970-01-01");
+                #print(paste("Plotting:",jj,"X:",xsde,"Y:",y));
+                lines(y,xsde,type="l",lty=ss,col=ii,lwd=2);        # stde
+                lines(y,xme,type="l",lty=ss,col=fadeColor(ii),lwd=2); # bias
+                # constrain the count-range
+                minV=yr[[1]];
+                maxV=yr[[2]];
+                zcnt <- sapply(ycnt, function(y) min(max(y,minV),maxV))
+                # add count bar
+                polygon(zcnt,xcnt,type="l",col=fadeColor(1,3),border=NA); # cnt
+                if (l=="") {
+                    legs=append(legs,paste0(leg[ss]));
+                } else {
+                    legs=append(legs,paste0(leg[ss]," (",l,")"));
+                }; 
+                cols=append(cols,ii);
+                ltys=append(ltys,ss);
+                lwds=append(lwds,2); # 3/0.75
+                stats=append(stats,stat);
+            };
+            lines(yr,c(0.,0.),type="l",lty=2,col=gray(0.75));
+            info=paste("From",toString(dtgs[1]),
+                       "to",as.Date(dtgs[2],origin="1970-01-01"),paste0("(",dtgs[3],")"));
+            legend("bottomright",legend=info,bty="n",cex=0.75*par("cex"));
+            if (length(legs)>0) {
+                print ("Adding legend.");
+                legend("topleft",legend=legs,col=cols,lty=ltys,lwd=lwds,
+                       bty="n",cex=0.75*par("cex"),seg.len=2.5);
+                legend("topright",legend=stats,bty="n",cex=0.75*par("cex"));
+            };
+            closePlot();
+        } else {
+            print (paste("$$$ No plot data for ",filename));
+        }
+    } else {
+        print (paste("$$$ No valid data for ",filename));
+    }
+    rm(npred,lst,inp,ilab,isel,title,valid,dtgs,pred,bpred,qpred);
+    rm(yl,xmel,xsdel,xrmsl,xmael,xcntl,ycntl,setl,il,xr,yr,statl);
+    rm(set,obs,mod,legs,cols,ltys,lwds,stats);
+    rm(xme,xsde,xrms,xmae,xcnt,ycnt);
+    rm(dsel,dme,dsde,drms,dmae,dcnt,y,d);
+    rm(ss,l,stat,info);gc();
+};
 
 ###################### scatter plot (... -> ["label",selection]...)
 
 scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                        idcol,altcol,obscol,modcol,obslab,modlab,min,max,...) {
+                        altcol,obscol,modcol,obslab,modlab,min,max,...) {
     lst=list(...);
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
     if (length(ilab)==1) {
-        title=paste0("'",title,"' (model vs observation)\n",ilab[[1]]);
+        title=paste0("'",title,"'\n",ilab[[1]]);
         ilab[[1]]="";
     } else {
-        title=paste0("'",title,"' (model vs observation)");
+        title=paste0("'",title,"'");
     };
     # loop over sets
     valid <- getValid(data,obscol,modcol,min,max);
@@ -396,7 +603,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         };
         if (length(xr)>0) {
             openPlot(filename,attr);
-            plot(xr,yr,type="n",xlab=obslab,ylab=modlab);#,tck = 0.0
+            plot(xr,yr,type="n",xlab=obslab,ylab=modlab,las=1);#,tck = 0.0
             title(title);
             lines(rr,rr,type="l",lty=2,col=gray(0.75));
             for (jj in 1:length(xl)) {
@@ -429,16 +636,16 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### score plot
 
 scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                      idcol,altcol,obscol,modcol,lab,min,max,...) {
+                      altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
     if (length(ilab)==1) {
-        title=paste0("'",title,"' SDE and BIAS (model-observation)\n",ilab[[1]]);
+        title=paste0("'",title,"'\n",ilab[[1]]);
         ilab[[1]]="";
     } else {
-        title=paste0("'",title,"' SDE and BIAS (model-observation)");
+        title=paste0("'",title,"'");
     };
     valid <- getValid(data,obscol,modcol,min,max);
     print (paste("Number of stations (score):          ",sum(valid)));
@@ -490,7 +697,7 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         ;# make plot
         if (length(xr)>0) { # we have data
             openPlot(filename,attr);
-            plot(xr,yr,type="n",xlab=paste("Lead time (h)"),ylab=lab);#,tck = 0.0
+            plot(xr,yr,type="n",xlab=paste("Lead time (h)"),ylab=paste(lab,"SDE and BIAS, model-observation"),las=1);#,tck = 0.0
             title(title);
             legs=c();
             cols=c();
@@ -546,16 +753,16 @@ scorePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### series plot
     
 seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                       idcol,altcol,obscol,modcol,lab,min,max,...) {
+                       altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
     if (length(ilab)==1) {
-        title=paste0("'",title,"' SDE and BIAS (model-observation)\n",ilab[[1]]);
+        title=paste0("'",title,"'\n",ilab[[1]]);
         ilab[[1]]="";
     } else {
-        title=paste0("'",title,"' SDE and BIAS (model-observation)");
+        title=paste0("'",title,"'");
     };
     valid <- getValid(data,obscol,modcol,min,max);
     print (paste("Number of stations (series):          ",sum(valid)));
@@ -611,7 +818,7 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             print (xr);
             print (ys);
             openPlot(filename,attr);
-            plot(xr,ys,type="n",ylab=lab,xlab="time",xaxt="n");
+            plot(xr,ys,type="n",ylab=paste(lab,"SDE and BIAS, model-observation"),xlab="time",xaxt="n",las=1);
             axis(1,at=xdtg[[1]],labels=xdtg[[2]], cex.axis = .75*par("cex"));
             title(title);
             legs=c();
@@ -669,16 +876,16 @@ seriesPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### series plot
     
 timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                     idcol,altcol,obscol,modcol,lab,min,max,...) {
+                     altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
     if (length(ilab)==1) {
-        title=paste0("'",title,"' MEAN (model) and MEAN (observation)\n",ilab[[1]]);
+        title=paste0("'",title,"'\n",ilab[[1]]);
         ilab[[1]]="";
     } else {
-        title=paste0("'",title,"' MEAN (model) and MEAN (observation)");
+        title=paste0("'",title,"'");
     };
     valid <- getValid(data,obscol,modcol,min,max);
     print (paste("Number of stations (time):          ",sum(valid)));
@@ -731,7 +938,7 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         if (length(xr)>0) { # we have data
             ###xr <- as.POSIXct(xr, origin="1970-01-01");
             openPlot(filename,attr);
-            plot(xr,yr,type="n",ylab=lab,xlab="time",xaxt="n");
+            plot(xr,yr,type="n",ylab=paste(lab,"MEAN,"),xlab="time",xaxt="n",las=1);
             axis(1,at=xdtg[[1]],labels=xdtg[[2]], cex.axis = .75*par("cex"));
             title(title);
             legs=c();
@@ -791,16 +998,16 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### historgram plot
 
 histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                        idcol,altcol,obscol,modcol,lab,min,max,...) {
+                        altcol,obscol,modcol,lab,min,max,...) {
     lst=list(...);
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
     if (length(ilab)==1) {
-        title=paste0("'",title,"' Density (model-observation)\n",ilab[[1]]);
+        title=paste0("'",title,"'\n",ilab[[1]]);
         ilab[[1]]="";
     } else {
-        title=paste0("'",title,"' Density (model-observation)");
+        title=paste0("'",title,"'");
     };
     valid <- getValid(data,obscol,modcol,min,max);
     print (paste("Number of stations (hist):          ",sum(valid)));
@@ -844,8 +1051,8 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             openPlot(filename,attr);
             plot(xr,yr,type="n",
                  main=title,
-                 xlab=label,
-                 ylab="Density");
+                 xlab=paste(label,"model-observation"),
+                 ylab="Density",las=1);
             for (jj in 1:length(xl)) {
                 x    <- xl[[jj]];
                 y    <- yl[[jj]];
@@ -877,19 +1084,19 @@ histPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
 ###################### vertical profile plot
 
 profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
-                       idcol,hgtlab,hgtcol,hgtdir,obscol,modcol,lab,min,max,...) {
+                       hgtlab,hgtcol,hgtdir,obscol,modcol,lab,min,max,...) {
     nhgt <- 10; # number of height bins
     lst=list(...); # "label1",selection1,"label2",selection2...
     inp <- matrix(lst,ncol=2,byrow=TRUE);
     ilab <- inp[,1]; # labels
     isel <- inp[,2]; # selection
     if (length(ilab)==1) {
-        title=paste0("'",title,"' SDE and BIAS (model-observation)\n",ilab[[1]]);
+        title=paste0("'",title,"'\n",ilab[[1]]);
         ilab[[1]]="";
     } else {
-        title=paste0("'",title,"' SDE and BIAS (model-observation)");
+        title=paste0("'",title,"'");
     };
-    valid <- getValidHgt(data,obscol,modcol,hgtcol,min,max);
+    valid <- getValidPred(data,obscol,modcol,hgtcol,min,max);
     print (paste("Number of stations (profile):          ",sum(valid)));
     if (sum(valid)>1) {
         if (length(isel) == 0 ) {isel <- list(valid);ilab <- list("");};
@@ -970,9 +1177,9 @@ profilePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
             ###xr <- as.POSIXct(xr, origin="1970-01-01");
             openPlot(filename,attr);
             if (hgtdir == "descending") {
-                plot(xr,yr,type="n",xlab=lab,ylab=hgtlab,ylim=rev(yr));
+                plot(xr,yr,type="n",xlab=paste(lab,"SDE and BIAS, model-observation"),ylab=hgtlab,ylim=rev(yr),las=1);
             } else {
-                plot(xr,yr,type="n",xlab=lab,ylab=hgtlab,ylim=yr);
+                plot(xr,yr,type="n",xlab=paste(lab,"SDE and BIAS, model-observation"),ylab=hgtlab,ylim=yr,las=1);
             };
             title(title);
             legs=c();

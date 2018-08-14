@@ -10,12 +10,15 @@
 # Id=8|star/dashed
 # Id=9|cross diamond/dotted
 #
-# Attribute=_n|1:2:3:4:5:6:7:8:9:10:11:12:13:14:15
-# Attribute=title_string_n|Title
-# Attribute=min_n|-999999
-# Attribute=max_n|+999999
-# Attribute=axis_string_n|Label
-# Attribute=file_string_n|var
+# Attribute=_N|1:2:3:4:5:6:7:8:9:10:11:12:13:14:15
+# Attribute=_P|0:1:2:3:4:5
+# Attribute=title_string_N|Title
+# Attribute=min_N|-999999
+# Attribute=max_N|+999999
+# Attribute=axis_string_N|Label
+# Attribute=file_string_N|var
+# Attribute=axis_pred_P|Predictor axis label
+# Attribute=file_pred_P|Predictor file label
 # Attribute=Orientation|landscape:portrait
 # Attribute=Format|Jpeg:png:PDF:PostScript
 # Attribute=Suffix|.jpg:.png:.pdf:.ps
@@ -24,14 +27,16 @@
 # Column=cycle_epoch
 # Column=time_epoch
 # Column=obs_file_id
-# Column=obs_location
+# Column=msg_id
+# Column=loc_id
 # Column=area
 # Column=lat_deg
 # Column=lon_deg
 # Column=pressure_hpa
 # Column=altitude_meter
-# Column=model_variable_n
-# Column=obs_variable_n
+# Column=model_variable_N
+# Column=obs_variable_N
+# Column=pred_P
 #
 # Usage: Rscript --vanilla verify table.txt plot
 #
@@ -46,28 +51,37 @@ prefix = args[2];
 leg <- readComments(tablefile,"LEGENDS");
 attr <- readComments(tablefile,"ATTRIBUTES");
 cols <- readComments(tablefile,"COLUMNS");
-data <- readData(tablefile);
+
+datafile <- grepFile(tablefile,"#\\|area\\|Norway",".Norway");
+
+raw <- readData(datafile);
 
 suffix = attr["Suffix",];
 
 setcol  = "set";
 refcol  = "cycle_epoch";
 timecol = "time_epoch";
-idcol   = "obs_id";
 areacol = "area";
 altcol  = "altitude_meter";
 pcol   = "pressure_hpa";
 
 
 #thres = attr["geopotential_threshold",];
-n <- equals(data,areacol,"Norway");
+nw <- equals(raw,areacol,"Norway");
+
+print ("Extracting overlapping data.");
+data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id","loc_id"),nw);
+
+rm(raw);gc(); # free memory
 
 #if (sum(n) < 1) { stop ("No norwegian stations found.");};
 
-for (ii in 1:attr["_n",]) {
+for (ii in 1:attr["_N",]) {
 
     file=attr[paste0("file_string",ii),];
     title=attr[paste0("title_string",ii),];
+    min=as.numeric(attr[paste0("min",ii),]);
+    max=as.numeric(attr[paste0("max",ii),]);
     label=attr[paste0("axis_string",ii),];
     obscol=paste0("obs_variable",ii);
     modcol=paste0("model_variable",ii);
@@ -77,8 +91,8 @@ for (ii in 1:attr["_n",]) {
     ;# profile plot
     proffile=paste0(prefix,file,"_prof",suffix);
     print(paste0("Processing '",proffile,"'"));
-    profilePlot(proffile,attr,leg,data,title,setcol,refcol,timecol,idcol,
-                "Pressure (hPA)",pcol,"descending",modcol,obscol,label);
+    profilePlot(proffile,attr,leg,data,title,setcol,refcol,timecol,
+                "Pressure (hPA)",pcol,"descending",obscol,modcol,label,min,max);
                                         #,"Norwegian stations",n);
 }
 
