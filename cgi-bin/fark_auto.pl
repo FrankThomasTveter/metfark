@@ -54,7 +54,7 @@ my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
 my $file = $loc . $name;
 my $test = (defined $param->{test}[0]) ? 1 : 0;
 #
-if (defined $cron) {$debug=1;};
+#####if (defined $cron) {$debug=1;};
 #
 if ($debug) {print "Argument='" . shift . "'\n";}
 if ($debug) {print "Processing $file\n";}
@@ -104,13 +104,7 @@ if (-f $autopath) { # we have a config file...
 	&updateTime($node,"plot");
     }
     if ($save) {
-	if (open(my $fh, '>', $autopath)) {
-	    print $fh $doc->toString;
-	    close $fh;
-	    chmod 0666, $autopath;
-	} else {
-	    farkdir::term("Unable to open:".$autopath);
-	}
+	farkdir::docsave($autopath, $doc);
     };
     if ( my ($node)=$doc->findnodes("auto/auto_config")) {
 	if (defined $node->getAttribute("password")) {$node->removeAttribute("password");}
@@ -212,7 +206,26 @@ sub loopCls {
 	my ($logdir,$logname)=farkdir::splitName($logfile);
 	farkdir::makePath($logdir) || farkdir::term("$myname unable to make: $logdir"); # make sure directory exists in case we create lockfile next
 	if($debug){print "Logfile '$logfile'\n";}
-	if ($debug) {
+	if ($cron)  {
+	    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
+	    #if ($cls eq "model") { fark::debug(2);};  # debug models
+	    farkdir::sandbox {
+		$cmd=&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+	    }{logfile   => $logfile,
+	      fork      => 1,
+	      debug     => 1,
+	      stdout    => "always"
+	    };
+	    if ($cmd) {
+		farkdir::sandbox {
+		    system($cmd);
+		}{fork      => 1,
+		  debug     => 1,
+		  stdout    => "always"
+		};
+	    }
+	    if($debug){print "After farkdir::sandbox\n";};
+	} elsif ($debug) {
 	    if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
 	    farkdir::sandbox {
 		$cmd=&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
@@ -224,25 +237,6 @@ sub loopCls {
 #message=>"$myname $cls file: $xmlfile, see '$logfile.err'",
 #	      logfile   => $logfile,
 	    
-	    if ($cmd) {
-		farkdir::sandbox {
-		    system($cmd);
-		}{fork      => 1,
-		  debug     => 1,
-		  stdout    => "always"
-		};
-	    }
-	    if($debug){print "After farkdir::sandbox\n";};
-	} elsif ($cron)  {
-	    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
-	    #if ($cls eq "model") { fark::debug(2);};  # debug models
-	    farkdir::sandbox {
-		$cmd=&execCls($cls,$test,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-	    }{logfile   => $logfile,
-	      fork      => 1,
-	      debug     => 1,
-	      stdout    => "always"
-	    };
 	    if ($cmd) {
 		farkdir::sandbox {
 		    system($cmd);

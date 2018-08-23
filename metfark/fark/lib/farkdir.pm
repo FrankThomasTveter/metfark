@@ -484,6 +484,18 @@ sub checkClassForStrings {
 #   debug     => 0,
 #   terminate => \&farkdir::term};
 
+sub docsave {
+    my $path=shift;
+    my $doc=shift;
+    if (open(PATH, '>', $path) && flock (PATH,2+4)) {
+	print PATH $doc->toString;
+	close PATH;
+	chmod 0666, $path;
+    } else {
+	farkdir::term("Unable to open: '".$path."'");
+    }
+}
+
 sub sandbox (&@) {
     use 5.014;
     use File::Copy;

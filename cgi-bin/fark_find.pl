@@ -120,13 +120,7 @@ sub findModel {
 		};
 		# put xml-structure into file
 		if ($passok) {
-		    if (open(my $fh, '>', $fpath)) {
-			print $fh $doc->toString;
-			close $fh;
-			chmod 0666, $fpath;
-		    } else {
-			return "Unable to open:".$fpath;
-		    };
+		    farkdir::docsave($fpath,$doc);
 		}
 	    } else {
 		my $parent = XML::LibXML::Element->new( 'stack' );
@@ -212,13 +206,7 @@ sub findModelFile {
 	}
 	if ($passok) {
 	    # put xml-structure into file
-	    if (open(my $fh, '>', $fpath)) {
-		print $fh $doc->toString;
-		close $fh;
-		chmod 0666, $fpath;
-	    } else {
-		farkdir::term("Unable to open:".$fpath);
-	    };
+	    farkdir::docsave($fpath,$doc);
 	}
 	# report xml-structure
 	print $doc->toString . "\n";
@@ -361,13 +349,7 @@ sub findObs {
 	    };
 	    # put xml-structure into file
 	    if ($passok) {
-		if (open(my $fh, '>', $fpath)) {
-		    print $fh $doc->toString;
-		    close $fh;
-		    chmod 0666, $fpath;
-		} else {
-		    farkdir::term("Unable to open:".$fpath);
-		}
+		farkdir::docsave($fpath,$doc);
 	    };
 	    # report xml-structure
 	    print $doc->toString . "\n";
@@ -453,13 +435,7 @@ sub findObsFile {
 	}
 	# put xml-structure into file
 	if ($passok) {
-	    if (open(my $fh, '>', $fpath)) {
-		print $fh $doc->toString;
-		close $fh;
-		chmod 0666, $fpath;
-	    } else {
-		farkdir::term("Unable to open:".$fpath);
-	    }
+	    farkdir::docsave($fpath,$doc);
 	}
 	# report xml-structure
 	print $doc->toString . "\n";

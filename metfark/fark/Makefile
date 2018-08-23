@@ -197,11 +197,9 @@ TO_INST_PM = check.pl \
 	fark.pl \
 	fark2.pl \
 	farkobs.pl \
-	lib/colocation.mod \
 	lib/fark.pm \
 	lib/farkdata.pm \
 	lib/farkdir.pm \
-	lib/fortranc.mod \
 	lib/libbufr.a \
 	lib/libbufrc.a \
 	lib/libcoloc.a \
@@ -213,14 +211,6 @@ TO_INST_PM = check.pl \
 	lib/libshape.a \
 	lib/libshapec.a \
 	lib/libsort.a \
-	lib/model.mod \
-	lib/observations.mod \
-	lib/parse.mod \
-	lib/plot.mod \
-	lib/read_xml_primitives.mod \
-	lib/shape.mod \
-	lib/sort.mod \
-	lib/xmlparse.mod \
 	t.pl
 
 PM_TO_BLIB = check.pl \
@@ -231,16 +221,12 @@ PM_TO_BLIB = check.pl \
 	$(INST_LIB)/fark2.pl \
 	farkobs.pl \
 	$(INST_LIB)/farkobs.pl \
-	lib/colocation.mod \
-	blib/lib/colocation.mod \
 	lib/fark.pm \
 	blib/lib/fark.pm \
 	lib/farkdata.pm \
 	blib/lib/farkdata.pm \
 	lib/farkdir.pm \
 	blib/lib/farkdir.pm \
-	lib/fortranc.mod \
-	blib/lib/fortranc.mod \
 	lib/libbufr.a \
 	blib/lib/libbufr.a \
 	lib/libbufrc.a \
@@ -263,22 +249,6 @@ PM_TO_BLIB = check.pl \
 	blib/lib/libshapec.a \
 	lib/libsort.a \
 	blib/lib/libsort.a \
-	lib/model.mod \
-	blib/lib/model.mod \
-	lib/observations.mod \
-	blib/lib/observations.mod \
-	lib/parse.mod \
-	blib/lib/parse.mod \
-	lib/plot.mod \
-	blib/lib/plot.mod \
-	lib/read_xml_primitives.mod \
-	blib/lib/read_xml_primitives.mod \
-	lib/shape.mod \
-	blib/lib/shape.mod \
-	lib/sort.mod \
-	blib/lib/sort.mod \
-	lib/xmlparse.mod \
-	blib/lib/xmlparse.mod \
 	t.pl \
 	$(INST_LIB)/t.pl
 
@@ -659,8 +629,8 @@ realclean_subdirs :
 # Delete temporary files (via clean) and also delete dist files
 realclean purge ::  clean realclean_subdirs
 	- $(RM_F) \
-	  $(FIRST_MAKEFILE) $(MAKEFILE_OLD) \
-	  $(OBJECT) 
+	  $(OBJECT) $(FIRST_MAKEFILE) \
+	  $(MAKEFILE_OLD) 
 	- $(RM_RF) \
 	  $(DISTVNAME) 
 
@@ -1107,11 +1077,9 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  fark.pl $(INST_LIB)/fark.pl \
 	  fark2.pl $(INST_LIB)/fark2.pl \
 	  farkobs.pl $(INST_LIB)/farkobs.pl \
-	  lib/colocation.mod blib/lib/colocation.mod \
 	  lib/fark.pm blib/lib/fark.pm \
 	  lib/farkdata.pm blib/lib/farkdata.pm \
 	  lib/farkdir.pm blib/lib/farkdir.pm \
-	  lib/fortranc.mod blib/lib/fortranc.mod \
 	  lib/libbufr.a blib/lib/libbufr.a \
 	  lib/libbufrc.a blib/lib/libbufrc.a \
 	  lib/libcoloc.a blib/lib/libcoloc.a \
@@ -1123,14 +1091,6 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	  lib/libshape.a blib/lib/libshape.a \
 	  lib/libshapec.a blib/lib/libshapec.a \
 	  lib/libsort.a blib/lib/libsort.a \
-	  lib/model.mod blib/lib/model.mod \
-	  lib/observations.mod blib/lib/observations.mod \
-	  lib/parse.mod blib/lib/parse.mod \
-	  lib/plot.mod blib/lib/plot.mod \
-	  lib/read_xml_primitives.mod blib/lib/read_xml_primitives.mod \
-	  lib/shape.mod blib/lib/shape.mod \
-	  lib/sort.mod blib/lib/sort.mod \
-	  lib/xmlparse.mod blib/lib/xmlparse.mod \
 	  t.pl $(INST_LIB)/t.pl 
 	$(NOECHO) $(TOUCH) pm_to_blib
 

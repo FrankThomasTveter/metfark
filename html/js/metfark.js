@@ -333,6 +333,8 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"rh2td(rh_%,t_c[,ice_0|1])","addValue('"+target+"','rh2td(rh_%,t_C)');","Convert relative-humidity to dew-point-temperature (function)");
     addChildButton(item,"td2rh(td_c,t_c[,ice_0|1])","addValue('"+target+"','td2rh(td_C,t_C)');","Convert dew-point-temperature to relative-humidity (function)");
     addChildButton(item,"q2rh(q_g/kg,t_k[,p_hpa])","addValue('"+target+"','q2rh(q_gkg,t_K,p_hPa)');","Convert specific-humidity to relative-humidity (function)");
+    addChildButton(item,"k2c(t_k)","addValue('"+target+"','k2c(t_K)');","Convert temperature in Kelvin to Celsius (function)");
+    addChildButton(item,"c2k(t_C)","addValue('"+target+"','c2k(t_C)');","Convert temperature in Celsius to Kelvin (function)");
     addChildButton(item,"abs()","addValue('"+target+"','abs()');","Absolute  (function)");
     addChildButton(item,"exp()","addValue('"+target+"','exp()');","Exponential (function)");
     addChildButton(item,"log10()","addValue('"+target+"','log10()');","Logarithm base 10 (function)");
@@ -1852,7 +1854,7 @@ function showDropdown(target, arg = "") {
 	var added=false;
 	addChildButton(item,"model","showValue('"+target+"','model');","Maintain model index");
 	addChildButton(item,"observation","showValue('"+target+"','obs');","Maintain observation index");
-	addChildButton(item,"colocation","showValue('"+target+"','coloc');","Make colocation XML");
+	addChildButton(item,"colocation","showValue('"+target+"','coloc');","Make colocation XML (debugging only)");
 	addChildButton(item,"plot","showValue('"+target+"','plot');","Make plot table and graphics");
 	added=true;
 	if (! added) {addChildText(item,"No data available...");}	

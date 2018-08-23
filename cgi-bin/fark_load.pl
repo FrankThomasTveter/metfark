@@ -197,7 +197,7 @@ sub loadAuto {
 	#$parser->expand_entities( 0 ); # leave entities alone
 	farkdir::sandbox {
 	    if (-f $path) {
-		my $auto = $parser->parse_file($path);
+		my $auto = $parser->parse_file($path) || next;
 		my ($node)=$auto->findnodes("auto/auto_config");
 		if ( $node ) {
 		    $node->removeAttribute("password"); # remove passwords

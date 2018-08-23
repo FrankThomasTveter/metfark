@@ -113,6 +113,7 @@ function coloc_addConfig (type,parameter,val) {
     }
 }
 function coloc_setConfigFilesTarget (type,target,parameter,val) {
+    //console.log("*** coloc_setConfigFilesTarget ");
     var file=coloc_getConfigFile();
     if (coloc_config[file] !== undefined) {
 	if (coloc_config[file][type] === undefined || 
@@ -122,8 +123,7 @@ function coloc_setConfigFilesTarget (type,target,parameter,val) {
 	    console.log("Undefined:",type,target,parameter,val);
 	};
 	coloc_config[file][type]['targets'][target][parameter]=val;
-	coloc_showModelDefaultTable();
-	coloc_showCOLOC();
+	coloc_show();
     }
 }
 function coloc_addConfigFilesTarget (type,target,parameter,val) {
@@ -701,6 +701,7 @@ function coloc_removeModelDefault(item,file,ii) {
     coloc_show();
 };
 function coloc_showObsTargetTable() {
+    //console.log("*** coloc_showObsargetTable ");
     var item=document.getElementById('obsTargetTable');
     var ofile=coloc_getObsConfigFile();
     var file=coloc_getConfigFile();
@@ -909,11 +910,11 @@ function coloc_insertObsTargetRow(item,target,ii,pos,descr,color,info,min,max) {
     td=document.createElement("TD");
     td.setAttribute("class","fill");
     inp=document.createElement("INPUT");
+    inp.setAttribute("title","Position in BUFR sequence");
     inp.setAttribute("type","text");
     inp.setAttribute("value",pos);
     inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","coloc_setConfigFilesTarget('obsConfigFile','"+target+"','pos',this.value);");
-    inp.setAttribute("title","Position in BUFR sequence");
     td.appendChild(inp);
     row.appendChild(td);
     // make select-subtype column  ***************************

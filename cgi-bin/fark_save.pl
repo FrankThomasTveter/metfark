@@ -143,13 +143,7 @@ sub saveModel {
 		}
 	    }
 	    # save XML to file
-	    if (open(my $fh, '>', $path)) {
-		print $fh $doc->toString;
-		close $fh;
-		chmod 0666, $path;
-	    } else {
-		farkdir::term("Unable to open: '".$path."'");
-	    }
+	    farkdir::docsave($path,$doc);
 	    print "<save message='success'/>\n";
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
@@ -269,13 +263,7 @@ sub saveObs {
 		}
 	    };
 	    # save XML to file
-	    if (open(my $fh, '>', $path)) {
-		print $fh $doc->toString;
-		close $fh; 
-		chmod 0666, $path;
-	    } else {
-		farkdir::term("Unable to open:".$path);
-	    }
+	    farkdir::docsave($path,$doc);
 	    print "<save message='success'/>\n";
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
@@ -454,13 +442,7 @@ sub saveColoc {
 		}
 	    }
 	    # save XML to file
-	    if (open(my $fh, '>', $path)) {
-		print $fh $doc->toString;
-		close $fh;
-		chmod 0666, $path;
-	    } else {
-		farkdir::term("Unable to open:".$path);
-	    }
+	    farkdir::docsave($path,$doc);
 	    print "<save message='success'/>\n";
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
@@ -597,13 +579,7 @@ sub savePlot {
 		}
 	    };
 	    # save XML to file
-	    if (open(my $fh, '>', $path)) {
-		print $fh $doc->toString;
-		close $fh; 
-		chmod 0666, $path;
-	    } else {
-		farkdir::term("Unable to open:".$path);
-	    }
+	    farkdir::docsave($path,$doc);
 	    print "<save message='success'/>\n";
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."'");
@@ -747,13 +723,7 @@ sub saveAuto {
 		}
 	    }
 	    # save XML to file
-	    if (open(my $fh, '>', $path)) {
-		print $fh $doc->toString;
-		close $fh;
-		chmod 0666, $path;
-	    } else {
-		farkdir::term("Unable to open:".$path);
-	    }
+	    farkdir::docsave($path,$doc);
 	    print "<save message='success'/>\n";
 	} else {
 	    farkdir::term("Permission denied: '".$fpath."' $priv");

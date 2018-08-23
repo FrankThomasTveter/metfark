@@ -142,8 +142,9 @@ function auto_saveConfigFile() {
     for (var coloc in auto_config["coloc"]) {
 	colocFiles=colocFiles + "|" + coloc + "~" + 
 	    auto_config["coloc"][coloc]["last"] + "~" +
-	    auto_config["coloc"][coloc]["info"] + "~" +
-	    auto_config["coloc"][coloc]["auto"];
+	    auto_config["coloc"][coloc]["info"] + "~";
+	//#+
+	//	    #auto_config["coloc"][coloc]["auto"];
     }
     for (var plot in auto_config["plot"]) {
 	plotFiles=plotFiles + "|" + plot + "~" + 
@@ -241,7 +242,7 @@ function auto_setTable() {
     for (var ii = 0; ii < colocs.length; ++ii) {
 	var coloc=colocs[ii];
 	console.log("Insert row: ",coloc);
-	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#F6CEEC");
+	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#66F");
     }
     for (var ii = 0; ii < plots.length; ++ii) {
 	var plot=plots[ii];
@@ -270,7 +271,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     var btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_removeFile(this.parentNode.parentNode,'"+type+"','"+file+"')");
     btn.setAttribute("style","width:100%");
-    btn.setAttribute("title","Remove automatic job");
+    btn.setAttribute("title","Remove scheduled job");
     var t=document.createTextNode("-");
     btn.appendChild(t);
     td.appendChild(btn);
@@ -278,6 +279,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     // make TYPE column
     td=document.createElement("TD");
     td.innerHTML=type;
+    td.setAttribute("title","Schedule type.");
     row.appendChild(td);
     // make select-TYPE column
     td=document.createElement("TD");
@@ -286,6 +288,16 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     // make FILE NAME column
     td=document.createElement("TD");
     td.innerHTML=file;
+    if (type == "model") {
+	td.setAttribute("title","Maintain <model file index>.");
+    } else if (type == "obs") {
+	td.setAttribute("title","Maintain <observation file index>.");
+    } else if (type == "coloc") {
+	td.setAttribute("title","Create <colocation xml> for debugging.");
+    } else if (type == "plot") {
+	td.setAttribute("title","Create <table file> and run plotting script.");
+    } else {
+    };
     row.appendChild(td);
     console.log("Row file name=",file);
     // make select-FILE NAME column
@@ -294,6 +306,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     row.appendChild(td);
     // make AUTO checkbox column
     td=document.createElement("TD");
+    td.setAttribute("title","Repetition interval.");
     td.innerHTML=auto;
     row.appendChild(td);
     // make select-TYPE column
@@ -307,8 +320,12 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_testNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","test");
-    btn.innerHTML="&#9762"
-    btn.setAttribute("title","Test now");
+    if (type == "coloc") {
+	btn.innerHTML="&#9762"
+    } else {
+	btn.innerHTML="&#9655"
+    }
+    btn.setAttribute("title","Test now, stop processing as soon as some output has been produced.");
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);
@@ -320,8 +337,12 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_runNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","run");
-    btn.innerHTML="&#9762"
-    btn.setAttribute("title","Run now");
+    if (type == "coloc") {
+	btn.innerHTML="&#9762"
+    } else {
+	btn.innerHTML="&#9654"
+    }
+    btn.setAttribute("title","Run now, process all data completely.");
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);
@@ -341,6 +362,15 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     row.appendChild(td);
     // make INFO column
     td=document.createElement("TD");
+    if (type =="model") {
+	td.title = "Show status of the model-index-file.";
+    } else if (type =="obs") {
+	td.title = "Show status of the observation-index-file.";
+    } else if (type =="plot") {
+	td.title = "Show status of the table-file.";
+    } else {
+	td.title = "Show status.";
+    };
     td.innerHTML=info;
     row.appendChild(td);
     // make add row to table

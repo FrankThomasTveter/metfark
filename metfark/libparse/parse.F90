@@ -14,6 +14,7 @@ module parse
   real    :: eps  = 0.0D0
   logical :: leps = .false.
   real    :: t0 = 273.15
+  real    :: t1 = 273.16
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Fortran 90 function parser v1.1

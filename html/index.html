@@ -37,7 +37,7 @@
 	      <td style="white-space: nowrap;"><em>Setup file:</em></td>
 	      <td class="fill" width="100%">
 		<input id="modelConfigFile" type="text" value="" style="width:100%" onblur="model_setConfigFile(this.value);model_show();"
-		       title="Name of <setup file>"/>
+		       title="Name of existing or new <setup file>"/>
                 <!-- onblur="coloc_setConfigFile(this.value);coloc_show()" -->
 		<div id="modelConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
@@ -105,11 +105,12 @@
 	  <table style="width:100%">
 	    <tr>
 	      <td align="right">
-		File:<input id="modelConfigFileSave" type="text" value="" readonly/>
+		File:<input id="modelConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
 		Password:<input type="password" id="modelConfigFilePsw" value=""
-		       title="Password needed to save the <setup file> to server">
+		       title="Password needed to save the <setup file> to server. 
+A new <setup file> will get this password.">
 		<button onclick="model_saveConfigFile()"
-		       title="Save the <setup file> to server">Save</button></td>
+		       title="Save the <setup file> to server.">Save</button></td>
 	    </tr>
 	  </table>
 	</div>
@@ -129,7 +130,7 @@
 	      <td style="white-space: nowrap;"><em>Setup file:</em></td>
 	      <td class="fill" width="100%">
 		<input id="obsConfigFile" type="text" value="" style="width:100%" onblur="obs_setConfigFile(this.value);obs_show();"
-		       title="Name of <setup file>"/> 
+		       title="Name of existing or new <setup file>"/> 
 		<div id="obsConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td align="center"><button onclick="obs_setConfigFile(fark_last['obs']);obs_updateData();"
@@ -267,11 +268,12 @@
 	  <table style="width:100%">
 	    <tr>
 	      <td align="right">
-		File:<input id="obsConfigFileSave" type="text" value="" readonly/>
+		File:<input id="obsConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
 		Password:<input type="password" id="obsConfigFilePsw" value=""
-		       title="Password needed to save the <setup file> to server">
+		       title="Password needed to save the <setup file> to server. 
+A new <setup file> will get this password.">
 		<button onclick="obs_saveConfigFile()"
-			title="Save the <setup file> to server">Save</button></td>
+			title="Save the <setup file> to server.">Save</button></td>
 	    </tr>
 	  </table>
 	</div>
@@ -290,7 +292,7 @@
 	      <td style="white-space: nowrap;"><em>Definition file:</em></td>
 	      <td class="fill" width="100%">
 		<input id="colocConfigFile" type="text" value="" style="width:100%" onblur="coloc_setConfigFile(this.value);coloc_show();"
-		       title="Name of <setup file>"/> 
+		       title="Name of existing or new <setup file>"/> 
 		<div id="colocConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td align="center"><button onclick="coloc_setConfigFile(fark_last['coloc']);coloc_updateData();"
@@ -501,11 +503,12 @@
 	  <table width="100%">
 	    <tr>
 	      <td align="right">
-		File:<input id="colocConfigFileSave" type="text" value="" readonly/>
+		File:<input id="colocConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
 		Password:<input type="password" id="colocConfigFilePsw" value=""
-				title="Password needed to save the <setup file> to server">
+				title="Password needed to save the <setup file> to server. 
+A new <setup file> will get this password.">
 		<button onclick="coloc_saveConfigFile('colocConfigFilePsw')"
-		       title="Save the <setup file> to server">Save</button></td>
+		       title="Save the <setup file> to server.">Save</button></td>
 	    </tr>
 	  </table>
         </div>
@@ -524,7 +527,7 @@
 	      <td style="white-space: nowrap;"><em>Setup file:</em></td>
 	      <td class="fill" width="100%">
 		<input id="plotConfigFile" type="text" value="" style="width:100%" onblur="plot_setConfigFile(this.value);"
-		       title="Name of <setup file>"/> 
+		       title="Name of existing or new <setup file>"/> 
 		<div id="plotConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
@@ -604,11 +607,12 @@
 	  <table width="100%">
 	    <tr>
 	      <td align="right">
-		File:<input id="plotConfigFileSave" type="text" value="" readonly/>
+		File:<input id="plotConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
 		Password:<input type="password" id="plotConfigFilePsw" value=""
-				title="Password needed to save the <setup file> to server">
+				title="Password needed to save the <setup file> to server. 
+A new <setup file> will get this password.">
 		<button onclick="plot_saveConfigFile('plotConfigFilePsw')"
-			title="Save the <setup file> to server">Save</button></td>
+			title="Save the <setup file> to server.">Save</button></td>
 	    </tr>
 	  </table>
 	</div>
@@ -662,11 +666,11 @@
 			title="Show available intervals">&#9776;</button></td>
 	      <td style="min-width:25px;width:25px" align="center">
 		<button class="test" onclick="auto_testNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)"
-			title="Test now, stop processing as soon as some output has been produced.">&#9762;</button></td>
+			title="Test now, stop processing as soon as some output has been produced.">&#9655;</button></td>
 	      <td style="min-width:25px;width:25px" align="center">
 		<button class="run"
 			onclick="auto_runNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)"
-			title="Run now, process all data completely.">&#9762;</button></td>
+			title="Run now, process all data completely.">&#9654;</button></td>
 	      <td id="autoLastTime"></td>
 	      <td id="autoLastInfo"></td>
 	    </tr>
@@ -674,9 +678,8 @@
 	  <table width="100%">
 	    <tr>
 	      <td align="right">
-		File:<input id="autoConfigFileSave" type="text" value="" readonly/>
-		Password:<input type="password" id="autoConfigFilePsw" value="" title="Password needed to save the setup to server">
-		<button onclick="auto_saveConfigFile()" title="Save the setup to server">Save</button></td>
+		Password:<input type="password" id="autoConfigFilePsw" value="" title="Password needed to save the setup to server.">
+		<button onclick="auto_saveConfigFile()" title="Save the setup to server.">Save</button></td>
 	    </tr>
 	  </table>
 	</div>
