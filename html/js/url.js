@@ -937,7 +937,7 @@ function url_saveConfigFile(target) {
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to save file: "+file+"\n"+msg);
 		  };
 		  documentLog.innerHTML="";}
@@ -1151,7 +1151,7 @@ function url_debugExp(f,t) {
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to evaluate expression:"+expin+"\n"+msg);
 		  } else {
 		      var results=data.getElementsByTagName("result");

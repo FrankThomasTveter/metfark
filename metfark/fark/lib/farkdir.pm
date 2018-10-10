@@ -102,6 +102,7 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 		  plot_log =>  {"/metfark/config/log/plot/"    => "rw" },
 		  auto  => {"/metfark/config/auto/"    => "rw" },       # auto config files
 		  url  =>  {"/metfark/config/url/"     => "rw" },       # url config files (not used?)
+		  abort=>  {"/metfark/config/abort/"     => "rw" },       # url config files (not used?)
 		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
     );
 
@@ -506,80 +507,88 @@ sub sandbox (&@) {
     my $print  = $opts->{"stdout"}//"always"; # print stdout: "always", "never", "success"
     my $term   = $opts->{"terminate"};        # terminate on error using function...
     my $fork   = $opts->{"fork"}//"0";        # fork process?
+    my $abort= $opts->{"abort"}//"0";  # check abortfile
+    my $abortfile= $opts->{"abortfile"}//"0";  # check abortfile
     my $debug   = $opts->{"debug"}//"0";      # print debug info
-    if ($msg && ! $term) {$term=\&term;}      # if we have message, use default term-function
-    my ($pid,$core,$sig,$ext,$wait,$blk,$mrg)=(0,0,0,0,0,0,0);
-    my $cmd="";
-    my $merged="";
-    if (!$log && $print eq "success") {
-	die ("farkdir::sandbox A logfile is required when using option stdout=>'success'.");
-    }
-    if (defined $log && $log) {
-	&redirect_streams($log);
-    } elsif ( $print eq "never") {
-	&redirect_streams("/dev/null");
-    };
-    ($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$debug);
-    if ($debug) {
-	my $s="";
-	if ($core) {$s .=" core:$core";}
-	if ($sig)  {$s .=" signal:$sig";}
-	if ($ext)  {$s .=" exit:$ext";}
-	if ($wait) {$s .=" wait:$wait";}
-	if ($blk)  {$s .=" block: $blk";}
-	if ($cmd)  {$s .=" cmd:$cmd";}
-	#if ($mrg)  {$s .=" merge:$mrg";}
-	print $s;
-    };
-    my $ok=(! $core       # child core dump 
-	    && ! $sig     # child abort signal
-	    && ! $ext     # child exit/die
-	    && ! $wait    # child pid vanished
-	    && ! $cmd     # eval return string
-	    && ! $blk );
-    if (defined $log && $log) {
-	&restore_streams();
-	$merged=&message_file($log);
-	if ($print eq "always"  || ($print eq "success" && $ok)) {
-	    &print_file($log);
-	    if ($cmd) {print $cmd;}
+    my $append   = $opts->{"append"}//"0";      # print debug info
+    if ($abort) { # this is an abort-request
+	farkdir::touchFile($abortfile);
+    } else { # start processes
+	if ($msg && ! $term) {$term=\&term;}      # if we have message, use default term-function
+	my ($pid,$core,$sig,$ext,$wait,$blk,$mrg)=(0,0,0,0,0,0,0);
+	my $cmd="";
+	my $merged="";
+	if (!$log && $print eq "success") {
+	    die ("farkdir::sandbox A logfile is required when using option stdout=>'success'.");
 	}
-	if (! $ok) { # save to errfile
-	    copy($log, $log.".err");
+	if (defined $log && $log) {
+	    &redirect_streams($log,$append);
+	} elsif ( $print eq "never") {
+	    &redirect_streams("/dev/null");
 	};
-    } elsif ( $print eq "never") {
-	&restore_streams();
-    };
-    # handle errors...
-    if (! $ok) {
-	my $message=$msg;
-	if ($merged) {
-	    $message=$merged;
-	} elsif ($core){
-	    $message = $msg . " (Process $pid dumped core.)";
-	}elsif($sig){
-	    $message=$msg . " (Process $pid died suddenly.)";
-	}elsif ($ext) {
-	    $message=$msg . " (Process $pid returned $ext.)";
-	}elsif ($wait) {
-	    $message=$msg . " (Process $pid just vanished. How strange.)";
-	} elsif ($cmd) {
-	    $message=$cmd;
-	} elsif ($blk) {
-	    $message=$msg . " [$cmd]";
+	($pid,$core,$sig,$ext,$wait,$blk,$cmd)=sandcorn($code,$fork,$abortfile,$debug);
+	if ($debug) {
+	    my $s="";
+	    if ($core) {$s .=" core:$core";}
+	    if ($sig)  {$s .=" signal:$sig";}
+	    if ($ext)  {$s .=" exit:$ext";}
+	    if ($wait) {$s .=" wait:$wait";}
+	    if ($blk)  {$s .=" block: $blk";}
+	    if ($cmd)  {$s .=" cmd:$cmd";}
+	    #if ($mrg)  {$s .=" merge:$mrg";}
+	    print $s . "\n";
 	};
-	if ($debug) {print "Message: $message\n";};
-	if ($term) {
-	    $term->($message);
-	} elsif ($debug) {
-	    print $message;
+	my $ok=(! $core       # child core dump 
+		&& ! $sig     # child abort signal
+		&& ! $ext     # child exit/die
+		&& ! $wait    # child pid vanished
+		&& ! $cmd     # eval return string
+		&& ! $blk );
+	if (defined $log && $log) {
+	    &restore_streams();
+	    $merged=&message_file($log);
+	    if ($print eq "always"  || ($print eq "success" && $ok)) {
+		&print_file($log);
+		if ($cmd) {print $cmd;}
+	    }
+	    if (! $ok) { # save to errfile
+		copy($log, $log.".err");
+	    };
+	} elsif ( $print eq "never") {
+	    &restore_streams();
 	};
+	# handle errors...
+	if (! $ok) {
+	    my $message=$msg;
+	    if ($merged) {
+		$message=$merged;
+	    } elsif ($core){
+		$message = $msg . " (Process $pid dumped core.)";
+	    }elsif($sig){
+		$message=$msg . " (Process $pid died suddenly.)";
+	    }elsif ($ext) {
+		$message=$msg . " (Process $pid returned $ext.)";
+	    }elsif ($wait) {
+		$message=$msg . " (Process $pid just vanished. How strange.)";
+	    } elsif ($cmd) {
+		$message=$cmd;
+	    } elsif ($blk) {
+		$message=$msg . " [$cmd]";
+	    };
+	    if ($debug) {print "Message: $message\n";};
+	    if ($term) {
+		$term->($message);
+	    } elsif ($debug) {
+		print $message;
+	    };
+	}
     }
 }
 
 sub sandcorn {
+    #use POSIX;
     use POSIX ":sys_wait_h";
-    my ($code,$fork,$debug)=@_;
+    my ($code,$fork,$abortfile,$debug)=@_;
     my $pid=0;      # child pid
     my $core=0;     # child core dump 
     my $sig=0;      # child abort signal
@@ -595,6 +604,9 @@ sub sandcorn {
     if ($fork) {
 	my $ret=0;
 	my $ps="";
+	if (-f $abortfile) {
+	    unlink($abortfile);
+	};
 	if($debug){print "farkdir::sandbox Forking process.\n";}
 	eval {
 	    $pid = fork();
@@ -607,7 +619,12 @@ sub sandcorn {
 			if ($lps =~ m/^.*\n.*\n/g) {$ps=$lps;};
 			$kid= waitpid($pid, WNOHANG);
 			$ret= $?;
-			if ($kid==0) {sleep(0.5);}
+			if ($kid==0) {sleep(1);}
+			if (-f $abortfile) {
+			    print "farkdir::sandbox User killed child process $pid\n";
+			    unlink($abortfile);
+			    kill 9,$pid;
+			};
 		    } while ($kid == 0); # $kid==0:running, $kid==$pid:exiting,$kid==-1:no such process
 		    if ($ret == -1) {
 			($ext, $sig, $core) = (-1,0,0);
@@ -680,10 +697,9 @@ sub dtg {
 # my $ret = &term ("System error...");
 #
 sub term {
-    my $msg=shift;
-    $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
-    $msg=~s/ +/ /g;
-    print "<error message='".$msg."'/>\n";
+    use URI::Encode qw(uri_encode);
+    my $msg=uri_encode(shift);
+    print '<error message="'.$msg.'"/>'."\n";
     exit 2;
 }
 
@@ -1232,11 +1248,15 @@ sub restore_streams
 sub redirect_streams
 {
     use strict;
-    (my $log_file) =@_;
+    my ($log_file, $append) = @_;
     if ($debug) {print "Redirecting streams to '$log_file'\n";};    
     open OLDOUT,">&STDOUT" || die "Can't duplicate STDOUT: $!";
     open OLDERR,">&STDERR" || die "Can't duplicate STDERR: $!";
-    open(STDOUT,"> $log_file");
+    if (defined $append && &append) {
+	open(STDOUT,">> $log_file");
+    } else {
+	open(STDOUT,"> $log_file");
+    }
     open(STDERR,">&STDOUT");
 }
 

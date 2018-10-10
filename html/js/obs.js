@@ -114,10 +114,10 @@ function obs_checkPassword() {
 function obs_removeTarget(target) {
     var file=obs_getConfigFile();
     var item=document.getElementById("newlineObsIndexTarget");
-    item.children[1].children[0].value=target;
-    item.children[2].children[0].value=obs_config[file]["targets"][target]["pos"];
-    item.children[4].children[0].value=obs_config[file]["targets"][target]["descr"];
-    item.children[5].children[0].value=obs_config[file]["targets"][target]["info"];
+    item.children[0].children[0].value=target;
+    item.children[1].children[0].value=obs_config[file]["targets"][target]["pos"];
+    item.children[3].children[0].value=obs_config[file]["targets"][target]["descr"];
+    item.children[4].children[0].value=obs_config[file]["targets"][target]["info"];
     obs_config[file]["targeto"]=obs_removeByValue(obs_config[file]["targeto"],target)
     delete obs_config[file]["targets"][target];
     obs_setIndexTargetTable(file);
@@ -132,10 +132,10 @@ function obs_isEmpty(obj) {
 };
 function obs_newObsIndexTarget(item) {
     //if (! obs_checkPassword()) {return;}
-    var target=item.parentNode.parentNode.children[1].children[0].value;
-    var pos=item.parentNode.parentNode.children[2].children[0].value;
-    var descr=item.parentNode.parentNode.children[4].children[0].value;
-    var info=item.parentNode.parentNode.children[5].children[0].value;
+    var target=item.parentNode.parentNode.children[0].children[0].value;
+    var pos=item.parentNode.parentNode.children[1].children[0].value;
+    var descr=item.parentNode.parentNode.children[3].children[0].value;
+    var info=item.parentNode.parentNode.children[4].children[0].value;
 //    console.log("New: trg:",target," pos:",pos," des:",descr," info:",info);
     if (target !== "") {
 	var file= obs_getConfigFile();
@@ -153,12 +153,10 @@ function obs_newObsIndexTarget(item) {
 	obs_config[file]["targets"][target]["descr"]=descr;
 	obs_config[file]["targets"][target]["info"]=info;
 	obs_setIndexTargetTable(file);
+	item.parentNode.parentNode.children[0].children[0].value="";
 	item.parentNode.parentNode.children[1].children[0].value="";
-	item.parentNode.parentNode.children[2].children[0].value="";
+	item.parentNode.parentNode.children[3].children[0].value="";
 	item.parentNode.parentNode.children[4].children[0].value="";
-	item.parentNode.parentNode.children[5].children[0].value="";
-	item.parentNode.parentNode.children[6].children[0].value="";
-	item.parentNode.parentNode.children[7].children[0].value="";
     } else {
 	alert("Invalid observation target name: ('"+target+"')");
     }
@@ -208,7 +206,7 @@ function obs_saveConfigFile() {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to save file: "+file+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -251,20 +249,6 @@ function obs_setIndexTargetTable(file) {
 function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     var row = document.createElement("TR");
     var td,inp;
-    // make "-" column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    td.setAttribute("align","center");
-    var btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","obs_removeTarget('"+target+"')");
-    btn.setAttribute("style","width:100%");
-    btn.setAttribute("title","Remove observation target");
-    //var t=document.createTextNode("--");
-    //btn.appendChild(t);
-    btn.innerHTML="&#45";
-    //btn.setAttribute("align","center");
-    td.appendChild(btn);
-    row.appendChild(td);
     // make NAME column  ***************************
     td=document.createElement("TD");
     td.innerHTML=target;
@@ -317,6 +301,20 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
     //inp.setAttribute("style","width:100%");
     inp.setAttribute("onblur","obs_setIndexTarget('"+target+"','info',this.value);");
     td.appendChild(inp);
+    row.appendChild(td);
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("align","center");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","obs_removeTarget('"+target+"')");
+    btn.setAttribute("style","width:100%");
+    btn.setAttribute("title","Remove observation target");
+    //var t=document.createTextNode("--");
+    //btn.appendChild(t);
+    btn.innerHTML="&#45";
+    //btn.setAttribute("align","center");
+    td.appendChild(btn);
     row.appendChild(td);
     // make add row to table  ***************************
     item.parentNode.insertBefore(row,item);
@@ -371,7 +369,7 @@ function obs_fileFind(sfile) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
 	      } else {
 		  dataToArray(data,status,documentLog);
@@ -392,7 +390,7 @@ function obs_mkdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to mkdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -411,7 +409,7 @@ function obs_rmfile(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmfile: "+path+"\n"+msg);
 	      } else {
 		  delete obs_config[path];
@@ -433,7 +431,7 @@ function obs_rmdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}

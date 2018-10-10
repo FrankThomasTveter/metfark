@@ -24,10 +24,10 @@ subroutine col_pushmatch(sid, nam80, expr250, l80, u80, crc250, irc)
   call colocation_pushmatch(css,nam80,expr250,l80,u80,crc250,irc)
   if (irc.ne.0) then
      !write(*,*) 'pushMatch Error.'
-     call colocation_errorappend(crc250,"|")
      call colocation_errorappend(crc250,myname)
      call colocation_errorappend(crc250," Error return from colocation_pushexp.")
      call colocation_errorappendi(crc250,irc)
+     call colocation_errorappend(crc250,"\n")
      return
   end if
   !if(col_bdeb)write(*,*) myname,'Done.'

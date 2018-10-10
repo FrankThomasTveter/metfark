@@ -1,3 +1,4 @@
+
 // data structure
 auto_config = { model : {"default1.cfg" : {last:"",info:"",auto:"",status:""}},
 		obs :   {"default2.cfg" : {last:"",info:"",auto:"",status:""}},
@@ -28,9 +29,9 @@ function auto_updateData() {
     });
 };
 function auto_newConfigFile(item) {
-    var type=item.parentNode.parentNode.children[1].children[0].value;
-    var file=item.parentNode.parentNode.children[3].children[0].value;
-    var auto=item.parentNode.parentNode.children[5].children[0].value;
+    var type=item.parentNode.parentNode.children[0].children[0].value;
+    var file=item.parentNode.parentNode.children[2].children[0].value;
+    var auto=item.parentNode.parentNode.children[4].children[0].value;
     showValue('autoType',"");
     showValue('autoConfigFile',"");
     document.getElementById("autoCron").value=auto_cron[0];
@@ -67,8 +68,8 @@ function auto_testNow(target,type,file,row) {
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
 	fark_last[type]=file;
-	row.children[9].innerHTML=""; // last
-	row.children[10].innerHTML="# running"; // info
+	row.children[7].innerHTML=""; // last
+	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1},
 	      function(data, status){
@@ -76,7 +77,7 @@ function auto_testNow(target,type,file,row) {
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
 			  console.log("Error:",data);
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
 		      };
 		      if (target === "") {
@@ -96,8 +97,8 @@ function auto_runNow(target,type,file,row) {
     if (target === "") {root="auto.cfg";};
     if (file !== "") {
 	fark_last[type]=file;
-	row.children[9].innerHTML=""; // last
-	row.children[10].innerHTML="# running"; // info
+	row.children[7].innerHTML=""; // last
+	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file},
 	      function(data, status){
@@ -105,7 +106,7 @@ function auto_runNow(target,type,file,row) {
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
 			  console.log("Error:",data);
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
 		      };
 		      if (target === "") {
@@ -113,6 +114,35 @@ function auto_runNow(target,type,file,row) {
 			  auto_setTable();
 		      } else {
 			  target.children[5].innerHTML="manual run";
+		      }
+		      documentLog.innerHTML="";}
+	      }
+	 );
+    };
+};
+function auto_stopNow(target,type,file,row) {
+    var root="";
+    var password=document.getElementById("autoConfigFilePsw").value;
+    if (target === "") {root="auto.cfg";};
+    if (file !== "") {
+	fark_last[type]=file;
+	row.children[7].innerHTML=""; // last
+	row.children[8].innerHTML="# running"; // info
+	documentLog.innerHTML="Sent auto-stop request ("+file+").";
+	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,abort:1},
+	      function(data, status){
+		  if (status == "success") {
+		      var errors=data.getElementsByTagName("error");
+		      if (errors.length > 0 ) {
+			  console.log("Error:",data);
+			  var msg=getErrorMessage(errors);
+			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+		      };
+		      if (target === "") {
+			  dataToArray(data,status,documentLog);
+			  auto_setTable();
+		      } else {
+			  target.children[5].innerHTML="manual stop";
 		      }
 		      documentLog.innerHTML="";}
 	      }
@@ -159,7 +189,7 @@ function auto_saveConfigFile() {
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to save auto config file: "+root+"\n"+msg);
 		  };
 		  documentLog.innerHTML="";}
@@ -169,9 +199,9 @@ function auto_saveConfigFile() {
 };
 function auto_removeFile(item,type,file) {
     var newitem=document.getElementById("newlineAuto");
-    newitem.children[1].children[0].value=type;
-    newitem.children[3].children[0].value=file;
-    newitem.children[5].children[0].value=auto_cron[0];
+    newitem.children[0].children[0].value=type;
+    newitem.children[2].children[0].value=file;
+    newitem.children[4].children[0].value=auto_cron[0];
     //if (! checkAutoPassword()) {return;}
     //item.parentNode.removeChild(item);
     delete auto_config[type][file];
@@ -265,17 +295,6 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     var row = document.createElement("TR");
     row.setAttribute("bgcolor",color);
     var td;
-    // make "-" column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px;");
-    var btn=document.createElement("BUTTON");
-    btn.setAttribute("onclick","auto_removeFile(this.parentNode.parentNode,'"+type+"','"+file+"')");
-    btn.setAttribute("style","width:100%");
-    btn.setAttribute("title","Remove scheduled job");
-    var t=document.createTextNode("-");
-    btn.appendChild(t);
-    td.appendChild(btn);
-    row.appendChild(td);
     // make TYPE column
     td=document.createElement("TD");
     td.innerHTML=type;
@@ -313,9 +332,9 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
     row.appendChild(td);
-    // make TEST NOW column
+    // make manual column
     td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
+    td.setAttribute("style","min-width:75px;width:75px");
     td.setAttribute("align","center");
     btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_testNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
@@ -329,11 +348,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);
-    row.appendChild(td);
     // make RUN NOW column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    td.setAttribute("align","center");
     btn=document.createElement("BUTTON");
     btn.setAttribute("onclick","auto_runNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
     btn.setAttribute("class","run");
@@ -346,8 +361,21 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     //var t=document.createTextNode();
     //btn.appendChild(t);
     td.appendChild(btn);
-    row.appendChild(td);
+    // make STOP column
+    btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","auto_stopNow('','"+type+"','"+file+"',this.parentNode.parentNode)");
+    btn.setAttribute("class","stop");
+    if (type == "coloc") {
+	btn.innerHTML="&#9762"
+    } else {
+	btn.innerHTML="&#9632"
+    }
+    btn.setAttribute("title","Stop process.");
+    //var t=document.createTextNode();
+    //btn.appendChild(t);
+    td.appendChild(btn);
     // make LAST column
+    row.appendChild(td);
     td=document.createElement("TD");
     if (status !== "") {
 	td.setAttribute("style","color:blue");
@@ -372,6 +400,17 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
 	td.title = "Show status.";
     };
     td.innerHTML=info;
+    row.appendChild(td);
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px;");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("onclick","auto_removeFile(this.parentNode.parentNode,'"+type+"','"+file+"')");
+    btn.setAttribute("style","width:100%");
+    btn.setAttribute("title","Remove scheduled job");
+    var t=document.createTextNode("-");
+    btn.appendChild(t);
+    td.appendChild(btn);
     row.appendChild(td);
     // make add row to table
     item.parentNode.insertBefore(row,item);

@@ -18,10 +18,10 @@ subroutine mod_setfilter(sid,flt, crc250, irc)
   end if
   call model_setfilter(css,flt,crc250,irc)
   if (irc.ne.0) then
-     call model_errorappend(crc250,"|")
-     call model_errorappend(crc250,trim(myname))
+     call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from col_setobscache.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

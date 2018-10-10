@@ -19,10 +19,10 @@ subroutine plo_strepfiles(pid, crc250, irc)
   end if
   call plot_strepfiles(pss,crc250,irc)
   if (irc.ne.0) then
-     call plot_errorappend(crc250,"|")
-     call plot_errorappend(crc250,trim(myname))
+     call plot_errorappend(crc250,myname)
      call plot_errorappend(crc250," Error return from plo_strepfiles.")
      call plot_errorappendi(crc250,irc)
+     call plot_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

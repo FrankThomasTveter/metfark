@@ -21,10 +21,10 @@ subroutine mod_pushtarget(sid, t80, v80, l80, u80, crc250, irc)
   end if
   call model_pushtarget(css,t80,v80,l80,u80,crc250,irc)
   if (irc.ne.0) then
-     call model_errorappend(crc250,"|")
-     call model_errorappend(crc250,trim(myname))
+     call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from model_stackclear.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

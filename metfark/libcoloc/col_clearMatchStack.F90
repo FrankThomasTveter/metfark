@@ -17,10 +17,10 @@ subroutine col_clearmatchstack(sid, crc250, irc)
     end if
   call colocation_clearmatchstack(css,crc250,irc)
   if (irc.ne.0) then
-     call colocation_errorappend(crc250,"|")
-     call colocation_errorappend(crc250,trim(myname))
+     call colocation_errorappend(crc250,myname)
      call colocation_errorappend(crc250," Error return from colocation_stackclear.")
      call colocation_errorappendi(crc250,irc)
+     call colocation_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

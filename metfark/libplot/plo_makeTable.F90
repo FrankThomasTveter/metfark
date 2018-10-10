@@ -57,10 +57,10 @@ subroutine plo_maketable(sid,cid,mid,oid,tab250,gra250,cat250,test,fill250,crc25
   !
   call  plot_maketable(pss,css,mss,oss,tab250,gra250,cat250,test,fill250,crc250,irc)
   if (irc.ne.0) then
-     call plot_errorappend(crc250,"|")
-     call plot_errorappend(crc250,trim(myname))
+     call plot_errorappend(crc250,myname)
      call plot_errorappend(crc250," Error return from plot_maketable.")
      call plot_errorappendi(crc250,irc)
+     call plot_errorappend(crc250,"\n")
      return
   end if
   return

@@ -17,10 +17,10 @@ subroutine mod_determinefileorder(sid, crc250, irc)
   end if
   call model_stackorder(css,crc250,irc)
   if (irc.ne.0) then
-     call model_errorappend(crc250,"|")
      call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from model_stackorder.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,'Done.'

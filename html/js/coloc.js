@@ -167,10 +167,10 @@ function coloc_setConfigFilesDefaultInfo (ii,val) {
     }
 }
 function coloc_newModelTarget(item) {
-    var name=item.parentNode.parentNode.children[1].children[0].value;
-    var variable=item.parentNode.parentNode.children[2].children[0].value;
-    var minimum=item.parentNode.parentNode.children[4].children[0].value;
-    var maximum=item.parentNode.parentNode.children[5].children[0].value;
+    var name=item.parentNode.parentNode.children[0].children[0].value;
+    var variable=item.parentNode.parentNode.children[1].children[0].value;
+    var minimum=item.parentNode.parentNode.children[3].children[0].value;
+    var maximum=item.parentNode.parentNode.children[4].children[0].value;
     if (name !== "" && variable !== "") {
 	var file= coloc_getConfigFile();
 	if (coloc_config[file] === undefined) {
@@ -191,10 +191,10 @@ function coloc_newModelTarget(item) {
 	//coloc_showModelTargetTable();
 	//coloc_showModelDefaultTable();
 	coloc_show();
+	item.parentNode.parentNode.children[0].children[0].value="";	
 	item.parentNode.parentNode.children[1].children[0].value="";	
-	item.parentNode.parentNode.children[2].children[0].value="";	
+	item.parentNode.parentNode.children[3].children[0].value="";	
 	item.parentNode.parentNode.children[4].children[0].value="";	
-	item.parentNode.parentNode.children[5].children[0].value="";	
     } else {
 	alert("Invalid: name ('"+name+"'), variable ('"+variable+"')");
     }
@@ -211,7 +211,7 @@ function coloc_newModelDefault(item) {
     var line={targets:{},info:{}};
     var ok=false;
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
-    var pos=1;
+    var pos=0;
     var val=item.parentNode.parentNode.children[pos].children[0].value
     if (val !== undefined && val !== "") {
 	ok=true;
@@ -244,13 +244,13 @@ function coloc_newModelDefault(item) {
 function coloc_newObsTarget(item) {
     var ofile=coloc_getObsConfigFile();
     if ( obs_config[ofile] !== undefined) {
-	var name=item.parentNode.parentNode.children[1].children[0].value;
+	var name=item.parentNode.parentNode.children[0].children[0].value;
 	if (obs_config[ofile]["targets"][name] === undefined) {
-	    var pos=item.parentNode.parentNode.children[2].children[0].value;
-	    var descr=item.parentNode.parentNode.children[4].children[0].value;
-	    var info=item.parentNode.parentNode.children[5].children[0].value;
-	    var minimum=item.parentNode.parentNode.children[6].children[0].value;
-	    var maximum=item.parentNode.parentNode.children[7].children[0].value;
+	    var pos=item.parentNode.parentNode.children[1].children[0].value;
+	    var descr=item.parentNode.parentNode.children[3].children[0].value;
+	    var info=item.parentNode.parentNode.children[4].children[0].value;
+	    var minimum=item.parentNode.parentNode.children[5].children[0].value;
+	    var maximum=item.parentNode.parentNode.children[6].children[0].value;
 	    var bufrType = obs_config[ofile]["bufrType"];
 	    var subType = obs_config[ofile]["subType"];
 	    if (name !== "") {
@@ -274,12 +274,12 @@ function coloc_newObsTarget(item) {
 		    coloc_configEd++;
 		    //coloc_showObsTargetTable();
 		    coloc_show();
+		    item.parentNode.parentNode.children[0].children[0].value="";
 		    item.parentNode.parentNode.children[1].children[0].value="";
-		    item.parentNode.parentNode.children[2].children[0].value="";
+		    item.parentNode.parentNode.children[3].children[0].value="";
 		    item.parentNode.parentNode.children[4].children[0].value="";
 		    item.parentNode.parentNode.children[5].children[0].value="";
 		    item.parentNode.parentNode.children[6].children[0].value="";
-		    item.parentNode.parentNode.children[7].children[0].value="";
 		} else {
 		    alert("Invalid: position ('"+pos+"'), BUFR type ('"+bufrType+"'), subType ('"+
 			  subType+"'), minimum('"+minimum+"'), maximum('"+maximum+"') detected.");
@@ -362,10 +362,6 @@ function coloc_showModelTargetTable() {
 function coloc_insertModelTargetIndexRow(item,target,variable,color,min,max) {
     var row = document.createElement("TR");
     var td, inp;
-    // make "-" column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(td);
     //
     // make target name column
     td=document.createElement("TD");
@@ -433,6 +429,10 @@ function coloc_insertModelTargetIndexRow(item,target,variable,color,min,max) {
     inp.setAttribute("title","Maximum model index value");
     td.appendChild(inp);
     row.appendChild(td);
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    row.appendChild(td);
     // make add row to table
     if (item !== undefined) {
 	item.parentNode.insertBefore(row,item);
@@ -447,17 +447,6 @@ function coloc_insertModelTargetRow(item,target,ii,variable,color,min,max) {
     var file = coloc_getModelConfigFile();
     console.log("coloc: Adding model target row for :",file,target,variable);
     var td, inp;
-    // make "-" column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    var btn=document.createElement("BUTTON");
-    btn.setAttribute("title","Remove model target");
-    btn.setAttribute("onclick","coloc_removeModelTarget(this.parentNode.parentNode,'"+target+"')");
-    btn.setAttribute("style","width:100%");
-    var t=document.createTextNode("-");
-    btn.appendChild(t);
-    td.appendChild(btn);
-    row.appendChild(td);
     // make target name column
     td=document.createElement("TD");
     td.setAttribute("style","");
@@ -510,6 +499,17 @@ function coloc_insertModelTargetRow(item,target,ii,variable,color,min,max) {
     inp.setAttribute("title","Maximum model value");
     td.appendChild(inp);
     row.appendChild(td);
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("title","Remove model target");
+    btn.setAttribute("onclick","coloc_removeModelTarget(this.parentNode.parentNode,'"+target+"')");
+    btn.setAttribute("style","width:100%");
+    var t=document.createTextNode("-");
+    btn.appendChild(t);
+    td.appendChild(btn);
+    row.appendChild(td);
     // make add row to table
     if (item !== undefined) {
 	item.parentNode.insertBefore(row,item);
@@ -532,10 +532,6 @@ function coloc_showModelDefaultTable() {
 // create model default table header
 function coloc_insertModelDefaultHeader(row,file) {
     var td,bf;
-    // make "-" column
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(td);
     var mfile=coloc_getModelConfigFile();
     if (model_config[mfile] !== undefined) {
 	var indexTarget=model_config[mfile]["indexTarget"];
@@ -564,11 +560,14 @@ function coloc_insertModelDefaultHeader(row,file) {
     bf.innerHTML="information";
     td.appendChild(bf);
     row.appendChild(td);
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    row.appendChild(td);
 }
 
 function coloc_insertModelDefaultRow(item,file) {
     var td;
-    // make "-" column
     var mfile=coloc_getModelConfigFile();
     if (model_config[mfile] !== undefined) {
 	var indexTarget=model_config[mfile]["indexTarget"];
@@ -580,16 +579,6 @@ function coloc_insertModelDefaultRow(item,file) {
     for (var ii=0;ii<len;ii++){
 	if (coloc_config[file]["modelConfigFile"]["def"][ii]["targets"] !== undefined) {
 	    var row = document.createElement("TR");
-	    td=document.createElement("TD");
-	    td.setAttribute("style","min-width:25px;width:25px");
-	    var btn=document.createElement("BUTTON");
-	    btn.setAttribute("title","Remove model default");
-	    btn.setAttribute("onclick","coloc_removeModelDefault(this.parentNode.parentNode,'"+file+"',"+ii+")");
-	    btn.setAttribute("style","width:100%");
-	    var t=document.createTextNode("-");
-	    btn.appendChild(t);
-	    td.appendChild(btn);
-	    row.appendChild(td);
 	    // insert index column
 	    td=document.createElement("TD");
 	    td.setAttribute("class","fill");
@@ -628,6 +617,17 @@ function coloc_insertModelDefaultRow(item,file) {
 	    inp.setAttribute("title","Information");
 	    td.appendChild(inp);
 	    row.appendChild(td);
+	    // make "-" column
+	    td=document.createElement("TD");
+	    td.setAttribute("style","min-width:25px;width:25px");
+	    var btn=document.createElement("BUTTON");
+	    btn.setAttribute("title","Remove model default");
+	    btn.setAttribute("onclick","coloc_removeModelDefault(this.parentNode.parentNode,'"+file+"',"+ii+")");
+	    btn.setAttribute("style","width:100%");
+	    var t=document.createTextNode("-");
+	    btn.appendChild(t);
+	    td.appendChild(btn);
+	    row.appendChild(td);
 	    // make add row to table
 	    item.parentNode.insertBefore(row,item);
 	};
@@ -638,23 +638,12 @@ function coloc_insertModelDefaultRow(item,file) {
 // create model default table newline
 function coloc_insertModelDefaultNewline(row,file) {
     var td,btn,inp;
-    // make "-" column
     var mfile=coloc_getModelConfigFile();
     if (model_config[mfile] !== undefined) {
 	var indexTarget=model_config[mfile]["indexTarget"];
     } else {
 	var indexTarget="";
     }
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    btn=document.createElement("BUTTON");
-    btn.setAttribute("title","Add model default");
-    btn.setAttribute("onclick","coloc_newModelDefault(this)");
-    btn.setAttribute("style","width:100%");
-    var t=document.createTextNode("+");
-    btn.appendChild(t);
-    td.appendChild(btn);
-    row.appendChild(td);
     // insert index
     td=document.createElement("TD");
     td.setAttribute("class","fill");
@@ -692,6 +681,17 @@ function coloc_insertModelDefaultNewline(row,file) {
     inp.setAttribute("style","width:100%");
     inp.setAttribute("title","Information");
     td.appendChild(inp);
+    row.appendChild(td);
+    // make "-" column
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    btn=document.createElement("BUTTON");
+    btn.setAttribute("title","Add model default");
+    btn.setAttribute("onclick","coloc_newModelDefault(this)");
+    btn.setAttribute("style","width:100%");
+    var t=document.createTextNode("+");
+    btn.appendChild(t);
+    td.appendChild(btn);
     row.appendChild(td);
 }
 function coloc_removeModelDefault(item,file,ii) {
@@ -778,14 +778,9 @@ function coloc_showObsTargetTable() {
 // create obs index target table row
 function coloc_insertOTargetIndexRow(item,target,exp,min,max) {
     // insert obs target index expression from obs-config file
-    // make "-" column  ***************************
     var row = document.createElement("TR");
-    var td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(td);
-    //
     // make target NAME column  ***************************
-    td=document.createElement("TD");
+    var td=document.createElement("TD");
     td.setAttribute("style","color:blue");
     td.innerHTML=target;
     row.appendChild(td);
@@ -849,16 +844,17 @@ function coloc_insertOTargetIndexRow(item,target,exp,min,max) {
     inp.setAttribute("title","Maximum observation value");
     td.appendChild(inp);
     row.appendChild(td);
+    // make "-" column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    row.appendChild(td);
+    //
     item.parentNode.insertBefore(row,item);
 }
 // create auto table row
 function coloc_insertOTargetRow(item,target,pos,descr,color,info) {
     var row = document.createElement("TR");
     var td, inp;
-    // make "-" column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    row.appendChild(td);
     // make NAME column  ***************************
     td=document.createElement("TD");
     td.innerHTML=target;
@@ -883,6 +879,10 @@ function coloc_insertOTargetRow(item,target,pos,descr,color,info) {
     td.setAttribute("colspan","3");
     td.innerHTML=info;
     row.appendChild(td);
+    // make "-" column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    row.appendChild(td);
     // make add row to table  ***************************
     item.parentNode.insertBefore(row,item);
     return row;
@@ -891,17 +891,6 @@ function coloc_insertOTargetRow(item,target,pos,descr,color,info) {
 function coloc_insertObsTargetRow(item,target,ii,pos,descr,color,info,min,max) {
     var row = document.createElement("TR");
     var td, inp;
-    // make "-" column  ***************************
-    td=document.createElement("TD");
-    td.setAttribute("style","min-width:25px;width:25px");
-    var btn=document.createElement("BUTTON");
-    btn.setAttribute("title","Remove observation target");
-    btn.setAttribute("onclick","removeObsTarget(this.parentNode.parentNode,'"+target+"')");
-    btn.setAttribute("style","width:100%");
-    var t=document.createTextNode("-");
-    btn.appendChild(t);
-    td.appendChild(btn);
-    row.appendChild(td);
     // make NAME column  ***************************
     td=document.createElement("TD");
     td.innerHTML=target;
@@ -978,6 +967,17 @@ function coloc_insertObsTargetRow(item,target,ii,pos,descr,color,info,min,max) {
     inp.setAttribute("onblur","coloc_setConfigFilesTarget('obsConfigFile','"+target+"','max',this.value);");
     inp.setAttribute("title","Maximum target value");
     td.appendChild(inp);
+    row.appendChild(td);
+    // make "-" column  ***************************
+    td=document.createElement("TD");
+    td.setAttribute("style","min-width:25px;width:25px");
+    var btn=document.createElement("BUTTON");
+    btn.setAttribute("title","Remove observation target");
+    btn.setAttribute("onclick","removeObsTarget(this.parentNode.parentNode,'"+target+"')");
+    btn.setAttribute("style","width:100%");
+    var t=document.createTextNode("-");
+    btn.appendChild(t);
+    td.appendChild(btn);
     row.appendChild(td);
     // make add row to table  ***************************
     item.parentNode.insertBefore(row,item);
@@ -1183,10 +1183,10 @@ function coloc_removeModelTarget(item,target) {
     var file=coloc_getConfigFile();
     if (coloc_config[file] !== undefined) {
 	var item=document.getElementById("newlineModelTarget");
-	item.children[1].children[0].value=target;
-	item.children[2].children[0].value=coloc_config[file]["modelConfigFile"]["targets"][target]["variable"];
-	item.children[4].children[0].value=coloc_config[file]["modelConfigFile"]["targets"][target]["min"];
-	item.children[5].children[0].value=coloc_config[file]["modelConfigFile"]["targets"][target]["max"];
+	item.children[0].children[0].value=target;
+	item.children[1].children[0].value=coloc_config[file]["modelConfigFile"]["targets"][target]["variable"];
+	item.children[3].children[0].value=coloc_config[file]["modelConfigFile"]["targets"][target]["min"];
+	item.children[4].children[0].value=coloc_config[file]["modelConfigFile"]["targets"][target]["max"];
 	delete coloc_config[file]["modelConfigFile"]["targets"][target];
 	if (obs_isEmpty(coloc_config[file]["modelConfigFile"]["targets"])) {
 	    delete coloc_config[file]["modelConfigFile"]["def"];
@@ -1204,12 +1204,12 @@ function removeObsTarget(item,target) {
     var file=coloc_getConfigFile();
     if (coloc_config[file] !== undefined) {
 	var item=document.getElementById("newlineObsTarget");
-	item.children[1].children[0].value=target;
-	item.children[2].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["pos"];
-	item.children[4].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["descr"];
-	item.children[5].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["info"];
-	item.children[6].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["min"];
-	item.children[7].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["max"];
+	item.children[0].children[0].value=target;
+	item.children[1].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["pos"];
+	item.children[3].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["descr"];
+	item.children[4].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["info"];
+	item.children[5].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["min"];
+	item.children[6].children[0].value=coloc_config[file]["obsConfigFile"]["targets"][target]["max"];
 	delete coloc_config[file]["obsConfigFile"]["targets"][target];
 	if (obs_isEmpty(coloc_config[file]["obsConfigFile"]["targets"])) {
 	    delete coloc_config[file]["obsConfigFile"]["def"];
@@ -1310,7 +1310,7 @@ function coloc_saveConfigFile(target) {
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to save file: "+file+"\n"+msg);
 		  };
 		  documentLog.innerHTML="";}
@@ -1339,10 +1339,10 @@ function coloc_showConfig() {
 		if (children[ii].getAttribute !== undefined) {
 		    var att=children[ii].getAttribute("id");
 		    if (att !== "labelsModelTarget" && att !== "newlineModelTarget") {
-			var name=children[ii].children[1].innerHTML;
-			var variable=children[ii].children[2].children[0].value;
-			var min=children[ii].children[4].children[0].value;
-			var max=children[ii].children[5].children[0].value;
+			var name=children[ii].children[0].innerHTML;
+			var variable=children[ii].children[1].children[0].value;
+			var min=children[ii].children[3].children[0].value;
+			var max=children[ii].children[4].children[0].value;
 			coloc_config[file]["modelConfigFile"]["targets"][name]=
 			    {variable:variable,min:min,max:max};;
 		    }
@@ -1388,13 +1388,13 @@ function coloc_showConfig() {
 		if (children[ii].getAttribute !== undefined) {
 		    var att=children[ii].getAttribute("id");
 		    if (att !== "labelsObsTarget" && att !== "newlineObsTarget") {
-			var name=children[ii].children[1].innerHTML;
-			var bufrType=children[ii].children[2].children[0].value;
-			var subType=children[ii].children[4].children[0].value;
-			var pos=children[ii].children[6].children[0].value;
-			var descr=children[ii].children[8].children[0].value;
-			var min=children[ii].children[9].children[0].value;
-			var max=children[ii].children[10].children[0].value;
+			var name=children[ii].children[0].innerHTML;
+			var bufrType=children[ii].children[1].children[0].value;
+			var subType=children[ii].children[3].children[0].value;
+			var pos=children[ii].children[5].children[0].value;
+			var descr=children[ii].children[7].children[0].value;
+			var min=children[ii].children[8].children[0].value;
+			var max=children[ii].children[9].children[0].value;
 			coloc_config[file]["obsConfigFile"]["targets"][name]=
 			    {bufrType:bufrType,subType:subType,pos:pos,descr:descr,min:min,max:max};
 		    }
@@ -1523,7 +1523,7 @@ function coloc_debugExp(f,t) {
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to evaluate expression:"+expin+"\n"+msg);
 		  } else {
 		      var results=data.getElementsByTagName("result");
@@ -1553,7 +1553,7 @@ function coloc_mkdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to mkdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -1572,7 +1572,7 @@ function coloc_rmdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -1591,7 +1591,7 @@ function coloc_rmfile(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmfile: "+path+"\n"+msg);
 	      } else {
 		  delete coloc_config[path];

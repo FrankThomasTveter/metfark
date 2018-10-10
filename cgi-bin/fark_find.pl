@@ -536,7 +536,7 @@ sub processObsFile {
 			if (defined $seqno) {
 			    foreach my $pos (sort {$a<=>$b} keys %{$seqno}) {
 				if ($pos < 250) {
-				    print "### VALUE: '$pos'->'".($val1->{$pos}//"")."'\n";
+				    #print "### VALUE: '$pos'->'".($val1->{$pos}//"")."'\n";
 			
 				    my $posNode = XML::LibXML::Element->new( 'seq' );
 				    $posNode->setAttribute("pos",$pos//"");

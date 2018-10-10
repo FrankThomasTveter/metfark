@@ -18,10 +18,10 @@ subroutine obs_popfile(sid,path250,crc250,irc)
   !write(*,*) myname,'Entering.',irc
   call observation_stackpop(css,path250,crc250,irc)
   if (irc.ne.0) then
-     call observation_errorappend(crc250,"|")
      call observation_errorappend(crc250,myname)
      call observation_errorappend(crc250," Error return from observation_stackpop.")
      call observation_errorappendi(crc250,irc)
+     call observation_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,'Done.'

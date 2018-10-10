@@ -121,6 +121,7 @@ xs_closeModelSession(int mid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 251);
+      strcpy(crc250,"");
       mod_closesession_(&mid,crc250, &irc, 250);
       if (irc == 0) {
          strcpy(crc250,"No error detected.");
@@ -175,6 +176,7 @@ xs_closeObsSession(int sid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 251);
+      strcpy(crc250,"");
       obs_closesession_(&sid,crc250, &irc, 250);
       if (irc == 0) {
          strcpy(crc250,"No error detected.");
@@ -227,6 +229,7 @@ xs_closeColocSession(int cid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 251);
+      strcpy(crc250,"");
       col_closesession_(&cid,crc250, &irc, 250);
       if (irc == 0) {
          strcpy(crc250,"No error detected.");
@@ -278,6 +281,7 @@ xs_closePlotSession(int pid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 251);
+      strcpy(crc250,"");
       plo_closesession_(&pid,crc250, &irc, 250);
       if (irc == 0) {
          strcpy(crc250,"No error detected.");
@@ -303,8 +307,8 @@ xs_makeModelCache(int sid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       mod_makecache_(&sid,path250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -332,8 +336,8 @@ xs_makeObsCache(int sid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       obs_makecache_(&sid, path250,crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -361,8 +365,8 @@ xs_loadModelCache(int sid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       mod_loadcache_(&sid,path250,crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -390,8 +394,8 @@ xs_setModelCache(int cid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       col_setmodcache_(&cid, path250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -419,8 +423,8 @@ xs_loadObsCache(int sid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       obs_loadcache_(&sid,path250,crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -448,8 +452,8 @@ xs_setObsCache(int cid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       col_setobscache_(&cid, path250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -482,8 +486,8 @@ xs_clearModelFileStack(int sid, ...);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      varname = calloc(sizeof(char), 80);
       strcpy(crc250,"");
+      varname = calloc(sizeof(char), 80);
       if (items >= 2) {
          vararg= (char *)SvPV_nolen(ST(1));
          strcpy(varname,vararg);
@@ -569,8 +573,8 @@ xs_pushModelFile(int sid, ...);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       for (i=1; i < items; i++) {
          path= (char *)SvPV_nolen(ST(i));
          strcpy(path250,path);
@@ -613,6 +617,7 @@ xs_peekModelFile(int sid);
     PPCODE:
 	irc=0;
 	crc250 = calloc(sizeof(char), 251);
+        strcpy(crc250,"");
 	mod_peekfilelen_(&sid,&maxrep,crc250,&irc,250);
         nrep=0;
         if (irc == 0) {
@@ -661,8 +666,8 @@ xs_popModelFile(int sid, ...);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 251);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       for (i=1; i < items; i++) {
          path= (char *)SvPV_nolen(ST(i));
          strcpy(path250,path);
@@ -723,9 +728,9 @@ xs_setModelIndexLimits(int mid, char* smin, char* smax);
       int  irc;
       char *crc250;
     PPCODE:
-	irc=0;
-	crc250 = calloc(sizeof(char), 251);
  	irc=0;
+	crc250 = calloc(sizeof(char), 251);
+        strcpy(crc250,"");
         mod_setindexlimits_(&mid, smin, smax, crc250, &irc, strlen(smin),strlen(smax), 250);
         #printf("fark.xs Setindexlimits here: %d %s\n",irc,crc250); 
 	EXTEND(SP, 2);
@@ -759,11 +764,11 @@ xs_pushModelTarget(int mid, char *modName, char *var, char *vmin, char *vmax);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       m80 = calloc(sizeof(char), 80);
       v80 = calloc(sizeof(char), 80);
       l80 = calloc(sizeof(char), 80);
       u80 = calloc(sizeof(char), 80);
-      strcpy(crc250,"");
       strcpy(m80,modName);
       strcpy(v80,var);
       strcpy(l80,vmin);
@@ -801,9 +806,9 @@ xs_addDefault(int cid, char *modName, char *val);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       m80 = calloc(sizeof(char), 80);
       v80 = calloc(sizeof(char), 80);
-      strcpy(crc250,"");
       strcpy(m80,modName);
       strcpy(v80,val);
       col_adddefault_(&cid, m80, v80, crc250, &irc, 80,80,250);
@@ -889,11 +894,11 @@ xs_pushMatchRule(int cid, char *modName, char *obsExpr, char *vmin, char *vmax);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       m80 = calloc(sizeof(char), 80);
       o250 = calloc(sizeof(char), 250);
       l80 = calloc(sizeof(char), 80);
       u80 = calloc(sizeof(char), 80);
-      strcpy(crc250,"");
       strcpy(m80,modName);
       strcpy(o250,obsExpr);
       strcpy(l80,vmin);
@@ -953,8 +958,8 @@ xs_setObsTablePath(int oid, char *path);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       strcpy(path250,path);
       obs_settablepath_(&oid, path250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1012,8 +1017,8 @@ xs_pushObsFile(int oid, ...);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       for (i=1; i < items; i++) {
          path= (char *)SvPV_nolen(ST(i));
          strcpy(path250,path);
@@ -1055,6 +1060,7 @@ xs_peekObsFile(int oid);
     PPCODE:
 	irc=0;
 	crc250 = calloc(sizeof(char), 251);
+        strcpy(crc250,"");
 	obs_peekfilelen_(&oid,&maxrep,crc250,&irc,250);
         nrep=0;
         if (irc == 0) {
@@ -1103,8 +1109,8 @@ xs_popObsFile(int oid, ...);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 251);
-      path250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      path250 = calloc(sizeof(char), 250);
       for (i=1; i < items; i++) {
          path= (char *)SvPV_nolen(ST(i));
          strcpy(path250,path);
@@ -1141,9 +1147,9 @@ xs_setObsIndexLimits(int sid, char *sindex, char *eindex);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       s25 = calloc(sizeof(char), 25);
       e25 = calloc(sizeof(char), 25);
-      strcpy(crc250,"");
       strcpy(s25,sindex);
       strcpy(e25,eindex);
       #printf("fark.xs Calling setINdexLimits: %s %s\n",s25,e25); 
@@ -1233,9 +1239,9 @@ xs_setObsIndex(int sid, char *target, char *expr);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       t80 = calloc(sizeof(char), 80);
       e250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
       strcpy(t80,target);
       strcpy(e250,expr);
       obs_setindex_(&sid, t80, e250,crc250, &irc, 80,250,250);
@@ -1294,8 +1300,8 @@ xs_expression(char *exp);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      exp250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      exp250 = calloc(sizeof(char), 250);
       strcpy(exp250,exp);
       col_expression_(exp250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1377,8 +1383,8 @@ xs_setColocXMLFile(int pid, char *fn);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      fn250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      fn250 = calloc(sizeof(char), 250);
       strcpy(fn250,fn);
       col_setxmlfile_(&pid, fn250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1406,8 +1412,8 @@ xs_getColocXMLFile(int pid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      fn250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      fn250 = calloc(sizeof(char), 250);
       strcpy(fn250,"");
       col_getxmlfile_(&pid, fn250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1437,9 +1443,9 @@ xs_setShapeFile(char *fn, char *cn);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       fn250 = calloc(sizeof(char), 250);
       cn11 = calloc(sizeof(char), 11);
-      strcpy(crc250,"");
       strcpy(fn250,fn);
       strcpy(cn11,cn);
       par_setshapefile_(fn250, cn11, crc250, &irc, 250, 11, 250);
@@ -1469,8 +1475,8 @@ xs_simplifyShapes(char *tol);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      tol20 = calloc(sizeof(char), 20);
       strcpy(crc250,"");
+      tol20 = calloc(sizeof(char), 20);
       strcpy(tol20,tol);
       par_simplifyshapes_(tol20, crc250, &irc, 20, 250);
       if(irc == 0) {
@@ -1527,9 +1533,9 @@ xs_makeColocXML(int cid, int mid, int oid, char *xml, int test, char *fill);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       fill250 = calloc(sizeof(char), 250);
       xml250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
 strcpy(fill250,fill);
       strcpy(xml250,xml);
       col_makexml_(&cid, &mid, &oid, xml250, &test, fill250,crc250, &irc, 250, 250,250);
@@ -1568,11 +1574,11 @@ xs_makePlotTable(int pid, int cid, int mid, int oid, char *table, char *graph, c
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       tab250 = calloc(sizeof(char), 250);
       gra250 = calloc(sizeof(char), 250);
       cat250 = calloc(sizeof(char), 250);
       fill250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
       strcpy(tab250,table);
       strcpy(gra250,graph);
       strcpy(cat250,cat);
@@ -1608,8 +1614,8 @@ xs_setPlotType(int pid, char *type);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      type250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      type250 = calloc(sizeof(char), 250);
       strcpy(type250,type);
       plo_settype_(&pid, type250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1637,8 +1643,8 @@ xs_setPlotTableFile(int pid, char *fn);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      fn250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      fn250 = calloc(sizeof(char), 250);
       strcpy(fn250,fn);
       plo_settablefile_(&pid, fn250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1666,8 +1672,8 @@ xs_getPlotTableFile(int pid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      fn250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      fn250 = calloc(sizeof(char), 250);
       strcpy(fn250,"");
       plo_gettablefile_(&pid, fn250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1696,8 +1702,8 @@ xs_setPlotGraphicsFile(int pid, char *fn);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      fn250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      fn250 = calloc(sizeof(char), 250);
       strcpy(fn250,fn);
       plo_setgraphicsfile_(&pid, fn250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1725,8 +1731,8 @@ xs_getPlotGraphicsFile(int pid);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
-      fn250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
+      fn250 = calloc(sizeof(char), 250);
       strcpy(fn250,"");
       plo_getgraphicsfile_(&pid, fn250, crc250, &irc, 250, 250);
       if(irc == 0) {
@@ -1806,9 +1812,9 @@ xs_pushPlotAttribute(int pid, char *name, char *value);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       name80 = calloc(sizeof(char), 80);
       value250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
       strcpy(name80,name);
       strcpy(value250,value);
       plo_pushattr_(&pid, name80, value250, crc250, &irc, 80, 250, 250);
@@ -1892,9 +1898,9 @@ xs_pushPlotColumn(int pid, char *name, char *expr);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       name80 = calloc(sizeof(char), 80);
       exp250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
       strcpy(name80,name);
       strcpy(exp250,expr);
       plo_pushcolumn_(&pid, name80, exp250, crc250, &irc, 80, 250, 250);
@@ -1933,9 +1939,9 @@ xs_pushPlotSet(int pid, int cid, int mid, int oid, char *name, char *legend);
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
       name80 = calloc(sizeof(char), 80);
       legend250 = calloc(sizeof(char), 250);
-      strcpy(crc250,"");
       strcpy(name80,name);
       strcpy(legend250,legend);
       plo_pushset_(&pid, &cid, &mid, &oid, name80, legend250, crc250, &irc, 80, 250, 250);

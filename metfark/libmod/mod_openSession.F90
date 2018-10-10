@@ -9,10 +9,10 @@ subroutine mod_opensession(sid, crc250, irc)
   !write(*,*) myname,'Entering.',irc
   call model_opensession(sid,css,crc250,irc)
   if (irc.ne.0) then
-     call model_errorappend(crc250,"|")
      call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from model_openSession.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,'Done.'

@@ -69,12 +69,18 @@ button:hover, button:focus {
     background-color: yellow;
 }
 .test:hover, .test:focus {
-    background-color: orange;
+    background-color: red;
 }
 .run {
-    background-color: Tomato;
+    background-color: limegreen;
 }
 .run:hover, .run:focus {
+    background-color: red;
+}
+.stop {
+    background-color: Tomato;
+}
+.stop:hover, .stop:focus {
     background-color: red;
 }
 .shaded {

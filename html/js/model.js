@@ -154,7 +154,7 @@ function model_saveConfigFile() {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to save file: "+file+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -186,7 +186,7 @@ function model_fileFind(sfile) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
 	      } else {
 		  dataToArray(data,status,documentLog);
@@ -208,7 +208,7 @@ function model_mkdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to mkdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -228,7 +228,7 @@ function model_rmdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -247,7 +247,7 @@ function model_rmfile(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmfile: "+path+"\n"+msg);
 	      } else {
 		  delete model_config[path];

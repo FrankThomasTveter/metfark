@@ -79,10 +79,10 @@ sub permissionDenied {
     my $logfile = shift;
     my $logcls = shift;
     my ($fpath, $name) = farkdir::splitName($logfile);
-    print "Path: $fpath $logcls\n";
     my ($root, $loc, $priv) = farkdir::splitDir( $fpath, $logcls);
-    print "splitDir Return: $fpath -> $root $loc $priv\n";
     if ($priv ne "rw") {
+	print "Path: $fpath $logcls\n";
+	print "splitDir Return: $fpath -> $root $loc $priv\n";
 	printStrong("${logfile}   -- Permission denied --","!");
 	return 1;
     } else {
@@ -124,10 +124,11 @@ sub printFile {
 	if ($s) {$s="(".$s.")"};
 	my $size = $stat->size;
 	printStrong("${file}   ${size}  ${mtime} ${s}",$str);
-	open (FH, $file);
+	open (FH, "<", $file);
 	while (<FH>) {
-	    print (<FH>);
+	    print;
 	}
+	close(FH);
     } else {
 	printStrong("${file}   -- No such file --",$str);
     }

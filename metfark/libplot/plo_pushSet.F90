@@ -55,10 +55,10 @@ subroutine plo_pushset(sid,cid,mid,oid,nam80,leg250,crc250, irc)
   !
   call  plot_pushset(pss,css,mss,oss,nam80,leg250,crc250, irc)
   if (irc.ne.0) then
-     call plot_errorappend(crc250,"|")
-     call plot_errorappend(crc250,trim(myname))
+     call plot_errorappend(crc250,myname)
      call plot_errorappend(crc250," Error return from plot_pushset.")
      call plot_errorappendi(crc250,irc)
+     call plot_errorappend(crc250,"\n")
      return
   end if
   !write(*,*)myname,'Exiting:',irc,sid,cid,mid,oid,nam80

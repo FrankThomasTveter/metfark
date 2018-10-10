@@ -19,10 +19,10 @@ subroutine mod_setIndexlimits(sid, smin, smax, crc250, irc)
   end if
   call model_setindexlimits(css, smin, smax, crc250,irc)
   if (irc.ne.0) then
-     call model_errorappend(crc250,"|")
-     call model_errorappend(crc250,trim(myname))
+     call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from model_setindexlimits.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   if(mod_bdeb)write(*,*) myname,' Done.'

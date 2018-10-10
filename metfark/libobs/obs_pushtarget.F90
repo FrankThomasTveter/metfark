@@ -25,10 +25,10 @@ subroutine obs_pushtarget(sid,trg,pos,descr,info,&
   call observation_pushtarget(css,trg,pos,descr,info,&
        & min,max,crc250,irc)
   if (irc.ne.0) then
-     call observation_errorappend(crc250,"|")
-     call observation_errorappend(crc250,trim(myname))
+     call observation_errorappend(crc250,myname)
      call observation_errorappend(crc250," Error return from observation_pushtarget.")
      call observation_errorappendi(crc250,irc)
+     call observation_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

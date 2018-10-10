@@ -138,25 +138,25 @@ sub open {
     my $class = shift; 
     my $self={}; 
     if (my ($ret,$msg,$mid) = xs_openModelSession()){
-    	if ($ret != 0) {die $msg;}
+    	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     	$self->{MID}=$mid;
     } else {
     	die "Unable to create class $class\n";
     }
     if (my ($ret,$msg,$bid) = xs_openObsSession()){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	$self->{OID}=$bid;
     } else {
 	die "Unable to create class $class\n";
     }
     if (my ($ret,$msg,$cid) = xs_openColocSession()){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	$self->{CID}=$cid;
     } else {
 	die "Unable to create class $class\n";
     }
     if (my ($ret,$msg,$pid) = xs_openPlotSession()){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	$self->{PID}=$pid;
     } else {
 	die "Unable to create class $class\n";
@@ -180,16 +180,16 @@ $fark->close();
 sub close { 
     my $self = shift; 
     if (my ($ret,$msg) = xs_closeModelSession($self->{MID})){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
     if (my ($ret,$msg) = xs_closeObsSession($self->{OID})){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
     if (my ($ret,$msg) = xs_closeColocSession($self->{CID})){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
     if (my ($ret,$msg) = xs_closePlotSession($self->{PID})){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
 }
 
@@ -222,7 +222,7 @@ sub clearModelFileStack {
     # list bufr types that should be used...
     #print "clearModelFile: $self->{MID}, @args\n";
     my ($ret,$msg) = xs_clearModelFileStack($self->{MID},@args);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -251,7 +251,7 @@ sub pushModelFile {
     my ($self,@args)=@_;
     #print "pushModelFile Arguments: $self->{MID}, @args\n";
     my ($ret,$msg) = xs_pushModelFile($self->{MID},@args);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -277,7 +277,7 @@ my $peekdata = $fark->peekModelFile();
 sub peekModelFile {
     my ($self)=@_;
     if (my ($ret,$msg,$nrep,@reps) = xs_peekModelFile($self->{MID})){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	my $hash=getHash($nrep,0,@reps);
 	bless $hash => "farkdata";
 	return $hash;
@@ -315,7 +315,7 @@ $fark->popModelFile();
 sub popModelFile {
     my ($self,@args)=@_;
     my ($ret,$msg) = xs_popModelFile($self->{MID},@args);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -376,12 +376,13 @@ sub updateModelRegister {
 	farkdir::makePath($dir);
 	## No files will be retrieved first time...
 	#%file_loaded = map {$_, 1} @new_file_list;
-	#print ">>>> No register file $register_file available.\n";
+	print ">>>> No register file $register_file available.\n";
 	$write_register_file=1;
     } else {
 	# Load register file 
-	#print ">>>> Reading register file: $register_file\n";
 	if (CORE::open(REGISTER, "<$register_file")) { 
+	    my $time=time() - <REGISTER>;
+	    print ">>>> Reading register file: $register_file (age=".pretty($time).")\n";
 	    while (<REGISTER>) {
 		chomp;
 		my $list=$_;
@@ -405,17 +406,15 @@ sub updateModelRegister {
 	}
     }
     # find new files that need to be scanned
+    if ($test) { print "Testing...";};
     foreach my $file (@new_file_list) {
 	if (not defined $file_loaded{$file}) {
 	    $write_register_file=1;
 	    push (@push_files,$file);
-
-	    print "File: '$file'\n";
-
-	    # touch fill-file...
-	    if ($fill_file) {
+	    if ($fill_file) { # touch fill-file
 		farkdir::touchFile ($fill_file);
-		if ($test) {
+		if ($test) { # only process first file...
+		    print ">>> Since this is a test, we only process: $file\n";
 		    # do not update register or stack
 		    $self->popModelFile(@pop_files); # remove old files
 
@@ -432,17 +431,28 @@ sub updateModelRegister {
 	}
     }
     $self->popModelFile(@pop_files); # remove old files
-    if (@push_files) {print "Pushing...\n";$self->pushModelFile(@push_files);} # add new files
+    if (@push_files) { # add new files
+	print ">>>> Adding ".scalar(@push_files)." new files '$mask' ($mask_dir)";
+	if ($min && $max) {print "<$min to $max>"; };
+	print "\n";
+	$self->pushModelFile(@push_files);
+    } else {
+	print ">>>> No new files '$mask' ($mask_dir)";
+	if ($min && $max) {print "<$min to $max>"; };
+	print "\n";
+    }
     # Update local register file
     if ($write_register_file) {
-	#print "Updating: $register_file\n";
 	if (not CORE::open (REGISTER,">$register_file")) {
 	    print ">>>> Unable to open $register_file\n";
+	} else {
+	    print ">>>> Updating: $register_file\n";
+	    print REGISTER time() . "\n";
+	    foreach (@new_file_list) {
+		print REGISTER "$new_file_hash{$_}\n";
+	    }
+	    CORE::close REGISTER;
 	}
-	foreach (@new_file_list) {
-	    print REGISTER "$new_file_hash{$_}\n";
-	}
-	CORE::close REGISTER;
 	chmod 0666, $register_file;
 
     }
@@ -474,7 +484,7 @@ sub makeModelCache {
     my ($dir,$name)=farkdir::splitName($modfile);
     farkdir::makePath($dir);
     if (my ($ret,$msg) = xs_makeModelCache($self->{MID},$modfile)){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	chmod 0666, $modfile;
     }
 }
@@ -501,7 +511,7 @@ sub loadModelCache {
     my $self = shift; 
     my $modfile = shift;
     if (my ($ret,$msg) = xs_loadModelCache($self->{MID},$modfile)){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;$msg =~ s/\\n/\n/g;die $msg;}
     }
 }
 
@@ -529,7 +539,7 @@ sub setModelCache {
     my ($dir,$name)=farkdir::splitName($modfile);
     farkdir::makePath($dir);
     if (my ($ret,$msg) = xs_setModelCache($self->{CID},$modfile)){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
 }
 
@@ -557,7 +567,7 @@ Arguments:
 sub setModelIndex {
     my ($self,$trg,$var)=@_;
     my ($ret,$msg) = xs_setModelIndex($self->{MID},$trg,$var);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 =head2 setModelIndexLimits
@@ -583,7 +593,7 @@ Arguments:
 sub setModelIndexLimits {
     my ($self,$min,$max)=@_;
     my ($ret,$msg) = xs_setModelIndexLimits($self->{MID},$min,$max);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 
@@ -600,7 +610,7 @@ $fark->clearModelTargetStack();
 sub clearModelTargetStack {
     my ($self)=@_;
     my ($ret,$msg) = xs_clearModelTargetStack($self->{OID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -631,7 +641,7 @@ $fark->pushModelTarget("modeltime","time","","");
 sub pushModelTarget {
     my ($self,$nam,$var,$min,$max)=@_;
     my ($ret,$msg) = xs_pushModelTarget($self->{OID},$nam,$var,$min,$max);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -649,7 +659,7 @@ $fark->clearDefaultStack();
 sub clearDefaultStack {
     my ($self)=@_;
     my ($ret,$msg) = xs_clearDefaultStack($self->{CID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -676,7 +686,7 @@ $fark->addDefault("modeltime","12220.0");
 sub addDefault {
     my ($self,$nam,$val)=@_;
     my ($ret,$msg) = xs_addDefault($self->{CID},$nam,$val);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -694,7 +704,7 @@ $fark->pushDefault();
 sub pushDefault {
     my ($self)=@_;
     my ($ret,$msg) = xs_pushDefault($self->{CID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -730,9 +740,10 @@ $fark->setObservationTablePath("/usr/share/metno-bufrtables/");
 sub setObservationTablePath {
     my ($self,$path)=@_;
     if ($path =~ m/.+[^\/]$/) {$path=$path . "/";};
+    $ENV{"PRINT_TABLE_NAMES"}="FALSE";
     $ENV{"BUFR_TABLES"}=$path;
     my ($ret,$msg) = xs_setObsTablePath($self->{OID},$path);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -752,7 +763,7 @@ sub clearObservationFileStack {
     # list obs types that should be used...
     #print "clearObsFile: $self->{OID}\n";
     my ($ret,$msg) = xs_clearObsFileStack($self->{OID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -778,7 +789,7 @@ Arguments:xs
 sub pushObservationFile {
     my ($self,@args)=@_;
     my ($ret,$msg) = xs_pushObsFile($self->{OID},@args);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -804,7 +815,7 @@ my $peekdata = $fark->peekObservationFile();
 sub peekObservationFile {
     my ($self)=@_;
     if (my ($ret,$msg,$nrep,@reps) = xs_peekObsFile($self->{OID})){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	my $hash=getHash($nrep,0,@reps);
 	bless $hash => "farkdata";
 	return $hash;
@@ -842,7 +853,7 @@ $fark->popObservationFile();
 sub popObservationFile {
     my ($self,@args)=@_;
     my ($ret,$msg) = xs_popObsFile($self->{OID},@args);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -900,12 +911,13 @@ sub updateObservationRegister {
 	farkdir::makePath($dir);
 	## No files will be retrieved first time...
 	#%file_loaded = map {$_, 1} @new_file_list;
-	#print "updateObservationRegister >>>> No register file $register_file available.\n";
+	print ">>>> No register file $register_file available.\n";
 	$write_register_file=1;
     } else {
 	# Load register file 
-	#print "updateObservationRegister >>>> Reading register file: '$register_file'\n";
 	if (CORE::open(REGISTER, "<$register_file")) { 
+	    my $time=time() - <REGISTER>;
+	    print ">>>> Reading register file: $register_file (age=".pretty($time).")\n";
 	    while (<REGISTER>) {
 		chomp;
 		my $list=$_;
@@ -936,9 +948,10 @@ sub updateObservationRegister {
 	if (not defined $file_loaded{$file}) {
 	    $write_register_file=1;
 	    push (@push_files,$file);
-	    if ($fill_file) {
+	    if ($fill_file) { # touch fill-file
 		farkdir::touchFile ($fill_file);
 		if ($test) {
+		    print ">>> Since this is a test, we only process: $file\n";
 		    # do not update register or stack
 		    $self->popObservationFile(@pop_files); # remove old files
 		    $self->pushObservationFile(@push_files); # add new files
@@ -949,17 +962,24 @@ sub updateObservationRegister {
 	}
     }
     $self->popObservationFile(@pop_files); # remove old files
-    if (@push_files) {$self->pushObservationFile(@push_files);} # add new files
+    if (@push_files) { # add new files
+	print ">>>> Adding ".scalar(@push_files)." new files '$mask' ($mask_dir)";
+	$self->pushObservationFile(@push_files);
+    } else {
+	print ">>>> No new files...\n";
+    }
     # Update local register file
     if ($write_register_file) {
-	#print "Updating: $register_file\n";
 	if (not CORE::open (REGISTER,">$register_file")) {
 	    print ">>>> Unable to open $register_file\n";
+	} else {
+	    print ">>>> Updating: $register_file\n";
+	    print REGISTER time() . "\n";
+	    foreach (@new_file_list) {
+		print REGISTER "$new_file_hash{$_}\n";
+	    }
+	    CORE::close REGISTER;
 	}
-	foreach (@new_file_list) {
-	    print REGISTER "$new_file_hash{$_}\n";
-	}
-	CORE::close REGISTER;
 	chmod 0666, $register_file;
     }
     return @push_files;
@@ -992,7 +1012,7 @@ sub makeObservationCache {
     my ($dir,$name)=farkdir::splitName($obsfile);
     farkdir::makePath($dir);
     if (my ($ret,$msg) = xs_makeObsCache($self->{OID},$obsfile)){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	chmod 0666, $obsfile;
     }
 }
@@ -1020,7 +1040,7 @@ sub loadObservationCache {
     my $obsfile = shift;
     if (my ($ret,$msg) = xs_loadObsCache($self->{OID},$obsfile)){
 	if ($ret != 0) {
-	    die $msg." (".$obsfile.")";
+	    $msg =~ s/\\n/\n/g;die $msg." (".$obsfile.")";
 	};
     }
 }
@@ -1049,7 +1069,7 @@ sub setObservationCache {
     my ($dir,$name)=farkdir::splitName($obsfile);
     farkdir::makePath($dir);
     if (my ($ret,$msg) = xs_setObsCache($self->{CID},$obsfile)){
-	if ($ret != 0) {die $msg;}
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
 }
 
@@ -1076,7 +1096,7 @@ Arguments:
 sub setObservationType {
     my ($self,$bufrtype,$subtype)=@_;
     my ($ret,$msg) = xs_setObsBufrType($self->{OID},$bufrtype,$subtype);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 
@@ -1106,7 +1126,7 @@ sub setObservationIndexLimits {
     my ($self,$start,$end)=@_;
     #print "fark.pm Calling xs_setObsIndexLimits with $start $end\n";
     my ($ret,$msg) = xs_setObsIndexLimits($self->{OID},$start,$end);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1123,7 +1143,7 @@ $fark->clearObservationTargetStack();
 sub clearObservationTargetStack {
     my ($self)=@_;
     my ($ret,$msg) = xs_clearObsTargetStack($self->{OID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1158,7 +1178,7 @@ $fark->pushObservationTarget("yy","10","4001","year","","");
 sub pushObservationTarget {
     my ($self,$name,$pos,$descr,$info,$min,$max)=@_;
     my ($ret,$msg) = xs_pushObsTarget($self->{OID},$name,$pos//"",$descr//"",$info//"",$min//"",$max//"");
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1184,7 +1204,7 @@ $fark->setObservationIndex("time","dtg(yy,mm,dd,hh,mi)");
 sub setObservationIndex {
     my ($self,$name,$expr)=@_;
     my ($ret,$msg,$nrep,@reps) = xs_setObsIndex($self->{OID},$name,$expr);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1206,7 +1226,7 @@ clearMatchRuleStack - clear match-rule expressions.
 sub clearMatchRuleStack {
     my ($self)=@_;
     my ($ret,$msg) = xs_clearMatchRuleStack($self->{CID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 =head2 pushMatchRule
@@ -1236,7 +1256,7 @@ Arguments:
 sub pushMatchRule {
     my ($self,$mod,$exp,$min,$max)=@_;
     my ($ret,$msg) = xs_pushMatchRule($self->{CID},$mod,$exp,$min,$max);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 =head2 makeMatchList
@@ -1252,7 +1272,7 @@ makeMatchList - make match list from match stack
 sub makeMatchList {
     my ($self)=@_;
     my ($ret,$msg) = xs_makeMatchList($self->{CID},$self->{MID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 
@@ -1277,7 +1297,7 @@ Arguments:
 sub setModelFilter {
     my ($self,$filter)=@_;
     my ($ret,$msg) = xs_setModelFilter($self->{MID},$filter);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 
@@ -1302,7 +1322,7 @@ Arguments:
 sub setObservationFilter {
     my ($self,$filter)=@_;
     my ($ret,$msg) = xs_setObsFilter($self->{OID},$filter);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 }
 
 
@@ -1332,16 +1352,16 @@ sub makeColocXML {
     my $fill_file = shift // "";
     #print "fark.pm Pattern $patt";
     my ($ret,$msg)= xs_setColocXMLFile($self->{PID},$patt);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     ($ret,$msg,my $xml)= xs_getColocXMLFile($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     my ($dir,$name)=farkdir::splitName($xml);
     farkdir::makePath($dir);
     #print " -> $xml\n";
     ($ret,$msg) = xs_makeColocXML($self->{CID},$self->{MID},$self->{OID},$xml,$test,$fill_file);
     if ($ret != 0) {
 	if (-e $xml) {unlink $xml;};
-	die $msg;
+	$msg =~ s/\\n/\n/g;die $msg;
     } else {
 	if (-e $xml) {chmod 0666, $xml;};
     }
@@ -1371,7 +1391,7 @@ sub setShapeFile {
     my ($self,$fn,$cn)=@_;
     if (! defined ($cn)) {$cn="SOVEREIGNT";};
     my ($ret,$msg) = xs_setShapeFile($fn,$cn);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1398,7 +1418,7 @@ $fark->simplifyShapes("10");
 sub simplifyShapes {
     my ($self,$tol)=@_;
     my ($ret,$msg) = xs_simplifyShapes($tol);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1417,7 +1437,7 @@ $fark->clearShapeFile();
 sub clearShapeFile {
     my ($self)=@_;
     my ($ret,$msg) = xs_clearShapeFile();
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1452,7 +1472,7 @@ $fark->setPlotType("rms+stdv");
 sub setPlotType {
     my ($self,$type)=@_;
     my ($ret,$msg) = xs_setPlotType($self->{PID},$type);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1479,7 +1499,7 @@ $fark->setPlotTableFile("rms+stdv");
 sub setPlotTableFile {
     my ($self,$tableFile)=@_;
     my ($ret,$msg) = xs_setPlotTableFile($self->{PID},$tableFile);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1506,7 +1526,7 @@ $fark->getPlotTableFile("rms+stdv");
 sub getPlotTableFile {
     my ($self,$tableFile)=@_;
     my ($ret,$msg,$fn) = xs_getPlotTableFile($self->{PID},$tableFile);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return $fn;
 }
 
@@ -1533,7 +1553,7 @@ $fark->setPlotGraphicsFile("rms+stdv");
 sub setPlotGraphicsFile {
     my ($self,$graphicsFile)=@_;
     my ($ret,$msg) = xs_setPlotGraphicsFile($self->{PID},$graphicsFile);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1560,7 +1580,7 @@ $fark->getPlotGraphicsFile("rms+stdv");
 sub getPlotGraphicsFile {
     my ($self,$graphicsFile)=@_;
     my ($ret,$msg,$fn) = xs_getPlotGraphicsFile($self->{PID},$graphicsFile);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return $fn;
 }
 
@@ -1581,7 +1601,7 @@ sub clearPlotSetStack {
     # list obs types that should be used...
     #print "clearPlotSetStack: $self->{PID}\n";
     my ($ret,$msg) = xs_clearPlotSetStack($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1599,7 +1619,7 @@ clearPlotColumn - clears all output columns from the set.
 sub clearPlotColumn {
     my ($self)=@_;
     my ($ret,$msg) = xs_clearPlotColumn($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1626,7 +1646,7 @@ Arguments:xs
 sub pushPlotColumn {
     my ($self,$name,$expr)=@_;
     my ($ret,$msg) = xs_pushPlotColumn($self->{PID},$name,$expr);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1662,7 +1682,7 @@ sub pushPlotSet {
     my ($self,$name,$legend)=@_;
     my ($ret,$msg) = xs_pushPlotSet($self->{PID},$self->{CID},$self->{MID},
 				   $self->{OID},$name,$legend);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1682,7 +1702,7 @@ sub clearPlotAttributeStack {
     # list obs types that should be used...
     #print "clearPlotSet: $self->{PID}\n";
     my ($ret,$msg) = xs_clearPlotAttributeStack($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1709,7 +1729,7 @@ Arguments:xs
 sub pushPlotAttribute {
     my ($self,$name,$value)=@_;
     my ($ret,$msg) = xs_pushPlotAttribute($self->{PID},$name,$value);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
 
@@ -1750,17 +1770,17 @@ sub makePlotTable {
     my $name;
     # set file names
     ($ret,$msg)= xs_setPlotTableFile($self->{PID},$tfile);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     ($ret,$msg)= xs_setPlotGraphicsFile($self->{PID},$gfile);
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     # replace wildcards in file names
     ($ret,$msg)= xs_strepPlotFiles($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     # retrieve file names
     ($ret,$msg,$tfile)= xs_getPlotTableFile($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     ($ret,$msg,$gfile)= xs_getPlotGraphicsFile($self->{PID});
-    if ($ret != 0) {die $msg;}
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     #
     $| = 1 ;
     # make sure output file directories exist...
@@ -1772,7 +1792,7 @@ sub makePlotTable {
 			 $tfile,$gfile,$cfile,$test,$fill_file);
     if ($ret != 0) {
 	if (-e $tablefile) {unlink $tablefile;};
-	die $msg;
+	$msg =~ s/\\n/\n/g;die $msg;
     } else {
 	if (-e $tablefile) {chmod 0666, $tablefile;};
     }
@@ -1846,7 +1866,7 @@ sub expression {
 	my $ret;
 	my $msg;
 	if (($ret,$msg,$res) = xs_expression($exp)){
-	    if ($ret != 0) {die $msg;}
+	    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
 	} else {
 	    die "Unable to evaluate expression $exp\n";
 	}
@@ -1878,6 +1898,35 @@ sub debug {
     my ($ideb)=@_;
     xs_setDebug($ideb);
     return;
+}
+
+sub pretty {
+    my $ss=shift;
+    my $dd=int($ss/86400);
+    $ss=$ss-86400*$dd;
+    my $hh=int($ss/3600);
+    $ss=$ss-3600*$hh;
+    my $mi=int($ss/60);
+    $ss=$ss-60*$mi;
+    my $s="";
+    if ($dd) {
+	if ($s){$s=$s.",";}
+	$s=$s . sprintf("%s",$dd) . "d";
+    }
+    if ($hh) {
+	if ($s){$s=$s.",";}
+	$s=$s . sprintf("%s",$hh) . "h";
+    }
+    if ($mi) {
+	if ($s){$s=$s.",";}
+	$s=$s . sprintf("%s",$mi) . "m";
+    }
+    if ($ss) {
+	if ($s){$s=$s.",";}
+	$s=$s . sprintf("%s",$ss) . "s";
+    }
+    if (! $s) {$s="0s";}
+    return $s;
 }
 
 

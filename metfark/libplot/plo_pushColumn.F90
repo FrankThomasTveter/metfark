@@ -21,10 +21,10 @@ subroutine plo_pushcolumn(sid,nam80,exp250,crc250, irc)
   !
   call  plot_pushcolumn(pss,nam80,exp250,crc250, irc)
   if (irc.ne.0) then
-     call plot_errorappend(crc250,"|")
-     call plot_errorappend(crc250,trim(myname))
+     call plot_errorappend(crc250,myname)
      call plot_errorappend(crc250," Error return from plot_pushcolumn.")
      call plot_errorappendi(crc250,irc)
+     call plot_errorappend(crc250,"\n")
      return
   end if
   !write(*,*)myname,'Exiting:',irc,sid,nam80

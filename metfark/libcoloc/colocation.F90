@@ -704,7 +704,7 @@ CONTAINS
           call colocation_clearmatchstack(css,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from clearMatchStack")
+             call colocation_errorappend(crc250," Error return from clearMatchStack")
              call colocation_errorappend(crc250,"\n")
              return
           end if
@@ -740,7 +740,7 @@ CONTAINS
                 call colocation_pushmatch(css,cdef%n80,e250,min80,max80,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,myname)
-                   call colocation_errorappend(crc250,"Error return from pushMatch")
+                   call colocation_errorappend(crc250," Error return from pushMatch")
                    call colocation_errorappend(crc250,"\n")
                    return
                 end if
@@ -784,7 +784,7 @@ CONTAINS
           call parse_close(css%mat_psp(ii)%ptr,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'parse_close'.")
+             call colocation_errorappend(crc250," Error return from parse_close.")
              return
           end if
        end do
@@ -873,7 +873,7 @@ CONTAINS
              call parse_open(css%mat_psp(css%cMatch)%ptr,crc250,irc)
              if (irc.ne.0) then
                 call colocation_errorappend(crc250,myname)
-                call colocation_errorappend(crc250,"Error return from 'parse_open'.")
+                call colocation_errorappend(crc250," Error return from parse_open.")
                 return
              end if
           else
@@ -1484,7 +1484,7 @@ CONTAINS
        call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
+          call colocation_errorappend(crc250," Error return from setTransformation.")
           return
        end if
        ! set observation target names
@@ -1555,7 +1555,7 @@ CONTAINS
     call model_setFileStackLimits(mss,mod_lval,mod_minval,mod_maxval,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250,"Error return from 'model_setFileStackLimits'.")
+       call colocation_errorappend(crc250," Error return from model_setFileStackLimits.")
        return
     end if
     !
@@ -1621,7 +1621,7 @@ CONTAINS
           call model_openCurrentFile(mss,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'model_openCurrentFile'.")
+             call colocation_errorappend(crc250," Error return from model_openCurrentFile.")
              return
           end if
        end if
@@ -1631,7 +1631,7 @@ CONTAINS
           call observation_setFileStackLimits(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             call colocation_errorappend(crc250," Error return from observation_setFileStackLimits.")
              return
           end if
           ! calculate observation target limits...
@@ -1639,7 +1639,7 @@ CONTAINS
                & mss%currentfile%dim_val,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             call colocation_errorappend(crc250," Error return from observation_setFileStackLimits.")
              return
           end if
        end if
@@ -1875,7 +1875,7 @@ CONTAINS
           call model_closeCurrentFile(mss,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'model_closeCurrentFile'.")
+             call colocation_errorappend(crc250," Error return from model_closeCurrentFile.")
              return
           end if
        end if
@@ -1936,7 +1936,7 @@ CONTAINS
     call colocation_settime(css,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250,"Error return from 'settime'.")
+       call colocation_errorappend(crc250," Error return from settime.")
        call colocation_errorappendi(crc250,irc)
        return
     end if
@@ -2187,7 +2187,7 @@ CONTAINS
        call observation_setTransformation(oss,css%mat_psp(1)%ptr,crc250,irc) ! css%cmatch
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
-          call colocation_errorappend(crc250,"Error return from 'setTransformation'.")
+          call colocation_errorappend(crc250," Error return from setTransformation.")
           return
        end if
        ! set observation target names
@@ -2250,7 +2250,7 @@ CONTAINS
     call model_setFileStackLimits(mss,mod_lval,mod_minval,mod_maxval,crc250,irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250,"Error return from 'model_setFileStackLimits'.")
+       call colocation_errorappend(crc250," Error return from model_setFileStackLimits.")
        return
     end if
     !
@@ -2349,7 +2349,7 @@ CONTAINS
           call model_openCurrentFile(mss,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'model_openCurrentFile'.")
+             call colocation_errorappend(crc250," Error return from model_openCurrentFile.")
              return
           end if
        end if
@@ -2359,7 +2359,7 @@ CONTAINS
           call observation_setFileStackLimits(oss,obs_lval,obs_minval,obs_maxval,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             call colocation_errorappend(crc250," Error return from observation_setFileStackLimits.")
              return
           end if
           ! calculate observation target limits...
@@ -2367,7 +2367,7 @@ CONTAINS
                & mss%currentfile%dim_val,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'observation_setFileStackLimits'.")
+             call colocation_errorappend(crc250," Error return from observation_setFileStackLimits.")
              return
           end if
        end if
@@ -2641,7 +2641,7 @@ CONTAINS
           call model_closeCurrentFile(mss,crc250,irc)
           if (irc.ne.0) then
              call colocation_errorappend(crc250,myname)
-             call colocation_errorappend(crc250,"Error return from 'model_closeCurrentFile'.")
+             call colocation_errorappend(crc250," Error return from model_closeCurrentFile.")
              return
           end if
        end if
@@ -2714,6 +2714,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine colocation_errorappend
   subroutine colocation_errorappendi(crc250,inum)
     implicit none
@@ -2732,6 +2733,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine colocation_errorappendi
   !
   !

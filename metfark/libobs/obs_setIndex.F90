@@ -19,10 +19,10 @@ subroutine obs_setIndex(sid, trg80, exp250, crc250, irc)
   end if
   call observation_setIndex(css,trg80,exp250,crc250,irc)
   if (irc.ne.0) then
-     call observation_errorappend(crc250,"|")
-     call observation_errorappend(crc250,trim(myname))
+     call observation_errorappend(crc250,myname)
      call observation_errorappend(crc250," Error return from observation_setIndex.")
      call observation_errorappendi(crc250,irc)
+     call observation_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

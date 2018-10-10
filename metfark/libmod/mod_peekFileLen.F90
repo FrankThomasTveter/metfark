@@ -17,10 +17,10 @@ subroutine mod_peekfilelen(sid, maxrep, crc250, irc)
   end if
   call model_peeklen(css,maxrep,crc250,irc)
   if (irc.ne.0) then
-     call model_errorappend(crc250,"|")
      call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from model_stackpeeklen.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   return

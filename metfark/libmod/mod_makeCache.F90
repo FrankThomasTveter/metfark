@@ -21,10 +21,10 @@ subroutine mod_makeCache(sid, path, crc250, irc)
   call model_makecache(css,path,crc250,irc)
   if (irc.ne.0) then
      !write(*,*) 'pushFile Error.'
-     call model_errorappend(crc250,"|")
      call model_errorappend(crc250,myname)
      call model_errorappend(crc250," Error return from model_makecache.")
      call model_errorappendi(crc250,irc)
+     call model_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,'Done.',irc,sid

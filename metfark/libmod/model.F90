@@ -649,7 +649,7 @@ CONTAINS
        call parse_close(css%psf,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'parse_close'.")
+          call model_errorappend(crc250," Error return from parse_close.")
           return
        end if
     end if
@@ -896,7 +896,7 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,'Entering.',css%nFileIndexes,irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(mod_bdeb)write(*,*)myname," File: '"//path250(1:lenp)//"'"
+    write(*,*)myname," Pushing '"//path250(1:lenp)//"'"
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
        if (irc.ne.0) then
@@ -1530,7 +1530,7 @@ CONTAINS
     end do
     if(mod_bdeb)write(*,*) myname,' Stack cnt.',cnt,&
          & css%newnFileSortIndexes(1),size(css%fileStackInd(:,1))
-    write(unitr,'(I0)',iostat=irc) cnt
+    write(unitr,'(I0,8(X,I0))',iostat=irc) cnt,css%values
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
        call model_errorappend(crc250," unable to write to:"//path250(1:lenp))
@@ -1538,6 +1538,11 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    !
+    write(*,'(X,A,A,I0,A,I4.4,6(A,I2.2))')myname," Index '"//path250(1:lenp)//&
+         & "' contains ",cnt," files. Created:", &
+         & css%values(1),"-",css%values(2),"-",css%values(3),"T",&
+         & css%values(5),":",css%values(6),":",css%values(7)
     ! loop over file stack
     leno=0
     cnt=0
@@ -1607,6 +1612,7 @@ CONTAINS
        call model_errorappend(crc250,"\n")
        return
     end if
+    if(mod_bdeb)write(*,*)myname,' Done, files in stack:',css%nFileIndexes,irc
     if(mod_bdeb)write(*,*)myname,' Done.',irc
   end subroutine model_makecache
   !
@@ -1625,6 +1631,9 @@ CONTAINS
     character*250 :: buff250
     character*1 :: c1
     character*22 :: myname="model_loadCache"
+    integer :: values(8),yy,mm,dd,hh,mi
+    real :: sec, f2000,s2000
+    character*250 :: diff250
     logical :: bok
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
@@ -1668,11 +1677,11 @@ CONTAINS
        return
     end if
     cnt=0
-    read(buff250,*,iostat=irc) css%nFileIndexes
+    read(buff250,*,iostat=irc) css%nFileIndexes,values
     if (irc.ne.0) then
        if (mod_bdeb) write(*,*) myname," Unable to interprt nfileindexes."
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to interpret:"//path250(1:lenp))
+       call model_errorappend(crc250," corrupt file:"//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1913,6 +1922,26 @@ CONTAINS
        return
     end if
     css%nFileIndexes=cnt! should not be necessary...
+    yy=css%values(1)
+    mm=css%values(2)
+    dd=css%values(3)
+    hh=css%values(5)
+    mi=css%values(6)
+    sec=css%values(7)
+    call jd2000(s2000,yy,mm,dd,hh,mi,sec)
+    yy=values(1)
+    mm=values(2)
+    dd=values(3)
+    hh=values(5)
+    mi=values(6)
+    sec=values(7)
+    call jd2000(f2000,yy,mm,dd,hh,mi,sec)
+    diff250=model_diff(s2000-f2000)
+    lend=length(diff250,250,10)
+    write(*,'(X,A,A,I0,A,I4.4,6(A,I2.2),A)')myname," Index '"//path250(1:lenp)//&
+         & "' contains ",css%nFileIndexes," files. Created:", &
+         & values(1),"-",values(2),"-",values(3),"T",&
+         & values(5),":",values(6),":",values(7),". Age:"//diff250(1:lend)
     if(mod_bdeb)write(*,*)myname,' Done, files in stack:',css%nFileIndexes,irc
   end subroutine model_loadcache
   !
@@ -2152,7 +2181,7 @@ CONTAINS
        call parse_open(plim,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'parse_open'.")
+          call model_errorappend(crc250," Error return from parse_open.")
           return
        end if
        css%ctrg=css%ntrg
@@ -2312,7 +2341,7 @@ CONTAINS
        call parse_close(plim,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'parse_close'.")
+          call model_errorappend(crc250," Error return from parse_close.")
           return
        end if
        css%trg_set=.true.
@@ -2724,7 +2753,7 @@ CONTAINS
                & css%trg_lenv(ii),crc250,irc) ! adjusts length
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
-             call model_errorappend(crc250,"Error return from getOffset.")
+             call model_errorappend(crc250," Error return from getOffset.")
              call model_errorappend(crc250,"\n")
              return
           end if
@@ -2734,7 +2763,7 @@ CONTAINS
                & css%trg_lenv(ii),crc250,irc) ! adjusts length
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
-             call model_errorappend(crc250,"Error return from getOffset.")
+             call model_errorappend(crc250," Error return from getOffset.")
              call model_errorappend(crc250,"\n")
              return
           end if
@@ -2806,7 +2835,7 @@ CONTAINS
        call model_initPSP(off%csli,off%sli_psp,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'initPSP'.")
+          call model_errorappend(crc250," Error return from initPSP.")
           call model_errorappend(crc250,"\n")
           return
        end if
@@ -2894,7 +2923,7 @@ CONTAINS
              kk=model_getSliceIndex(css,sli80(1:lens),crc250,irc)
              if (irc.ne.0) then
                 call model_errorappend(crc250,myname)
-                call model_errorappend(crc250,"Error return from 'getSliceIndex'.")
+                call model_errorappend(crc250," Error return from getSliceIndex.")
                 call model_errorappend(crc250,"\n")
                 return
              end if
@@ -2992,7 +3021,7 @@ CONTAINS
        model_getOffset=model_checkOffset(css,var80(is+1:ie-1),crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from checkOffset.")
+          call model_errorappend(crc250," Error return from checkOffset.")
           call model_errorappend(crc250,"\n")
           return
        end if
@@ -3141,7 +3170,7 @@ CONTAINS
     call model_parseTargets(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Error return from parseTargets.")
+       call model_errorappend(crc250," Error return from parseTargets.")
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -3184,7 +3213,7 @@ CONTAINS
     call model_parseOffset(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Error return from parseOffset.")
+       call model_errorappend(crc250," Error return from parseOffset.")
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -3660,13 +3689,13 @@ CONTAINS
        call parse_open(css%psf,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'parse_open'.")
+          call model_errorappend(crc250," Error return from parse_open.")
           return
        end if
        call model_setMPO(css,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from 'setMPO'.")
+          call model_errorappend(crc250," Error return from setMPO.")
           return
        end if
        call parse_parsef(css%psf,css%flt250(1:css%lenf),css%mpo_var,crc250,irc)
@@ -3713,7 +3742,7 @@ CONTAINS
     call model_setMPO(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Error return from 'setMPO'.")
+       call model_errorappend(crc250," Error return from setMPO.")
        return
     end if
     if(mod_bdeb)write(*,*)myname,'InitPSP.'
@@ -3721,7 +3750,7 @@ CONTAINS
     call model_initPSP(css%cpsp,css%psp,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Error return from 'initPSP'.")
+       call model_errorappend(crc250," Error return from initPSP.")
        return
     end if
     if(mod_bdeb)write(*,*)myname,'Checking.',associated(css),allocated(exp250)
@@ -5829,7 +5858,7 @@ CONTAINS
     call model_allocateTable(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from 'allocateTable'.")
+       call model_errorappend(crc250," Error return from allocateTable.")
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -6617,7 +6646,7 @@ CONTAINS
     call model_allocateTable(css,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Error return from 'allocateTable'.")
+       call model_errorappend(crc250," Error return from allocateTable.")
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -7551,7 +7580,7 @@ CONTAINS
     call parse_open(plim,crc250,irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250,"Error return from 'parse_open'.")
+       call model_errorappend(crc250," Error return from parse_open.")
        return
     end if
     if (lens.ne.0) then
@@ -7615,7 +7644,7 @@ CONTAINS
     call parse_close(plim,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_close'.")
+       call observation_errorappend(crc250," Error return from parse_close.")
        return
     end if
     if(mod_bdeb)write(*,*)myname,"Done min='"//trim(smin)//"' max='"//smax//"'",&
@@ -7899,7 +7928,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=801
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_INQ_DIM."//nf_strerror(ret))
+          call model_errorappend(crc250," Error return from NF_INQ_DIM."//nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
@@ -7939,7 +7968,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=802
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_INQ_VARNDIMS."//&
+          call model_errorappend(crc250," Error return from NF_INQ_VARNDIMS."//&
                & nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -7957,7 +7986,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=802
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_INQ_VAR."//nf_strerror(ret))
+          call model_errorappend(crc250," Error return from NF_INQ_VAR."//nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
           return
@@ -8291,7 +8320,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_GET_VARA_INT1."//&
+          call model_errorappend(crc250," Error return from NF_GET_VARA_INT1."//&
                & nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8312,7 +8341,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_GET_VARA_INT2."//&
+          call model_errorappend(crc250," Error return from NF_GET_VARA_INT2."//&
                & nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8334,7 +8363,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_GET_VARA_INT."//&
+          call model_errorappend(crc250," Error return from NF_GET_VARA_INT."//&
                & nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8359,7 +8388,7 @@ CONTAINS
        if (ret .ne. NF_NOERR) then
           irc=812
           call model_errorappend(crc250,myname)
-          call model_errorappend(crc250,"Error return from NF_GET_VARA_REAL."//&
+          call model_errorappend(crc250," Error return from NF_GET_VARA_REAL."//&
                & nf_strerror(ret))
           call model_errorappendi(crc250,irc)
           call model_errorappend(crc250,"\n")
@@ -8640,6 +8669,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine model_errorappend
   subroutine model_errorappendi(crc250,inum)
     implicit none
@@ -8658,6 +8688,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine model_errorappendi
   !
   subroutine model_errorappendi8(crc250,inum)
@@ -8677,7 +8708,79 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine model_errorappendi8
+
+  character*250 function model_diff(dt)
+    real :: dt
+    character*250 :: buff250
+    character*25 :: siff25
+    integer, external :: length
+    integer :: lenb,lens
+    integer :: dd
+    integer :: hh
+    integer :: mi
+    integer :: ss
+    lenb=0
+    call chop0(buff250,250)
+    ss=nint(dt*86400.0D0)
+    if (ss.gt.86400) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       dd=int(ss/86400)
+       ss=ss-dd*86400
+       write(siff25,*)dd
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"d"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    if (ss.gt.3600) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       hh=int(ss/3600)
+       ss=ss-hh*3600
+       write(siff25,*)hh
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"h"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    if (ss.gt.60) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       mi=int(ss/60)
+       ss=ss-mi*60
+       write(siff25,*)mi
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"m"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    if (ss.gt.0) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       write(siff25,*)ss
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"s"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    model_diff=buff250
+    return
+  end function model_diff
   !
   !###############################################################################
   ! STRING ROUTINES

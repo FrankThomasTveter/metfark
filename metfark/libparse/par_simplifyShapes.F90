@@ -8,10 +8,10 @@ subroutine par_simplifyShapes(tol20, crc250, irc)
   !write(*,*) myname, 'Entering.',irc
   call parse_simplifyShapes(tol20, crc250,irc)
   if (irc.ne.0) then
-     call parse_errorappend(crc250,"|")
-     call parse_errorappend(crc250,trim(myname))
+     call parse_errorappend(crc250,myname)
      call parse_errorappend(crc250," Error return from parse_simplifyShapes.")
      call parse_errorappendi(crc250,irc)
+     call parse_errorappend(crc250,"\n")
      return
   end if
   !write(*,*) myname,' Done.'

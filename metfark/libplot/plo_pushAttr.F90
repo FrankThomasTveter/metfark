@@ -20,10 +20,10 @@ subroutine plo_pushattr(sid,name80,val250,crc250, irc)
   !
   call  plot_pushattr(css,name80,val250,crc250,irc)
   if (irc.ne.0) then
-     call plot_errorappend(crc250,"|")
-     call plot_errorappend(crc250,trim(myname))
+     call plot_errorappend(crc250,myname)
      call plot_errorappend(crc250," Error return from plot_pushattr.")
      call plot_errorappendi(crc250,irc)
+     call plot_errorappend(crc250,"\n")
      return
   end if
   return

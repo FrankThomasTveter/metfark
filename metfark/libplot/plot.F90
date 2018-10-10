@@ -461,7 +461,7 @@ CONTAINS
     ounit=ftunit(irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from FTUNIT.")
+       call plot_errorappend(crc250," Error return from FTUNIT.")
        call plot_errorappendi(crc250,irc)
        return
     end if
@@ -492,7 +492,7 @@ CONTAINS
     ounit=ftunit(irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from FTUNIT.")
+       call plot_errorappend(crc250," Error return from FTUNIT.")
        call plot_errorappendi(crc250,irc)
        return
     end if
@@ -600,7 +600,7 @@ CONTAINS
     end do
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from loopset'.")
+       call plot_errorappend(crc250," Error return from loopset'.")
        return
     end if
     ! print legend table
@@ -672,7 +672,7 @@ CONTAINS
     call plot_settime(pss,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'settime'.")
+       call plot_errorappend(crc250," Error return from settime.")
        call plot_errorappendi(crc250,irc)
        return
     end if
@@ -707,31 +707,31 @@ CONTAINS
     call plot_setTablefile(pss,tab250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'setTableFile'.")
+       call plot_errorappend(crc250," Error return from setTableFile.")
        return
     end if
     call plot_setGraphicsfile(pss,gra250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'setGraphicsFile'.")
+       call plot_errorappend(crc250," Error return from setGraphicsFile.")
        return
     end if
     call plot_strepfiles(pss,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'strepFiles'.")
+       call plot_errorappend(crc250," Error return from strepFiles.")
        return
     end if
     call plot_getTablefile(pss,tab250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'setTableFile'.")
+       call plot_errorappend(crc250," Error return from setTableFile.")
        return
     end if
     call plot_getGraphicsfile(pss,gra250,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from 'setGraphicsFile'.")
+       call plot_errorappend(crc250," Error return from setGraphicsFile.")
        return
     end if
     return
@@ -2366,7 +2366,7 @@ CONTAINS
           call chop0(name80,80)
           lenn=length(name80,80,10)
           call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250,"Error return from 'makeOutput'.")
+          call plot_errorappend(crc250," Error return from makeOutput.")
           call plot_errorappend(crc250,name80(1:lenn))
           return
        end if
@@ -2382,7 +2382,7 @@ CONTAINS
     end do
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250,"Error return from loopset'.")
+       call plot_errorappend(crc250," Error return from loopset.")
        return
     end if
     !
@@ -2417,6 +2417,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine plot_errorappend
   subroutine plot_errorappendi(crc250,inum)
     implicit none
@@ -2435,6 +2436,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//" "//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine plot_errorappendi
   !
   subroutine findDelimiter(var80,del,pos)

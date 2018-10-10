@@ -358,17 +358,16 @@ CONTAINS
     ! remove old shapefile data
     call parse_clearshapefile(crc250,irc)
     if (irc.ne.0) then
-       call parse_errorappend(crc250,myname)
-       call parse_errorappend(crc250,"Error return from clearshapeFile")
+       call parse_errorappend(crc250,myname//" Error return from clearshapeFile")
        call parse_errorappendi(crc250,irc)
+       call parse_errorappend(crc250,"\n")
        return
     end if
     ! read new shape file...
     shphandle = shpopen(sf%shp250(1:sf%lens), 'rb')
     ! error check
     IF (shpfileisnull(shphandle) .OR. dbffileisnull(shphandle)) THEN
-       call parse_errorappend(crc250,myname)
-       call parse_errorappend(crc250,'Error opening '//sf%shp250(1:sf%lens)//' for reading')
+       call parse_errorappend(crc250,myname//" Error opening '"//sf%shp250(1:sf%lens)//"' for reading\n")
        irc=458
        return
     ENDIF
@@ -383,9 +382,9 @@ CONTAINS
     ! get field "name" index
     iname=dbfgetfieldindex (shphandle,sf%cname11)
     if (iname.eq.-1) then
-       call parse_errorappend(crc250,myname)
-       call parse_errorappend(crc250,'Error in dbfgetfieldindex')
+       call parse_errorappend(crc250,myname//" Error in dbfgetfieldindex ")
        call parse_errorappendi(crc250,ii)
+       call parse_errorappend(crc250,"\n")
        irc=458
     end if
     cname="" ! use iname to identify field...
@@ -393,10 +392,10 @@ CONTAINS
     sf%nshp=nshpr
     allocate(sf%shp(sf%nshp),stat=irc)
     if (irc.ne.0) then
-       call parse_errorappend(crc250,myname)
-       call parse_errorappend(crc250,"Unable to allocate shape:")
+       call parse_errorappend(crc250,myname//" Unable to allocate shape:")
        call parse_errorappendi(crc250,sf%nshp)
        call parse_errorappendi(crc250,irc)
+       call parse_errorappend(crc250,"\n")
        return
     end if
     ! read the nshp shapes
@@ -405,10 +404,10 @@ CONTAINS
        sf%shp(ii)%index=ii
        allocate(character(len=sf%lenn) :: sf%shp(ii)%name)
        if (irc.ne.0) then
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Unable to allocate shape-name:")
+          call parse_errorappend(crc250,myname//" Unable to allocate shape-name:")
           call parse_errorappendi(crc250,sf%lenn)
           call parse_errorappendi(crc250,irc)
+          call parse_errorappend(crc250,"\n")
           return
        end if
        ! read databse attribute
@@ -430,10 +429,10 @@ CONTAINS
        ! error check
        IF (shpisnull(shpobj)) THEN
           irc=348
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Error in shpreadobject.")
+          call parse_errorappend(crc250,myname//" Error in shpreadobject.")
           call parse_errorappendi(crc250,jj)
           call parse_errorappendi(crc250,irc)
+          call parse_errorappend(crc250,"\n")
           return
        ENDIF
        ! rewind shape-rings..
@@ -449,21 +448,21 @@ CONTAINS
             & '+',shpobj%nseg,'->',sf%shp(ii)%nll
        if (sf%shp(ii)%nll.lt.3) then ! sanity check
           irc=945
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Invalid shape-ll:")
+          call parse_errorappend(crc250,myname//" Invalid shape-ll:")
           call parse_errorappendi(crc250,sf%shp(ii)%nll)
           call parse_errorappend(crc250,":")
           call parse_errorappendi(crc250,irc)
+          call parse_errorappend(crc250,"\n")
           return
        end if
        sf%shp(ii)%npos=sf%shp(ii)%nll
        allocate(sf%shp(ii)%xx(sf%shp(ii)%nll),sf%shp(ii)%yy(sf%shp(ii)%nll),&
             & sf%shp(ii)%pos(3,sf%shp(ii)%npos),sf%shp(ii)%actual(sf%shp(ii)%npos),stat=irc)
        if (irc.ne.0) then
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Unable to allocate shape-ll:")
+          call parse_errorappend(crc250,myname//" Unable to allocate shape-ll:")
           call parse_errorappendi(crc250,sf%shp(ii)%nll)
           call parse_errorappendi(crc250,irc)
+          call parse_errorappend(crc250,"\n")
           return
        end if
        kk=0
@@ -493,9 +492,9 @@ CONTAINS
        rr=dsqrt(shape_dot(sf%shp(ii)%map(1,3),sf%shp(ii)%map(1,3)))
        if (rr.lt.1.0D-10) then ! shape covers half the world...
           irc=843
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Great circle shape: "//trim(sf%shp(ii)%name))
+          call parse_errorappend(crc250,myname//" Great circle shape: "//trim(sf%shp(ii)%name))
           call parse_errorappendi(crc250,ii)
+          call parse_errorappend(crc250,"\n")
           return
        end if
        sf%shp(ii)%map(1,3)=sf%shp(ii)%map(1,3)/rr
@@ -518,9 +517,9 @@ CONTAINS
        rr=dsqrt(shape_dot(sf%shp(ii)%map(1,2),sf%shp(ii)%map(1,2)))
        if (rr.lt.1.0D-10) then ! error
           irc=845
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Failed sanity check: "//trim(sf%shp(ii)%name))
+          call parse_errorappend(crc250,myname//" Failed sanity check: "//trim(sf%shp(ii)%name))
           call parse_errorappendi(crc250,ii)
+          call parse_errorappend(crc250,"\n")
           return
        else ! not necessary... in theory
           sf%shp(ii)%map(1,2)=sf%shp(ii)%map(1,2)/rr
@@ -560,16 +559,16 @@ CONTAINS
              write(*,*)myname,'Minzz:',sf%shp(ii)%minzz,trim(sf%shp(ii)%name)
           end if
           irc=844
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Too large shape: "//trim(sf%shp(ii)%name))
+          call parse_errorappend(crc250,myname//" Too large shape: "//trim(sf%shp(ii)%name))
           call parse_errorappendi(crc250,ii)
+          call parse_errorappend(crc250,"\n")
           return
        end if
        if (first) then ! shape has no nodes
           irc=899
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,"Too small shape: "//trim(sf%shp(ii)%name))
+          call parse_errorappend(crc250,myname//" Too small shape: "//trim(sf%shp(ii)%name))
           call parse_errorappendi(crc250,ii)
+          call parse_errorappend(crc250,"\n")
           return
        end if
        !write(*,'(X,A,X,I0,6(X,F6.1),2X,I5,X,A,X,F6.1)') &
@@ -611,8 +610,7 @@ CONTAINS
     lent=length(tol20,20,10)
     read (tol20(1:lent),*,iostat=irc) eps
     if (irc.ne.0) then
-       call parse_errorappend(crc250,myname)
-       call parse_errorappend(crc250,'Invalid tolerance:')
+       call parse_errorappend(crc250,myname//" Invalid tolerance:")
        call parse_errorappendr(crc250,eps)
        call parse_errorappend(crc250,"\n")
        return
@@ -813,8 +811,7 @@ CONTAINS
           IF (css%Stack(SP)==0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Division by zero."
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Division by zero.')
+             call parse_errorappend(crc250,myname//" Division by zero.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=1
@@ -843,8 +840,7 @@ CONTAINS
           IF (css%Stack(SP)<=0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Negative argument to LOG10.",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Negative argument to LOG10.')
+             call parse_errorappend(crc250,myname//" Negative argument to LOG10.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=3
@@ -859,8 +855,7 @@ CONTAINS
           IF (css%Stack(SP)<=0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Negative argument to LOG.",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Negative argument to LOG.')
+             call parse_errorappend(crc250,myname//" Negative argument to LOG.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=3
@@ -875,8 +870,7 @@ CONTAINS
           IF (css%Stack(SP)<0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Negative argument to SQRT.",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Negative argument to SQRT.')
+             call parse_errorappend(crc250,myname//" Negative argument to SQRT.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=2
@@ -1089,8 +1083,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to s1970:",nargs
              irc=308
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to s1970.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to s1970.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1153,8 +1146,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to d2000:",nargs
              irc=309
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to d2000.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to d2000.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1202,8 +1194,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shapes.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1226,8 +1217,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to validRange:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to validRange.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to validRange.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1243,8 +1233,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shape.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1260,8 +1249,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shape.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1277,8 +1265,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2q:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to td2q.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to td2q.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1296,8 +1283,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rh2td:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to rh2td.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to rh2td.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1315,8 +1301,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2rh:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to td2rh.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to td2rh.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1334,8 +1319,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to q2rh:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to q2rh.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to q2rh.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1389,8 +1373,7 @@ CONTAINS
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
              if (parse_bdeb) write(*,*)"*** Invalid argument to ASIN:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Invalid argument to ASIN.')
+             call parse_errorappend(crc250,myname//" Invalid argument to ASIN.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=4
@@ -1405,8 +1388,7 @@ CONTAINS
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
              if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Invalid argument to ACOS.')
+             call parse_errorappend(crc250,myname//" Invalid argument to ACOS.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=4
@@ -1423,8 +1405,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to atan2:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to atan2.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1520,9 +1501,7 @@ CONTAINS
           IF (css%Stack(SP)==0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Division by zero."
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Division by zero.')
-             call parse_errorappend(crc250,"\n")
+             call parse_errorappend(crc250,myname//" Division by zero.\n")
              EvalErrType=1
              res=zero
              RETURN
@@ -1549,8 +1528,7 @@ CONTAINS
           IF (css%Stack(SP)<=0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Negative argument to LOG10:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Negative argument to LOG10.')
+             call parse_errorappend(crc250,myname//" Negative argument to LOG10.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=3
@@ -1565,8 +1543,7 @@ CONTAINS
           IF (css%Stack(SP)<=0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Negative argument to LOG:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Negative argument to LOG.')
+             call parse_errorappend(crc250,myname//" Negative argument to LOG.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=3
@@ -1581,8 +1558,7 @@ CONTAINS
           IF (css%Stack(SP)<0._rn) THEN
              if (parse_bdeb) write(*,*)"*** Negative argument to SQRT:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Negative argument to SQRT.')
+             call parse_errorappend(crc250,myname//" Negative argument to SQRT.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=3
@@ -1795,8 +1771,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to s1970:",nargs
              irc=311
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to s1970.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to s1970.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1859,8 +1834,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to d2000:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to d2000.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to d2000.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1908,8 +1882,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shapes.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1932,8 +1905,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rangeCheck:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to rangeCheck.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to rangeCheck.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1949,8 +1921,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shape.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1966,8 +1937,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shape.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1983,8 +1953,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2q:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to td2q.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to td2q.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2002,8 +1971,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rh2td:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to rh2td.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to rh2td.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2021,8 +1989,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2rh:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to td2rh.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to td2rh.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2040,8 +2007,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to q2rh:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to q2rh.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to q2rh.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2095,8 +2061,7 @@ CONTAINS
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
              if (parse_bdeb) write(*,*)"*** Invalid argument to ASIN:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Invalid argument to ASIN.')
+             call parse_errorappend(crc250,myname//" Invalid argument to ASIN.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=4
@@ -2111,8 +2076,7 @@ CONTAINS
           IF ((css%Stack(SP)<-1._rn).OR.(css%Stack(SP)>1._rn)) THEN
              if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Invalid argument to ACOS.')
+             call parse_errorappend(crc250,myname//" Invalid argument to ACOS.")
              call parse_errorappendr(crc250,css%Stack(SP))
              call parse_errorappend(crc250,"\n")
              EvalErrType=4
@@ -2129,8 +2093,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to atan2:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to atan2.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2205,9 +2168,7 @@ CONTAINS
        IF (ASSOCIATED(css%Wrka))   DEALLOCATE ( css%Wrka,   stat=irc)
        ALLOCATE (css%Stacka(css%StackSize,css%npos),css%Wrka(css%npos),STAT = irc)
        IF (irc.ne. 0) THEN
-          call parse_errorappend(crc250,myname)
-          call parse_errorappend(crc250,'Unable to allocate stacka, stacka, wrka.')
-          call parse_errorappend(crc250,"\n")
+          call parse_errorappend(crc250,myname//" Unable to allocate stacka, stacka, wrka.\n")
           return
        end if
     end if
@@ -2270,9 +2231,7 @@ CONTAINS
                 IF (css%Stacka(SP,JJ)==0._rn) THEN
                    if (parse_bdeb) write(*,*)"*** Division by zero."
                    irc=314
-                   call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Division by zero.')
-                   call parse_errorappend(crc250,"\n")
+                   call parse_errorappend(crc250,myname//" Division by zero.\n")
                    EvalErrType=1
                    RETURN
                 ENDIF
@@ -2314,8 +2273,7 @@ CONTAINS
                 IF (css%Stacka(SP,JJ)<=0._rn) THEN
                    if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
                    irc=315
-                   call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Negative argument to LOG10.')
+                   call parse_errorappend(crc250,myname//" Negative argument to LOG10.")
                    call parse_errorappendr(crc250,css%Stack(SP))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=3
@@ -2334,8 +2292,7 @@ CONTAINS
                 IF (css%Stacka(SP,JJ)<=0._rn) THEN
                    if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
                    irc=316
-                   call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Negative argument to LOG.')
+                   call parse_errorappend(crc250,myname//" Negative argument to LOG.")
                    call parse_errorappendr(crc250,css%Stack(SP))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=3
@@ -2354,8 +2311,7 @@ CONTAINS
                 IF (css%Stacka(SP,JJ)<0._rn) THEN
                    if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stack(SP)
                    irc=317
-                   call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Negative argument to SQRT.')
+                   call parse_errorappend(crc250,myname//" Negative argument to SQRT.")
                    call parse_errorappendr(crc250,css%Stack(SP))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=3
@@ -2700,8 +2656,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to s1970:",nargs
              irc=318
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Invalid number of arguments to s1970.')
+             call parse_errorappend(crc250,myname//" Invalid number of arguments to s1970.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2799,8 +2754,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to d2000:",nargs
              irc=319
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Invalid number of arguments to d2000.')
+             call parse_errorappend(crc250,myname//" Invalid number of arguments to d2000.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2865,8 +2819,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shapes.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shapes.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2891,8 +2844,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to validRange:",nargs
              irc=312
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to validRange.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to validRange.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2912,8 +2864,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shape.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2933,8 +2884,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shape:",nargs
              irc=310
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to shape.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shape.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2954,8 +2904,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2q:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to td2q.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to td2q.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2981,8 +2930,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to rh2td:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to rh2td.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to rh2td.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -3008,8 +2956,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to td2rh:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to td2rh.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to td2rh.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -3035,8 +2982,7 @@ CONTAINS
           else
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to q2rh:",nargs
              irc=313
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to q2rh.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to q2rh.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -3124,8 +3070,7 @@ CONTAINS
                 IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
                    if (parse_bdeb) write(*,*)"*** Invalid argument to ASIN:",css%Stacka(SP,JJ)
                    irc=320
-                   call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Invalid arguments to asin.')
+                   call parse_errorappend(crc250,myname//" Invalid arguments to asin.")
                    call parse_errorappendr(crc250,css%Stacka(SP,JJ))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=4
@@ -3144,8 +3089,7 @@ CONTAINS
                 IF ((css%Stacka(SP,JJ)<-1._rn).OR.(css%Stacka(SP,JJ)>1._rn)) THEN
                    if (parse_bdeb) write(*,*)"*** Invalid argument to ACOS:",css%Stacka(SP,JJ)
                    irc=321
-                   call parse_errorappend(crc250,myname)
-                   call parse_errorappend(crc250,'Invalid arguments to acos.')
+                   call parse_errorappend(crc250,myname//" Invalid arguments to acos.")
                    call parse_errorappendr(crc250,css%Stacka(SP,JJ))
                    call parse_errorappend(crc250,"\n")
                    EvalErrType=4
@@ -3168,8 +3112,7 @@ CONTAINS
           ELSE 
              if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to atan2:",nargs
              irc=322
-             call parse_errorappend(crc250,myname)
-             call parse_errorappend(crc250,'Unexpected number of arguments to atan2.')
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to atan2.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -3416,13 +3359,10 @@ CONTAINS
     integer :: irc
     character*25 :: myname = "fparse"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    call parse_errorappend(crc250,myname)
-    call parse_errorappend(crc250,'*** Error in syntax of function string: ')
-    call parse_errorappend(crc250,' '//FuncStr)
-    call parse_errorappend(crc250,"\nPos=")
+    call parse_errorappend(crc250,myname//" "//Msg//" in string '"//&
+         & FuncStr//"' [pos=")
     call parse_errorappendi(crc250,j)
-    call parse_errorappend(crc250,' '//Msg)
-    call parse_errorappend(crc250,"\n")
+    call parse_errorappend(crc250,"]\n")
     irc=323
     return
   END SUBROUTINE parse_ParseErrMsg
@@ -3581,9 +3521,7 @@ CONTAINS
          css%ArgsByte(css%ArgsSize+1),    &
          STAT = istat                            )
     IF (istat /= 0) THEN
-       call parse_errorappend(crc250,myname)
-       call parse_errorappend(crc250,'*** Parser error: Memmory allocation for byte code failed')
-       call parse_errorappend(crc250,"\n")
+       call parse_errorappend(crc250,myname//" Memmory allocation for byte code failed.\n")
        irc=324
        return
     ELSE
@@ -4194,6 +4132,8 @@ CONTAINS
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
     if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
+    call chop0(crc250,250)
+    return
   end subroutine parse_errorappend
   subroutine parse_errorappendi(crc250,inum)
     implicit none
@@ -4214,6 +4154,8 @@ CONTAINS
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
     if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
+    call chop0(crc250,250)
+    return
   end subroutine parse_errorappendi
   subroutine parse_errorappendr(crc250,rnum)
     implicit none
@@ -4234,6 +4176,8 @@ CONTAINS
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
     if (parse_bdeb)write(*,*)myname,buff250(1:lenb)
+    call chop0(crc250,250)
+    return
   end subroutine parse_errorappendr
   !
   character*20 function parse_code20(code,nargs)

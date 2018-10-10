@@ -393,7 +393,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -485,7 +485,7 @@ function showDropdown(target, arg = "") {
 		  if (errors.length > 0 ) {
 		      item.classList.toggle("show");
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to list: "+path+"\n"+msg);
 		  } else {
 		      var ls=data.getElementsByTagName("ls");
@@ -567,7 +567,7 @@ function showDropdown(target, arg = "") {
 		      if (errors.length > 0 ) {
 			  item.classList.toggle("show");
 			  console.log("Error:",data);
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  alert("Unable to peek at: "+filterDir+" "+filterFile+" (file:"+file+")\n"+msg);
 		      } else {
 			  dataToArray(data,status,documentLog);
@@ -613,7 +613,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -717,7 +717,7 @@ function showDropdown(target, arg = "") {
 		  if (errors.length > 0 ) {
 		      item.classList.toggle("show");
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to list: "+path+"\n"+msg);
 		  } else {
 		      var ls=data.getElementsByTagName("ls");
@@ -812,7 +812,7 @@ function showDropdown(target, arg = "") {
 		      if (errors.length > 0 ) {
 			  item.classList.toggle("show");
 			  console.log("Error:",data);
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  alert("Unable to peek at: "+filterDir+" "+filterFile+" (file:"+file+")\n"+msg);
 		      } else {
 			  dataToArray(data,status,documentLog);
@@ -846,7 +846,7 @@ function showDropdown(target, arg = "") {
 		  if (errors.length > 0 ) {
 		      item.classList.toggle("show");
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to list: "+path+"\n"+msg);
 		  } else {
 		      var ls=data.getElementsByTagName("ls");
@@ -974,7 +974,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -1079,7 +1079,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -1161,7 +1161,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -1226,14 +1226,14 @@ function showDropdown(target, arg = "") {
 		  if (errors.length > 0 ) {
 		      item.classList.toggle("show");
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to list: "+arg+"\n"+msg);
 		  } else {
 		      addWildcardButtons(item,target);
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
 			  item.classList.toggle("show");
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  console.log("Error:"+path+"  "+msg);
 			  //alert("Unable to list: "+path+"\n"+msg);
 		      } else {
@@ -1460,7 +1460,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -1563,14 +1563,14 @@ function showDropdown(target, arg = "") {
 		  if (errors.length > 0 ) {
 		      item.classList.toggle("show");
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to list: "+arg+"\n"+msg);
 		  } else {
 		      addWildcardButtons(item,target);
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
 			  item.classList.toggle("show");
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  console.log("Error:"+path+"  "+msg);
 			  //alert("Unable to list: "+path+"\n"+msg);
 		      } else {
@@ -1636,14 +1636,14 @@ function showDropdown(target, arg = "") {
 		  if (errors.length > 0 ) {
 		      item.classList.toggle("show");
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
+		      var msg=getErrorMessage(errors);
 		      alert("Unable to list: "+arg+"\n"+msg);
 		  } else {
 		      addWildcardButtons(item,target);
 		      var errors=data.getElementsByTagName("error");
 		      if (errors.length > 0 ) {
 			  item.classList.toggle("show");
-			  var msg=(errors[0].getAttribute("message")||"");
+			  var msg=getErrorMessage(errors);
 			  console.log("Error:"+path+"  "+msg);
 			  //alert("Unable to list: "+path+"\n"+msg);
 		      } else {
@@ -1724,7 +1724,7 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
@@ -1867,14 +1867,14 @@ function showDropdown(target, arg = "") {
 	    if (errors.length > 0 ) {
 		item.classList.toggle("show");
 		console.log("Error:",data);
-		var msg=(errors[0].getAttribute("message")||"");
+		var msg=getErrorMessage(errors);
 		alert("Unable to list: "+arg+"\n"+msg);
 	    } else {
 		var ret=dataToArray(data,status,documentLog);
 		var errors=data.getElementsByTagName("error");
 		if (errors.length > 0 ) {
 		    item.classList.toggle("show");
-		    var msg=(errors[0].getAttribute("message")||"");
+		    var msg=getErrorMessage(errors);
 		    alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
 		} else if (ret[0] !== undefined) {
 		    var root=ret[0]||{};
@@ -2699,8 +2699,10 @@ function debugExp(f,t) {
 		  var errors=data.getElementsByTagName("error");
 		  if (errors.length > 0 ) {
 		      console.log("Error:",data);
-		      var msg=(errors[0].getAttribute("message")||"");
-		      alert("Unable to evaluate expression:"+expin+"\n"+msg);
+		      var dmsg=getErrorMessage(errors);
+		      var amsg="Unable to evaluate expression:"+expin+"\n"+dmsg;
+		      console.log("MSG:",amsg);
+		      alert(amsg);
 		  } else {
 		      var results=data.getElementsByTagName("result");
 		      if (results.length > 0 ) {
@@ -2718,6 +2720,13 @@ function debugExp(f,t) {
 	  }
 	 );
 };
+
+function getErrorMessage(errors) {
+    var emsg=errors[0].getAttribute("message")||"";
+    var dmsg=decodeURIComponent(emsg).replace('\\n',"\n").replace("\\n","\n");
+    //console.log("Error message encoded:'",emsg,"' decoded:'",dmsg,"'");
+    return dmsg;
+}
 
 Array.prototype.extend = function (other_array) {
     /* you should include a test to check whether other_array really is an array */

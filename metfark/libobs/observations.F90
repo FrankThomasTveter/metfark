@@ -470,7 +470,7 @@ CONTAINS
     call observation_targetinit(css,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from observation_targetInit.")
+       call observation_errorappend(crc250," Error return from observation_targetInit.")
        call observation_errorappendi(crc250,irc)
        call observation_errorappend(crc250,"\n")
        return
@@ -559,7 +559,7 @@ CONTAINS
           call parse_close(css%trg_psp(ii)%ptr,crc250,irc)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from 'parse_close'.")
+             call observation_errorappend(crc250," Error return from parse_close.")
              return
           end if
        end do
@@ -594,7 +594,7 @@ CONTAINS
           call parse_close(css%psf,crc250,irc)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from 'parse_close'.")
+             call observation_errorappend(crc250," Error return from parse_close.")
              return
           end if
        end if
@@ -602,7 +602,7 @@ CONTAINS
        call observation_clearTargetList(css,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from 'cleartargetlist'.")
+          call observation_errorappend(crc250," Error return from cleartargetlist.")
           return
        end if
        deallocate(css%msg)
@@ -693,7 +693,7 @@ CONTAINS
        old250=currentFile%fn250
        leno=currentFile%lenf
     end do
-    write(unitr,'(I0)',iostat=irc) cnt
+    write(unitr,'(I0,8(X,I0))',iostat=irc) cnt,css%values
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
        call observation_errorappend(crc250," unable to write to:"//path250(1:lenp))
@@ -701,6 +701,11 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    !
+    write(*,'(X,A,A,I0,A,I4.4,6(A,I2.2))')myname," Index '"//path250(1:lenp)//&
+         & "' contains ",cnt," files. Created:", &
+         & css%values(1),"-",css%values(2),"-",css%values(3),"T",&
+         & css%values(5),":",css%values(6),":",css%values(7)
     ! loop over file stack
     leno=0
     do ii=1,css%newnFileSortIndexes(1)
@@ -753,6 +758,9 @@ CONTAINS
     integer :: lenp,lenf,lenb,ii,jj,kk,opos,pos,unitr
     character*250 :: buff250
     character*22 :: myname="observation_loadCache"
+    character*250 diff250
+    integer :: values(8),yy,mm,dd,hh,mi,lend
+    real :: sec, f2000,s2000
     !if(obs_bdeb)write(*,*) myname,' *** Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -798,10 +806,10 @@ CONTAINS
     end if
     call chop0(buff250,250)
     lenb=length(buff250,250,10)
-    read(buff250(1:lenb),*,iostat=irc) css%nFileIndexes
+    read(buff250(1:lenb),*,iostat=irc) css%nFileIndexes,values
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," unable to interpret:"//path250(1:lenp))
+       call observation_errorappend(crc250," corrupt file:"//path250(1:lenp))
        call observation_errorappend(crc250,buff250(1:lenb))
        call observation_errorappendi(crc250,irc)
        call observation_errorappend(crc250,"\n")
@@ -937,6 +945,26 @@ CONTAINS
        call observation_errorappend(crc250,"\n")
        return
     end if
+    yy=css%values(1)
+    mm=css%values(2)
+    dd=css%values(3)
+    hh=css%values(5)
+    mi=css%values(6)
+    sec=css%values(7)
+    call jd2000(s2000,yy,mm,dd,hh,mi,sec)
+    yy=values(1)
+    mm=values(2)
+    dd=values(3)
+    hh=values(5)
+    mi=values(6)
+    sec=values(7)
+    call jd2000(f2000,yy,mm,dd,hh,mi,sec)
+    diff250=observation_diff(s2000-f2000)
+    lend=length(diff250,250,10)
+    write(*,'(X,A,A,I0,A,I4.4,6(A,I2.2),A)')myname," Index '"//path250(1:lenp)//&
+         & "' contains ",css%nFileIndexes," files. Created:", &
+         & values(1),"-",values(2),"-",values(3),"T",&
+         & values(5),":",values(6),":",values(7),". Age:"//diff250(1:lend)
     if(obs_bdeb)write(*,*)myname,' *** Done.',irc
   end subroutine observation_loadCache
   !
@@ -1014,6 +1042,7 @@ CONTAINS
     end if
     css%tablepath=buff250
     call chop0(css%tablepath,250)
+    write(*,*)myname," BUFR table path= '"//buff250(1:lenb)//"'"
     !if(obs_bdeb)write(*,*)myname,' Done. "'//buff250(1:lenb)//'"'
   end subroutine observation_setTablePath
   !
@@ -1120,7 +1149,7 @@ CONTAINS
     if(obs_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    if(obs_bdeb)write(*,*)myname,' *** Adding:',path250(1:lenp)
+    write(*,*)myname," Pushing '"//path250(1:lenp)//"'"
     ! create new stack-item
     bok=.true.
     allocate(newFile,stat=irc)
@@ -1868,7 +1897,7 @@ CONTAINS
              call parse_open(css%trg_psp(ii)%ptr,crc250,irc)
              if (irc.ne.0) then
                 call observation_errorappend(crc250,myname)
-                call observation_errorappend(crc250,"Error return from 'parse_open'.")
+                call observation_errorappend(crc250," Error return from parse_open.")
                 return
              end if
           case (parse_variable);
@@ -1883,7 +1912,7 @@ CONTAINS
              call parse_open(css%trg_psp(ii)%ptr,crc250,irc)
              if (irc.ne.0) then
                 call observation_errorappend(crc250,myname)
-                call observation_errorappend(crc250,"Error return from 'parse_open'.")
+                call observation_errorappend(crc250," Error return from parse_open.")
                 return
              end if
           end select
@@ -1926,7 +1955,7 @@ CONTAINS
     call parse_open(plim,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       call observation_errorappend(crc250," Error return from parse_open.")
        return
     end if
     css%dyn_max=1
@@ -2015,7 +2044,7 @@ CONTAINS
     call parse_close(plim,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_close'.")
+       call observation_errorappend(crc250," Error return from parse_close.")
        return
     end if
     if (allocated(css%dup_ind)) deallocate(css%dup_ind)
@@ -2572,7 +2601,7 @@ CONTAINS
     call parse_open(plim,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_open'.")
+       call observation_errorappend(crc250," Error return from parse_open.")
        return
     end if
     if (lens.ne.0) then
@@ -2636,7 +2665,7 @@ CONTAINS
     call parse_close(plim,crc250,irc)
     if (irc.ne.0) then
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from 'parse_close'.")
+       call observation_errorappend(crc250," Error return from parse_close.")
        return
     end if
     if(obs_bdeb)write(*,*)myname,' Done.',css%ind_lval,css%ind_minval,css%ind_maxval
@@ -3278,7 +3307,7 @@ CONTAINS
        call parse_open(css%psf,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from 'parse_open'.")
+          call observation_errorappend(crc250," Error return from parse_open.")
           return
        end if
        if(obs_bdeb)write(*,*)myname,"Parsing filter: '"//css%flt250(1:css%lenf)//"'",size(css%trg80)
@@ -4173,7 +4202,7 @@ CONTAINS
           call observation_checkTarget(css,bok,crc250,irc)
           IF(IRC.NE.0) THEN
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from checkTarget.");
+             call observation_errorappend(crc250," Error return from checkTarget.");
              call observation_errorappend(crc250,"\n")
              observation_checkObs=.false. ! exit loop
              RETURN
@@ -4192,7 +4221,7 @@ CONTAINS
     if(obs_bdeb)write(*,*)myname,'Done:',irc,observation_checkObs
     IF(IRC.NE.0) THEN
        call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250,"Error return from eval.");
+       call observation_errorappend(crc250," Error return from eval.");
        call observation_errorappend(crc250,"\n")
        observation_checkObs=.false. ! exit loop
        RETURN
@@ -4400,7 +4429,7 @@ CONTAINS
        call observation_checkDescr(css,bok,crc250,irc)
        IF(IRC.NE.0) THEN
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from eval.");
+          call observation_errorappend(crc250," Error return from eval.");
           call observation_errorappend(crc250,"\n")
           RETURN
        END IF
@@ -4895,7 +4924,7 @@ CONTAINS
        call observation_initCodeTable(irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from observation_initCodeTable.")
+          call observation_errorappend(crc250," Error return from observation_initCodeTable.")
           call observation_errorappendi(crc250,irc)
           call observation_errorappend(crc250,"\n")
           return
@@ -5040,6 +5069,7 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine observation_errorappend
   subroutine observation_errorappendi(crc250,inum)
     implicit none
@@ -5059,7 +5089,79 @@ CONTAINS
     else
        crc250=crc250(1:lenc)//""//buff250(1:min(250-lenc-1,lenb))
     end if
+    call chop0(crc250,250)
   end subroutine observation_errorappendi
+
+  character*250 function observation_diff(dt)
+    real :: dt
+    character*250 :: buff250
+    character*25 :: siff25
+    integer, external :: length
+    integer :: lenb,lens
+    integer :: dd
+    integer :: hh
+    integer :: mi
+    integer :: ss
+    lenb=0
+    call chop0(buff250,250)
+    ss=nint(dt*86400.0D0)
+    if (ss.gt.86400) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       dd=int(ss/86400)
+       ss=ss-dd*86400
+       write(siff25,*)dd
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"d"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    if (ss.gt.3600) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       hh=int(ss/3600)
+       ss=ss-hh*3600
+       write(siff25,*)hh
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"h"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    if (ss.gt.60) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       mi=int(ss/60)
+       ss=ss-mi*60
+       write(siff25,*)mi
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"m"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    if (ss.gt.0) then
+       if (lenb.gt.0) then
+          buff250=buff250(1:lenb)//" "
+          lenb=lenb+1
+       end if
+       write(siff25,*)ss
+       call chop0(siff25,25)
+       lens=length(siff25,25,5)
+       buff250=buff250(1:lenb)//siff25(1:lens)//"s"
+       call chop0(buff250,250)
+       lenb=length(buff250,250,lenb)
+    end if
+    observation_diff=buff250
+    return
+  end function observation_diff
 
   character*250 function observation_pretty(varname,ndims,dimnames,start,vsize)
     character*80 :: varname
@@ -5124,7 +5226,7 @@ CONTAINS
        call parse_open(css%ind_pe,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from 'parse_open'.")
+          call observation_errorappend(crc250," Error return from parse_open.")
           return
        end if
        call parse_parsef(css%ind_pe,css%ind_exp250(1:css%ind_lene),css%trg80,crc250,irc)
@@ -5334,7 +5436,7 @@ CONTAINS
           call observation_pullTargets(css,crc250,irc)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from 'pullTargets'.")
+             call observation_errorappend(crc250," Error return from pullTargets.")
              call observation_errorappend(crc250,"\n")
              return
           end if
@@ -5348,7 +5450,7 @@ CONTAINS
           call observation_pullTargets(css,crc250,irc)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
-             call observation_errorappend(crc250,"Error return from 'pullTargets'.")
+             call observation_errorappend(crc250," Error return from pullTargets.")
              call observation_errorappend(crc250,"\n")
              return
           end if
@@ -5499,7 +5601,7 @@ CONTAINS
        call parse_close(css%ind_pe,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250,"Error return from 'parse_close'.")
+          call observation_errorappend(crc250," Error return from parse_close.")
           return
        end if
     end if
@@ -5545,7 +5647,7 @@ CONTAINS
        ! END IF
        ! IF(IRC.NE.0) THEN
        !    call observation_errorappend(crc250,myname)
-       !    call observation_errorappend(crc250,"Error return from eval.");
+       !    call observation_errorappend(crc250," Error return from eval.");
        !    call observation_errorappend(crc250,"\n")
        !    RETURN
        ! END IF

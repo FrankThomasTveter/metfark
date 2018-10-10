@@ -211,17 +211,14 @@ A new <setup file> will get this password.">
 	      <td colspan="3">
 		<table width="100%" border="1" id="obsIndexTargetTable">
 		  <tr style="background-color:#00b9f2" id="labelsObsIndexTarget"> 
-		    <td style="min-width:25px;width:25px"></td>
 		    <th style="min-width:20%;width:20%">Observation target</th>
 		    <th width="150px">Position</th>
 		    <th style="min-width:25px;width:25px"></th>
 		    <th style="min-width:100px;width:100px">Descriptor</th>
 		    <th style="min-width:50%;width:50%">Info</th>
+		    <th style="min-width:25px;width:25px"></td>
 		  </tr>
 		  <tr id="newlineObsIndexTarget">
-		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="obs_newObsIndexTarget(this)"
-			      title="Add observation target">&#43;</button></td>
 		    <td class="fill">
 		      <input id="obsObsIndexTargetName" type="text" value="" style="width:100%"
 			     title="Target name"/> 
@@ -238,6 +235,9 @@ A new <setup file> will get this password.">
 					    title="BUFR descriptor"/></td>
 		    <td class="fill"><input id="obsIndexInfo" type="text" value="" style="width:100%"
 					    title="Information"/></td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="obs_newObsIndexTarget(this)"
+			      title="Add observation target">&#43;</button></td>
 		  </tr>
 		</table>
 	      </td>
@@ -338,16 +338,14 @@ A new <setup file> will get this password.">
 	      <td>
 		<table width="100%" border="1" id="modelTargetTable">
 		  <tr style="background-color:#00b9f2" id="labelsModelTarget"> 
-		    <th style="min-width:25px;width:25px"></th>
 		    <th style="min-width:200px;width:200px">Model target</th>
 		    <th style="min-width:70%;width:70%">Model variable/(dimension)</th>
 		    <th style="min-width:25px;width:25px"></th>
 		    <th style="min-width:100px;width:100px">Minimum</th>
 		    <th style="min-width:100px;width:100px">Maximum</th>
+		    <th style="min-width:25px;width:25px"></th>
 		  </tr>
 		  <tr id="newlineModelTarget">
-		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="coloc_newModelTarget(this)" title="Add model target">&#43;</button></td>
 		    <td class="fill">
 		      <input id="colocModelTargetName" type="text" value="" style="display:block"
 			     title="Model target name"/> </td>
@@ -365,6 +363,8 @@ A new <setup file> will get this password.">
 		    <td class="fill">
 		      <input id="colocModelTargetMax" type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')" title="Maximum <BUFR sequence item> value. Observations with values above this threshold are rejected. &#13; (Duplicator: stop value)"/>
 		    </td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="coloc_newModelTarget(this)" title="Add model target">&#43;</button></td>
 		  </tr>
 		</table>
 	      </td>
@@ -373,14 +373,12 @@ A new <setup file> will get this password.">
 	      <td>
 		<table width="100%" border="1" id="modelDefaultTable">
 		  <tr style="background-color:#00b9f2" id="labelsModelDefault"> 
-		    <td style="min-width:25px;width:25px"></td>
 		    <th>Latitude</th>
 		    <th>Longitude</th>
 		    <th>Information</th>
+		    <td style="min-width:25px;width:25px"></td>
 		  </tr>
 		  <tr id="newlineModelDefault">
-		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="coloc_newModelDefault(this)" title="Add model default">&#43;</button></td>
 		    <td class="fill" id="_latitude">
 		      <input type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')"
 			     title="Latitude"/>
@@ -392,6 +390,8 @@ A new <setup file> will get this password.">
 		    <td class="fill" id="information">
 		      <input type="text" value="" style="width:100%" title="Information"/>
 		    </td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="coloc_newModelDefault(this)" title="Add model default">&#43;</button></td>
 		  </tr>
 		</table>
 	      </td>
@@ -400,7 +400,6 @@ A new <setup file> will get this password.">
 	      <td>
 		<table width="100%" border="1" id="obsTargetTable">
 		  <tr style="background-color:#00b9f2" id="labelsObsTarget"> 
-		    <th style="min-width:25px;width:25px"></th>
 		    <th style="min-width:200px;width:200px">Observation target</th>
 		    <th style="min-width:10%;width:10%">Position</th>
 		    <th style="min-width:25px;width:25px"></th>
@@ -408,10 +407,9 @@ A new <setup file> will get this password.">
 		    <th style="min-width:50%;width:50%">Info</th>
 		    <th style="min-width:100px;width:100px">Minimum</th>
 		    <th style="min-width:100px;width:100px">Maximum</th>
+		    <th style="min-width:25px;width:25px"></th>
 		  </tr>
 		  <tr id="newlineObsTarget">
-		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="coloc_newObsTarget(this)" title="Add observation target">&#43;</button></td>
 		    <td class="fill">
 		      <input id="colocObsTargetName" type="text" value="" title="Observation target name"/> 
 		    </td>
@@ -430,6 +428,8 @@ A new <setup file> will get this password.">
 					    title="Minimum target value:&#13; * Observations with values below this threshold are rejected&#13;Duplicator:&#13; * Duplicator start index&#13;Internal variable:&#13; * Blank"/></td>
 		    <td class="fill"><input id="colocObsMax" type="text" value=""
 					    title="Maximum target value:&#13; * Observations with values above this threshold are rejected&#13;Duplicator:&#13; * Duplicator stop index&#13;Internal variable:&#13; * Blank"/></td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="coloc_newObsTarget(this)" title="Add observation target">&#43;</button></td>
 		  </tr>
 		</table>
 	    </td></tr>
@@ -493,7 +493,7 @@ A new <setup file> will get this password.">
 		      <button onclick="showDropdown('colocDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn"
 			      title="Show available functions">&#9776;</button></td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="debugExp('colocDebugExp','colocDebugRes')" title="Send expression to server and display results">&#8594;</button></td>
+		      <button class="run" onclick="debugExp('colocDebugExp','colocDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
 		    <td width="20%" id="colocDebugRes">0</td>
 		  </tr>
 		</table>
@@ -597,7 +597,7 @@ A new <setup file> will get this password.">
 		      <button onclick="showDropdown('plotDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn"
 			      title="Show available functions">&#9776;</button></td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="debugExp('plotDebugExp','plotDebugRes')" title="Send expression to server and display results">&#8594;</button></td>
+		      <button class="run" onclick="debugExp('plotDebugExp','plotDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
 		    <td width="20%" id="plotDebugRes">0</td>
 		  </tr>
 		</table>
@@ -628,21 +628,18 @@ A new <setup file> will get this password.">
 	  </table>
 	  <table id="autoTable"  width="100%" border="1">
 	    <tr id="labelsAuto" style="background-color:#00b9f2"> 
-	      <th style="min-width:25px;width:25px"></th>
 	      <th style="min-width:50px;width:50px">Type</th>
 	      <th style="min-width:25px;width:25px"></th>
 	      <th>Setup file</th>
 	      <th style="min-width:25px;width:25px"></th>
-	      <th style="min-width:50px;width:50px" align="center">Auto</th>
+	      <th style="min-width:50px;width:50px" align="center">Schedule</th>
 	      <th style="min-width:25px;width:25px"></th>
-	      <th style="min-width:50px;width:50px" align="center">Test</th>
-	      <th style="min-width:50px;width:50px" align="center">Run</th>
+	      <th style="min-width:75px;width:75px" align="center">Manual</th>
 	      <th width="200px">Last</th>
 	      <th width="200px">Info</th>
+	      <th style="min-width:25px;width:25px"></th>
 	    </tr>
 	    <tr id="newlineAuto">
-	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="auto_newConfigFile(this)" title="Add automatic job">&#43;</button></td>
 	      <td class="fill">
 		<input id="autoType" type="text" value="" style="width:100%" disabled/> 
 		<div id="autoTypeDropdown" class="dropdown-content"></div>
@@ -664,15 +661,19 @@ A new <setup file> will get this password.">
 	      <td style="min-width:25px;width:25px" align="center">
 		<button onclick="showDropdown('autoCron',document.getElementById('autoCron').value)" class="dropbtn"
 			title="Show available intervals">&#9776;</button></td>
-	      <td style="min-width:25px;width:25px" align="center">
+	      <td style="min-width:75px;width:75px" align="center">
 		<button class="test" onclick="auto_testNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)"
-			title="Test now, stop processing as soon as some output has been produced.">&#9655;</button></td>
-	      <td style="min-width:25px;width:25px" align="center">
+			title="Test now, stop processing as soon as some output has been produced.">&#9655;</button>
 		<button class="run"
 			onclick="auto_runNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)"
-			title="Run now, process all data completely.">&#9654;</button></td>
+			title="Run now, process all data completely.">&#9654;</button>
+		<button class="stop"
+			onclick="auto_stopNow(this.parentNode.parentNode,this.parentNode.parentNode.children[1].children[0].value,this.parentNode.parentNode.children[3].children[0].value)"
+			title="Stop process.">&#9632;</button></td>
 	      <td id="autoLastTime"></td>
 	      <td id="autoLastInfo"></td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="auto_newConfigFile(this)" title="Add automatic job">&#43;</button></td>
 	    </tr>
 	  </table>
 	  <table width="100%">

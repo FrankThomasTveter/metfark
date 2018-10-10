@@ -376,7 +376,7 @@ function plot_saveConfigFile() {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to save file: "+file+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -745,7 +745,7 @@ function plot_mkdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to mkdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}
@@ -764,7 +764,7 @@ function plot_rmfile(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmfile: "+path+"\n"+msg);
 	      } else {
 		  delete plot_config[path];
@@ -786,7 +786,7 @@ function plot_rmdir(path) {
 	      var errors=data.getElementsByTagName("error");
 	      if (errors.length > 0 ) {
 		  console.log("Error:",data);
-		  var msg=(errors[0].getAttribute("message")||"");
+		  var msg=getErrorMessage(errors);
 		  alert("Unable to rmdir: "+path+"\n"+msg);
 	      };
 	      documentLog.innerHTML="";}

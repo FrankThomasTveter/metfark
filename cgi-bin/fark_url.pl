@@ -155,7 +155,7 @@ eval {
 		#print "Model targets: ". $modelTargets."\n";
 		foreach my $target (split (/\|/, $modelTargets)) {
 		    if ($target ne "") {
-			print "Model target:'$target'\n";
+			# print "Model target:'$target'\n";
 			$fark->pushModelTarget( split (/\~/, $target,-1) );
 		    }
 		};
@@ -164,7 +164,7 @@ eval {
 		#print "Model default: ". $modelDefault."\n";
 		foreach my $set ( split (/\[/, $modelDefault)) {
 		    foreach my $target ( split (/\|/, $set)) {
-			print "Default: $target\n";
+			# print "Default: $target\n";
 			$fark->addModelDefault( split (/\~/, $target,-1)); # "target:value"
 		    };
 		    $fark->pushModelDefault(); # "target:value"
@@ -173,7 +173,7 @@ eval {
 	    if ( $matchRules ) { # process match rules
 		$fark->clearMatchRuleStack();
 		foreach my $rule ( split (/\|/,  $matchRules) ) {
-		    print "Expression: $rule\n";
+		    # print "Expression: $rule\n";
 		    $fark->addMatchRule( split (/\~/, $rule,-1));
 		};
 	    };
@@ -207,7 +207,7 @@ eval {
 		    my $indexTarget=($node->getAttribute("indexTarget") // "");
 		    my $indexExp=($node->getAttribute("indexExp") // "");
 		    if ( $indexTarget && $indexExp) {
-			print "Setting index: '".$indexTarget."' = '".$indexExp."'\n";
+			# print "Setting index: '".$indexTarget."' = '".$indexExp."'\n";
 			$fark->setObservationIndex($indexTarget,$indexExp);
 		    }
 		    my @targets = $node->findnodes("target");
@@ -219,19 +219,19 @@ eval {
 			my $min=$target->getAttribute("min");
 			my $max=$target->getAttribute("max");
 			#print "calling pushObservationTarget\n";
-			print "Obs target: $name~$pos~$descr~$info~$min~$max\n";
+			# print "Obs target: $name~$pos~$descr~$info~$min~$max\n";
 			$fark->pushObservationTarget($name,$pos,$descr,$info,$min,$max);
 		    };
 		};
 	    };
 	    if ( $obsTargets ) { # process obs targets
 		foreach my $target ( split (/\|/,  $obsTargets) ) {
-		    print "Obs target: $target\n";
+		    # print "Obs target: $target\n";
 		    $fark->pushObservationTarget( split (/\~/, $target,-1));
 		};
 	    };
 	    if ($obsStart && $obsStop) {
-		print "Obs Limits: $obsStart $obsStop\n";
+		# print "Obs Limits: $obsStart $obsStop\n";
 		$fark->setObservationIndexLimits($obsStart, $obsStop); # "target:value"
 	    };
 	};
