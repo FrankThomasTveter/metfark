@@ -1,0 +1,22 @@
+\BOOKMARK [0][-]{chapter*.1}{File ARchive Kit \(FARK\)met.no, 2018}{}% 1
+\BOOKMARK [1][-]{section*.2}{Introduction}{chapter*.1}% 2
+\BOOKMARK [2][-]{section*.2}{FARK production}{chapter*.1}% 3
+\BOOKMARK [1][-]{section*.2}{Web interface}{chapter*.1}% 4
+\BOOKMARK [2][-]{section*.3}{Buttons}{section*.2}% 5
+\BOOKMARK [2][-]{section*.3}{Model tab}{section*.2}% 6
+\BOOKMARK [2][-]{section*.3}{Observation tab}{section*.2}% 7
+\BOOKMARK [2][-]{section*.3}{Colocation tab}{section*.2}% 8
+\BOOKMARK [2][-]{lstnumber.-1.1}{Plot tab}{section*.2}% 9
+\BOOKMARK [2][-]{lstnumber.-1.1}{Auto tab}{section*.2}% 10
+\BOOKMARK [1][-]{lstnumber.-1.1}{Performance}{chapter*.1}% 11
+\BOOKMARK [1][-]{lstnumber.-1.1}{HOW TO...}{chapter*.1}% 12
+\BOOKMARK [2][-]{section*.4}{Create a model index}{lstnumber.-1.1}% 13
+\BOOKMARK [2][-]{section*.4}{Create an observation index}{lstnumber.-1.1}% 14
+\BOOKMARK [2][-]{section*.4}{Create a colocation setup}{lstnumber.-1.1}% 15
+\BOOKMARK [2][-]{section*.4}{Create verification plots}{lstnumber.-1.1}% 16
+\BOOKMARK [2][-]{section*.4}{Examples}{lstnumber.-1.1}% 17
+\BOOKMARK [1][-]{section*.4}{Appendix}{chapter*.1}% 18
+\BOOKMARK [2][-]{section*.5}{NetCDF model files}{section*.4}% 19
+\BOOKMARK [2][-]{section*.5}{BUFR observation files}{section*.4}% 20
+\BOOKMARK [2][-]{section*.5}{BUFR sequence}{section*.4}% 21
+\BOOKMARK [2][-]{section*.5}{Delayed replicator}{section*.4}% 22

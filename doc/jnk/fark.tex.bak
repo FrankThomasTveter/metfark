@@ -1,0 +1,376 @@
+% Changing book to article will make the footers match on each page,
+% rather than alternate every other.
+%
+% Note that the article class does not have chapters.
+\documentclass[letterpaper,10pt,twoside,twocolumn,openany]{book}
+
+% Use babel or polyglossia to automatically redefine macros for terms
+% Armor Class, Level, etc...
+% Default output is in English; captions are located in lib/dndstring-captions.sty.
+% If no captions exist for a language, English will be used.
+%1. To load a language with babel:
+%	\usepackage[<lang>]{babel}
+%2. To load a language with polyglossia:
+%	\usepackage{polyglossia}
+%	\setdefaultlanguage{<lang>}
+\usepackage[english]{babel}
+%usepackage[italian]{babel}
+% For further options (multilanguage documents, hypenations, language environments...)
+% please refer to babel/polyglossia's documentation.
+
+\usepackage[utf8]{inputenc}
+\usepackage{lipsum}
+\usepackage{listings}
+\usepackage{hyperref}
+
+% dnd package options 
+% bg-full   : Default option. Use paper background and fancy footer.
+% bg-print  : Use fancy footer but not background.
+% bg-none   : No paper background and plain footer.
+% justified : Use full justification for text layout instead of ragged right.
+\usepackage{dnd}
+
+\lstset{%
+  basicstyle=\ttfamily,
+  language=[LaTeX]{TeX},
+}
+
+% Start document
+\begin{document}
+
+% Your content goes here
+
+% Comment this out if you're using the article class.
+\chapter{File ARchive Kit (FARK)}
+
+\section{Introduction}
+The process of generating {\bf verification results} by co-locating {\bf observation} and {\bf model data}, typically requires 200 pieces of information.
+The FARK system provides a web-interface \url{http://fark.met.no} for the user to specify this information and
+organise the production of verification results at {\bf regular intervals}.
+
+\begin{quotebox}
+   Use FARK if you need {\bf verification results} at regular 
+   intervals and don't want to spend your time writing scripts.
+\end{quotebox}
+
+\section{Background information}
+Some background information is useful when navigating the FARK web-interface.
+
+\subsection{FARK processing}
+FARK first generates an {\bf indexed list} of the model files and an {\bf indexed list} of the observation files.
+The {\bf index} that the files are sorted by, is the time-epoch of the file data.
+
+Next, the observations relevant for a specific model file are extracted and the relevant model fields are interpolated 
+to the observation location and time.
+This co-located data is written to a {\bf table file} according to the specifications of a {\bf plotting script}.
+
+Finally, the {\bf plotting script} is executed yielding the {\bf verification plots}.
+
+\subsection{NetCDF model files}
+The NetCDF model files each contain a set of dimensions and variables, 
+where each variable may have zero or more dimensions, for instance \lstinline!latitude(x,y)! where
+``x'' and ``y'' are dimensions. 
+Note that some variables are accumulated, for instance \lstinline!precipitation_amount_acc(...,time)!. 
+Rain rate is calculated by differentiating this variable with respect to time.
+
+\subsection{BUFR observation files}
+A BUFR observation file may contain many BUFR messages with different BUFR type and sub-type.
+Each BUFR message may contain many observations of the same type, for instance SYNOP or TEMP. 
+An observation may further contain many locations, for instance a radiosonde TEMP 
+observation may contain data from many different heights in the atmosphere.
+
+Observations with the same type and sub-type use the same {\bf BUFR sequence}.
+\begin{paperbox}{BUFR sequence example}
+  \includegraphics[width=\columnwidth]{bufr1.jpg}
+\end{paperbox}
+The BUFR sequence contains a {\bf position}, {\bf descriptor} and {\bf value}
+for each parameter in the observation. 
+\begin{paperbox}{Delayed descriptor replicator}
+  \includegraphics[width=\columnwidth]{bufr2.jpg}
+\end{paperbox}
+A BUFR sequence may contain a {\bf delayed descriptor replicator} (descriptor ``31001''), 
+which will duplicate a sub-section of the BUFR sequence the specified number of times. 
+
+\begin{quotebox}
+  BUFR sequence positions after a {\bf delayed descriptor replicator} are unpredictable.
+\end{quotebox}
+
+\section{Web interface}
+All information necessary to generate verification results can be put into the 
+FARK web-interface at \url{http://fark.met.no}.
+The web-interface provides the following buttons:
+\begin{dndtable}[cX][DmgCoral]
+  \textbf{Button} & \textbf{Description} \\
+   \includegraphics[width=10pt]{server.jpg} & show alternatives (from server) \\
+   \includegraphics[width=10pt]{left.jpg} & move information (on client)\\
+   \includegraphics[width=10pt]{plus.jpg} & add table entry (on client)\\
+   \includegraphics[width=10pt]{minus.jpg} & delete table entry (on client)\\
+   \includegraphics[width=10pt]{test.jpg} & process first data (on server)\\
+   \includegraphics[width=10pt]{run.jpg} & process all data (on server)\\
+   \includegraphics[width=15pt]{save.jpg} & save data to server \\
+\end{dndtable}
+The web-interface has the following tabs:
+\begin{dndtable}[lX]
+  \textbf{tab}          & \textbf{Information type} \\
+  model                 & model file index \\
+  observation           & observation file index \\
+  colocation            & model and observation relationship\\
+  plot                  & {\bf plotting script} information\\
+  auto                  & {\bf schedule} for generating lists and plots. 
+\end{dndtable}
+\begin{quotebox}
+  Re-load data from server by pressing the ``tab-title''.
+\end{quotebox}
+
+\subsection{Model tab}
+
+\begin{paperbox}{Model tab}
+  \includegraphics[width=\columnwidth]{fark_model.jpg}
+\end{paperbox}
+In this tab you specify which files to use in your {\bf model index}.
+The {\bf model index} is sorted by the value of the {\bf index variable} which is also specified here.
+The {\bf index variable} is assigned a {\bf target} name.
+
+\begin{quotebox}
+  {\bf Target} names are short names used to
+  represent the model variables and observation 
+  parameters.
+\end{quotebox}
+
+List of  \includegraphics[width=20pt]{server.jpg} button actions:
+\begin{dndtable}[cX][DmgCoral]
+  \textbf{Location} & \textbf{Action} \\
+  {\em setup file} &  list available setup files \\
+  Search top directory & navigate or select filter \\
+  Model file filter & find a matching file and scan\\
+  Variable & show scanned variables 
+\end{dndtable}
+
+\subsection{Observation tab}
+\begin{paperbox}{Observation tab}
+  \includegraphics[width=\columnwidth]{fark_obs.jpg}
+\end{paperbox}
+Here you specify which files to use in your {\bf observation index}.
+The user must first define the {\bf observation targets} used by the {\bf index expression}.
+The {\bf observation index} is sorted by the value of the {\bf index expression}.
+The {\bf index expression} is assigned a {\bf target} name that can be used in 
+later matching- and filtering- expressions along with the other {\bf observation targets}.
+
+List of  \includegraphics[width=20pt]{server.jpg} button actions:
+\begin{dndtable}[cX][DmgCoral]
+  \textbf{Location} & \textbf{Action} \\
+  {\em setup file} &  list available setup files \\
+  Search top directory & navigate or select filter \\
+  Obs file filter & find a matching file and scan\\
+  BUFR type & show scanned BUFR types\\
+  Sub type & show scanned BUFR sub types\\ 
+  Position & show scanned BUFR sequence entries
+\end{dndtable}
+
+\subsection{Colocation tab}
+This is where it is specified how the model and 
+observation data should be matched.
+The colocation tab contains several tables, 
+for instance the {\bf model targets} table.
+\begin{paperbox}{Model targets table}
+  \includegraphics[width=\columnwidth]{coloc_model.jpg}
+\end{paperbox}
+
+The {\bf model targets} table lists model variables and their target names.
+
+\begin{quotebox}
+  Variables in red are not present in the scanned model file.
+\end{quotebox}
+
+You may also use a {\bf dimension} as a {\bf model target}. 
+In this case the dimension should be surrounded by brackets, for instance ``(time)''.
+
+\begin{paperbox}{Observation targets table}
+  \includegraphics[width=\columnwidth]{coloc_obs.jpg}
+\end{paperbox}
+
+In the {\bf observation targets} table the user can specify target entries in the BUFR sequence.
+The targets already defined in the {\bf observation tab} are listed first, along with the
+sorting function target. 
+Additional targets needed to match the observation with the model fields are added here.
+
+\subsubsection{Delayed replicators}
+To use entries after a  {\bf delayed descriptor replicator} the
+user may specify a {\bf position variable} instead of a fixed number in the position field. 
+The system will then search the BUFR sequence for the specified descriptor and assign the 
+corresponding position to the {\bf position variable}. The {\bf position variable} can
+be used in the position expressions of later observation targets. 
+
+\begin{quotebox}
+   Use {\bf position variables} when you process radiosonde TEMP BUFR messages.
+\end{quotebox}
+
+If only the descriptor is specified, the system will search the BUFR sequence 
+for the next entry with the given descriptor.
+
+\subsubsection{Internal variables}
+Internal variables are indicated using the position entry and no descriptor, max nor min.
+\begin{dndtable}[cX][DmgCoral]
+  \textbf{Position} & \textbf{Description} \\
+  mid &  model file index position\\
+  oid &  observation file index position \\
+  bid &  BUFR message number \\
+  sid &  observation number in message \\
+  lid &  location number in message
+\end{dndtable}
+
+\begin{quotebox}
+A location is identified using {\bf oid}, {\bf bid} and {\bf lid}.
+\end{quotebox}
+
+\subsubsection{Duplicate location}
+If you want to compare the same location (observation) to several fields, for instance different ensemble members,
+you need to duplicate the location.
+In this case you specify the min and max values and not the position nor descriptor
+(the max value may be a model dimension).
+
+\begin{quotebox}
+   Duplicate locations if you need to process multiple {\bf model ensemble members}.
+\end{quotebox}
+
+\subsection{Match rules}
+The {\bf match rules} table specifies how the model targets are related to the
+observation targets. 
+The FARK system will determine which model dimensions to search in the 
+interpolation to the observation location.
+\begin{paperbox}{Match rules table}
+  \includegraphics[width=\columnwidth]{coloc_match.jpg}
+\end{paperbox}
+In situations where there are no specified rules to interpolate a dimension, the FARK system will
+average over that dimension.
+Locations where at least one of the matching targets have an undefined value are discarded.
+
+\subsubsection{filter}
+
+Colocation takes a lot of computer resources, and it is therefore a good strategy
+to filter out unwanted data as early as possible in the data processing.
+
+The observation {\bf min} and {\bf max} filters are applied immediately to discard locations
+when the BUFR messages are read from file. 
+
+The model {\bf min} and {\bf max} filters are applied immediately when the location has been interpolated.
+
+The {\bf observation filter} expression is applied when all locations in a BUFR message have been read from file,
+and this filter allows functions that apply to the whole message. For instance ``msgclosest''
+selects the location that produces an expression closest to a list
+\begin{lstlisting}
+   msgclosest(obs_pres*0.01,1000,500)
+\end{lstlisting}
+\begin{quotebox}
+  The {\bf observation filter} expression can only be based on observation targets.
+\end{quotebox}
+
+The {\bf model filter} expression is applied when model fields have been interpolated to the observation location.
+This is the most expensive filter in terms of computer resources.
+
+There is a debug option available for testing the built in filter functions.
+The debug option does not allow any model or observation targets.
+Note that ``blank'' returns zero.
+
+\begin{quotebox}
+  A location is rejected if a filter expression returns 0.
+\end{quotebox}
+
+\subsection{Plot tab}
+
+\begin{paperbox}{Plot tab}
+  \includegraphics[width=\columnwidth]{fark_plot.jpg}
+\end{paperbox}
+
+The {\bf plot tab} allows the user to input data requested by the plotting script.
+The plotting script is specified in the ``Category'' field.
+
+Verification results are placed on disk according to the output paths in the {\bf plot} tab,
+for instance at: \lstinline!/lustre/storeA/project/nwp/fark/!
+
+\begin{quotebox}
+ Use {\bf YY MM DD HH MI} as wildcards in the ``Output'' paths.
+\end{quotebox}
+
+
+There are two tables in this tab. 
+
+The Attribute table allows the user to input fixed attributes for all the data,
+for instance titles, units and labels. 
+The attributes are specified in the comments of the plotting script.
+
+The Dataset table specifies the expressions that should be listed in the table file,
+which is used by the plotting script.
+The first rows are independent of plotting script, namely the dataset ``Id'', the 
+name of the colocation file and the legend. 
+The remaining rows are specified by the comments in the plotting script.
+
+\subsection{Auto tab}
+\begin{paperbox}{Auto tab}
+  \includegraphics[width=\columnwidth]{auto.jpg}
+\end{paperbox}
+
+The {\bf auto tab} contains a table that lists tasks that are automatically 
+executed at given intervals. 
+Tasks are:
+\begin{itemize}
+\item maintain model {\bf index file},
+\item maintain observation {\bf index file},
+\item generate colocation xml and
+\item generate {\bf verification products}.
+\end{itemize}
+
+\section{Performance}
+
+Colocating large amounts of data takes a lot of resources, and it is quite easy to
+set up jobs that are not able to run successfully. Generating {\bf table files}
+does not usually require too much memory but can take much processing time.
+However the {\bf plotting script} will typically not be able to process a {\bf table file} with 
+more than 10 million entries without running out of memory. 
+This corresponds to 20 days of verification for northern Europe.
+
+Full verification of operational forecast ensemble data is probably not realistic 
+within the current FARK system due to the limited memory resources on ARES (8Gb RAM).
+TEMP verification is possible, but takes surprisingly long time due to the
+many height-levels in the radiosone observations.
+
+\section{Verification results}
+
+Verification results depend on the plotting script, which is written in {\bf R}.
+
+\begin{quotebox}
+   A comment in the {\bf table file} indicates how the {\bf plotting script} is executed.
+\end{quotebox}
+
+Here is an example of a verification plot for 10m wind:
+
+\begin{paperbox}{FF10m score}
+  \centerline{\includegraphics[width=1.0\columnwidth]{ff10m_score_hl.jpg}}
+\end{paperbox}
+
+%\begin{paperbox}{FF10m vs MSLP}
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_mslp_hl.jpg}}
+%\end{paperbox}
+
+%\begin{paperbox}{FF10m time series}
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}
+%\end{paperbox}
+
+%\begin{paperbox}{FF10m profile}
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_prof_hl.jpg}}
+%\end{paperbox}
+
+%\begin{paperbox}{FF10m }
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}
+%\end{paperbox}
+
+%\begin{paperbox}{FF10m time series}
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}
+%\end{paperbox}
+
+%\begin{paperbox}{FF10m time series}
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}
+%\end{paperbox}
+
+% End document
+\end{document}
