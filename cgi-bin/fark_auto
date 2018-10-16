@@ -3,10 +3,8 @@
 # Note: if "test" is defined, it is always true (regardless of value)!
 # ;debug=1
 
-
-./fark_auto.pl '?root=auto.cfg&password=&type=obs&file=siri2.cfg&debug=1'
-
-#              '?root=auto.cfg&password=&type=plot&file=syno_003d.cfg&abort=1'
+#;test=1
+./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=default.cfg'
 
 #wget --tries=1 -O - "http://localhost/cgi-bin/fark_auto.pl?root=auto.cfg&password=&type=plot&file=meps_syno_365d.cfg"
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc.cfg'

@@ -79,7 +79,8 @@ C
       CHARACTER*(*) YNAME
       CHARACTER*256  YFNAME
       REAL*8 RVIND,EPS
-C
+      logical lfirst=.true.
+C     
 C     DATA CTABBEN/JTAB*' '/,CTABBU/JTAB*' '/
 C
 C     ------------------------------------------------------------------
@@ -116,7 +117,10 @@ C
      2            IOSTAT=IOS,      
      1            STATUS='OLD')
       IF(IOS.NE.0) THEn
-         print*,'open error on ',YFNAME(1:II)
+         if (lfirst) then
+            print*,'open error on ',YFNAME(1:II)
+            lfirst=.false.
+         end if
          kerr=61
          return
       END IF

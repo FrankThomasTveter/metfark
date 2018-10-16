@@ -84,7 +84,8 @@ C
       CHARACTER*256 YFNAME
       CHARACTER*(*) YNAME
       REAL*8 RVIND,EPS
-C
+      logical lfirst=.true.
+C     
 C     ------------------------------------------------------------------
 C*          1.   SET INITIAL CONSTANTS.
 C                ----------------------
@@ -113,7 +114,10 @@ C
       CALL GET_FREE_UNIT(IUNIT)
       OPEN(UNIT=IUNIT,iostat=ios,FILE=YFNAME(1:II),STATUS='OLD')
       IF(IOS.NE.0) THEN
-         print*,'Open error on ',YFNAME(1:II)
+         if (lfirst) then
+            print*,'Open error on ',YFNAME(1:II)
+            lfirst=.false.
+         end if
          kerr=63
          return
       END IF

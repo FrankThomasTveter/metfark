@@ -23,10 +23,15 @@ function auto_checkPassword() {
 function auto_updateData() {
     documentLog.innerHTML="Sent auto-load request.";
     var root="auto.cfg";
-    $.get("cgi-bin/fark_load.pl",{type:"auto",root:root},function(data, status){
-	dataToArray(data,status,documentLog);
-	auto_setTable();
-    });
+    $.get("cgi-bin/fark_load.pl",{type:"auto",root:root})
+	.success(
+	    function(data, status){
+		dataToArray(data,status,documentLog);
+		auto_setTable();
+	    })
+	.error(
+	    function (error) { alert("Auto request failed (system error)");}
+	);
 };
 function auto_newConfigFile(item) {
     var type=item.parentNode.parentNode.children[0].children[0].value;
@@ -55,12 +60,12 @@ function auto_newConfigFile(item) {
 	    };
 	}
 	auto_setTable();
-	console.log("Saving setup file.");
+	//console.log("Saving setup file.");
 	auto_saveConfigFile();
     } else {
 	alert("Invalid: Model config file ('"+file+"')");
     }
-    console.log("Adding ",type,file,auto);
+   //console.log("Adding ",type,file,auto);
 };
 function auto_testNow(target,type,file,row) {
     var root="";
@@ -71,24 +76,26 @@ function auto_testNow(target,type,file,row) {
 	row.children[7].innerHTML=""; // last
 	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
-	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1},
-	      function(data, status){
-		  if (status == "success") {
-		      var errors=data.getElementsByTagName("error");
-		      if (errors.length > 0 ) {
-			  console.log("Error:",data);
-			  var msg=getErrorMessage(errors);
-			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
-		      };
-		      if (target === "") {
-			  dataToArray(data,status,documentLog);
-			  auto_setTable();
-		      } else {
-			  target.children[5].innerHTML="manual test";
-		      }
-		      documentLog.innerHTML="";}
-	      }
-	 );
+	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1})
+	    .success(
+		function(data, status){
+		    if (status == "success") {
+			var errors=data.getElementsByTagName("error");
+			if (errors.length > 0 ) {
+			    var msg=getErrorMessage(errors);
+			    alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			};
+			if (target === "") {
+			    dataToArray(data,status,documentLog);
+			    auto_setTable();
+			} else {
+			    target.children[5].innerHTML="manual test";
+			}
+			documentLog.innerHTML="";}
+		})
+	    .error(
+		function (error) { alert("Test request failed (system error)");}
+	    );
     };
 };
 function auto_runNow(target,type,file,row) {
@@ -100,24 +107,29 @@ function auto_runNow(target,type,file,row) {
 	row.children[7].innerHTML=""; // last
 	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
-	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file},
-	      function(data, status){
-		  if (status == "success") {
-		      var errors=data.getElementsByTagName("error");
-		      if (errors.length > 0 ) {
-			  console.log("Error:",data);
-			  var msg=getErrorMessage(errors);
-			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
-		      };
-		      if (target === "") {
-			  dataToArray(data,status,documentLog);
-			  auto_setTable();
-		      } else {
-			  target.children[5].innerHTML="manual run";
-		      }
-		      documentLog.innerHTML="";}
-	      }
-	 );
+	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file})
+	    .success(
+		function(data, status){
+		   //console.log("Here...");
+		    if (status == "success") {
+			var errors=data.getElementsByTagName("error");
+			if (errors.length > 0 ) {
+			    var msg=getErrorMessage(errors);
+			    alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			};
+			if (target === "") {
+			    dataToArray(data,status,documentLog);
+			    auto_setTable();
+			} else {
+			    target.children[5].innerHTML="manual run";
+			}
+			documentLog.innerHTML="";}
+		})
+	    .error(
+		function (error) { documentLog.innerHTML="Run request failed (system error)";
+				   alert("Run request failed (system error)");
+				 }
+	    );
     };
 };
 function auto_stopNow(target,type,file,row) {
@@ -129,24 +141,26 @@ function auto_stopNow(target,type,file,row) {
 	row.children[7].innerHTML=""; // last
 	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-stop request ("+file+").";
-	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,abort:1},
-	      function(data, status){
-		  if (status == "success") {
-		      var errors=data.getElementsByTagName("error");
-		      if (errors.length > 0 ) {
-			  console.log("Error:",data);
-			  var msg=getErrorMessage(errors);
-			  alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
-		      };
-		      if (target === "") {
-			  dataToArray(data,status,documentLog);
-			  auto_setTable();
-		      } else {
-			  target.children[5].innerHTML="manual stop";
-		      }
-		      documentLog.innerHTML="";}
-	      }
-	 );
+	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,abort:1})
+	    .success(
+		function(data, status){
+		    if (status == "success") {
+			var errors=data.getElementsByTagName("error");
+			if (errors.length > 0 ) {
+			    var msg=getErrorMessage(errors);
+			    alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			};
+			if (target === "") {
+			    dataToArray(data,status,documentLog);
+			    auto_setTable();
+			} else {
+			    target.children[5].innerHTML="manual stop";
+			}
+			documentLog.innerHTML="";}
+		})
+	    .error(
+		function (error) { alert("Stop request failed (system error)");}
+	    );
     };
 };
 function auto_saveConfigFile() {
@@ -183,18 +197,20 @@ function auto_saveConfigFile() {
 	    auto_config["plot"][plot]["auto"];
     }
     documentLog.innerHTML="Sent auto-save request.";
-    $.get("cgi-bin/fark_save.pl",{type:"auto",root:root,password:password,modelFiles:modelFiles,obsFiles:obsFiles,colocFiles:colocFiles,plotFiles:plotFiles},
-	  function(data, status){
-	      if (status == "success") {
-		  var errors=data.getElementsByTagName("error");
-		  if (errors.length > 0 ) {
-		      console.log("Error:",data);
-		      var msg=getErrorMessage(errors);
-		      alert("Unable to save auto config file: "+root+"\n"+msg);
-		  };
-		  documentLog.innerHTML="";}
-	  }
-	 );
+    $.get("cgi-bin/fark_save.pl",{type:"auto",root:root,password:password,modelFiles:modelFiles,obsFiles:obsFiles,colocFiles:colocFiles,plotFiles:plotFiles})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to save auto config file: "+root+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Auto save request failed (system error)");}
+	);
     makeUrl("auto",root);
 };
 function auto_removeFile(item,type,file) {
@@ -226,25 +242,25 @@ function auto_setTable() {
 	var plotl=[];
 	for (var model in auto_config["model"]) {
 	    if (auto_config["model"][model]["auto"] === cron) {
-		console.log("*** Found: ",cron, model);
+		//console.log("*** Found: ",cron, model);
 		modell.push(model);
 	    }
 	}
 	for (var obs in auto_config["obs"]) {
 	    if (auto_config["obs"][obs]["auto"] == cron) {
-		console.log("*** Found: ",cron,obs);
+		//console.log("*** Found: ",cron,obs);
 		obsl.push(obs);
 	    }
 	}
 	for (var coloc in auto_config["coloc"]) {
 	    if (auto_config["coloc"][coloc]["auto"] == cron) {
-		console.log("*** Found: ",cron,coloc);
+		//console.log("*** Found: ",cron,coloc);
 		colocl.push(coloc);
 	    }
 	}
 	for (var plot in auto_config["plot"]) {
 	    if (auto_config["plot"][plot]["auto"] == cron) {
-		console.log("*** Found: ",cron,plot);
+		//console.log("*** Found: ",cron,plot);
 		plotl.push(plot);
 	    }
 	}
@@ -261,22 +277,22 @@ function auto_setTable() {
     }
     for (var ii = 0; ii < models.length; ++ii) {
 	var model=models[ii];
-	console.log("Insert row: ",model);
+	//console.log("Insert row: ",model);
 	auto_insertRow(tail,"model",model,auto_config["model"][model]["last"],auto_config["model"][model]["info"],auto_config["model"][model]["auto"],auto_config["model"][model]["status"],"#01DFD7"); 
     }
     for (var ii = 0; ii < obss.length; ++ii) {
 	var obs=obss[ii];
-	console.log("Insert row: ",obs);
+	//console.log("Insert row: ",obs);
 	auto_insertRow(tail,"obs",obs,auto_config["obs"][obs]["last"],auto_config["obs"][obs]["info"],auto_config["obs"][obs]["auto"],auto_config["obs"][obs]["status"],"#F3E2A9");
     }
     for (var ii = 0; ii < colocs.length; ++ii) {
 	var coloc=colocs[ii];
-	console.log("Insert row: ",coloc);
+	//console.log("Insert row: ",coloc);
 	auto_insertRow(tail,"coloc",coloc,auto_config["coloc"][coloc]["last"],auto_config["coloc"][coloc]["info"],auto_config["coloc"][coloc]["auto"],auto_config["coloc"][coloc]["status"],"#66F");
     }
     for (var ii = 0; ii < plots.length; ++ii) {
 	var plot=plots[ii];
-	console.log("Insert row: ",plot);
+	//console.log("Insert row: ",plot);
 	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"],"#BDBDBD");
     }
 };
@@ -285,7 +301,7 @@ function auto_setTable() {
 
 function auto_setCheckbox(item,type,file) {
     var checked = item.checked;
-    console.log("Checked:",checked);
+   //console.log("Checked:",checked);
     if (auto_config[type] !== undefined && auto_config[type][file] !== undefined) {
 	auto_config[type][file]["auto"] = checked;
     }
@@ -318,7 +334,7 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     } else {
     };
     row.appendChild(td);
-    console.log("Row file name=",file);
+   //console.log("Row file name=",file);
     // make select-FILE NAME column
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");

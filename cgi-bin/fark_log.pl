@@ -45,8 +45,8 @@ if ($priv ne "rw") {
 }
 sub printType{
     use File::stat;
-    my $ce = "#";
-    my $co = "=";
+    my $ce = "===ERROR===";
+    my $co = "-";
     my $logstat;
     my $errstat;
     my $cls  = shift//"";
@@ -98,37 +98,12 @@ sub printFile {
     if (-e $file) {
 	my $stat = stat($file);
 	my $mtime = gmtime($stat->mtime);
-	my $days;
-	my $hours;
-	my $minutes;
 	my $age= $time  - $stat->mtime;
-	my $s="";
-	if ($age > 86400) {
-	    $days=floor($age/86400);
-	    $age=$age-$days*86400;
-	    if ($s) {$s=$s . " "};
-	    $s=$s . "${days}d";
-	};
-	if ($age > 3600) {
-	    $hours=floor($age/3600);
-	    $age=$age-$hours*3600;
-	    if ($s) {$s=$s . " "};
-	    $s=$s . "${hours}h";
-	};
-	if ($age > 60) {
-	    $minutes=floor($age/60);
-	    $age=$age-$minutes*60;
-	    if ($s) {$s=$s . " "};
-	    $s=$s . "${minutes}m";
-	};
+	my $s=prettyAge($age);
 	if ($s) {$s="(".$s.")"};
 	my $size = $stat->size;
-	printStrong("${file}   ${size}  ${mtime} ${s}",$str);
-	open (FH, "<", $file);
-	while (<FH>) {
-	    print;
-	}
-	close(FH);
+	printStrong("${file}   ${size}  ${mtime}   ${s}",$str);
+	farkdir::print_file($file);
     } else {
 	printStrong("${file}   -- No such file --",$str);
     }
@@ -139,7 +114,36 @@ sub printStrong {
     my $line="==========================================================================================";
     my $s = shift;
     my $c = shift;
-    my $l = length($s);
+    my $ls = length($s);
+    my $lc = length($c);
+    my $l=($ls/$lc)+1;
     $line = ($c x $l);
     print "${line}\n${s}\n${line}\n";
+}
+
+sub prettyAge {
+    my $age=shift;
+    my $days;
+    my $hours;
+    my $minutes;
+    my $s="";
+    if ($age > 86400) {
+	$days=floor($age/86400);
+	$age=$age-$days*86400;
+	if ($s) {$s=$s . " "};
+	$s=$s . "${days}d";
+    };
+    if ($age > 3600) {
+	$hours=floor($age/3600);
+	$age=$age-$hours*3600;
+	if ($s) {$s=$s . " "};
+	$s=$s . "${hours}h";
+    };
+    if ($age > 60) {
+	$minutes=floor($age/60);
+	$age=$age-$minutes*60;
+	if ($s) {$s=$s . " "};
+	$s=$s . "${minutes}m";
+    };
+    return $s;
 }

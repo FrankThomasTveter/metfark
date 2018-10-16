@@ -1,4 +1,4 @@
-obs_file = "default.cfg";
+    obs_file = "default.cfg";
 obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 filterDirStat : "",
 				 filterDirMin: "",
@@ -8,7 +8,7 @@ obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 hits : "?",
 				 bufr : { 99 : { info : "default", 9 : { 1 :{descr:99999, info: "default info"},
 									 info : "more default info"
-						     }
+								       }
 					       }
 					},
 				 bufrType : "99",
@@ -21,22 +21,22 @@ obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 files : [],
 				 stack : "",
 				 password: "test"
-					   }
+			       }
 	     };
 obs_configEd = 0;
 
 function obs_allocate(file) {
     if (obs_config[file] === undefined) {
 	obs_config[file]=clone(obs_config[obs_file]);
-	console.log("cloned:",file,obs_file,obs_config[file]);
+	//console.log("cloned:",file,obs_file,obs_config[file]);
     }
 }
 function obs_setConfigFile(file) {
     showValue('obsConfigFile',file);
     showValue('obsConfigFileSave',file);
     //if (file != "") {
-	obs_allocate(file);
-	obs_file=file;
+    obs_allocate(file);
+    obs_file=file;
     //};
 }
 function obs_getConfigFile() {
@@ -52,20 +52,24 @@ function obs_setFilterDir(value) {
     //console.log("File:",file,"filterDir",obs_config[file]);
     var val=decodeURI(value);
     obs_config[file]["filterDir"]=val;
-    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:"data",path:val},
-	  function(data, status){
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length == 0 ) {
-		  document.getElementById('obsFilterDir').style.color='black'
-		  obs_config[file]["filterDirStat"]="";
-		  console.log("Dir ok:",val);
-	      } else {
-		  obs_config[file]["filterDirStat"]=val;
-		  document.getElementById('obsFilterDir').style.color='red'
-		  console.log("Dir NOT ok:",val);
-	      }
-	      obs_show();
-	  });
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:"data",path:val})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length == 0 ) {
+		    document.getElementById('obsFilterDir').style.color='black'
+		    obs_config[file]["filterDirStat"]="";
+		   //console.log("Dir ok:",val);
+		} else {
+		    obs_config[file]["filterDirStat"]=val;
+		    document.getElementById('obsFilterDir').style.color='red'
+		    console.log("Dir NOT ok:",val);
+		}
+		obs_show();
+	    })
+	.error(
+	    function (error) { alert("Model filter dir request failed (system error)");}
+	);
 };
 function obs_setIndexTarget(target,parameter,value) {
     var file=obs_getConfigFile();
@@ -92,6 +96,7 @@ function obs_show() {
 	// this may seem strange, Stat stores name of dir only if it does not exist...
 	if (obs_config[file]["filterDirStat"]==obs_config[file]["filterDir"]) {
 	    document.getElementById('obsFilterDir').style.color='red'
+	    console.log("Directory does not exist:",obs_config[file]["filterDir"]);
 	} else {
 	    document.getElementById('obsFilterDir').style.color='black'
 	}
@@ -136,7 +141,7 @@ function obs_newObsIndexTarget(item) {
     var pos=item.parentNode.parentNode.children[1].children[0].value;
     var descr=item.parentNode.parentNode.children[3].children[0].value;
     var info=item.parentNode.parentNode.children[4].children[0].value;
-//    console.log("New: trg:",target," pos:",pos," des:",descr," info:",info);
+    //    console.log("New: trg:",target," pos:",pos," des:",descr," info:",info);
     if (target !== "") {
 	var file= obs_getConfigFile();
 	if (obs_config[file] === undefined) {
@@ -164,54 +169,74 @@ function obs_newObsIndexTarget(item) {
 function obs_saveConfigFile() {
     var file=obs_getConfigFile();
     var password=document.getElementById("obsConfigFilePsw").value;
-    var bufrType=obs_config[file]["bufrType"];
-    var subType=obs_config[file]["subType"];
-    var typeInfo=obs_config[file]["typeInfo"];
-    var indexTarget=obs_config[file]["indexTarget"];
-    var indexExp=obs_config[file]["indexExp"];
+    var filterDir="";
+    var filterDirMin="";
+    var filterDirMax="";
+    var filterFile="";
+    var table="";
+    var bufrType="";
+    var subType="";
+    var typeInfo="";
+    var indexTarget="";
+    var indexExp="";
     var stack="";
-    var sfile=obs_config[file]["stack"];
-    if (sfile !== "") {
-	stack=stack+"|"+sfile;
-    };
     var obsTargets="";
-    var targeto=obs_config[file]["targeto"];
-    var targets=obs_config[file]["targets"];
-    //for (var target in targets) {
-    for (var ii =0; ii< targeto.length;ii++) {
-	var target=targeto[ii];
-	var pos=targets[target]["pos"];
-	var descr=targets[target]["descr"];
-	var info=targets[target]["info"];
-	obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info;
-    };
+    if (obs_config[file]!= undefined) {
+	filterDir=obs_config[file]["filterDir"]//"";
+	filterDirMin=obs_config[file]["filterDirMin"]//"";
+	filterDirMax=obs_config[file]["filterDirMax"]//"";
+	filterFile=obs_config[file]["filterFile"]//"";
+	var sfile=obs_config[file]["stack"];
+	if (sfile !== "") {
+	    stack=stack+"|"+sfile;
+	};
+	bufrType=obs_config[file]["bufrType"]//"";
+	subType=obs_config[file]["subType"]//"";
+	typeInfo=obs_config[file]["typeInfo"]//"";
+	indexTarget=obs_config[file]["indexTarget"]//"";
+	indexExp=obs_config[file]["indexExp"]//"";
+	var targeto=obs_config[file]["targeto"];
+	var targets=obs_config[file]["targets"];
+	//for (var target in targets) {
+	for (var ii =0; ii< targeto.length;ii++) {
+	    var target=targeto[ii];
+	    var pos=targets[target]["pos"];
+	    var descr=targets[target]["descr"];
+	    var info=targets[target]["info"];
+	    obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info;
+	};
+	table=obs_config[file]["tablePath"]//"";
+    }
     if (obsTargets == "") {obsTargets="none";}
     obs_configEd++;
     documentLog.innerHTML="Sent obs-save request.";
     $.get("cgi-bin/fark_save.pl",{type:"obs",file:file,password:password,
-			     filterDir:obs_config[file]["filterDir"],
-			     filterDirMin:obs_config[file]["filterDirMin"],
-			     filterDirMax:obs_config[file]["filterDirMax"],
-			     filterFile:obs_config[file]["filterFile"],
-		             stack:stack,
-			     table:obs_config[file]["tablePath"],
-                             bufrType:bufrType,
-                             subType:subType,
-                             typeInfo:typeInfo,
-                             indexTarget:indexTarget,
-                             indexExp:indexExp,
-			     obsTargets:obsTargets
-			    },
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to save file: "+file+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				  filterDir:filterDir,
+				  filterDirMin:filterDirMin,
+				  filterDirMax:filterDirMax,
+				  filterFile:filterFile,
+				  stack:stack,
+				  table:table,
+				  bufrType:bufrType,
+				  subType:subType,
+				  typeInfo:typeInfo,
+				  indexTarget:indexTarget,
+				  indexExp:indexExp,
+				  obsTargets:obsTargets
+				 })
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to save file: "+file+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Obs save request failed (system error)");}
+	);
     makeUrl("obs",file);
 };
 // make new obs-index entry
@@ -323,13 +348,18 @@ function obs_insertIndexTargetRow(item,target,ii,pos,descr,color,info) {
 function obs_updateData(arg=obs_getConfigFile()) {
     var args=getArgs(arg);
     documentLog.innerHTML="Sent obs-load request.";
-    $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
-	dataToArray(data,status,documentLog);
-	obsLoaded=true;
-	//console.log("Updating dropdown for ",target);
-	obs_show();
-	documentLog.innerHTML="";
-    });
+    $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args})
+	.success(
+	    function(data, status){
+		dataToArray(data,status,documentLog);
+		obsLoaded=true;
+		//console.log("Updating dropdown for ",target);
+		obs_show();
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Obs request failed (system error)");}
+	);
 };
 function obs_fileFind(sfile) {
     var file=obs_getConfigFile();
@@ -364,20 +394,23 @@ function obs_fileFind(sfile) {
 				  indexExp:indexExp,
 				  bufrType:bufrType,
 				  subType:subType,
-				  typeInfo:typeInfo},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
-	      } else {
-		  dataToArray(data,status,documentLog);
-		  obs_show();
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				  typeInfo:typeInfo})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
+		    } else {
+			dataToArray(data,status,documentLog);
+			obs_show();
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Obs find request failed (system error)");}
+	);
 };
 
 function obs_mkdir(path) {
@@ -385,17 +418,20 @@ function obs_mkdir(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"mk",
 				 cls:"obs",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to mkdir: "+path+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to mkdir: "+path+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Obs mkdir request failed (system error)");}
+	);
     
 };
 
@@ -404,20 +440,23 @@ function obs_rmfile(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"rf",
 				 cls:"obs",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to rmfile: "+path+"\n"+msg);
-	      } else {
-		  delete obs_config[path];
-		  if (obs_file == path) {obs_file="default.cfg";}
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to rmfile: "+path+"\n"+msg);
+		    } else {
+			//delete obs_config[path];
+			if (obs_file == path) {obs_file="default.cfg";}
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Obs rmfile request failed (system error)");}
+	);
     
 };
 
@@ -426,24 +465,33 @@ function obs_rmdir(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"rm",
 				 cls:"obs",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to rmdir: "+path+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to rmdir: "+path+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Obs rmdir request failed (system error)");}
+	);
     
 };
 
 function obs_mkfile(file) {
-    console.log("Calling saveConfigFile: '"+file+"'");
+   //console.log("Calling saveConfigFile: '"+file+"'");
     obs_setConfigFile(file);
     obs_saveConfigFile(file);
+};
+
+function obs_fgfile(path) { // clear file from internal memory
+    if (obs_config[path] != undefined) {
+	delete obs_config[path];
+    }
 };
 
 // arr=obs_removeByValue(arr,item1,item2...)

@@ -351,9 +351,9 @@ sub updateModelRegister {
     my $self = shift;
     my $register_file = shift;
     my $mask_dir = shift;
-    my $mask=shift;
-    my $min = shift // "";
-    my $max = shift // "";
+    my $mask = shift;
+    my $min = farkdir::getOffset(shift // "",-1);
+    my $max = farkdir::getOffset(shift // "",0);
     my $test = shift // 0;
     my $fill_file = shift // "";
     my $new_file_cnt = 0;
@@ -402,7 +402,7 @@ sub updateModelRegister {
 	    }
 	    CORE::close REGISTER;
 	} else {
-	    print ">>>> Unable to open $register_file\n";
+	    print ">>>> Unable to open register file: $register_file\n";
 	}
     }
     # find new files that need to be scanned
@@ -444,9 +444,9 @@ sub updateModelRegister {
     # Update local register file
     if ($write_register_file) {
 	if (not CORE::open (REGISTER,">$register_file")) {
-	    print ">>>> Unable to open $register_file\n";
+	    print ">>>> Unable to open register file: $register_file\n";
 	} else {
-	    print ">>>> Updating: $register_file\n";
+	    print ">>>> Updating register file: $register_file\n";
 	    print REGISTER time() . "\n";
 	    foreach (@new_file_list) {
 		print REGISTER "$new_file_hash{$_}\n";
@@ -886,8 +886,8 @@ sub updateObservationRegister {
     my $register_file = shift;
     my $mask_dir = shift;
     my $mask = shift;
-    my $min = shift // "";
-    my $max = shift // "";
+    my $min = farkdir::getOffset(shift // "",-1);
+    my $max = farkdir::getOffset(shift // "",0);
     my $test = shift // 0; 
     my $fill_file = shift // "";
     my $new_file_cnt = 0;
@@ -940,7 +940,7 @@ sub updateObservationRegister {
 	    }
 	    CORE::close REGISTER;
 	} else {
-	    print ">>>> Unable to open $register_file\n";
+	    print ">>>> Unable to open register file: $register_file\n";
 	}
     }
     # find new files that need to be scanned
@@ -971,9 +971,9 @@ sub updateObservationRegister {
     # Update local register file
     if ($write_register_file) {
 	if (not CORE::open (REGISTER,">$register_file")) {
-	    print ">>>> Unable to open $register_file\n";
+	    print ">>>> Unable to open register file: $register_file\n";
 	} else {
-	    print ">>>> Updating: $register_file\n";
+	    print ">>>> Updating register file: $register_file\n";
 	    print REGISTER time() . "\n";
 	    foreach (@new_file_list) {
 		print REGISTER "$new_file_hash{$_}\n";

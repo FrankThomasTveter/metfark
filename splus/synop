@@ -46,6 +46,9 @@ args <- getArguments();
 tablefile = args[1];
 prefix = args[2];
 
+logfile=paste0(tablefile,".Rout");
+sink(logfile);
+
 leg <- readComments(tablefile,"LEGENDS");
 attr <- readComments(tablefile,"ATTRIBUTES");
 cols <- readComments(tablefile,"COLUMNS");

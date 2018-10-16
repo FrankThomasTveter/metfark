@@ -323,6 +323,7 @@ CONTAINS
        if (irc.ne.0) then
           call colocation_errorappend(crc250,myname)
           call colocation_errorappend(crc250,"Unable to allocate 'trg80'.")
+          call colocation_errorappendi(crc250,css%ctrg)
           call colocation_errorappend(crc250,"\n")
           return
        end if
@@ -1313,7 +1314,7 @@ CONTAINS
   !###############################################################################
   ! colocate data and write to table file
   !
-  subroutine colocation_makeTable(css,mss,oss,ounit,name80,&
+  subroutine colocation_makeTable(css,mss,oss,ounit,ocnt,name80,&
        & ncol,col80,colexp250,leg250,test,fill250,crc250,irc)
     use model
     use observations
@@ -1323,6 +1324,7 @@ CONTAINS
     type(mod_session), pointer ::  mss !  current session
     type(obs_session), pointer ::  oss !  current session
     integer :: ounit ! output unit
+    integer :: ocnt ! output count
     character*80 :: name80
     integer :: ncol
     character*80, allocatable :: col80(:)
@@ -1572,11 +1574,6 @@ CONTAINS
           if (.not.bok) then
              if(col_bdeb)write(*,*)myname,'No more model files.'
              exit MODFILE ! no more files to process
-          else if (.not.model_rangeCheck(mss,crc250,irc)) then ! current file is outside target limits
-             if(col_bdeb)write(*,*)myname,"Out of range: '"//&
-                  & mss%currentFile%fn250(1:mss%currentFile%lenf)//"'",&
-                  & mod_cnt,model_getFileId(mss)
-             cycle MODFILE
           else 
              mod_cnt=mod_cnt+1
              call observation_setModelFileId(oss,model_getFileId(mss))
@@ -1799,19 +1796,15 @@ CONTAINS
           if (mod_bdeb)write(*,*)myname,'locready=',mss%locReady
           lok=.true.
           if (tmod.ne.0) then ! we have match expressions specified
-             if (lok) then
-                call  model_checkTargetVal(mss,locid,lok,crc250,irc)
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_checkTargetVal")
-                   return
-                end if
+             call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+             if (irc.ne.0) then
+                call colocation_errorappend(crc250,"model_checkTargetVal")
+                return
              end if
-             if (lok) then
-                call model_checkFilter(mss,locid,lok,crc250,irc)        
-                if (irc.ne.0) then
-                   call colocation_errorappend(crc250,"model_checkFilter")
-                   return
-                end if
+             call model_checkFilter(mss,locid,lok,crc250,irc)        
+             if (irc.ne.0) then
+                call colocation_errorappend(crc250,"model_checkFilter")
+                return
              end if
           end if
           !
@@ -1826,6 +1819,7 @@ CONTAINS
              else
                 write(ounit,"(X,A)") name80(1:lena)
              end if
+             ocnt=ocnt+1
              fill=fillx
              do ii=1,ncol
                 if (ii.ne.ncol) then
@@ -2263,7 +2257,7 @@ CONTAINS
     ounit=ftunit(irc)
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," no free unit number for:"//xml250(1:lenx))
+       call colocation_errorappend(crc250," no free unit number for "//xml250(1:lenx))
        call colocation_errorappendi(crc250,irc)
        call colocation_errorappend(crc250,"\n")
        return
@@ -2273,7 +2267,7 @@ CONTAINS
          &        iostat=irc, file=xml250(1:lenx) )
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," unable to open:"//xml250(1:lenx))
+       call colocation_errorappend(crc250," unable to open "//xml250(1:lenx))
        call colocation_errorappendi(crc250,irc)
        call colocation_errorappend(crc250,"\n")
        return
@@ -2294,8 +2288,6 @@ CONTAINS
           if (.not.bok) then
              if(col_bdeb)write(*,*)myname,'No more model files.'
              exit MODFILE ! no more files to process
-          else if (.not.model_rangeCheck(mss,crc250,irc)) then ! current file is outside target limits
-             cycle MODFILE
           else 
              mod_cnt=mod_cnt+1
              call observation_setModelFileId(oss,model_getFileId(mss))
@@ -2544,19 +2536,15 @@ CONTAINS
                 locid=locid+1
                 lok=.true.
                 if (tmod.ne.0) then ! we have match expressions specified
-                   if (lok) then
-                      call  model_checkTargetVal(mss,locid,lok,crc250,irc)
-                      if (irc.ne.0) then
-                         call colocation_errorappend(crc250,"model_checkTargetVal")
-                         return
-                      end if
+                   call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"model_checkTargetVal")
+                      return
                    end if
-                   if (lok) then
-                      call model_checkFilter(mss,locid,lok,crc250,irc)
-                      if (irc.ne.0) then
-                         call colocation_errorappend(crc250,"model_checkFilter")
-                         return
-                      end if
+                   call model_checkFilter(mss,locid,lok,crc250,irc)
+                   if (irc.ne.0) then
+                      call colocation_errorappend(crc250,"model_checkFilter")
+                      return
                    end if
                 end if
                 !if (col_bdeb)write(*,*)myname,' OOK:',oss%currentFile%ook
@@ -2579,19 +2567,15 @@ CONTAINS
              write(*,*)myname,'Printing output:',locstart,css%nloc
              do locid=locstart+1,locstart+css%nloc
                 lok=.true.
-                if (lok) then
-                   call  model_checkTargetVal(mss,locid,lok,crc250,irc)
-                   if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"model_checkTargetVal")
-                      return
-                   end if
+                call  model_checkTargetVal(mss,locid,lok,crc250,irc)
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,"model_checkTargetVal")
+                   return
                 end if
-                if (lok) then
-                   call model_checkFilter(mss,locid,lok,crc250,irc)
-                   if (irc.ne.0) then
-                      call colocation_errorappend(crc250,"model_checkFilter")
-                      return
-                   end if
+                call model_checkFilter(mss,locid,lok,crc250,irc)
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,"model_checkFilter")
+                   return
                 end if
                 if (col_bdeb)write(*,*)myname,' SEARCH:',locid,lok
                 !
@@ -3162,10 +3146,10 @@ CONTAINS
     open (unit=unitw,form="formatted",action="write",iostat=irc,file=fill250(1:lenf))
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," Unable to open:"//fill250(1:lenf))
+       call colocation_errorappend(crc250," Unable to open "//fill250(1:lenf))
        call colocation_errorappendi(crc250,irc)
        call colocation_errorappend(crc250,"\n")
-       if (col_bdeb)write(*,*) myname,'unable to open:'//fill250(1:lenf)
+       if (col_bdeb)write(*,*) myname,"unable to open "//fill250(1:lenf)
        return
     end if
     write(unitw,'("Data available.")',iostat=irc)
@@ -3173,10 +3157,10 @@ CONTAINS
     open (unit=unitw,form="formatted",action="read",iostat=irc,file=fill250(1:lenf))
     if (irc.ne.0) then
        call colocation_errorappend(crc250,myname)
-       call colocation_errorappend(crc250," Unable to open:"//fill250(1:lenf))
+       call colocation_errorappend(crc250," Unable to open "//fill250(1:lenf))
        call colocation_errorappendi(crc250,irc)
        call colocation_errorappend(crc250,"\n")
-       if (col_bdeb)write(*,*) myname,'unable to open:'//fill250(1:lenf)
+       if (col_bdeb)write(*,*) myname,"unable to open "//fill250(1:lenf)
        return
     end if
     read(unitw,*,iostat=irc) buff100

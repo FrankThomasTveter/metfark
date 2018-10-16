@@ -236,6 +236,8 @@ module model
      character*80, allocatable :: sys_var(:)
      real, allocatable         :: sys_val(:)
      integer,dimension(8)      :: values    
+     integer :: fok(10),frm(10)
+     !
      !
      type(mod_offset), pointer :: firstOffset => null()   ! linked offset list start
      type(mod_offset), pointer :: lastOffset => null()    ! linked offset list end
@@ -298,6 +300,8 @@ module model
      real, pointer         :: trg_val(:) => null()     ! list of values
      integer, pointer      :: trg_ook(:) => null()
      integer, pointer      :: trg_orm(:) => null()
+     integer, pointer      :: trg_fok(:) => null()
+     integer, pointer      :: trg_frm(:) => null()
      logical :: trg_set=.false.                     ! is target list set?
      !
      ! observation targets...
@@ -1207,13 +1211,23 @@ CONTAINS
     logical :: bdone,found
     found=.false.
     bdone=(.not. css%sortLimitsOk)
+    if (bdone) then ! index is not sorted..
+       css%frm(1)=css%nFileIndexes ! no sort index
+    else if (css%currentFileSortIndex.lt.css%leftFileSortIndex) then ! first
+       css%fok(1)=css%nFileIndexes ! we have a sort index
+       css%frm(2)=css%frm(2)+(css%leftFileSortIndex-1) ! outside index search
+    else
+       css%fok(1)=css%nFileIndexes ! we have a sort index
+    end if
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
-       if (css%currentFileSortIndex.gt.css%rightFileSortIndex) then
+       if (css%currentFileSortIndex.gt.css%rightFileSortIndex) then ! last
           css%currentFileSortIndex=0
           css%currentFileIndex=0
           nullify(css%currentFile)
           bdone=.true.
+          css%frm(2)=css%frm(2)+&
+               & (css%nFileSortIndexes-css%rightFileSortIndex) ! outside index search
        else
           css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
           css%currentFile => css%fileStack(css%currentFileIndex)%ptr
@@ -1221,14 +1235,35 @@ CONTAINS
           if (.not.((mod_lval(1).and.mod_minval.gt.css%currentFile%ind_stop) .or.&
                & (mod_lval(2).and.mod_maxval.lt.css%currentFile%ind_start)).and. &
                & .not.((css%ind_lval(1).and.css%ind_minval.gt.css%currentFile%ind_stop) .or.&
-               & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then ! overlap
-             found=.true.
-             bdone=.true.
+               & (css%ind_lval(2).and.css%ind_maxval.lt.css%currentFile%ind_start))) then
+             if (model_rangeCheck(css,crc250,irc)) then
+                ! write(*,*)myname,'Passed check:',css%currentFileSortIndex,associated(css%currentFile), &
+                ! &   'min:',mod_lval(1),mod_minval,css%currentFile%ind_stop,&
+                ! &   'max:',mod_lval(2),mod_maxval,css%currentFile%ind_start, &
+                ! & ' MIN:',css%ind_lval(1),css%ind_minval,css%currentFile%ind_stop, &
+                ! & ' MAX:',css%ind_lval(2),css%ind_maxval,css%currentFile%ind_start       
+                found=.true.
+                bdone=.true.
+                css%fok(3)=css%fok(3)+1 ! within target range
+             else
+                css%frm(3)=css%frm(3)+1 ! outside target range
+             end if
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from model_rangeCheck.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
              if (mod_bdeb) write(*,*)myname,' Found:',css%sortLimitsOk,&
                   & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+             css%fok(2)=css%fok(2)+1 ! within index search
+          else
+             css%frm(2)=css%frm(2)+1 ! outside index search
           end if
        end if
     end do
+    !write(*,*)myname,'Index:',css%currentFileSortIndex,found
     model_loopFileStack=found
     return
   end function model_loopFileStack
@@ -1250,28 +1285,46 @@ CONTAINS
     model_rangeCheck=.true. ! file is ok
     if (.not. associated(css%currentFile)) return ! no current file
     f => css%currentFile  ! file
-    do ii=1,f%nvar
+    LOOP: do ii=1,f%nvar ! loop over file variables
        v => f%var(ii)%ptr ! variable
        if (.not.associated(v)) cycle              ! no variable
-       do itrg=1,css%ctrg ! loop over targets
-          if (css%trg_var(itrg).ne.ii) cycle      ! check if target is variable
+       TRG: do itrg=1,css%ctrg ! loop over targets
+          if (css%trg_v80(itrg)(1:css%trg_lenv(itrg)).ne.v%var80(1:v%lenv)) then
+             !write(*,*)myname,"No match '"//css%trg_v80(itrg)(1:css%trg_lenv(itrg))//&
+             !     "' != '"//v%var80(1:v%lenv)//"'"
+             cycle TRG      ! no match
+          end if
           ff=css%trg_offset(itrg)
           if (css%trg_minset(itrg).or.css%trg_maxset(itrg)) then !check max/min
              ! get variable          
              if (v%mmrange) then ! we have limits
-                if (.not.model_variableCheck(css,v,itrg)) then
+                if (model_variableCheck(css,v,itrg)) then ! target range check
+                   !write(*,*)myname,"Passed '"//&
+                   !     & v%var80(1:v%lenv)//"'",&
+                   !     & itrg, v%mmrange,v%mmset,v%minval,v%maxval,&
+                   !     & css%trg_minset(itrg),css%trg_maxset(itrg),&
+                   !     & css%trg_minval(itrg),css%trg_maxval(itrg)
+                   css%trg_fok(itrg)=css%trg_fok(itrg)+1
+                else ! failed range check
                    if(mod_bdeb)write(*,*)myname,"Failed '"//&
                         & v%var80(1:v%lenv)//"'",&
                         & itrg, v%mmrange,v%mmset,v%minval,v%maxval,&
                         & css%trg_minset(itrg),css%trg_maxset(itrg),&
                         & css%trg_minval(itrg),css%trg_maxval(itrg)
-                   model_rangeCheck=.false.
-                   return
+                   model_rangeCheck=.false. 
+                   css%trg_frm(itrg)=css%trg_frm(itrg)+1
+                   exit LOOP
                 end if
              end if
           end if
-       end do
-    end do
+       end do TRG
+    end do LOOP
+    !write(*,*)myname,'Running checks...',model_rangeCheck,f%nvar
+    if (model_rangeCheck) then
+       css%trg_fok(0)=css%trg_fok(0)+1
+    else
+       css%trg_frm(0)=css%trg_frm(0)+1
+    end if
     return
   end function model_rangeCheck
   !
@@ -1281,24 +1334,19 @@ CONTAINS
     type(mod_session), pointer :: css !  current session
     type(mod_variable), pointer :: v
     integer :: itrg
-    if (.not.v%mmset) then
-       model_variableCheck=.false. ! required values are all undefined...
-       return
-    else
+    model_variableCheck=.true. ! all ok so far...
+    if (v%mmset) then ! range is set
        if (css%trg_minset(itrg)) then
           if (v%maxval.lt.css%trg_minval(itrg)) then
              model_variableCheck=.false.
-             return
           end if
        end if
        if (css%trg_maxset(itrg)) then
           if (v%minval.gt.css%trg_maxval(itrg)) then
              model_variableCheck=.false.
-             return
           end if
        end if
     end if
-    model_variableCheck=.true. ! all ok so far...
     return
   end function model_variableCheck
   !
@@ -1472,6 +1520,8 @@ CONTAINS
     character*50 :: minval50,maxval50
     integer :: lenmi,lenma,leno,cnt
     character*250 :: old250
+    integer :: ook(10), orm(10)
+    real :: pst(10)
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1480,7 +1530,7 @@ CONTAINS
     unitr=ftunit(irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," no free unit number for:"//path250(1:lenp))
+       call model_errorappend(crc250," no free unit number for "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1491,7 +1541,7 @@ CONTAINS
          &        iostat=irc, file=path250(1:lenp) )
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to open:"//path250(1:lenp))
+       call model_errorappend(crc250," unable to open "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1515,6 +1565,10 @@ CONTAINS
        return
     end if
     !
+    do ii=1,10
+       ook(ii)=0
+       orm(ii)=0
+    end do
     ! write number of files: css%nFileIndexes
     if(mod_bdeb)write(*,*) myname,' Stack entries.',css%nFileIndexes,unitr
     leno=0
@@ -1533,14 +1587,14 @@ CONTAINS
     write(unitr,'(I0,8(X,I0))',iostat=irc) cnt,css%values
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to write to:"//path250(1:lenp))
+       call model_errorappend(crc250," unable to write to "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
     end if
     !
     write(*,'(X,A,A,I0,A,I4.4,6(A,I2.2))')myname," Index '"//path250(1:lenp)//&
-         & "' contains ",cnt," files. Created:", &
+         & "' contains ",cnt," files. Modified:", &
          & css%values(1),"-",css%values(2),"-",css%values(3),"T",&
          & css%values(5),":",css%values(6),":",css%values(7)
     ! loop over file stack
@@ -1607,7 +1661,7 @@ CONTAINS
     close(unitr,iostat=irc)
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to close:"//path250(1:lenp))
+       call model_errorappend(crc250," unable to close "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1662,7 +1716,7 @@ CONTAINS
          &        iostat=irc, file=path250(1:lenp) )
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to open:"//path250(1:lenp))
+       call model_errorappend(crc250," unable to open "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1671,7 +1725,7 @@ CONTAINS
     read(unitr,'(A)',iostat=irc) buff250
     if (irc.ne.0) then
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to read:"//path250(1:lenp))
+       call model_errorappend(crc250," unable to read "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1681,7 +1735,7 @@ CONTAINS
     if (irc.ne.0) then
        if (mod_bdeb) write(*,*) myname," Unable to interprt nfileindexes."
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," corrupt file:"//path250(1:lenp))
+       call model_errorappend(crc250," Corrupt index file "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1914,9 +1968,9 @@ CONTAINS
     ! close file
     close(unitr,iostat=irc)
     if (irc.ne.0) then
-       if (mod_bdeb) write(*,*) myname," Unable to close:"//path250(1:lenp)
+       if (mod_bdeb) write(*,*) myname," Unable to close "//path250(1:lenp)
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," unable to close:"//path250(1:lenp))
+       call model_errorappend(crc250," unable to close "//path250(1:lenp))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
        return
@@ -1939,7 +1993,7 @@ CONTAINS
     diff250=model_diff(s2000-f2000)
     lend=length(diff250,250,10)
     write(*,'(X,A,A,I0,A,I4.4,6(A,I2.2),A)')myname," Index '"//path250(1:lenp)//&
-         & "' contains ",css%nFileIndexes," files. Created:", &
+         & "' contains ",css%nFileIndexes," files. Modified:", &
          & values(1),"-",values(2),"-",values(3),"T",&
          & values(5),":",values(6),":",values(7),". Age:"//diff250(1:lend)
     if(mod_bdeb)write(*,*)myname,' Done, files in stack:',css%nFileIndexes,irc
@@ -2158,6 +2212,8 @@ CONTAINS
     if (associated(css%trg_val)) deallocate(css%trg_val)
     if (associated(css%trg_ook)) deallocate(css%trg_ook)
     if (associated(css%trg_orm)) deallocate(css%trg_orm)
+    if (associated(css%trg_fok)) deallocate(css%trg_fok)
+    if (associated(css%trg_frm)) deallocate(css%trg_frm)
     css%trg_set=.false.
     if (allocated(css%mpo_var)) deallocate(css%mpo_var)
     if (allocated(css%mpo_lenv)) deallocate(css%mpo_lenv)
@@ -2207,6 +2263,8 @@ CONTAINS
        if(associated(css%trg_val)) deallocate(css%trg_val)
        if(associated(css%trg_ook)) deallocate(css%trg_ook)
        if(associated(css%trg_orm)) deallocate(css%trg_orm)
+       if(associated(css%trg_fok)) deallocate(css%trg_fok)
+       if(associated(css%trg_frm)) deallocate(css%trg_frm)
        if (css%ctrg.ne.0) then
           allocate(css%trg80(css%ctrg), css%trg_lent(css%ctrg), &
                & css%trg_v80(css%ctrg), css%trg_lenv(css%ctrg), css%trg_offset(0:css%ctrg),  &
@@ -2216,7 +2274,8 @@ CONTAINS
                & css%trg_sliceset(css%ctrg), css%trg_valset(css%ctrg), &
                & css%trg_minset(css%ctrg), css%trg_maxset(css%ctrg), &
                & css%trg_req(css%ctrg), css%trg_vok(css%ctrg), css%trg_val(css%ctrg), &
-               & css%trg_ook(0:css%ctrg), css%trg_orm(0:css%ctrg), stat=irc)
+               & css%trg_ook(0:css%ctrg), css%trg_orm(0:css%ctrg), &
+               & css%trg_fok(0:css%ctrg), css%trg_frm(0:css%ctrg), stat=irc)
           if (irc.ne.0) then
              call model_errorappend(crc250,myname)
              call model_errorappend(crc250,"Unable to allocate 'session:n80...'.")
@@ -2226,6 +2285,8 @@ CONTAINS
           ii=0
           css%trg_ook(ii)=0
           css%trg_orm(ii)=0
+          css%trg_fok(ii)=0
+          css%trg_frm(ii)=0
           currentTarget => css%firstTrg%next
           do while (.not.associated(currentTarget,target=css%lastTrg))
              ii=min(css%ctrg,ii+1)
@@ -2305,6 +2366,8 @@ CONTAINS
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
              css%trg_orm(ii)=0
+             css%trg_fok(ii)=0
+             css%trg_frm(ii)=0
              currentTarget => currentTarget%next
              css%trg_dim(ii)=0
              css%trg_var(ii)=0
@@ -2333,6 +2396,8 @@ CONTAINS
              css%trg_val(ii)=0.0D0
              css%trg_ook(ii)=0
              css%trg_orm(ii)=0
+             css%trg_fok(ii)=0
+             css%trg_frm(ii)=0
              css%trg_dim(ii)=0
              css%trg_var(ii)=0
              css%trg_type(ii)=0 ! undefined
@@ -2618,41 +2683,138 @@ CONTAINS
        if (bok) then
           bok=(loc%bok)
           if (bok) then
-             css%currentFile%ook(2)=css%currentFile%ook(2)+1
+             css%currentFile%ook(1)=css%currentFile%ook(1)+1
           else
              if (mod_bdeb)write(*,*)myname,'Loc fail:',loc%bok
-             css%currentFile%orm(2)=css%currentFile%orm(2)+1 ! location error
+             css%currentFile%orm(1)=css%currentFile%orm(1)+1 ! failed to qualify
           end if
        end if
-       do ii=1,loc%ctrg
-          if (bok) then
-             if (loc%trg_set(ii)) then
-                if (css%trg_minset(ii)) then
-                   if (loc%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
-                end if
-                if (css%trg_maxset(ii)) then
-                   if (loc%trg_val(ii).gt.css%trg_maxval(ii)) bok=.false.
-                end if
-                if (bok) then
-                   css%trg_ook(ii)=css%trg_ook(ii)+1
-                else
-                   css%trg_orm(ii)=css%trg_orm(ii)+1
-                end if
-             end if
-             if (.not.bok.and.mod_bdeb)write(*,*)myname,'Rejected:',&
-                  & ii,css%trg80(ii)(1:css%trg_lent(ii)), &
-                  & loc%trg_val(ii),css%trg_minval(ii),css%trg_maxval(ii),&
-                  & loc%trg_set(ii),css%trg_minset(ii),css%trg_maxset(ii)
-          end if
-       end do
        if (bok) then
-          css%trg_ook(0)=css%trg_ook(0)+1
-       else
-          css%trg_orm(0)=css%trg_orm(0)+1
+          do ii=1,loc%ctrg
+             if (bok) then
+                if (loc%trg_set(ii)) then
+                   if (css%trg_minset(ii)) then
+                      if (loc%trg_val(ii).lt.css%trg_minval(ii)) bok=.false.
+                   end if
+                   if (css%trg_maxset(ii)) then
+                      if (loc%trg_val(ii).gt.css%trg_maxval(ii)) bok=.false.
+                   end if
+                   if (bok) then
+                      css%trg_ook(ii)=css%trg_ook(ii)+1
+                   else
+                      css%trg_orm(ii)=css%trg_orm(ii)+1
+                   end if
+                end if
+                if (.not.bok.and.mod_bdeb)write(*,*)myname,'Rejected:',&
+                     & ii,css%trg80(ii)(1:css%trg_lent(ii)), &
+                     & loc%trg_val(ii),css%trg_minval(ii),css%trg_maxval(ii),&
+                     & loc%trg_set(ii),css%trg_minset(ii),css%trg_maxset(ii)
+             end if
+          end do
+          if (bok) then
+             css%currentFile%ook(2)=css%currentFile%ook(2)+1
+             css%trg_ook(0)=css%trg_ook(0)+1
+          else
+             css%currentFile%orm(2)=css%currentFile%orm(2)+1 ! target error
+             css%trg_orm(0)=css%trg_orm(0)+1
+          end if
        end if
     end if
     return
   end subroutine model_checkTargetVal
+  !
+  subroutine model_checkFilter(css,locid,bok,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    integer :: locid
+    logical :: bok
+    character*250 :: crc250
+    integer :: irc
+    integer :: pos, ii
+    character*25 :: myname="model_checkFilter"
+    type(mod_location), pointer :: loc
+    real :: val
+    logical :: bdeb
+    if (bok.and.css%locReady) then
+       pos=locid-css%locoo
+       if (pos.gt.css%nloc) then
+          if(mod_bdeb)write(*,*)myname,'Location pos out of range.',pos,'->',css%nloc,&
+               & locid,css%locoo
+          bok=.false.
+          irc=944
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Locid out of range:")
+          call model_errorappendi(crc250,locid)
+          call model_errorappend(crc250,"<>")
+          call model_errorappendi(crc250,css%nloc)
+          call model_errorappendi(crc250,css%locoo)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if (bok) then
+          loc => css%locData(pos)%ptr
+          if (.not.associated(loc)) then
+             if(mod_bdeb)write(*,*)myname,'Location invalid location at ',pos,'->',css%nloc
+             bok=.false.
+          end if
+       end if
+       if (bok) then
+          bok=(loc%bok)
+       end if
+       if (bok) then
+          bok=(loc%search(0).eq.0)
+          if (bok) then
+             css%currentFile%ook(3)=css%currentFile%ook(3)+1
+          else
+             if (mod_bdeb)write(*,*)myname,'Search fail:',loc%search(0)
+             css%currentFile%orm(3)=css%currentFile%orm(3)+1 ! field search failed
+          end if
+       end if
+       if (bok) then
+          ! evaluate filter
+          if (css%mpo_set) then
+             if (mod_bdeb)write(*,*)myname,'Evaluating filter:',ii,&
+                  & associated(css%psf),css%cmpo
+             do ii=1,loc%ctrg
+                css%mpo_val(ii)=loc%trg_val(ii)
+                css%mpo_vok(ii)=loc%trg_vok(ii)
+             end do
+             do ii=1,loc%cobs
+                css%mpo_val(ii+css%ctrg)=loc%obs_val(ii)
+                css%mpo_vok(ii+css%ctrg)=loc%obs_vok(ii)
+             end do
+             if (mod_bdeb)write(*,*)myname,' MPO:',css%mpo_val
+             val=parse_evalf(css%psf,css%mpo_val,crc250,irc)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Error return from evalf.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
+             bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
+             if (mod_bdeb)write(*,*)myname,'Returned:',val,bok
+          else
+             if (mod_bdeb)write(*,*)myname,'MPO fail:',css%mpo_set
+             bok=.false.
+          end if
+          if (bok) then
+             css%currentFile%ook(4)=css%currentFile%ook(4)+1
+          else
+             if (mod_bdeb)write(*,*)myname,'Filter fail:',loc%bok
+             css%currentFile%orm(4)=css%currentFile%orm(4)+1 ! model filter failed
+          end if
+       end if
+    else
+       if (mod_bdeb)write(*,*)myname,'Failed to qualify, locready=',css%locReady
+       bok=.false.
+    end if
+    if (bok) then
+       if (mod_bdeb)write(*,*)myname,'Obs OK:',locid,bok
+    else
+       if (mod_bdeb)write(*,*)myname,'Obs FAIL:',locid,bok,css%mpo_set
+    end if
+    return
+  end subroutine model_checkFilter
   !
   ! delete target from stack
   !
@@ -3558,107 +3720,6 @@ CONTAINS
     if(mod_bdeb.and.locid.lt.10)write(*,*)myname,' Done.'
     return
   end subroutine model_locpushTarget
-  !
-  subroutine model_checkFilter(css,locid,bok,crc250,irc)
-    type(mod_session), pointer :: css !  current session
-    integer :: locid
-    logical :: bok
-    character*250 :: crc250
-    integer :: irc
-    integer :: pos, ii
-    character*25 :: myname="model_checkFilter"
-    type(mod_location), pointer :: loc
-    real :: val
-    logical :: bdeb
-    if (bok.and.css%locReady) then
-       css%currentFile%ook(1)=css%currentFile%ook(1)+1
-       pos=locid-css%locoo
-       if (pos.gt.css%nloc) then
-          if(mod_bdeb)write(*,*)myname,'Location pos out of range.',pos,'->',css%nloc,&
-               & locid,css%locoo
-          bok=.false.
-          irc=944
-          call model_errorappend(crc250,myname)
-          call model_errorappend(crc250," Locid out of range:")
-          call model_errorappendi(crc250,locid)
-          call model_errorappend(crc250,"<>")
-          call model_errorappendi(crc250,css%nloc)
-          call model_errorappendi(crc250,css%locoo)
-          call model_errorappend(crc250,"\n")
-          return
-       end if
-       if (bok) then
-          loc => css%locData(pos)%ptr
-          if (.not.associated(loc)) then
-             if(mod_bdeb)write(*,*)myname,'Location invalid location at ',pos,'->',css%nloc
-             bok=.false.
-          end if
-       end if
-       if (bok) then
-          bok=(loc%bok)
-          if (bok) then
-             css%currentFile%ook(2)=css%currentFile%ook(2)+1
-          else
-             if (mod_bdeb)write(*,*)myname,'Loc fail:',loc%bok
-             css%currentFile%orm(2)=css%currentFile%orm(2)+1 ! location error
-          end if
-       end if
-       if (bok) then
-          bok=(loc%search(0).eq.0)
-          if (bok) then
-             css%currentFile%ook(3)=css%currentFile%ook(3)+1
-          else
-             if (mod_bdeb)write(*,*)myname,'Search fail:',loc%search(0)
-             css%currentFile%orm(3)=css%currentFile%orm(3)+1 ! search failed
-          end if
-       end if
-       if (bok) then
-          ! evaluate filter
-          if (css%mpo_set) then
-             if (mod_bdeb)write(*,*)myname,'Evaluating filter:',ii,&
-                  & associated(css%psf),css%cmpo
-             do ii=1,loc%ctrg
-                css%mpo_val(ii)=loc%trg_val(ii)
-                css%mpo_vok(ii)=loc%trg_vok(ii)
-             end do
-             do ii=1,loc%cobs
-                css%mpo_val(ii+css%ctrg)=loc%obs_val(ii)
-                css%mpo_vok(ii+css%ctrg)=loc%obs_vok(ii)
-             end do
-             if (mod_bdeb)write(*,*)myname,' MPO:',css%mpo_val
-             val=parse_evalf(css%psf,css%mpo_val,crc250,irc)
-             if (irc.ne.0) then
-                call model_errorappend(crc250,myname)
-                call model_errorappend(crc250," Error return from evalf.")
-                call model_errorappendi(crc250,irc)
-                call model_errorappend(crc250,"\n")
-                return
-             end if
-             bok=(nint(val).ne.0) ! NB bok is local, reject obs using trg_set->.false.
-             if (mod_bdeb)write(*,*)myname,'Returned:',val,bok
-          else
-             if (mod_bdeb)write(*,*)myname,'MPO fail:',css%mpo_set
-             bok=.false.
-          end if
-          if (bok) then
-             css%currentFile%ook(4)=css%currentFile%ook(4)+1
-          else
-             if (mod_bdeb)write(*,*)myname,'Filter fail:',loc%bok
-             css%currentFile%orm(4)=css%currentFile%orm(4)+1 ! filter failed
-          end if
-       end if
-    else
-       if (mod_bdeb)write(*,*)myname,'Early fail, locready=',css%locReady
-       css%currentFile%orm(1)=css%currentFile%orm(1)+1 ! failed earlier or no locations
-       bok=.false.
-    end if
-    if (bok) then
-       if (mod_bdeb)write(*,*)myname,'Obs OK:',locid,bok
-    else
-       if (mod_bdeb)write(*,*)myname,'Obs FAIL:',locid,bok,css%mpo_set
-    end if
-    return
-  end subroutine model_checkFilter
   !
   subroutine model_setfilter(css,flt,crc250,irc)
     implicit none
@@ -7764,7 +7825,7 @@ CONTAINS
             & "' accepted='",css%currentFile%ook(4),"'>"
        if (css%currentFile%orm(2).ne.0) write(ounit,'(4X,A,I0,A)')"<check removed='",&
             & css%currentFile%orm(2),&
-            & "' reason='location error.'"
+            & "' reason='rejected by target filter.'"
        if (css%currentFile%orm(3).ne.0) write(ounit,'(4X,A,I0,A)')"<check removed='",&
             & css%currentFile%orm(3),&
             & "' reason='search failed.'/>"
@@ -7803,7 +7864,6 @@ CONTAINS
     end if
     return
   end subroutine model_wash
-  !
   !
   !###############################################################################
   ! NETCDF ROUTINES
@@ -8640,7 +8700,7 @@ CONTAINS
     if (ret .ne. NF_NOERR) then
        irc=170
        call model_errorappend(crc250,myname)
-       call model_errorappend(crc250," Unable to close: "//&
+       call model_errorappend(crc250," Unable to close "//&
                & f%fn250(1:f%lenf)//" "//nf_strerror(ret))
        call model_errorappendi(crc250,irc)
        call model_errorappend(crc250,"\n")
@@ -8648,6 +8708,145 @@ CONTAINS
     end if
     return
   end subroutine model_closeFile
+  !
+  subroutine model_resetStat(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    type(mod_file), pointer :: cfile
+    character*22 :: myname="model_resetStat"
+    if (mod_bdeb) write(*,*)myname,'Entering.',irc
+    do ii=1,10
+       css%fok(ii)=0
+       css%frm(ii)=0
+    end do
+    if (associated(css%firstFile)) then
+       cfile => css%firstFile%next
+       do while (.not.associated(cfile,target=css%lastFile))
+          ! update statistics
+          do ii=1,10
+             cfile%ook(ii)=0
+             cfile%orm(ii)=0
+          end do
+          cfile  => cfile%next
+       end do
+    end if
+    ! if (mod_bdeb) write(*,*)myname,'Targets.',css%ntrg
+    if (associated(css%trg_ook).and.associated(css%trg_orm)) then
+       do ii=0,css%ntrg
+          css%trg_orm(ii)=0
+          css%trg_ook(ii)=0
+          css%trg_frm(ii)=0
+          css%trg_fok(ii)=0
+       end do
+    end if
+    if (mod_bdeb) write(*,*)myname,'Done.',irc
+    return
+  end subroutine model_resetStat
+  !
+  subroutine model_printFStat(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    real :: pst(10),pp
+    type(mod_file), pointer :: cfile
+    character*22 :: myname="model_printFStat"
+    ! accumulate file statistics...
+    ! file statistics
+    do ii=1,10
+       pst(ii)=dfloat(css%frm(ii))/max(1.0d0,dfloat(css%frm(ii)+css%fok(ii)))*100
+    end do
+    WRITE(*,*)
+    WRITE(*,998) MYNAME,                     'Model files:               ', css%fok(1)+css%frm(1)
+    IF (CSS%FRM(1).NE.0) WRITE(*,999) MYNAME,'Unsorted:                  ', -CSS%FRM(1),PST(1)
+    IF (CSS%FRM(2).NE.0) WRITE(*,999) MYNAME,'Index range:               ', -CSS%FRM(2),PST(2)
+    IF (CSS%FRM(3).NE.0) WRITE(*,999) MYNAME,'Target range:              ', -CSS%FRM(3),PST(3)
+    WRITE(*,997) MYNAME,     '--------------------------------------------------'
+    pp=dfloat(css%fok(3))/max(1.0d0,dfloat(css%frm(1)+css%fok(1)))*100
+    WRITE(*,999) MYNAME,                 'Accepted model files:      ', css%fok(3),pp
+    ! target range statistics
+    if (css%trg_frm(0).ne.0) then
+       WRITE(*,*)
+       WRITE(*,998) MYNAME,                 'Target range checks:          ', css%trg_frm(0)+css%trg_fok(0)
+       do ii=1,css%ntrg
+          pp=dfloat(css%trg_frm(ii))/max(1.0d0,dfloat(css%trg_frm(0)+css%trg_fok(0)))*100
+          IF (css%trg_frm(ii).NE.0) WRITE(*,996) MYNAME,"'"//css%trg80(ii)(1:css%trg_lent(ii))//"' check:", &
+               & -css%trg_frm(ii),PP
+       end do
+       WRITE(*,997) MYNAME,     '-----------------------------------------------------'
+       pp=dfloat(css%trg_fok(0))/max(1.0d0,dfloat(css%trg_frm(0)+css%trg_fok(0)))*100
+       WRITE(*,999) MYNAME,                 'Accepted target range checks: ', css%trg_fok(0),pp
+    end if
+    !
+999 FORMAT(X,A12,X,A,I13,' (',F6.2,'%)')
+998 FORMAT(X,A12,X,A,I13)
+997 FORMAT(X,A12,X,A)
+996 FORMAT(X,A12,X,A30,I13,' (',F6.2,'%)')
+  
+    return
+  end subroutine model_printFStat
+  !
+  subroutine model_printLStat(css,crc250,irc)
+    type(mod_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    integer :: ook(10),orm(10)
+    real :: pst(10),pp
+    type(mod_file), pointer :: cfile
+    character*22 :: myname="model_printStatistics"
+    ! accumulate file statistics...
+    do ii=1,10
+       ook(ii)=0
+       orm(ii)=0
+    end do
+    if (associated(css%firstFile)) then
+       cfile => css%firstFile%next
+       do while (.not.associated(cfile,target=css%lastFile))
+          ! update statistics
+          do ii=1,10
+             ook(ii)=ook(ii)+cfile%ook(ii)
+             orm(ii)=orm(ii)+cfile%orm(ii)
+          end do
+          cfile  => cfile%next
+       end do
+    end if
+    ! target statistics
+    if (css%trg_orm(0).ne.0) then
+       WRITE(*,*)
+       WRITE(*,998) MYNAME,                 'Target filter checks:        ', css%trg_orm(0)+css%trg_ook(0)
+       do ii=1,css%ntrg
+          pp=dfloat(css%trg_orm(ii))/max(1.0d0,dfloat(css%trg_orm(0)+css%trg_ook(0)))*100
+          IF (css%trg_orm(ii).NE.0) WRITE(*,996) MYNAME,"'"//css%trg80(ii)(1:css%trg_lent(ii))//"'-filter:", &
+               & -css%trg_orm(ii),PP
+       end do
+       WRITE(*,997) MYNAME,     '-----------------------------------------------------'
+       pp=dfloat(css%trg_ook(0))/max(1.0d0,dfloat(css%trg_orm(0)+css%trg_ook(0)))*100
+       WRITE(*,999) MYNAME,                 'Accepted target filter checks:',css%trg_ook(0),pp
+    end if
+    ! location statistics
+    do ii=1,10
+       pst(ii)=dfloat(orm(ii))/max(1.0d0,dfloat(orm(ii)+ook(ii)))*100
+    end do
+    WRITE(*,*)
+    WRITE(*,998) MYNAME,                 'Locations:                 ', ook(1)+orm(1)
+    IF (ORM(1).NE.0) WRITE(*,999) MYNAME,'Failed to qualify:         ', -ORM(1),PST(1)
+    IF (ORM(2).NE.0) WRITE(*,999) MYNAME,'Target filter rejection:   ', -ORM(2),PST(2)
+    IF (ORM(3).NE.0) WRITE(*,999) MYNAME,'Missing model data:        ', -ORM(3),PST(3)
+    IF (ORM(4).NE.0) WRITE(*,999) MYNAME,'Model filter rejection:    ', -ORM(4),PST(4)
+    WRITE(*,997) MYNAME,     '--------------------------------------------------'
+    pp=dfloat(ook(4))/max(1.0d0,dfloat(orm(1)+ook(1)))*100
+    WRITE(*,999) MYNAME,                 'Accepted locations:        ', ook(4),pp
+    !
+999 FORMAT(X,A12,X,A,I13,' (',F6.2,'%)')
+998 FORMAT(X,A12,X,A,I13)
+997 FORMAT(X,A12,X,A)
+996 FORMAT(X,A12,X,A30,I13,' (',F6.2,'%)')
+  
+    return
+  end subroutine model_printLStat
   !
   !###############################################################################
   ! ERROR ROUTINES

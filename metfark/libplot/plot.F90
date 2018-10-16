@@ -465,6 +465,7 @@ CONTAINS
        call plot_errorappendi(crc250,irc)
        return
     end if
+    write(*,'(X,A,X,A)')myname,"Table file: "//tab250(1:lent)
     open(unit=ounit,file=tab250(1:lent), &
          & access="sequential",form="formatted",status="unknown",iostat=irc)
     if(plot_bdeb)write(*,*)myname,'Opened:',tab250(1:lent),ounit,irc
@@ -590,7 +591,7 @@ CONTAINS
     ! print legend table
     write(ounit,'("#")',iostat=irc)
     write(ounit,'("# LEGENDS:",I0)',iostat=irc) pss%nset
-    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
+    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,0,crc250,irc))
        call chop0(name80,80)
        lenn=length(name80,80,1)
        call chop0(leg250,250)
@@ -996,7 +997,7 @@ CONTAINS
   end subroutine plot_pushset
   !
   ! loop over sets from top and delete them
-  logical function plot_pullset(pss,css,mss,oss,name80,leg250,crc250,irc)
+  logical function plot_pullset(pss,css,mss,oss,name80,leg250,level,crc250,irc)
     use model
     use observations
     use colocation
@@ -1007,6 +1008,7 @@ CONTAINS
     type(obs_session), pointer ::  oss !  current session
     character*80 :: name80
     character*250 :: leg250
+    integer :: level
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_pullset"
@@ -1149,7 +1151,7 @@ CONTAINS
   end function plot_checkObsTrg
   !
   ! loop over sets from the top without deleting them...
-  logical function plot_loopSet(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc)
+  logical function plot_loopSet(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,level,crc250,irc)
     use model
     use observations
     use colocation
@@ -1163,6 +1165,7 @@ CONTAINS
     character*80, allocatable :: col80(:)
     character*250, allocatable :: exp250(:)
     character*250 :: leg250
+    integer :: level
     character*250 :: crc250
     integer :: irc,ii
     integer :: lenn
@@ -1180,29 +1183,31 @@ CONTAINS
     else
        name80=pss%currentSet%name80
        leg250=pss%currentSet%leg250
-       if(plot_bdeb)then
-          lenn=length(pss%currentSet%name80,80,10)
-          write(*,*)myname,"Set '"//pss%currentSet%name80(1:lenn)//"'"
+       if (level.ne.0) then
+          if(plot_bdeb)then
+             lenn=length(pss%currentSet%name80,80,10)
+             write(*,*)myname,"Set '"//pss%currentSet%name80(1:lenn)//"'"
+          end if
+          call plot_obsExport(pss%currentSet,oss,crc250,irc) ! set obs data
+          if (irc.ne.0) then
+             call plot_errorappend(crc250,myname)
+             call plot_errorappend(crc250," Error return from obsExport.")
+             return
+          end if
+          call plot_modExport(pss%currentSet,mss,crc250,irc) ! set model data
+          if (irc.ne.0) then
+             call plot_errorappend(crc250,myname)
+             call plot_errorappend(crc250," Error return from modExport.")
+             return
+          end if
+          call plot_colExport(pss%currentSet,css,crc250,irc) ! set colocation data
+          if (irc.ne.0) then
+             call plot_errorappend(crc250,myname)
+             call plot_errorappend(crc250," Error return from colExport.")
+             return
+          end if
+          !
        end if
-       call plot_obsExport(pss%currentSet,oss,crc250,irc) ! set obs data
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250," Error return from obsExport.")
-          return
-       end if
-       call plot_modExport(pss%currentSet,mss,crc250,irc) ! set model data
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250," Error return from modExport.")
-          return
-       end if
-       call plot_colExport(pss%currentSet,css,crc250,irc) ! set colocation data
-       if (irc.ne.0) then
-          call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250," Error return from colExport.")
-          return
-       end if
-       !
        if(plot_bdeb)write(*,*)myname,"Make columns.",pss%currentSet%ccol,allocated(col80)
        ncol=pss%currentSet%ccol
        if (.not.allocated(col80).or..not.allocated(exp250).or.&
@@ -1839,7 +1844,7 @@ CONTAINS
     call observation_getTablePath(oss,set%tablepath,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," Error return from setTablePath.")
+       call plot_errorappend(crc250," Error return from getTablePath.")
        return
     end if
     call observation_getBufrType(oss,set%category,set%subCategory,crc250,irc)
@@ -2293,7 +2298,7 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_maketable"
-    integer :: ounit
+    integer :: ounit, ocnt
     character*250 :: leg250
     character*80 :: name80
     integer, external :: length
@@ -2310,11 +2315,12 @@ CONTAINS
     call plot_openFile(pss,ounit,tab250,lent,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," unable to open:"//tab250(1:lent))
+       call plot_errorappend(crc250," unable to open "//tab250(1:lent))
        call plot_errorappendi(crc250,irc)
        call plot_errorappend(crc250,"\n")
        return
     end if
+    ocnt=0;
     !
     call plot_addComments(pss,css,mss,oss,ounit,tab250,lent,gra250,cat250,crc250,irc)
     if (irc.ne.0) then
@@ -2328,7 +2334,7 @@ CONTAINS
     call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
-       call plot_errorappend(crc250," unable to close:"//tab250(1:lent))
+       call plot_errorappend(crc250," unable to close "//tab250(1:lent))
        call plot_errorappendi(crc250,irc)
        call plot_errorappend(crc250,"\n")
        return
@@ -2340,19 +2346,21 @@ CONTAINS
        end if
     end if
     lcnt=0
-    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,crc250,irc))
+    do while (plot_loopset(pss,css,mss,oss,name80,ncol,col80,exp250,leg250,1,crc250,irc))
+       call observation_resetStat(oss,crc250,irc)
+       call model_resetStat(mss,crc250,irc)
        lcnt=lcnt+1
        !if (lcnt.eq.2) mod_bdeb=.true.
        !parse_bdeb=mod_bdeb
-       if (plot_bdeb) then
-          lenn=length(name80,80,10)
-          write(*,*)myname,"Inside loopSet '"//name80(1:lenn)//"'"
-       end if
+       !if (plot_bdeb) then
+       lenn=length(name80,80,10)
+       write(*,*)myname,"Processing set '"//name80(1:lenn)//"'"
+       !end if
        ! append table file
        call plot_openFileApp(pss,ounit,tab250,lent,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250," unable to append:"//tab250(1:lent))
+          call plot_errorappend(crc250," unable to append "//tab250(1:lent))
           call plot_errorappendi(crc250,irc)
           call plot_errorappend(crc250,"\n")
           return
@@ -2360,7 +2368,7 @@ CONTAINS
        ! make output data for this set
        irc=0
        if(plot_bdeb)write(*,*)myname,'Making table.',ounit,ncol,size(col80),size(exp250)
-       call colocation_makeTable(css,mss,oss,ounit,name80,ncol,col80,&
+       call colocation_makeTable(css,mss,oss,ounit,ocnt,name80,ncol,col80,&
             & exp250,leg250,test,fill250,crc250,irc)
        if (irc.ne.0) then
           call chop0(name80,80)
@@ -2374,11 +2382,14 @@ CONTAINS
        call plot_closeFile(pss,ounit,tab250,lent,crc250,irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)
-          call plot_errorappend(crc250," unable to close:"//tab250(1:lent))
+          call plot_errorappend(crc250," unable to close "//tab250(1:lent))
           call plot_errorappendi(crc250,irc)
           call plot_errorappend(crc250,"\n")
           return
        end if
+       call model_printFStat(mss,crc250,irc)
+       call observation_printStat(oss,crc250,irc)
+       call model_printLStat(mss,crc250,irc)
     end do
     if (irc.ne.0) then
        call plot_errorappend(crc250,myname)
@@ -2391,7 +2402,7 @@ CONTAINS
     if (allocated(col80)) deallocate(col80)
     if (allocated(exp250)) deallocate(exp250)
     !
-    write(*,*)myname,"Normal end of subroutine."
+    write(*,'(X,A,I0,A)') myname,ocnt," locations written to table file "//tab250(1:lent)
     if(plot_bdeb)write(*,*)myname,'Done.',irc
     return
   end subroutine plot_maketable

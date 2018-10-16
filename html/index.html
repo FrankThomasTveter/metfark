@@ -67,10 +67,12 @@
 		    </td>
 		    <td align="center"><button onclick="showDropdown('modelFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
 					       title="Show <NETCDF model files> that can be scanned &#13;for <model variables> and <model dimensions>">&#9776;</button></td>
-		    <td> Min Age:</td> <td><input id="modelFilterDirMin" type="text" value="" style="width:50px"
-						  title="Minimum age of <NETCDF model files> in days" onblur="model_setArray('filterDirMin',this.value)"/> </td>
-		    <td> Max:</td> <td><input id="modelFilterDirMax" type="text" value="" style="width:50px"
-					      title="Maximum age of <NETCDF model files> in days" onblur="model_setArray('filterDirMax',this.value)"/> </td>
+		    <td> Max age:</td> <td><input id="modelFilterDirMax" type="text" value="" style="width:100px"
+						  title="Maximum age of <NETCDF model files> in days, or start date YYYY-MM-DD."
+						  onblur="model_setArray('filterDirMax',this.value)"/> </td>
+		    <td> min:</td> <td><input id="modelFilterDirMin" type="text" value="" style="width:100px"
+						  title="Minimum age of <NETCDF model files> in days, or stop date YYYY-MM-DD."
+						  onblur="model_setArray('filterDirMin',this.value)"/> </td>
 		    <td> Files:</td>
 		    <td id="modelPatternHits">0</td>
 		  </tr>
@@ -159,10 +161,12 @@ A new <setup file> will get this password.">
 		    </td>
 		    <td align="center"><button onclick="showDropdown('obsFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
 		       title="Show <BUFR observation files> that can be scanned for the BUFR sequence">&#9776;</button></td>
-		    <td> Min Age:</td> <td><input id="obsFilterDirMin" type="text" value="" style="width:50px"
-						  title="Minimum age of <BUFR observation files> in days" onblur="obs_setArray('filterDirMin',this.value)"/> </td>
-		    <td> Max:</td> <td><input id="obsFilterDirMax" type="text" value="" style="width:50px"
-					      title="Maximum age of <BUFR observation files> in days" onblur="obs_setArray('filterDirMax',this.value)"/> </td>
+		    <td> Max age:</td> <td><input id="obsFilterDirMax" type="text" value="" style="width:100px"
+					       title="Maximum age of <BUFR observation files> in days, or start date YYYY-MM-DD."
+					       onblur="obs_setArray('filterDirMax',this.value)"/> </td>
+		    <td> min:</td> <td><input id="obsFilterDirMin" type="text" value="" style="width:100px"
+						title="Minimum age of <BUFR observation files> in days, or stop date YYYY-MM-DD."
+						onblur="obs_setArray('filterDirMin',this.value)"/> </td>
 		    <td>Files:</td>
 		    <td id="obsPatternHits">0</td>
 		  </tr>
@@ -526,7 +530,7 @@ A new <setup file> will get this password.">
 	    <tr>
 	      <td style="white-space: nowrap;"><em>Setup file:</em></td>
 	      <td class="fill" width="100%">
-		<input id="plotConfigFile" type="text" value="" style="width:100%" onblur="plot_setConfigFile(this.value);"
+		<input id="plotConfigFile" type="text" value="" style="width:100%" onblur="plot_setConfigFile(this.value);plot_show();"
 		       title="Name of existing or new <setup file>"/> 
 		<div id="plotConfigFileDropdown" class="dropdown-content"></div>
 	      </td>

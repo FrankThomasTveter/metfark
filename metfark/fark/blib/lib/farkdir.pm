@@ -435,7 +435,7 @@ sub removeDir {
 	#print "Removing $root\n";
 	rmdir($root) or &term("Unable to rmdir $root: $!");
     };
-    chdir($sdir) or die "Unable to change to dir $sdir:$!\n";
+    chdir($sdir) or die "Unable to change to dir $sdir ($!)\n";
     return($ret);
 }
 
@@ -493,7 +493,7 @@ sub docsave {
 	close PATH;
 	chmod 0666, $path;
     } else {
-	farkdir::term("Unable to open: '".$path."'");
+	farkdir::term("Unable to open $path ($!)");
     }
 }
 
@@ -510,7 +510,6 @@ sub sandbox (&@) {
     my $abort= $opts->{"abort"}//"0";  # check abortfile
     my $abortfile= $opts->{"abortfile"}//"0";  # check abortfile
     my $debug   = $opts->{"debug"}//"0";      # print debug info
-    my $append   = $opts->{"append"}//"0";      # print debug info
     if ($abort) { # this is an abort-request
 	farkdir::touchFile($abortfile);
     } else { # start processes
@@ -522,7 +521,7 @@ sub sandbox (&@) {
 	    die ("farkdir::sandbox A logfile is required when using option stdout=>'success'.");
 	}
 	if (defined $log && $log) {
-	    &redirect_streams($log,$append);
+	    &redirect_streams($log);
 	} elsif ( $print eq "never") {
 	    &redirect_streams("/dev/null");
 	};
@@ -544,22 +543,8 @@ sub sandbox (&@) {
 		&& ! $wait    # child pid vanished
 		&& ! $cmd     # eval return string
 		&& ! $blk );
-	if (defined $log && $log) {
-	    &restore_streams();
-	    $merged=&message_file($log);
-	    if ($print eq "always"  || ($print eq "success" && $ok)) {
-		&print_file($log);
-		if ($cmd) {print $cmd;}
-	    }
-	    if (! $ok) { # save to errfile
-		copy($log, $log.".err");
-	    };
-	} elsif ( $print eq "never") {
-	    &restore_streams();
-	};
-	# handle errors...
+	my $message=$msg;
 	if (! $ok) {
-	    my $message=$msg;
 	    if ($merged) {
 		$message=$merged;
 	    } elsif ($core){
@@ -575,11 +560,26 @@ sub sandbox (&@) {
 	    } elsif ($blk) {
 		$message=$msg . " [$cmd]";
 	    };
+	    print $message . "\n";
+	}
+	if (defined $log && $log) {
+	    &restore_streams();
+	    $merged=&message_file($log);
+	    if ($print eq "always"  || ($print eq "success" && $ok)) {
+		&print_file($log);
+		if ($cmd) {print $cmd;}
+	    }
+	    if (! $ok) { # save to errfile
+		copy($log, $log.".err");
+	    };
+	} elsif ( $print eq "never") {
+	    &restore_streams();
+	};
+	# handle errors...
+	if (! $ok) {
 	    if ($debug) {print "Message: $message\n";};
 	    if ($term) {
 		$term->($message);
-	    } elsif ($debug) {
-		print $message;
 	    };
 	}
     }
@@ -697,25 +697,22 @@ sub dtg {
 # my $ret = &term ("System error...");
 #
 sub term {
-    use URI::Encode qw(uri_encode);
-    my $msg=uri_encode(shift);
+    use URI::Escape qw(uri_escape);
+    my $msg=uri_escape(shift);
     print '<error message="'.$msg.'"/>'."\n";
     exit 2;
 }
 
 sub info {
-    my $msg=shift;
-    $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
-    $msg=~s/ +/ /g;
+    use URI::Escape qw(uri_escape);
+    my $msg=uri_escape(shift);
     print "<info message='".$msg."'/>\n";
     exit 3;
 }
 
 sub termAll {
-    my $msg=shift;
-    $msg=~s/[^a-zA-Z0-9 _\-\+\.\,\/\:\[\]\(\)]/ /g;
-    $msg=~s/\n/ /g;
-    $msg=~s/ +/ /g;
+    use URI::Escape qw(uri_escape);
+    my $msg=uri_escape(shift);
     print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
     print "<error message='".$msg."'/>\n";
 }
@@ -746,7 +743,7 @@ sub FindFiles{
     if (substr($root,-1) ne "/") { $root = $root . "/";};
     my ($sdir) = &cwd; 
     if ($debug) {print "Opening $wdir\n";}
-    opendir(DIR, $wdir) or die "Unable to open $wdir:$!\n";
+    opendir(DIR, $wdir) or die "Unable to open 'search top directory' $wdir ($!)\n";
     my @dirs = ();
     #print "Here...\n";
     my @entries = sort { $a cmp $b } readdir(DIR);
@@ -810,7 +807,7 @@ sub FindFiles{
 	push (@ret,@lret);
 	$hits+=@lret;
     }
-    chdir($sdir) or die "Unable to change to dir $sdir:$!\n";
+    chdir($sdir) or die "Unable to change to dir $sdir ($!)\n";
     return sort @ret;
 }
 
@@ -843,6 +840,33 @@ sub GetFiles {   # full scan of all files...
     return @files;
 }
 
+#
+#offsets time difference-to-now, if it is a date
+#
+sub getOffset {
+    my $inp=shift;
+    my $off=shift;
+    if ($inp =~ m/^(\d{4})\-(\d{2})\-(\d{2})$/) {
+	use Time::Local;
+	#use POSIX::floor;
+	my $yy=$1;
+	my $mm=$2;
+	my $dd=$3;
+	my $hour=0;
+	my $min=0;
+	my $sec=0;
+	my $d1 = time;
+	my $d2 = timelocal($sec,$min,$hour,$dd,$mm-1,$yy);
+	my $delta = ($d1-$d2)/86400 + $off; # floor()
+	#print "Time offset: $inp -> $delta\n";
+	return $delta;
+    } else {
+	#print "Time offset: $inp\n";
+	return $inp;
+    }
+}
+
+#
 # find YYYY MM DD pattern in file/directory names
 # usage: my %patterns = farkdir::findPattern(@files);
 # return: %patterns{"fileYYYYMMDD"}=["file\d\d\d\d\d\d\d\d",tmin,tmax]
@@ -1238,51 +1262,56 @@ sub mod {
 sub restore_streams
 {
     use strict;
-    close(STDOUT) || die "Can't close STDOUT: $!";
-    close(STDERR) || die "Can't close STDERR: $!";
-    open(STDERR, ">&OLDERR") || die "Can't restore stderr: $!";
-    open(STDOUT, ">&OLDOUT") || die "Can't restore stdout: $!";
+    #print "Restoring streams\n";
+    close(STDOUT) || die "Can't close STDOUT ($!)";
+    close(STDERR) || die "Can't close STDERR ($!)";
+    open(STDERR, ">&OLDERR") || die "Can't restore stderr ($!)";
+    open(STDOUT, ">&OLDOUT") || die "Can't restore stdout ($!)";
     if ($debug) {print "Streams restored.\n";};    
 };
 
 sub redirect_streams
 {
     use strict;
-    my ($log_file, $append) = @_;
-    if ($debug) {print "Redirecting streams to '$log_file'\n";};    
-    open OLDOUT,">&STDOUT" || die "Can't duplicate STDOUT: $!";
-    open OLDERR,">&STDERR" || die "Can't duplicate STDERR: $!";
-    if (defined $append && &append) {
-	open(STDOUT,">> $log_file");
-    } else {
-	open(STDOUT,"> $log_file");
-    }
+    my ($log_file) = @_;
+    $|=1; # flush stdout buffer, otherwise it will not be captured by parent...
+    if ($debug) {print "Redirecting streams to '$log_file'\n";};
+    #print "Redirecting streams to '$log_file'\n";
+    open OLDOUT,">&STDOUT" || die "Can't duplicate STDOUT ($!)";
+    open OLDERR,">&STDERR" || die "Can't duplicate STDERR ($!)";
+    open(STDOUT,"> $log_file");
     open(STDERR,">&STDOUT");
 }
 
 sub print_file
 {
+    use URI::Escape qw(uri_unescape);
     my ($filename)=@_;
     if ($debug) {print "*** Start of '$filename' ***\n";};    
     open(my $fh, '<:encoding(UTF-8)', $filename)
-	or die "Could not open file '$filename' $!";
-    
+	or die "Could not open file $filename ($!)";
     while (my $row = <$fh>) {
 	chomp $row;
-	print "$row\n";
+	if ($row =~ m/<error message="(.*)"\/>/g) {
+	    print uri_unescape($1) . "\n";
+	} else {
+	    print "$row\n";
+	};
     };
-    if ($debug) {print "*** End of '$filename' ***\n";};    
+    close ($fh);
+    if ($debug) {print "*** End of $filename ***\n";};    
 }
 
 sub message_file
 {
+    use URI::Escape qw(uri_unescape);
     my ($filename)=@_;
     open(my $fh, '<:encoding(UTF-8)', $filename)
-	or die "Could not open file '$filename' $!";
+	or die "Could not open file $filename ($!)";
     
     while (my $row = <$fh>) {
-	if ($row =~ m/<error message='(.*)'\/>/g) {
-	    return $1;
+	if ($row =~ m/<error message="(.*)"\/>/g) {
+	    return uri_unescape($1);
 	};
     };
 }

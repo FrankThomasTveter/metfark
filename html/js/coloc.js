@@ -1,34 +1,34 @@
-coloc_file="default.cfg"; // always valid file
-coloc_config = { "default.cfg" : { modelConfigFile : { file: "default.cfg",
-						       min : "def_min",
-						       max : "def_max",
-						       exp : "",
-						       targets : { "def_model" : { variable : "def",
-										   min: "def_min",
-										   max : "def_max",
-									           exp : "" 
-										 } },
-						       targeto : ["def_model"],
-						       def : [ {targets: {"def_model": 101}, 
-								info:"default info"} ]
-						     },
-				   obsConfigFile : { file: "default.cfg",
-						     min: "def_min",
-						     max : "def_max",
-						     targets : { "def_obs" : {pos:"", 
-									      descr:"", 
-									      info:"",  
-									      min:"", 
-									      max:""}
-							       },
-						     targeto : ["def_obs"]
-						   },
-				   host:"fark.met.no",
-				   filter:"",
-				   xml:"",
-				   password: ""
-				 }
-	       };
+    coloc_file="default.cfg"; // always valid file
+    coloc_config = { "default.cfg" : { modelConfigFile : { file: "default.cfg",
+							   min : "def_min",
+							   max : "def_max",
+							   exp : "",
+							   targets : { "def_model" : { variable : "def",
+										       min: "def_min",
+										       max : "def_max",
+									               exp : "" 
+										     } },
+							   targeto : ["def_model"],
+							   def : [ {targets: {"def_model": 101}, 
+								    info:"default info"} ]
+							 },
+				       obsConfigFile : { file: "default.cfg",
+							 min: "def_min",
+							 max : "def_max",
+							 targets : { "def_obs" : {pos:"", 
+										  descr:"", 
+										  info:"",  
+										  min:"", 
+										  max:""}
+								   },
+							 targeto : ["def_obs"]
+						       },
+				       host:"fark.met.no",
+				       filter:"",
+				       xml:"",
+				       password: ""
+				     }
+		   };
 coloc_configEd = 0;
 modelLoaded=false;
 obsLoaded=false;
@@ -41,27 +41,27 @@ function coloc_obsIsNotLoaded(ofile) {
 function coloc_allocate(file) {
     if (coloc_config[file] === undefined) {
 	coloc_config[file]=clone(coloc_config[coloc_file]);
-	console.log("cloned:",file,coloc_file,coloc_config[file]);
+	//console.log("cloned:",file,coloc_file,coloc_config[file]);
     }
 }
 function coloc_setConfigFile2(file) {
     showValue('colocConfigFile',file);
     showValue('colocConfigFileSave',file);
-    console.log("Setting file= '"+file+"'");
+   //console.log("Setting file= '"+file+"'");
 }
 function coloc_setConfigFile(file) {
-    console.log("Setting file= '"+file+"'");
+   //console.log("Setting file= '"+file+"'");
     showValue('colocConfigFile',file);
     showValue('colocConfigFileSave',file);
     //if (file != "") {
-	coloc_allocate(file);
-	coloc_file=file;
-	var mfile=coloc_getModelConfigFile();
-        fark_last['model']=coloc_getModelConfigFile();
-	if (coloc_modelIsNotLoaded(mfile)) {coloc_updateModelData(mfile);}
-	var ofile=coloc_getObsConfigFile();
-        fark_last['obs']=coloc_getObsConfigFile();
-	if (coloc_obsIsNotLoaded(ofile)) {coloc_updateObsData(ofile);}
+    coloc_allocate(file);
+    coloc_file=file;
+    var mfile=coloc_getModelConfigFile();
+    fark_last['model']=coloc_getModelConfigFile();
+    if (coloc_modelIsNotLoaded(mfile)) {coloc_updateModelData(mfile);}
+    var ofile=coloc_getObsConfigFile();
+    fark_last['obs']=coloc_getObsConfigFile();
+    if (coloc_obsIsNotLoaded(ofile)) {coloc_updateObsData(ofile);}
     //};
     coloc_showCOLOC();
 };
@@ -90,18 +90,27 @@ function coloc_setConfig(type,parameter,val) {
     // load if we are changing obs or model config files
     if (parameter === "file" && type === "model") {
 	documentLog.innerHTML="Sent "+type+"-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:type},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    modelLoaded=true;
-	    documentLog.innerHTML="";
-	});
+	$.get("cgi-bin/fark_load.pl",{type:type})
+	    .success(
+		function(data, status){
+		    dataToArray(data,status,documentLog);
+		    modelLoaded=true;
+		    documentLog.innerHTML="";
+		})
+	    .error(
+		function (error) { alert("Coloc model request failed (system error)");}
+	    );
     } else if (parameter === "file" && type === "obs") {
 	documentLog.innerHTML="Sent "+type+"-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:type},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    obsLoaded=true;
-	    documentLog.innerHTML="";
-	});
+	$.get("cgi-bin/fark_load.pl",{type:type})
+	    .success(function(data, status){
+		dataToArray(data,status,documentLog);
+		obsLoaded=true;
+		documentLog.innerHTML="";
+	    })
+	    .error(
+		function (error) { alert("Coloc obs request failed (system error)");}
+	    );
     }
     coloc_showCOLOC();
 }
@@ -120,7 +129,7 @@ function coloc_setConfigFilesTarget (type,target,parameter,val) {
 	    coloc_config[file][type]['targets'] ===undefined ||
 	    coloc_config[file][type]['targets'][target] ===undefined ||
 	    coloc_config[file][type]['targets'][target][parameter] ===undefined) {
-	    console.log("Undefined:",type,target,parameter,val);
+	   console.log("Undefined:",type,target,parameter,val);
 	};
 	coloc_config[file][type]['targets'][target][parameter]=val;
 	coloc_show();
@@ -299,7 +308,7 @@ function coloc_newObsTarget(item) {
 function coloc_showModelTargetTable() {
     var item=document.getElementById('modelTargetTable');
     var file=coloc_getConfigFile();
-    console.log("coloc: Showing ",file, coloc_config[file]["modelConfigFile"]["file"],coloc_config);
+   //console.log("coloc: Showing ",file, coloc_config[file]["modelConfigFile"]["file"],coloc_config);
     var tail=removeTableChildFromTo(item,"labelsModelTarget","newlineModelTarget");
     var targeto=coloc_config[file]["modelConfigFile"]["targeto"];
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
@@ -352,7 +361,7 @@ function coloc_showModelTargetTable() {
 		    color="black";
 		};
 	    }
-	    console.log("*** Target:",target,targets[target]["variable"],color,variables[target]);
+	   //console.log("*** Target:",target,targets[target]["variable"],color,variables[target]);
 	    coloc_insertModelTargetRow(tail,target,ii,targets[target]["variable"],color,
 				       targets[target]["min"],targets[target]["max"]);
 	}
@@ -445,7 +454,7 @@ function coloc_insertModelTargetIndexRow(item,target,variable,color,min,max) {
 function coloc_insertModelTargetRow(item,target,ii,variable,color,min,max) {
     var row = document.createElement("TR");
     var file = coloc_getModelConfigFile();
-    console.log("coloc: Adding model target row for :",file,target,variable);
+   //console.log("coloc: Adding model target row for :",file,target,variable);
     var td, inp;
     // make target name column
     td=document.createElement("TD");
@@ -545,7 +554,7 @@ function coloc_insertModelDefaultHeader(row,file) {
     row.appendChild(td);
     var targeto=coloc_config[file]["modelConfigFile"]["targeto"];
     var targets=coloc_config[file]["modelConfigFile"]["targets"];
-//    for (var target in targets) {
+    //    for (var target in targets) {
     for (var ii =0; ii< targeto.length;ii++) {
 	var target=targeto[ii];
 	// make variable names
@@ -724,7 +733,7 @@ function coloc_showObsTargetTable() {
 		bufr[bufrType][subType][pos] !== undefined) {
 		var descr=bufr[bufrType][subType][pos]["descr"];
 		if (descr!=otargets[target]["descr"]) {
-			    color="red";
+		    color="red";
 		};
 	    } else {
 		color="black";
@@ -1002,13 +1011,13 @@ function coloc_showTargetMatchTable() {
     //for (var target in targets) {
     for (var ii =0; ii< targeto.length;ii++) {
 	var target=targeto[ii];
-	console.log("TargetS:",target);
+	//console.log("TargetS:",target);
 	cnt=cnt+1;
 	var exp=(targets[target]["exp"]||"");
 	coloc_insertTargetMatchRow(tail,cnt,target,exp);
     };
     for (var target of targeto) {
-	console.log("TargetO:",target);
+	//console.log("TargetO:",target);
     }
 };
 // create auto table row
@@ -1226,66 +1235,90 @@ function removeObsTarget(item,target) {
 function coloc_saveConfigFile(target) {
     var file=coloc_getConfigFile();
     var password=document.getElementById("colocConfigFilePsw").value;
-    var host = coloc_config[file]["host"];
-    var xml = coloc_config[file]["xml"];
-    var modelFilter = coloc_config[file]["filter"];
-    var modelFile = coloc_config[file]["modelConfigFile"]["file"];
-    var modelStart = coloc_config[file]["modelConfigFile"]["min"];
-    var modelStop = coloc_config[file]["modelConfigFile"]["max"];
-    var exp = coloc_config[file]["modelConfigFile"]["exp"];
+    var host ="";
+    var xml = "";
+    var modelFilter = "";
+    var modelFile = "";
+    var modelStart = "";
+    var modelStop = "";
+    var exp = "";
     var modelTargets = "";
-    var modelTrgo=coloc_config[file]["modelConfigFile"]["targeto"];
-    var modelTrg=coloc_config[file]["modelConfigFile"]["targets"];
-    //for (var target in modelTrg) {
-    for (var ii =0; ii< modelTrgo.length;ii++) {
-	var target=modelTrgo[ii];
-	modelTargets=modelTargets + "|" + target + "~" + 
-	    modelTrg[target]["variable"] + "~" + 
-	    modelTrg[target]["min"] + "~" + 
-	    modelTrg[target]["max"];
-    };
+    var modelTrgo="";
+    var modelTrg="";
     var modelDefault = "";
-    var modelDef=coloc_config[file]["modelConfigFile"]["def"];
-    var len=modelDef.length;
-    for (var ii=0; ii<len;ii++) {
-	var info=modelDef[ii]["info"];
-	var defTrg=modelDef[ii]["targets"];
-	var first=true;
-	for (var target in defTrg) {
-	    if (first) {
-		modelDefault=modelDefault + "[" + info;
-		first=false;
-	    };
-	    modelDefault=modelDefault + "|" + 
-		target + "~" + 
-		defTrg[target];
+    var indexExp="";
+    var matchTrg={};
+    if (coloc_config[file] != undefined && coloc_config[file]["modelConfigFile"] != undefined) {
+	host = coloc_config[file]["host"];
+	xml = coloc_config[file]["xml"];
+	modelFilter = coloc_config[file]["filter"];
+	modelFile = coloc_config[file]["modelConfigFile"]["file"];
+	modelStart = coloc_config[file]["modelConfigFile"]["min"];
+	modelStop = coloc_config[file]["modelConfigFile"]["max"];
+	exp = coloc_config[file]["modelConfigFile"]["exp"];
+	modelTargets = "";
+	modelTrgo=coloc_config[file]["modelConfigFile"]["targeto"];
+	modelTrg=coloc_config[file]["modelConfigFile"]["targets"];
+	//for (var target in modelTrg) {
+	for (var ii =0; ii< modelTrgo.length;ii++) {
+	    var target=modelTrgo[ii];
+	    modelTargets=modelTargets + "|" + target + "~" + 
+		modelTrg[target]["variable"] + "~" + 
+		modelTrg[target]["min"] + "~" + 
+		modelTrg[target]["max"];
 	};
+	// model defaults
+	var modelDef=coloc_config[file]["modelConfigFile"]["def"]//[];
+	var len=modelDef.length;
+	for (var ii=0; ii<len;ii++) {
+	    var info=modelDef[ii]["info"];
+	    var defTrg=modelDef[ii]["targets"];
+	    var first=true;
+	    for (var target in defTrg) {
+		if (first) {
+		    modelDefault=modelDefault + "[" + info;
+		    first=false;
+		};
+		modelDefault=modelDefault + "|" + 
+		    target + "~" + 
+		    defTrg[target];
+	    };
+	};
+	indexExp=coloc_config[file]["modelConfigFile"]["exp"]//"";
+	matchTrg=coloc_config[file]["modelConfigFile"]["targets"];
     };
-    var obsFile = coloc_config[file]["obsConfigFile"]["file"];
-    var obsFilter = coloc_config[file]["obsConfigFile"]["filter"];
-    var obsStart = coloc_config[file]["obsConfigFile"]["min"];
-    var obsStop = coloc_config[file]["obsConfigFile"]["max"];
-    var obsTargets = "";
-    var obsTrgo=coloc_config[file]["obsConfigFile"]["targeto"];
-    var obsTrg=coloc_config[file]["obsConfigFile"]["targets"];
-    //for (var target in obsTrg) {
-    for (var ii =0; ii< obsTrgo.length;ii++) {
-	var target=obsTrgo[ii];
-	obsTargets=obsTargets + "|" + target + "~" + 
-	    obsTrg[target]["pos"] + "~" + 
-	    obsTrg[target]["descr"] + "~" + 
-	    obsTrg[target]["info"] + "~" + 
-	    obsTrg[target]["min"] + "~" + 
-	    obsTrg[target]["max"];
-    };
-    var indexTarget=model_config[modelFile]["indexTarget"];
-    var indexExp=coloc_config[file]["modelConfigFile"]["exp"];;
+    var indexTarget="";
+    if (model_config[modelFile] != undefined) {
+	indexTarget=model_config[modelFile]["indexTarget"]//"";
+    }
     var matchRules = "|" + indexTarget + "~" + indexExp;
-    var matchTrg=coloc_config[file]["modelConfigFile"]["targets"];
     for (var target in matchTrg) {
 	matchRules=matchRules + "|" + target + "~" + 
 	    matchTrg[target]["exp"];
     };
+    var obsFile = "";
+    var obsFilter = "";
+    var obsStart = "";
+    var obsStop = "";
+    var obsTargets = "";
+    if (coloc_config[file] != undefined && coloc_config[file]["obsConfigFile"] != undefined) {
+	obsFile = coloc_config[file]["obsConfigFile"]["file"]//"";
+	obsFilter = coloc_config[file]["obsConfigFile"]["filter"]//"";
+	obsStart = coloc_config[file]["obsConfigFile"]["min"]//"";
+	obsStop = coloc_config[file]["obsConfigFile"]["max"]//"";
+	var obsTrgo=coloc_config[file]["obsConfigFile"]["targeto"]//[];
+	var obsTrg=coloc_config[file]["obsConfigFile"]["targets"]//{};
+	//for (var target in obsTrg) {
+	for (var ii =0; ii< obsTrgo.length;ii++) {
+	    var target=obsTrgo[ii];
+	    obsTargets=obsTargets + "|" + target + "~" + 
+		obsTrg[target]["pos"] + "~" + 
+		obsTrg[target]["descr"] + "~" + 
+		obsTrg[target]["info"] + "~" + 
+		obsTrg[target]["min"] + "~" + 
+		obsTrg[target]["max"];
+	};
+    }
     documentLog.innerHTML="Sent coloc-save request.";
     $.get("cgi-bin/fark_save.pl",{type:"coloc",
 				  file:file,
@@ -1304,18 +1337,20 @@ function coloc_saveConfigFile(target) {
 				  obsTargets:obsTargets,
 				  modelTargets:modelTargets,
 				  modelDefault:modelDefault,
-				  matchRules:matchRules},
-	  function(data, status){
-	      if (status == "success") {
-		  var errors=data.getElementsByTagName("error");
-		  if (errors.length > 0 ) {
-		      console.log("Error:",data);
-		      var msg=getErrorMessage(errors);
-		      alert("Unable to save file: "+file+"\n"+msg);
-		  };
-		  documentLog.innerHTML="";}
-	  }
-	 );
+				  matchRules:matchRules})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to save file: "+file+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Coloc save request failed (system error)");}
+	);
     makeUrl("coloc",file);
 };
 function coloc_showConfig() {
@@ -1427,54 +1462,78 @@ function coloc_showConfig() {
     }
 };
 function coloc_updateModelData(arg = "") {
-	var args=getArgs(arg);
-	documentLog.innerHTML="Sent model-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    modelLoaded=true;
-	    //console.log("Updating dropdown for ",target);
-	    coloc_show();
-	    fark_last['model']=coloc_getModelConfigFile();
-	    documentLog.innerHTML="";
-	});
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent model-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"model",arg:args})
+	.success(
+	    function(data, status){
+		dataToArray(data,status,documentLog);
+		modelLoaded=true;
+		//console.log("Updating dropdown for ",target);
+		coloc_show();
+		fark_last['model']=coloc_getModelConfigFile();
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Coloc load model request failed (system error)");}
+	);
 };
 function coloc_updateObsData(arg = "") {
     var args=getArgs(arg);
     documentLog.innerHTML="Sent obs-load request.";
-    $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
-	dataToArray(data,status,documentLog);
-	obsLoaded=true;
-	//console.log("Updating dropdown for ",target);
-	coloc_show();
-	fark_last['obs']=coloc_getObsConfigFile();
-	documentLog.innerHTML="";
-    });
+    $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args})
+	.success(
+	    function(data, status){
+		dataToArray(data,status,documentLog);
+		obsLoaded=true;
+		//console.log("Updating dropdown for ",target);
+		coloc_show();
+		fark_last['obs']=coloc_getObsConfigFile();
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Coloc load obs request failed (system error)");}
+	);
 };
 function coloc_updateData() {
-	var args=getArgs(coloc_getConfigFile());
-	documentLog.innerHTML="Sent coloc-load request.";
-        console.log("coloc: *****loading  ",args);
-	$.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    documentLog.innerHTML="Sent model-load request.";
-	    fark_last['model']=coloc_getModelConfigFile();
-	    args=getArgs(coloc_getModelConfigFile());
-	    console.log("coloc: *****loading model ",args);
-	    $.get("cgi-bin/fark_load.pl",{type:"model",arg:args},function(data, status){
+    var args=getArgs(coloc_getConfigFile());
+    documentLog.innerHTML="Sent coloc-load request.";
+   //console.log("coloc: *****loading  ",args);
+    $.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args})
+	.success(
+	    function(data, status){
 		dataToArray(data,status,documentLog);
-		modelLoaded=true;
-		fark_last['obs']=coloc_getObsConfigFile();
-		args=getArgs(coloc_getObsConfigFile());
-		console.log("coloc: *****loading obs ",args);
-		documentLog.innerHTML="Sent obs-load request.";
-		$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
-		    dataToArray(data,status,documentLog);
-		    obsLoaded=true;
-		    coloc_show();
-		    documentLog.innerHTML="";
-		});
-	    });
-	});
+		documentLog.innerHTML="Sent model-load request.";
+		fark_last['model']=coloc_getModelConfigFile();
+		args=getArgs(coloc_getModelConfigFile());
+		//console.log("coloc: *****loading model ",args);
+		$.get("cgi-bin/fark_load.pl",{type:"model",arg:args})
+		    .success(function(data, status){
+			dataToArray(data,status,documentLog);
+			modelLoaded=true;
+			fark_last['obs']=coloc_getObsConfigFile();
+			args=getArgs(coloc_getObsConfigFile());
+			//console.log("coloc: *****loading obs ",args);
+			documentLog.innerHTML="Sent obs-load request.";
+			$.get("cgi-bin/fark_load.pl",{type:"obs",arg:args})
+			    .success(
+				function(data, status){
+				    dataToArray(data,status,documentLog);
+				    obsLoaded=true;
+				    coloc_show();
+				    documentLog.innerHTML="";
+				})
+			    .error(
+				function (error) { alert("Coloc obs request failed (system error)");}
+			    );
+		    })
+		    .error(
+			function (error) { alert("Coloc model request failed (system error)");}
+		    );
+	    })
+	.error(
+	    function (error) { alert("Coloc request failed (system error)");}
+	);
 };
 function coloc_getModelIndexStart(inp,target) {
     var file=coloc_getModelConfigFile();
@@ -1491,7 +1550,7 @@ function coloc_getModelIndexStop(inp,target) {
 function coloc_getObsIndexStart(inp,target) {
     var file=coloc_getObsConfigFile();
     var item=document.getElementById(inp);
-    console.log("fark.js start:'"+file+"' '"+obs_config[file]["start"]+"'")
+   //console.log("fark.js start:'"+file+"' '"+obs_config[file]["start"]+"'")
     item.value=Number(obs_config[file]["start"]).toString();
     coloc_setArrayPar('obsConfigFile','min',item.value);
 };
@@ -1517,30 +1576,32 @@ function coloc_debugExp(f,t) {
     var expin=fitem.value;
     titem.innerHTML="";
     documentLog.innerHTML="Sent coloc-exp request:"+expin;
-    $.get("cgi-bin/fark_exp.pl",{exp:expin},
-	  function(data, status){
-	      if (status === "success" && data !== null) {
-		  var errors=data.getElementsByTagName("error");
-		  if (errors.length > 0 ) {
-		      console.log("Error:",data);
-		      var msg=getErrorMessage(errors);
-		      alert("Unable to evaluate expression:"+expin+"\n"+msg);
-		  } else {
-		      var results=data.getElementsByTagName("result");
-		      if (results.length > 0 ) {
-			  var val=(results[0].getAttribute("value")||"");
-			  //titem.innerHTML=val;
-			  if (isNaN(val)) {
-			      titem.innerHTML=String(val);
-			  } else {
-			      titem.innerHTML=Number(val).toString();
-			  };
-		      };
-		  };
-		  documentLog.innerHTML="";
-	      };
-	  }
-	 );
+    $.get("cgi-bin/fark_exp.pl",{exp:expin})
+	.success(
+	    function(data, status){
+		if (status === "success" && data !== null) {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to evaluate expression:"+expin+"\n"+msg);
+		    } else {
+			var results=data.getElementsByTagName("result");
+			if (results.length > 0 ) {
+			    var val=(results[0].getAttribute("value")||"");
+			    //titem.innerHTML=val;
+			    if (isNaN(val)) {
+				titem.innerHTML=String(val);
+			    } else {
+				titem.innerHTML=Number(val).toString();
+			    };
+			};
+		    };
+		    documentLog.innerHTML="";
+		};
+	    })
+	.error(
+	    function (error) { alert("Coloc exp request failed (system error)");}
+	);
 };
 
 function coloc_mkdir(path) {
@@ -1548,17 +1609,20 @@ function coloc_mkdir(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"mk",
 				 cls:"coloc",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to mkdir: "+path+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to mkdir: "+path+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Coloc mkdir request failed (system error)");}
+	);
     
 };
 
@@ -1567,18 +1631,21 @@ function coloc_rmdir(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"rm",
 				 cls:"coloc",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to rmdir: "+path+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
-    
+				 password,password})
+    	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to rmdir: "+path+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";
+		}
+	    })
+	.error(
+	    function (error) { alert("Coloc rmdir request failed (system error)");}
+	);
 };
 
 function coloc_rmfile(path) {
@@ -1586,25 +1653,34 @@ function coloc_rmfile(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"rf",
 				 cls:"coloc",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to rmfile: "+path+"\n"+msg);
-	      } else {
-		  delete coloc_config[path];
-		  if (coloc_file == path) {coloc_file="default.cfg";}
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+    	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to rmfile: "+path+"\n"+msg);
+		    } else {
+			// delete coloc_config[path];
+			if (coloc_file == path) {coloc_file="default.cfg";}
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Coloc rmfile request failed (system error)");}
+	);
     
 };
 
+function coloc_fgfile(path) { // clear file from internal memory
+    if (coloc_config[path] != undefined) {
+	delete coloc_config[path];
+    }
+};
+
 function coloc_mkfile(file) {
-    console.log("Calling saveConfigFile: '"+file+"'");
+   //console.log("Calling saveConfigFile: '"+file+"'");
     coloc_setConfigFile(file);
     coloc_saveConfigFile(file);
 };

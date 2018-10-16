@@ -6,7 +6,7 @@ use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
 use Capture::Tiny 'capture';
 use POSIX 'strftime';
-use Data::Dumper;
+#use Data::Dumper;
 use farkdir;
 use URI::Encode;
 #
@@ -28,7 +28,7 @@ my $ref=CGI->new();
 #
 $XML::LibXML::skipXMLDeclaration = 1;
 my $param= $ref->{param};
-if (! defined $param->{cmd}) {farkdir::term("Undefined cmd.".Dumper($param))};
+if (! defined $param->{cmd}) {farkdir::term("Undefined 'command'")};
 if ($param->{cmd}->[0] eq "ls") {
     my $dir=$param->{path}->[0]||"";
     &cmdls($param,$dir);
@@ -42,7 +42,7 @@ if ($param->{cmd}->[0] eq "ls") {
     my $dir=$param->{path}->[0]||"";
     &cmdrf($param, $dir);
 } else {
-    farkdir::term("Unknown cmd.".Dumper($param));
+    farkdir::term("Unknown 'command' ".$param->{cmd}->[0]);
 }
 
 sub cmdls {
@@ -98,13 +98,13 @@ sub cmdls {
 		    $parent->addChild( $f );
 		} 
 	    } else {
-		farkdir::term("Unable to open directory.".Dumper($param));
+		farkdir::term("Unable to open directory.");
 		# my $d = XML::LibXML::Element->new( 'error' );
 		# $d->setAttribute("message","Unable to open directory.");
 		# $parent->addChild( $d );
 	    }
 	} else {
-	    farkdir::term("Permission denied ($idir,$priv).".Dumper($param));
+	    farkdir::term("permission=$priv $idir (permission denied)");
 	    # my $d = XML::LibXML::Element->new( 'error' );
 	    # $d->setAttribute("message","Permission denied.");
 	    # $parent->addChild( $d );
@@ -147,7 +147,7 @@ sub cmdmk {
 	    $doc->addChild( $parent );
 	    my $ret=farkdir::makePath($npath); # make directory
 	    if (! $ret) {
-		farkdir::term("Unable to make directory. $ret".Dumper($param));
+		farkdir::term("Unable to make directory $npath ($ret)");
 		# my $e = XML::LibXML::Element->new( 'error' );
 		# $e->setAttribute("message","Unable to make directory.");
 		# $parent->addChild( $e );
@@ -174,20 +174,20 @@ sub cmdmk {
 		    }
 		    closedir(DIR);
 		} else {
-		    farkdir::term("Unable to open directory $fpath.".Dumper($param));
+		    farkdir::term("Unable to open directory $fpath ($!)");
 		    # my $d = XML::LibXML::Element->new( 'error' );
 		    # $d->setAttribute("message","Unable to open directory.");
 		    # $parent->addChild( $d );
 		}
 	    };
 	} else {
-	    farkdir::term("Permission denied ($cls,$fpath,$priv).".Dumper($param));
+	    farkdir::term("permission=$priv $fpath (denied)");
 	    # my $e = XML::LibXML::Element->new( 'error' );
 	    # $e->setAttribute("message","Permission denied.");
 	    # $parent->addChild( $e );
 	}
     } else {
-	farkdir::term("Invalid mk directory ($idir).".Dumper($param));
+	farkdir::term("Invalid mk directory ($idir)");
 	# my $e = XML::LibXML::Element->new( 'error' );
 	# $e->setAttribute("message","Invalid directory.");
 	# $parent->addChild( $e );
@@ -218,7 +218,7 @@ sub cmdrm {
 	    #print "Priv: $priv, '$fpath' $cls '$password'\n";
 	    my $ret=farkdir::removeDir($fpath,$password);
 	    if ($ret) {
-		farkdir::term("Unable to remove directory.".Dumper($param));
+		farkdir::term("Unable to remove directory $fpath ($!)");
 		# my $e = XML::LibXML::Element->new( 'error' );
 		# $e->setAttribute("message","Unable to remove directory.");
 		# $parent->addChild( $e );
@@ -226,13 +226,13 @@ sub cmdrm {
 		$parent->setAttribute("removed",$fpath);
 	    };
 	} else {
-	    farkdir::term("Permission denied ($fpath,$priv).".Dumper($param));
+	    farkdir::term("Permission $priv $fpath (denied)");
 	    # my $e = XML::LibXML::Element->new( 'error' );
 	    # $e->setAttribute("message","Permission denied.");
 	    # $parent->addChild( $e );
 	}
     } else {
-	farkdir::term("Invalid rm directory ($fpath).".Dumper($param));
+	farkdir::term("Invalid rm directory $fpath");
 	# my $e = XML::LibXML::Element->new( 'error' );
 	# $e->setAttribute("message","Invalid directory.");
 	# $parent->addChild( $e );
@@ -263,19 +263,19 @@ sub cmdrf {
 	    if (farkdir::removeFile($path,$password)) {
 		$parent->setAttribute("removed",$path);
 	    } else {
-		farkdir::term("Unable to remove file $path.".Dumper($param));
+		farkdir::term("Unable to remove file $path ($!)");
 		# my $e = XML::LibXML::Element->new( 'error' );
 		# $e->setAttribute("message","Unable to remove directory.");
 		# $parent->addChild( $e );
 	    };
 	} else {
-	    farkdir::term("Permission denied ($fpath,$priv).".Dumper($param));
+	    farkdir::term("Permission=$priv  $fpath (denied)");
 	    # my $e = XML::LibXML::Element->new( 'error' );
 	    # $e->setAttribute("message","Permission denied.");
 	    # $parent->addChild( $e );
 	}
     } else {
-	farkdir::term("Invalid rf directory ($fpath).".Dumper($param));
+	farkdir::term("Invalid rf directory $fpath");
 	# my $e = XML::LibXML::Element->new( 'error' );
 	# $e->setAttribute("message","Invalid directory.");
 	# $parent->addChild( $e );

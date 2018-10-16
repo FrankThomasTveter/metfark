@@ -1,8 +1,8 @@
-url_file="default.cfg";
+    url_file="default.cfg";
 url_config = { "default.cfg" : { modelConfigFile : { file: "default.cfg",
 						     targets : { "def_model" : { variable : "def",
-										  min: "def_min",
-										  max : "def_max"} },
+										 min: "def_min",
+										 max : "def_max"} },
 						     def : [ {targets: {"def_model": 101}, 
 							      info:"default info"} ]
 						   },
@@ -42,18 +42,28 @@ function url_setConfig(type,parameter,val) {
     // load if we are changing obs or model config files
     if (parameter === "file" && type === "model" && !modelLoaded) {
 	documentLog.innerHTML="Sent "+type+"-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:type},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    modelLoaded=true;
-	    documentLog.innerHTML="";
-	});
+	$.get("cgi-bin/fark_load.pl",{type:type})
+	    .success(
+		function(data, status){
+		    dataToArray(data,status,documentLog);
+		    modelLoaded=true;
+		    documentLog.innerHTML="";
+		})
+	    .error(
+		function (error) { alert("URL model request failed (system error)");}
+	    );
     } else if (parameter === "file" && type === "obs" && !obsLoaded) {
 	documentLog.innerHTML="Sent "+type+"-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:type},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    obsLoaded=true;
-	    documentLog.innerHTML="";
-	});
+	$.get("cgi-bin/fark_load.pl",{type:type})
+	    .success(
+		function(data, status){
+		    dataToArray(data,status,documentLog);
+		    obsLoaded=true;
+		    documentLog.innerHTML="";
+		})
+	    .error(
+		function (error) { alert("URL obs request failed (system error)");}
+	    );
     }
     url_showURL();
 }
@@ -446,7 +456,7 @@ function url_insertModelDefaultNewline(row,file) {
     row.appendChild(td);
 }
 function url_removeModelDefault(item,file,ii) {
-    console.log("removing model default:",file,ii);
+   //console.log("removing model default:",file,ii);
     url_config[file]["modelConfigFile"]["def"].splice(ii,1);
     //url_showModelDefaultTable();
     url_show();
@@ -460,7 +470,7 @@ function url_showObsTargetTable() {
     var otargets=obs_config[ofile]["targets"];
     for (var target in otargets) {
 	url_insertOTargetRow(tail,target,otargets[target]["pos"],otargets[target]["descr"],
-			   otargets[target]["info"],otargets[target]["min"],otargets[target]["max"]);
+			     otargets[target]["info"],otargets[target]["min"],otargets[target]["max"]);
     }
     // insert obs target index expression from obs-config file
     // make "-" column  ***************************
@@ -518,7 +528,7 @@ function url_showObsTargetTable() {
     var targets=url_config[file]["obsConfigFile"]["targets"];
     for (var target in targets) {
 	url_insertObsTargetRow(tail,target,targets[target]["pos"],targets[target]["descr"],
-			   targets[target]["info"],targets[target]["min"],targets[target]["max"]);
+			       targets[target]["info"],targets[target]["min"],targets[target]["max"]);
     }
 };
 // create auto table row
@@ -931,18 +941,20 @@ function url_saveConfigFile(target) {
 				  obsTargets:obsTargets,
 				  modelTargets:modelTargets,
 				  modelDefault:modelDefault,
-				  matchRules:matchRules},
-	  function(data, status){
-	      if (status == "success") {
-		  var errors=data.getElementsByTagName("error");
-		  if (errors.length > 0 ) {
-		      console.log("Error:",data);
-		      var msg=getErrorMessage(errors);
-		      alert("Unable to save file: "+file+"\n"+msg);
-		  };
-		  documentLog.innerHTML="";}
-	  }
-	 );
+				  matchRules:matchRules})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to save file: "+file+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("URL save request failed (system error)");}
+	);
 };
 function url_showConfig() {
     var file=url_getConfigFile();
@@ -1055,40 +1067,51 @@ function url_showConfig() {
     }
 };
 function url_updateData() {
-	documentLog.innerHTML="Sent url-load request.";
-	$.get("cgi-bin/fark_load.pl",{type:"url"},function(data, status){
-	    dataToArray(data,status,documentLog);
-	    if (! modelLoaded) {
-		documentLog.innerHTML="Sent model-load request.";
-		$.get("cgi-bin/fark_load.pl",{type:"model"},function(data, status){
-		    dataToArray(data,status,documentLog);
-		    modelLoaded=true;
-		    if (! obsLoaded) {
-			documentLog.innerHTML="Sent obs-load request.";
-			$.get("cgi-bin/fark_load.pl",{type:"obs"},function(data, status){
-			    dataToArray(data,status,documentLog);
-			    obsLoaded=true;
-			    url_show();
-			    documentLog.innerHTML="";
-			});
-		    } else {
-			url_show();
-			documentLog.innerHTML="";
-		    }
-		});
-	    } else if (!obsLoaded) {
-		documentLog.innerHTML="Sent obs-load request.";
-		$.get("cgi-bin/fark_load.pl",{type:"obs"},function(data, status){
-		    dataToArray(data,status,documentLog);
-		    obsLoaded=true;
+    documentLog.innerHTML="Sent url-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"url"})
+	.success(
+	    function(data, status){
+		dataToArray(data,status,documentLog);
+		if (! modelLoaded) {
+		    documentLog.innerHTML="Sent model-load request.";
+		    $.get("cgi-bin/fark_load.pl",{type:"model"})
+			.success(
+			    function(data, status){
+				dataToArray(data,status,documentLog);
+				modelLoaded=true;
+				if (! obsLoaded) {
+				    documentLog.innerHTML="Sent obs-load request.";
+				    $.get("cgi-bin/fark_load.pl",{type:"obs"})
+					.success(
+					    function(data, status){
+						dataToArray(data,status,documentLog);
+						obsLoaded=true;
+						url_show();
+						documentLog.innerHTML="";
+					    });
+				} else {
+				    url_show();
+				    documentLog.innerHTML="";
+				}
+			    });
+		} else if (!obsLoaded) {
+		    documentLog.innerHTML="Sent obs-load request.";
+		    $.get("cgi-bin/fark_load.pl",{type:"obs"})
+			.success(
+			    function(data, status){
+				dataToArray(data,status,documentLog);
+				obsLoaded=true;
+				url_show();
+				documentLog.innerHTML="";
+			    });
+		} else {
 		    url_show();
 		    documentLog.innerHTML="";
-		});
-	    } else {
-		url_show();
-		documentLog.innerHTML="";
-	    }
-	});
+		}
+	    })
+	.error(
+	    function (error) { alert("URL update request failed (system error)");}
+	);
 };
 function url_getModelIndexStart(inp,target) {
     var file=url_getModelConfigFile();
@@ -1105,7 +1128,7 @@ function url_getModelIndexStop(inp,target) {
 function url_getObsIndexStart(inp,target) {
     var file=url_getObsConfigFile();
     var item=document.getElementById(inp);
-    console.log("fark.js start:",file,obs_config[file]["start"])
+   //console.log("fark.js start:",file,obs_config[file]["start"])
     item.value=obs_config[file]["start"];
     url_setArray('obsConfigFile','start',obs_config[file]["start"]);
 };
@@ -1145,24 +1168,26 @@ function url_debugExp(f,t) {
     var titem=document.getElementById(t);
     var expin=fitem.value;
     documentLog.innerHTML="Sent url-exp request:"+expin;
-    $.get("cgi-bin/fark_exp.pl",{exp:expin},
-	  function(data, status){
-	      if (status === "success" && data !== null) {
-		  var errors=data.getElementsByTagName("error");
-		  if (errors.length > 0 ) {
-		      console.log("Error:",data);
-		      var msg=getErrorMessage(errors);
-		      alert("Unable to evaluate expression:"+expin+"\n"+msg);
-		  } else {
-		      var results=data.getElementsByTagName("result");
-		      if (results.length > 0 ) {
-			  var val=(results[0].getAttribute("value")||"");
-			  //titem.innerHTML=val;
-			  titem.innerHTML=Number(val).toString();
-		      };
-		  };
-		  documentLog.innerHTML="";
-	      };
-	  }
-	 );
+    $.get("cgi-bin/fark_exp.pl",{exp:expin})
+	.success(
+	    function(data, status){
+		if (status === "success" && data !== null) {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to evaluate expression:"+expin+"\n"+msg);
+		    } else {
+			var results=data.getElementsByTagName("result");
+			if (results.length > 0 ) {
+			    var val=(results[0].getAttribute("value")||"");
+			    //titem.innerHTML=val;
+			    titem.innerHTML=Number(val).toString();
+			};
+		    };
+		    documentLog.innerHTML="";
+		};
+	    })
+	.error(
+	    function (error) { alert("URL debug request failed (system error)");}
+	);
 };

@@ -1,4 +1,4 @@
-plot_file = "default.cfg";
+    plot_file = "default.cfg";
 plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
 						   coloc:"coloc", 
 						   legend:"legend",
@@ -16,16 +16,16 @@ plot_org_cats = { "Text": {attributes : {xlabel:"X", ylabel:"Y"},
 	  		   order : ["xlabel","ylabel"],
 			   lines : {1:"solid"},
 			   colnames_ : ["X-expression","Y-expression"]}
-	    };
+		};
 plot_cats  ={};
 plot_order =["Text"];
 plot_configEd = 0;
 
 function plot_print(file) {
     if (plot_config[file]!== undefined) {
-	console.log("File:",file," Dataset:",Object.keys(plot_config[file]["dataset"]).length);
+	//console.log("File:",file," Dataset:",Object.keys(plot_config[file]["dataset"]).length);
     } else {
-	console.log("File:",file," Dataset is undefined.");
+	//console.log("File:",file," Dataset is undefined.");
     }
 }
 
@@ -41,10 +41,11 @@ function plot_setConfigFile(file) {
     showValue('plotConfigFile',file);
     showValue('plotConfigFileSave',file);
     //if (file != "") {
-	console.log("Setting plot config file:",file);
-	plot_allocate(file);
-	plot_file=file;
-        plot_setCat();
+   //console.log("Setting plot config file:",file);
+    plot_allocate(file);
+    plot_file=file;
+    //console.log("Cat:",plot_config[file]["cat"]," PLot_file:",plot_file);
+    plot_setCat();
     //};
 }
 function plot_getConfigFile() {
@@ -80,7 +81,7 @@ function plot_expandCat(cat) {
 	return;
     };
     for (var attr in plot_org_cats[cat]["attributes"]) {
-	console.log("Found org attribute:",attr);
+	//console.log("Found org attribute:",attr);
     }
     for (var attr in plot_org_cats[cat]["attributes"]) {
 	if (attr.substr(0,1) === "_") {
@@ -95,7 +96,7 @@ function plot_expandCat(cat) {
 		    var nn=val;
 		}
 	    };
-	    console.log("Duplicator attribute '"+attr+"' = ",nn);
+	   //console.log("Duplicator attribute '"+attr+"' = ",nn);
 	    var re = new RegExp("(\w*)"+RegExp.quote(attr)+"(\w*)", "g");
 	    for (var aa in plot_cats[cat]["attributes"]) {
 		if (aa.match(re) && aa !== attr) {
@@ -108,7 +109,7 @@ function plot_expandCat(cat) {
 		    for (var ii=nn;ii>0;ii--) {
 			var newattr = aa.replace(re, '$1'+ii.toString()+'$2');
 			// add attribute
-			console.log("Adding attribute '"+newattr+"' = ",val);
+			//console.log("Adding attribute '"+newattr+"' = ",val);
 			plot_cats[cat]["attributes"][newattr]=val;
 			plot_cats[cat]["order"].splice(index,0,newattr);
 		    }
@@ -120,12 +121,12 @@ function plot_expandCat(cat) {
 		var cc=plot_cats[cat]["colnames_"][jj];
 		if (cc.match(re)) {
 		    // delete cc column
-		    console.log("Column match '"+cc+"' == '"+attr+"'");
+		   //console.log("Column match '"+cc+"' == '"+attr+"'");
 		    var index = plot_cats[cat]["colnames_"].indexOf(cc);
 		    plot_cats[cat]["colnames_"].splice(index, 1);
 		    for (var ii=nn;ii>0;ii--) {
 			var newcol = cc.replace(re, '$1'+ii.toString()+'$2');
-			console.log("Adding column '"+newcol+"'");
+			//console.log("Adding column '"+newcol+"'");
 			// add column
 			plot_cats[cat]["colnames_"].splice(index,0,newcol);
 		    }
@@ -211,6 +212,7 @@ function plot_setAttribute(attr,value) {
 };
 function plot_show() {
     var file=plot_getConfigFile();
+    //console.log("Showing:",file);
     if (file != "") {
 	plot_allocate(file);
 	showValue('plotConfigFile',file);
@@ -254,7 +256,7 @@ function plot_newDataset() {
     var clmns=[];
     for (var ii =0; ii< colnames_.length;ii++) {
 	var itemId="plotExpression"+(ii);
-	console.log("newDataset, cleaning:",ii,itemId);
+	//console.log("newDataset, cleaning:",ii,itemId);
 	var item=document.getElementById(itemId);
 	if (item !== undefined && item !== null) {
 	    clmns.push(item.value);
@@ -264,7 +266,7 @@ function plot_newDataset() {
 	}
     }
     fark_last["coloc"]=coloc.value;
-    console.log("New: trg:",set.value," file:",coloc.value," columns:",clmns," leg:",legend.value);
+   //console.log("New: trg:",set.value," file:",coloc.value," columns:",clmns," leg:",legend.value);
     if (set.value !== "" && coloc.value !== "") {
 	if (plot_config[file] === undefined) {
 	    plot_config[file]={dataset : {},
@@ -315,78 +317,96 @@ function plot_removeDataset(set) {
 function plot_saveConfigFile() {
     var file=plot_getConfigFile();
     var password=document.getElementById("plotConfigFilePsw").value;
-    var table=plot_config[file]["table"];
-    var graphics=plot_config[file]["graphics"];
-    var cat=plot_config[file]["cat"];
-    var colnames_=plot_cats[cat]["colnames_"];
+    var cat="";
+    var table="";
+    var graphics="";
     var plotCols="";
-    for (var ii =0; ii< colnames_.length;ii++) {
-	if (plotCols.length==0) {
-	    plotCols=colnames_[ii];
-	} else {
-	    plotCols=plotCols+"~"+colnames_[ii];
-	}
-    }
     var plotSets="";
-    var sets=plot_config[file]["dataset"];
-    for (var set in sets) {
-	var colnames=sets[set]["colnames"];
-	var columns=sets[set]["columns"];
-	var panick ={};
-	for (var ii =0; ii< colnames.length;ii++) {
-	    panick[colnames]=columns[ii]||0;
-	};
-	var coloc=sets[set]["coloc"];
-	var clmns="";
-	for (var ii =0; ii< colnames_.length;ii++) {
-	    var expr;
-	    if (columns !== undefined) {
-		if (colnames_[ii] == colnames[ii]) {
-		    expr = columns[ii]||"0";
-		} else {
-		    expr = panick[colnames_[ii]]||0;
-		}
-	    } else {
-		expr = "0";
-	    }
-	    clmns=clmns + expr + "~";
-	}
-	var legend=sets[set]["legend"];
-	if (coloc === undefined) {coloc="";}
-	if (legend === undefined) {legend="";}
-	plotSets=plotSets + "|" + set + "~" + coloc + "~" + legend + "~" + clmns;
-    };
     var plotAttrs="";
-    var order=plot_cats[cat]['order'];
-    var attrs=plot_config[file]["attributes"];
-    for (var ii=0;ii<order.length;ii++) {
-	var attr=order[ii];
-	var value=attrs[attr];
-	if (value !== undefined) {
-	    plotAttrs=plotAttrs + "|" + attr + "~" + value;
+    if (plot_config[file] != undefined) {
+	cat=plot_config[file]["cat"]//"";
+	table=plot_config[file]["table"]//"";
+	graphics=plot_config[file]["graphics"]//"";
+	if (plot_cats[cat] != undefined) {
+	    var colnames_=plot_cats[cat]["colnames_"]//[];
+	    for (var ii =0; ii< colnames_.length;ii++) {
+		if (plotCols.length==0) {
+		    plotCols=colnames_[ii];
+		} else {
+		    plotCols=plotCols+"~"+colnames_[ii];
+		}
+	    }
+	    var sets=plot_config[file]["dataset"]//{};
+	    for (var set in sets) {
+		var colnames=sets[set]["colnames"]//"";
+		var columns=sets[set]["columns"]//"";
+		var panick ={};
+		for (var ii =0; ii< colnames.length;ii++) {
+		    panick[colnames]=columns[ii]||0;
+		};
+		var coloc=sets[set]["coloc"]//"";
+		var clmns="";
+		for (var ii =0; ii< colnames_.length;ii++) {
+		    var expr;
+		    if (columns !== undefined) {
+			if (colnames_[ii] == colnames[ii]) {
+			    expr = columns[ii]||"0";
+			} else {
+			    expr = panick[colnames_[ii]]||0;
+			}
+		    } else {
+			expr = "0";
+		    }
+		    clmns=clmns + expr + "~";
+		}
+		var legend=sets[set]["legend"]//"";
+		if (coloc === undefined) {coloc="";}
+		if (legend === undefined) {legend="";}
+		plotSets=plotSets + "|" + set + "~" + coloc + "~" + legend + "~" + clmns;
+	    };
+	    var order=plot_cats[cat]['order']//[];
+	    var attrs=plot_config[file]["attributes"]//{};
+	    for (var ii=0;ii<order.length;ii++) {
+		var attr=order[ii];
+		var value=attrs[attr];
+		if (value !== undefined) {
+		    plotAttrs=plotAttrs + "|" + attr + "~" + value;
+		}
+	    };
 	}
     };
-    console.log("Saving: "+file+" "+cat+" "+table+" "+graphics+" "+plotSets+" "+plotAttrs, plot_config[file]);
+   //console.log("Saving: "+file+" "+cat+" "+table+" "+graphics+" "+plotSets+" "+plotAttrs, plot_config[file]);
     plot_configEd++;
     documentLog.innerHTML="Sent plot-save request.";
-    $.get("cgi-bin/fark_save.pl",{type:"plot",file:file,password:password,cat:cat,table:table,
-				  graphics:graphics,columns:plotCols,sets:plotSets,attributes:plotAttrs
-				 },
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to save file: "+file+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+    $.get("cgi-bin/fark_save.pl",
+	  {type:"plot",
+	   file:file,
+	   password:password,
+	   cat:cat,
+	   table:table,
+	   graphics:graphics,
+	   columns:plotCols,
+	   sets:plotSets,
+	   attributes:plotAttrs
+	  })
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to save file: "+file+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Plot save request failed (system error)");}
+	);
     makeUrl("plot",file);
 };
 // Transposed function...
 function plot_showDatasetTable() {
-    console.log(":::::::::: showDatasetTable");
+   //console.log(":::::::::: showDatasetTable");
     var file=plot_getConfigFile();
     var cat=plot_config[file]["cat"];
     var colnames_={};
@@ -456,7 +476,7 @@ function plot_insertDataset(item,type,col1,data) {
     for (var ii=0;ii<type.length;ii++) {
 	if (type[[ii]] == 6 && offset==-1) {offset=ii;}
     }
-    console.log("Offset=",offset);
+   //console.log("Offset=",offset);
     for (var ii=0;ii<type.length;ii++) {
 	var row = document.createElement("TR");
 	plot_insertHeader(row,type,col1,ii,offset);
@@ -491,7 +511,7 @@ function plot_insertItem(row,type,data,jj,ii,offset) {
 	td.appendChild(btn);
 	row.appendChild(td);
     } else {
-	console.log("insertItem Inserting:",jj,ii,data[[jj]][[ii]]);
+	//console.log("insertItem Inserting:",jj,ii,data[[jj]][[ii]]);
 	td=document.createElement("TD");
 	td.innerHTML=data[[jj]][[ii]];
 	row.appendChild(td);
@@ -584,9 +604,9 @@ function plot_insertNew(row,type,ii,offset) {
 	btn.setAttribute("title","Show available colocation <setup files>");
 	btn.setAttribute("onclick","showDropdown('plotColoc',document.getElementById('plotColoc').value)");
 	btn.setAttribute("class","dropbtn");
-    btn.innerHTML="&#9776";
-    td.appendChild(btn);
-    row.appendChild(td);
+	btn.innerHTML="&#9776";
+	td.appendChild(btn);
+	row.appendChild(td);
     } else if (type[[ii]] == 5) { // legend
 	// make Legend column
 	td=document.createElement("TD");
@@ -604,7 +624,7 @@ function plot_insertNew(row,type,ii,offset) {
     } else if (type[[ii]] == 6) { // expression
 	// make expression column
 	var itemId="plotExpression"+(ii-offset);
-	console.log("insertNew Inserting:",itemId);
+	//console.log("insertNew Inserting:",itemId);
 	td=document.createElement("TD");
 	td.setAttribute("class","fill");
 	td.setAttribute("style","width:100%");
@@ -724,33 +744,40 @@ function plot_updateData(arg = plot_getConfigFile()) {
     var types=[];
     types[0]="plot";
     types[1]="cat";
-    console.log("$$$$$ Loading plot+cats with: ", args);
-    $.get("cgi-bin/fark_load.pl",{type:types,arg:args},
-	  function(data, status){
-	      dataToArray(data,status,documentLog);
-	      plotLoaded=true;
-	      //console.log("Updating dropdown for ",arg);
-	      plot_setCat();
-	      plot_show();
-	      documentLog.innerHTML="";
-	  });
+   //console.log("$$$$$ Loading plot+cats with: ", args);
+    $.get("cgi-bin/fark_load.pl",{type:types,arg:args})
+	.success(
+	    function(data, status){
+		dataToArray(data,status,documentLog);
+		plotLoaded=true;
+		//console.log("Updating dropdown for ",arg);
+		plot_setCat();
+		plot_show();
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Plot request failed (system error)");}
+	);
 };
 function plot_mkdir(path) {
     var password=document.getElementById("plotConfigFilePsw").value;
     $.get("cgi-bin/fark_dir.pl",{cmd:"mk",
 				 cls:"plot",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to mkdir: "+path+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to mkdir: "+path+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Plot mkdir request failed (system error)");}
+	);
     
 };
 
@@ -759,21 +786,30 @@ function plot_rmfile(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"rf",
 				 cls:"plot",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to rmfile: "+path+"\n"+msg);
-	      } else {
-		  delete plot_config[path];
-		  if (plot_file == path) {plot_file="default.cfg";}
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to rmfile: "+path+"\n"+msg);
+		    } else {
+			//delete plot_config[path];
+			if (plot_file == path) {plot_file="default.cfg";}
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Plot rmfile request failed (system error)");}
+	);
     
+};
+
+function plot_fgfile(path) { // clear file from internal memory
+    if (plot_config[path] != undefined) {
+	delete plot_config[path];
+    }
 };
 
 function plot_rmdir(path) {
@@ -781,22 +817,25 @@ function plot_rmdir(path) {
     $.get("cgi-bin/fark_dir.pl",{cmd:"rm",
 				 cls:"plot",
 				 path:path,
-				 password,password},
-	  function(data, status){if (status == "success") {
-	      var errors=data.getElementsByTagName("error");
-	      if (errors.length > 0 ) {
-		  console.log("Error:",data);
-		  var msg=getErrorMessage(errors);
-		  alert("Unable to rmdir: "+path+"\n"+msg);
-	      };
-	      documentLog.innerHTML="";}
-				}
-	 );
+				 password,password})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to rmdir: "+path+"\n"+msg);
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Plot rmdir request failed (system error)");}
+	);
     
 };
 
 function plot_mkfile(file) {
-    console.log("Calling saveConfigFile: '"+file+"'");
+   //console.log("Calling saveConfigFile: '"+file+"'");
     plot_setConfigFile(file);
     plot_saveConfigFile(file);
 };

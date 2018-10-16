@@ -100,7 +100,7 @@ C
       CHARACTER*80 CVALS(*) ,CVALS_IMG(*)
 C
       CHARACTER*256 COUT1,COUT2,COUT3
-C
+C     
 #ifndef R_4
       REAL*8 VALUES(KVALS)
       REAL*8 RVIND
@@ -111,6 +111,7 @@ C
       REAL   EPS
 #endif
 C
+      logical lfirst=.true.
 C     ------------------------------------------------------------------
 C
       RVIND=1.7D38
@@ -296,7 +297,10 @@ C     -----------------------------------------------------------------
 C
  810  CONTINUE
 C
-      WRITE(*,'(1H ,A)') 'OPEN ERROR ON INPUT FILE'
+      if (lfirst) then
+         WRITE(*,'(1H ,A)') 'OPEN ERROR ON INPUT FILE'
+         lfirst=.false.
+      end if
       GO TO 900
 C
  800  CONTINUE

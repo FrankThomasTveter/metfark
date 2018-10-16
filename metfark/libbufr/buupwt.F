@@ -102,8 +102,8 @@ C
       I=NTABP(ICLASS,IYYY)
       IF(I.EQ.0) THEN
          KERR=23
-         WRITE(KNTN,*)'BUUPWT : ',KDD
-         CALL BUERR(KERR)
+         !WRITE(KNTN,'(X,A,I0,A)')'BUUPWT Table B reference ',KDD,' not found.'
+         !CALL BUERR(KERR)
          DO 1 IQ=1,JELEM
          NSTACK(IQ)=0.
  1       CONTINUE
