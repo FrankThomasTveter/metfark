@@ -2264,12 +2264,11 @@ CONTAINS
     found=.false.
     bdone=(.not. css%sortLimitsOk)
     if (bdone) then ! index is not sorted..
-       css%frm(1)=css%nFileIndexes ! no sort index
+       css%frm(1)=css%frm(1)+css%nFileIndexes ! no sort index
     else if (css%currentFileSortIndex.lt.css%leftFileSortIndex) then ! first
-       css%fok(1)=css%nFileIndexes ! we have a sort index
-       css%frm(2)=css%frm(2)+(css%leftFileSortIndex-1) ! outside index search
-    else
-       css%fok(1)=css%nFileIndexes ! we have a sort index
+       css%fok(1)=css%fok(1)+css%nFileIndexes ! we have a sort index
+       css%frm(2)=css%frm(2)+(css%leftFileSortIndex-1&
+            & +css%nFileIndexes-css%rightFileSortIndex) ! outside index search
     end if
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
@@ -2278,8 +2277,6 @@ CONTAINS
           css%currentFileIndex=0
           nullify(css%currentFile)
           bdone=.true.
-          css%frm(2)=css%frm(2)+&
-               & (css%nFileSortIndexes-css%rightFileSortIndex) ! outside index search
        else
           css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
           css%currentFile => css%fileStack(css%currentFileIndex)%ptr
