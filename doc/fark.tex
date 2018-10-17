@@ -251,7 +251,7 @@ selects the location that produces an expression closest to a list
 The model {\bf min} and {\bf max} filters are applied immediately when the corresponding 
 model field has been interpolated to the observation location.
 
-The {\bf model filter} expression is applied when all relevant model fields have been interpolated to the observation location.
+The {\bf location filter} expression is applied when all relevant model fields have been interpolated to the observation location.
 This is the most expensive filter in terms of computer resources.
 
 There is a debug option available for testing the built in filter functions.
@@ -357,11 +357,9 @@ Select the \lstinline!model! type, and press \raisebox{-0.2\height}{\includegrap
   \includegraphics[width=\columnwidth]{how_auto.jpg}
 \end{paperbox}
 Your new model setup \lstinline!test.cfg! should now be available as an option, select it.
-Finally press \raisebox{-0.2\height}{\includegraphics[height=13pt]{run.jpg}} to the right of your model setup file to create the model index itself.
-
-If you know the password, you can schedule an automatic maintenance of your model
-index and press \raisebox{-0.2\height}{\includegraphics[height=13pt]{plus.jpg}}
+Enter the password and press \raisebox{-0.2\height}{\includegraphics[height=13pt]{plus.jpg}}
 to permanently add your job to the table.
+Finally press \raisebox{-0.2\height}{\includegraphics[height=13pt]{run.jpg}} to the right of your model setup file to create the model index itself.
 
 \subsubsection{6. Check the log}
 When the job is finished, check the log. You may view the log by pressing the link in the \lstinline!Last! column in the Auto tab table.

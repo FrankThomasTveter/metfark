@@ -15,6 +15,7 @@ var clss = ["model","obs","coloc","plot"];
 
 // initialisation function
 function load(){
+    $.ajaxSetup({timeout:0}); // never timeout a request (and re-send it)...
     var types=["model","obs","coloc","plot","auto"];
     var type="model"; 
     var file="default.cfg";

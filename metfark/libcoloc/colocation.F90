@@ -1055,11 +1055,15 @@ CONTAINS
     if (css%cmatch.ne.0) then
        do ii=1,css%cmatch
           if(col_bdeb)then
-             write(*,*)myname,'nvar:',size(oss%trg80),allocated(oss%trg80)
-             do jj=1,size(oss%trg80)
-                write(*,'(X,A,A,I0,A)') myname,"      var(",jj,")='"//trim(oss%trg80(jj))//"'"
-             end do
-             write(*,*)myname,"'Calling parsef: '"//css%mat_e250(ii)(1:css%mat_lene(ii))//"'"
+             if (allocated(oss%trg80)) then
+                write(*,*)myname,'nvar:',size(oss%trg80),allocated(oss%trg80)
+                do jj=1,size(oss%trg80)
+                   write(*,'(X,A,A,I0,A)') myname,"      var(",jj,")='"//trim(oss%trg80(jj))//"'"
+                end do
+             else
+                write(*,*)myname,'No observation targets.'
+             end if
+             write(*,*)myname,"'Calling parsef: '"//css%mat_e250(ii)(1:css%mat_lene(ii))//"'",ii
           end if
           call parse_parsef(css%mat_psp(ii)%ptr,css%mat_e250(ii)(1:css%mat_lene(ii)),&
                & oss%trg80,crc250,irc)

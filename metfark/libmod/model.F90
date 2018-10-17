@@ -1285,6 +1285,8 @@ CONTAINS
     model_rangeCheck=.true. ! file is ok
     if (.not. associated(css%currentFile)) return ! no current file
     f => css%currentFile  ! file
+    if(mod_bdeb)write(*,*)myname,"Checking file '"//&
+         & f%fn250(1:f%lenf)//"'"
     LOOP: do ii=1,f%nvar ! loop over file variables
        v => f%var(ii)%ptr ! variable
        if (.not.associated(v)) cycle              ! no variable
@@ -1299,11 +1301,11 @@ CONTAINS
              ! get variable          
              if (v%mmrange) then ! we have limits
                 if (model_variableCheck(css,v,itrg)) then ! target range check
-                   !write(*,*)myname,"Passed '"//&
-                   !     & v%var80(1:v%lenv)//"'",&
-                   !     & itrg, v%mmrange,v%mmset,v%minval,v%maxval,&
-                   !     & css%trg_minset(itrg),css%trg_maxset(itrg),&
-                   !     & css%trg_minval(itrg),css%trg_maxval(itrg)
+                   if(mod_bdeb)write(*,*)myname,"Passed '"//&
+                        & v%var80(1:v%lenv)//"'",&
+                        & itrg, v%mmrange,v%mmset,v%minval,v%maxval,&
+                        & css%trg_minset(itrg),css%trg_maxset(itrg),&
+                        & css%trg_minval(itrg),css%trg_maxval(itrg)
                    css%trg_fok(itrg)=css%trg_fok(itrg)+1
                 else ! failed range check
                    if(mod_bdeb)write(*,*)myname,"Failed '"//&
@@ -1652,6 +1654,12 @@ CONTAINS
                 write(unitr,*,iostat=irc)
              end if
           end do
+          if (currentFile%ind_lim) then
+             write(*,'(2X,A," <",F0.1,",",F0.1,">")') currentFile%fn250(1:currentFile%lenf),&
+                  & currentFile%ind_start,currentFile%ind_stop
+          else
+             write(*,'(2X,A," <*,*>")') currentFile%fn250(1:currentFile%lenf)
+          end if
        end if
        old250=currentFile%fn250
        leno=currentFile%lenf
@@ -1799,8 +1807,6 @@ CONTAINS
        pos=251 ! call findDelimiter(buff250(1:lenb)," ",pos)
        newFile%fn250=buff250(opos+1:pos-1)
        !
-       if (mod_bdeb) write(*,*) myname," Loaded:'"//newFile%fn250(1:newFile%lenf)//"'",newFile%ind_lim,ii
-       !
        allocate(newFile%sort(newFile%nsort),newFile%indsort(newFile%nsort),newFile%desc250(newFile%nsort),stat=irc)
        if (irc.ne.0) then
           if (mod_bdeb) write(*,*) myname," Unable to allocate new Sort item."
@@ -1838,6 +1844,17 @@ CONTAINS
              newFile%ind_stop=max(newFile%ind_stop,newFile%sort(jj))
           end if
        end do
+       !
+       if (mod_bdeb) then
+          if (newFile%ind_lim) then
+             write(*,'(X,A,X,A,I0,X,"<",F0.1,",",F0.1,">")') myname,&
+                  & "loaded:'"//newFile%fn250(1:newFile%lenf)//"'",ii,newFile%ind_start,newfile%ind_stop
+          else
+              write(*,'(X,A,X,A,I0,X,"<*,*>")') myname,&
+                  & "loaded:'"//newFile%fn250(1:newFile%lenf)//"'",ii
+         end if
+       end if
+          !
        allocate(newFile%istart(newFile%ndim),newFile%istop(newFile%ndim),&
             & newFile%dim80(newFile%ndim),newFile%dim_var(newFile%ndim),&
             & newFile%dim_val(newFile%ndim),newFile%dim_trg(newFile%ndim),&
@@ -6218,10 +6235,14 @@ CONTAINS
     integer :: ff, itrg
     logical :: first,bdeb
     if(mod_bdeb)write(*,*)myname,' Entering.',nloc
-    write(*,*)myname,'Processing: ',f%fn250(1:f%lenf)//"'"
+    write(*,*)myname,"Processing: '",f%fn250(1:f%lenf)//"'"
     !
     ! initialise location positions
     !
+    if (nloc.eq.0) then
+       bok=.false.
+       return
+    end if
     do ll=1,nloc
        !
        ! initialise location position

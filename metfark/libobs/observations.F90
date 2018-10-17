@@ -217,6 +217,8 @@ module observations
      integer :: leftFileSortIndex=0           ! ref fileStackSort(*,2) - maxvalues
      integer :: rightFileSortIndex=0          ! ref fileStackSort(*,1) - minvalues
      logical :: sortLimitsOk  = .false.
+     integer :: fopened  = 0                 ! number of overlapping observation files
+     integer :: fok(10), frm(10)
      !
      ! data selection
      !
@@ -720,6 +722,13 @@ CONTAINS
                & currentFile%ind_start,currentFile%ind_stop,&
                & currentFile%nmessage,currentFile%ncat,currentFile%nsub,&
                & currentFile%lenf,currentFile%fn250(1:currentFile%lenf)
+          !
+          if (currentFile%ind_lim) then
+             write(*,'(2X,A," <",F0.1,",",F0.1,">")') currentFile%fn250(1:currentFile%lenf),&
+                  & currentFile%ind_start,currentFile%ind_stop
+          else
+             write(*,'(2X,A," <*,*>")') currentFile%fn250(1:currentFile%lenf)
+          end if
           ! write category summary
           currentCat=>currentFile%firstCategory%next
           do while (.not.associated(currentCat,target=currentFile%lastCategory)) 
@@ -880,7 +889,15 @@ CONTAINS
        call chop0(newFile%fn250,250)
        lenf=length(newFile%fn250,250,10)
        !
-       if(obs_bdeb)write(*,*)myname,"Loaded: '"//newFile%fn250(1:newFile%lenf)//"'",ii
+       if (obs_bdeb) then
+          if (newFile%ind_lim) then
+             write(*,'(X,A,X,A,I0,X,"<",F0.1,",",F0.1,">")') myname,&
+                  & "loaded:'"//newFile%fn250(1:newFile%lenf)//"'",ii,newFile%ind_start,newfile%ind_stop
+          else
+              write(*,'(X,A,X,A,I0,X,"<*,*>")') myname,&
+                  & "loaded:'"//newFile%fn250(1:newFile%lenf)//"'",ii
+         end if
+       end if
        !
        do jj=1,newFile%ncat
           allocate(newCat,stat=irc)
@@ -2246,6 +2263,14 @@ CONTAINS
          & css%leftFileSortIndex,css%rightFileSortIndex
     found=.false.
     bdone=(.not. css%sortLimitsOk)
+    if (bdone) then ! index is not sorted..
+       css%frm(1)=css%nFileIndexes ! no sort index
+    else if (css%currentFileSortIndex.lt.css%leftFileSortIndex) then ! first
+       css%fok(1)=css%nFileIndexes ! we have a sort index
+       css%frm(2)=css%frm(2)+(css%leftFileSortIndex-1) ! outside index search
+    else
+       css%fok(1)=css%nFileIndexes ! we have a sort index
+    end if
     do while (.not.bdone)
        css%currentFileSortIndex=max(css%currentFileSortIndex+1,css%leftFileSortIndex)
        if (css%currentFileSortIndex.gt.css%rightFileSortIndex) then
@@ -2253,6 +2278,8 @@ CONTAINS
           css%currentFileIndex=0
           nullify(css%currentFile)
           bdone=.true.
+          css%frm(2)=css%frm(2)+&
+               & (css%nFileSortIndexes-css%rightFileSortIndex) ! outside index search
        else
           css%currentFileIndex=css%fileStackInd(css%currentFileSortIndex,2)
           css%currentFile => css%fileStack(css%currentFileIndex)%ptr
@@ -2266,7 +2293,11 @@ CONTAINS
              bdone=.true.
              if (obs_bdeb) write(*,*)myname,' Found:',&
                   & css%currentFileSortIndex,css%leftFileSortIndex,css%rightFileSortIndex
+             css%fok(3)=css%fok(3)+1 ! within index target range
+          else
+             css%frm(3)=css%frm(3)+1 ! outside index target range
           end if
+          css%fok(2)=css%fok(2)+1 ! within index search
        end if
     end do
     css%int_val(2)=css%currentFileIndex ! observation file id
@@ -4334,6 +4365,7 @@ CONTAINS
     css%int_val(5)=0 ! location id
     call observation_clearCat(css%currentFile)
     fopen=.true.
+    css%fopened=css%fopened+1
     return
   end subroutine observation_openFile
   !
@@ -4345,7 +4377,7 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     integer :: ii, jj
-    character*22 :: myname="observation_readMessage"
+    character*25 :: myname="observation_readMessage"
     if(obs_bdeb)write(*,*)myname,' Entering.'
     css%dyn_pos=0               ! reset dynamic position search index
     css%dyn_cnt=0               ! reset dynamic position search index
@@ -5126,6 +5158,11 @@ CONTAINS
     type(obs_file), pointer :: cfile
     character*22 :: myname="observation_resetStat"
     if (obs_bdeb) write(*,*)myname,'Entering.',irc
+    css%fopened = 0
+    do ii=1,10
+       css%fok(ii)=0
+       css%frm(ii)=0
+    end do
     css%keepstat=.true.
     if (associated(css%firstFile)) then
        cfile => css%firstFile%next
@@ -5167,6 +5204,26 @@ CONTAINS
        mok(ii)=0
        mrm(ii)=0
     end do
+    !
+    ! file statistics
+    do ii=1,10
+       pst(ii)=dfloat(css%frm(ii))/max(1.0d0,dfloat(css%frm(ii)+css%fok(ii)))*100
+    end do
+    WRITE(*,*)
+    WRITE(*,998) MYNAME,                     'Possible obs file matches: ', css%fok(1)+css%frm(1)
+    IF (CSS%FRM(1).NE.0) WRITE(*,999) MYNAME,'No overlap:                ', -CSS%FRM(1),PST(1)
+    IF (CSS%FRM(2).NE.0) WRITE(*,999) MYNAME,'Index search failed:       ', -CSS%FRM(2),PST(2)
+    IF (CSS%FRM(3).NE.0) WRITE(*,999) MYNAME,'Invalid index target range:', -CSS%FRM(3),PST(3)
+    WRITE(*,997) MYNAME,     '--------------------------------------------------'
+    pp=dfloat(css%fok(3))/max(1.0d0,dfloat(css%frm(1)+css%fok(1)))*100
+    WRITE(*,999) MYNAME,                     'Obs file matches:          ', css%fok(3),pp
+    !
+    if (css%fopened.eq.0) then
+       WRITE(*,*)
+       write(*,*)myname,'No obs files were opened. How strange!'
+    else
+       write(*,'(X,A,X,A,I0)')myname,'Obs files opened:',css%fopened
+    end if
     ! accumulate file statistics...
     if (associated(css%firstFile)) then
        cfile => css%firstFile%next

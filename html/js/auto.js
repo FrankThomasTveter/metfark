@@ -76,6 +76,7 @@ function auto_testNow(target,type,file,row) {
 	row.children[7].innerHTML=""; // last
 	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
+	$.ajaxSetup({timeout:0}); // never timeout a request (and re-send it)...
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file,test:1})
 	    .success(
 		function(data, status){
@@ -83,7 +84,11 @@ function auto_testNow(target,type,file,row) {
 			var errors=data.getElementsByTagName("error");
 			if (errors.length > 0 ) {
 			    var msg=getErrorMessage(errors);
-			    alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			    if (isRunning(msg)) {
+				alert(msg+"\nMonitoring has timed out.");
+			    } else {
+				alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			    }
 			};
 			if (target === "") {
 			    dataToArray(data,status,documentLog);
@@ -107,15 +112,22 @@ function auto_runNow(target,type,file,row) {
 	row.children[7].innerHTML=""; // last
 	row.children[8].innerHTML="# running"; // info
 	documentLog.innerHTML="Sent auto-now request ("+file+").";
+	console.log("Sending sever request....",type,file);
+	$.ajaxSetup({timeout:0}); // never timeout a request (and re-send it)...
 	$.get("cgi-bin/fark_auto.pl",{root:root,password:password,type:type,file:file})
 	    .success(
 		function(data, status){
+		    console.log("Success...");
 		   //console.log("Here...");
 		    if (status == "success") {
 			var errors=data.getElementsByTagName("error");
 			if (errors.length > 0 ) {
 			    var msg=getErrorMessage(errors);
-			    alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			    if (isRunning(msg)) {
+				alert(msg+"\nMonitoring has timed out.");
+			    } else {
+				alert("Unable to process, "+type+" config file: "+file+"\n"+msg);
+			    }
 			};
 			if (target === "") {
 			    dataToArray(data,status,documentLog);
@@ -433,3 +445,6 @@ function auto_insertRow(item,type,file,last,info,auto,status,color) {
     return row;
 }
 
+function isRunning(msg) {
+    return (msg.substring(0,18) === "Process is running");
+}

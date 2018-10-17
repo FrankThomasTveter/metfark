@@ -4,7 +4,8 @@
 # ;debug=1
 
 #;test=1
-./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=default.cfg'
+./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=default.cfg&debug=1'
+#?root=auto.cfg&password=&type=plot&file=default.cfg'
 
 #wget --tries=1 -O - "http://localhost/cgi-bin/fark_auto.pl?root=auto.cfg&password=&type=plot&file=meps_syno_365d.cfg"
 #./fark_auto.pl '?root=auto.cfg&password=&type=plot&file=starc.cfg'

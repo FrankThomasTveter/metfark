@@ -27,8 +27,8 @@ eval {
     my $debug=0;
     if (defined $param->{debug}[0]) {
 	$debug=1;       # debug this script (0=omit output)
-	#fark::debug(1);  # debug observations
-	#fark::debug(2);  # debug models
+	fark::debug(1);  # debug observations
+	fark::debug(2);  # debug models
 	fark::debug(3);  # debug colocation
 	fark::debug(4);  # debug plot
 	#fark::debug(5);  # debug parse
@@ -202,59 +202,113 @@ eval {
 	    farkdir::term("Invalid root directory (".$cls.")");
 	my $clsLogDir=  farkdir::getRootDir($cls."_log") || 
 	    farkdir::term("Invalid root directory (".$cls."_log)");
+	my $abortDir=farkdir::getRootDir("abort") || 
+	    farkdir::term("Invalid root directory (abort)");
 	#
 	foreach my $clsfile (sort keys %{$clsr}) {
 	    my $xmlfile=$clsDir . $clsfile;
-	    # check logfile
-	    my $logfile = $clsLogDir ."$clsfile.log";
-	    my $abortDir=farkdir::getRootDir("abort") || 
-		farkdir::term("Invalid root directory (abort)");
 	    my $abortfile = $abortDir ."$cls/$clsfile";
-	    #print "Abort file: $abortfile\n";
-	    my ($logdir,$logname)=farkdir::splitName($logfile);
-	    farkdir::makePath($logdir) || farkdir::term("$myname unable to make: $logdir"); # make sure directory exists in case we create lockfile next
-	    if (-e $logfile) {
-		unlink($logfile) || farkdir::term("Unable to rm $logfile");
-	    };
-	    if ($cron)  {
-		if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
-		#if ($cls eq "model") { fark::debug(2);};  # debug models
-		farkdir::sandbox {
-		    my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-		    if ($cmd) {system($cmd);};
-		}{logfile   => $logfile,
-		  fork      => 1,
-		  debug     => 1,
-		  abort     => $abort,
-		  abortfile => $abortfile,
-		  stdout    => "always"
-		};
-		if($debug){print "After farkdir::sandbox\n";};
-	    } elsif ($debug) {
-		if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
-		farkdir::sandbox {
-		    my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
-		    if ($cmd) {system($cmd);};
-		}{message=>"$myname Failed to process $xmlfile ($cls)\n",
-		  debug     => 1,
-		  stdout    => "always"
-		};
-		#message=>"$myname Failed to process $xmlfile ($cls)\nSee '$logfile.err' for more information.\n",
-		#	      logfile   => $logfile,
-		if($debug){print "After farkdir::sandbox\n";};
+	    # check lockfile
+	    my $lockfile = $lockDir ."$cls/$clsfile.lock";
+	    my ($lockdir,$lockname)=farkdir::splitName($lockfile);
+	    # make sure directory exists in case we create lockfile next
+	    if (farkdir::makePath($lockdir)) {
+	    } elsif ($cron) { 
+		print "$myname unable to make: $lockdir";
+		return;
 	    } else {
-		if($debug){print "Calling farkdir::sandbox '$clsfile'\n";};
+		farkdir::term("$myname unable to make: $lockdir")
+	    };
+	    if($debug){print "Lockfile '$lockfile'\n";};
+	    ###print ">>>>> Lockfile '$lockfile'\n";
+	    if ( $abort) {
+		my $logfile="";
 		farkdir::sandbox {
 		    my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
 		    if ($cmd) {system($cmd);};
-		}{message   => "$myname Failed to process $xmlfile ($cls)\nSee '$logfile.err' for more information.\n",
-		  logfile   => $logfile,
-		  fork      => 1,
-		  abort     => $abort,
+		}{abort     => $abort,
 		  abortfile => $abortfile,
-		  stdout    => "never"
+		  stdout    => "always"
 		};
-		if($debug){print "After farkdir::sandbox\n";};
+	    } elsif(open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
+		close(MLOCKFILE);
+		if (unlink($lockfile)) {
+		    if($debug){print "$myname Able to rm '$lockfile'\n";}
+		} elsif ($cron) {
+		    print "$myname unable to rm '$lockfile'\n";
+		    return;
+		} else {
+		    farkdir::term("$myname unable to rm '$lockfile'");
+		};
+		open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) 
+		    || farkdir::term("$myname unable to lock '$lockfile'");
+		# this defines processing start time
+		if (farkdir::touchFile($lockfile)) {
+		} elsif ($cron) {
+		    print "$myname unable to touch '$lockfile'";
+		    return;
+		} else {
+		    farkdir::term("$myname unable to touch '$lockfile'");
+		};
+		chmod 0666, $lockfile;
+		#system "ls -lu $lockfile";
+		# check logfile
+		my $logfile = $clsLogDir ."$clsfile.log";
+		#print "Abort file: $abortfile\n";
+		my ($logdir,$logname)=farkdir::splitName($logfile);
+		farkdir::makePath($logdir) || farkdir::term("$myname unable to make: $logdir"); # make sure directory exists in case we create lockfile next
+		if (-e $logfile) {
+		    unlink($logfile) || farkdir::term("Unable to rm $logfile");
+		};
+		if ($cron)  {
+		    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
+		    #if ($cls eq "model") { fark::debug(2);};  # debug models
+		    farkdir::sandbox {
+			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+			if ($cmd) {system($cmd);};
+		    }{logfile   => $logfile,
+		      fork      => 1,
+		      debug     => 1,
+		      abort     => $abort,
+		      abortfile => $abortfile,
+		      stdout    => "always"
+		    };
+		    if($debug){print "After farkdir::sandbox\n";};
+		} elsif ($debug) {
+		    if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
+		    farkdir::sandbox {
+			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+			if ($cmd) {system($cmd);};
+		    }{message=>"$myname Failed to process $xmlfile ($cls)\n",
+		      debug     => 1,
+		      stdout    => "always"
+		    };
+		    #message=>"$myname Failed to process $xmlfile ($cls)\nSee '$logfile.err' for more information.\n",
+		    #	      logfile   => $logfile,
+		    if($debug){print "After farkdir::sandbox\n";};
+		} else {
+		    if($debug){print "Calling farkdir::sandbox '$clsfile'\n";};
+		    farkdir::sandbox {
+			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+			if ($cmd) {system($cmd);};
+		    }{message   => "$myname Failed to process $xmlfile ($cls)\nSee '$logfile.err' for more information.\n",
+		      logfile   => $logfile,
+		      fork      => 1,
+		      abort     => $abort,
+		      abortfile => $abortfile,
+		      stdout    => "never"
+		    };
+		    if($debug){print "After farkdir::sandbox\n";};
+		};
+		#print "Closing lock file $lockfile\n";
+		close(MLOCKFILE);
+		#farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
+		#system "ls -lu $lockfile";
+	    } elsif ($cron) {
+		print "$myname Unable to lock '$lockfile'";
+		return;
+	    } else {
+		farkdir::term("Process is running ($clsfile).");
 	    };
 	};
 	if($debug) {print "Ending loopCls... $cls\n";}
@@ -275,43 +329,7 @@ eval {
 	my $cmd="";
 	if ($debug){print "Starting loopCls... ($cls, $cron)\n";};
 	if($debug){print "Logfile '$logfile'\n";}
-	#
-	# check lockfile
-	my $lockfile = $lockDir ."$cls/$clsfile.lock";
-	my ($lockdir,$lockname)=farkdir::splitName($lockfile);
-	# make sure directory exists in case we create lockfile next
-	if (farkdir::makePath($lockdir)) {
-	} elsif ($cron) { 
-	    print "$myname unable to make: $lockdir";
-	    return;
-	} else {
-	    farkdir::term("$myname unable to make: $lockdir")
-	};
-	if($debug){print "Lockfile '$lockfile'\n";};
-	print ">>>>> Lockfile '$lockfile'\n";
-	if ( open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) ) {
-	    close(MLOCKFILE);
-	    if (unlink($lockfile)) {
-		if($debug){print "$myname Able to rm '$lockfile'\n";}
-	    } elsif ($cron) {
-		print "$myname unable to rm '$lockfile'\n";
-		return;
-	    } else {
-		farkdir::term("$myname unable to rm '$lockfile'");
-	    };
-	    open(MLOCKFILE, ">$lockfile")  && flock (MLOCKFILE,2+4) 
-		|| farkdir::term("$myname unable to lock '$lockfile'");
-	    # this defines processing start time
-	    if (farkdir::touchFile($lockfile)) {
-	    } elsif ($cron) {
-		print "$myname unable to touch '$lockfile'";
-		return;
-	    } else {
-		farkdir::term("$myname unable to touch '$lockfile'");
-	    };
-	    #system "ls -lu $lockfile";
 	    print ">>>>> $myname Starting sandbox...($debug,$cron,$test)\n";
-	    chmod 0666, $lockfile;
 	    my $clsOldDir=  farkdir::getRootDir($cls."_old") || 
 		farkdir::term("Invalid root directory (".$cls."_old)");
 	    my $clsUseDir=  farkdir::getRootDir($cls."_use") || 
@@ -406,16 +424,6 @@ eval {
 		$clsr->{$clsfile}->[2]=$infoAuto;
 		$clsr->{$clsfile}->[3]=$logfile;
 	    }
-	    #print "Closing lock file $lockfile\n";
-	    close(MLOCKFILE);
-	    #farkdir::touchFile($lockfile) || farkdir::term("$myname unable to touch '$lockfile'");
-	    #system "ls -lu $lockfile";
-	} elsif ($cron) {
-	    print "$myname Unable to lock '$lockfile'";
-	    return;
-	} else {
-	    farkdir::term("$myname Unable to LOCK '$lockfile'");
-	};
 	if($debug) {print "Ending loopCls... $cls\n";}
 	return $cmd;
     };

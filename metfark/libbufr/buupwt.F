@@ -242,8 +242,8 @@ C
       I=NTABP(ICLASS,IYYY)
       IF(I.EQ.0) THEN
          KERR=23
-         WRITE(KNTN,*)'BUUPWT : ',KDD
-         CALL BUERR(KERR)
+         !WRITE(KNTN,*)'BUUPWT : ',KDD
+         !CALL BUERR(KERR)
          DO 2 IQ=1,JELEM
          NSTACK(IQ)=0.
  2       CONTINUE

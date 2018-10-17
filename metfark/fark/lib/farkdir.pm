@@ -543,11 +543,9 @@ sub sandbox (&@) {
 		&& ! $wait    # child pid vanished
 		&& ! $cmd     # eval return string
 		&& ! $blk );
-	my $message=$msg;
+	my $message=$msg; #  default message from sandbox
 	if (! $ok) {
-	    if ($merged) {
-		$message=$merged;
-	    } elsif ($core){
+	    if ($core){
 		$message = $msg . " (Process $pid dumped core.)";
 	    }elsif($sig){
 		$message=$msg . " (Process $pid died suddenly.)";
@@ -560,11 +558,14 @@ sub sandbox (&@) {
 	    } elsif ($blk) {
 		$message=$msg . " [$cmd]";
 	    };
-	    print $message . "\n";
+	    if ($message) {
+		print $message . "\n";
+	    }
 	}
 	if (defined $log && $log) {
 	    &restore_streams();
 	    $merged=&message_file($log);
+	    if ($merged) {$message=$merged;};
 	    if ($print eq "always"  || ($print eq "success" && $ok)) {
 		&print_file($log);
 		if ($cmd) {print $cmd;}
