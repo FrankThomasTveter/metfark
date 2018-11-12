@@ -8778,25 +8778,16 @@ CONTAINS
     end do
     WRITE(*,*)
     WRITE(*,998) MYNAME,                     'Model files:               ', css%fok(1)+css%frm(1)
-    IF (CSS%FRM(1).NE.0) WRITE(*,999) MYNAME,'Unsorted:                  ', -CSS%FRM(1),PST(1)
-    IF (CSS%FRM(2).NE.0) WRITE(*,999) MYNAME,'Index range:               ', -CSS%FRM(2),PST(2)
-    IF (CSS%FRM(3).NE.0) WRITE(*,999) MYNAME,'Target range:              ', -CSS%FRM(3),PST(3)
+    IF (CSS%FRM(1).NE.0) WRITE(*,999) MYNAME,'Out of index filter range: ', -CSS%FRM(1),PST(1)
+    IF (CSS%FRM(2).NE.0) WRITE(*,999) MYNAME,'Model index filter:        ', -CSS%FRM(2),PST(2)
+    do ii=1,css%ntrg
+       pp=dfloat(css%trg_frm(ii))/max(1.0d0,dfloat(css%trg_frm(0)+css%trg_fok(0)))*100
+       IF (css%trg_frm(ii).NE.0) WRITE(*,996) MYNAME,"'"//css%trg80(ii)(1:css%trg_lent(ii))//"' filter:", &
+            & -css%trg_frm(ii),PP
+    end do
     WRITE(*,997) MYNAME,     '--------------------------------------------------'
     pp=dfloat(css%fok(3))/max(1.0d0,dfloat(css%frm(1)+css%fok(1)))*100
-    WRITE(*,999) MYNAME,                 'Accepted model files:      ', css%fok(3),pp
-    ! target range statistics
-    if (css%trg_frm(0).ne.0) then
-       WRITE(*,*)
-       WRITE(*,998) MYNAME,                 'Target range checks:          ', css%trg_frm(0)+css%trg_fok(0)
-       do ii=1,css%ntrg
-          pp=dfloat(css%trg_frm(ii))/max(1.0d0,dfloat(css%trg_frm(0)+css%trg_fok(0)))*100
-          IF (css%trg_frm(ii).NE.0) WRITE(*,996) MYNAME,"'"//css%trg80(ii)(1:css%trg_lent(ii))//"' check:", &
-               & -css%trg_frm(ii),PP
-       end do
-       WRITE(*,997) MYNAME,     '-----------------------------------------------------'
-       pp=dfloat(css%trg_fok(0))/max(1.0d0,dfloat(css%trg_frm(0)+css%trg_fok(0)))*100
-       WRITE(*,999) MYNAME,                 'Accepted target range checks: ', css%trg_fok(0),pp
-    end if
+    WRITE(*,999) MYNAME,                     'Accepted model files:      ', css%fok(3),pp
     !
 999 FORMAT(X,A12,X,A,I13,' (',F6.2,'%)')
 998 FORMAT(X,A12,X,A,I13)

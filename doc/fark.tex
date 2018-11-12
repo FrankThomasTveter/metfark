@@ -233,9 +233,19 @@ The default table specifies how the model targets should match default values.
 
 Co-location takes a lot of computer resources, and it is therefore a good strategy
 to filter out unwanted data as early as possible in the data processing.
+The plot log in the \lstinline!Auto tab! contains summaries of how different filters and the quality control removed data.
 
-The observation {\bf min} and {\bf max} filters are applied immediately to discard locations
-when the BUFR messages are read from file. 
+When a model file is being indexed, FARK will scan the range of the model variables with small array size.
+\begin{paperbox}{Model target filter}
+  \includegraphics[width=\columnwidth]{filter_minmax.jpg}
+\end{paperbox}
+If a model target has {\bf min} and {\bf max} filter limits that are outside the scanned range,
+the model file will immediately be rejected. Below is an example of the resulting plot log summary.
+\begin{paperbox}{Plot log (model file filter)}
+  \includegraphics[width=\columnwidth]{filter_minmaxlog.jpg}
+\end{paperbox}
+
+The observation {\bf min} and {\bf max} filters are applied as the BUFR messages are read from the observation file.
 
 The {\bf observation filter} expression is applied when all locations in a BUFR message have been read from file,
 and this filter allows functions that apply to the whole message. 
@@ -279,8 +289,8 @@ There are two tables in the plot tab.
 The {\bf Attributes} table allows the user to specify attributes that apply for all the data,
 for instance titles, units and labels.
 Some attributes can only have fixed values, indicated by an action button
- \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}},
-and some attributes are used to add attributes and columns.
+ \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}}.
+Special attributes can be used to enumerate other attributes and columns.
 
 A plotting script can compare different colocation datasets.
 The {\bf Dataset} table assigns every dataset an \lstinline!Id!, \lstinline!Colocation file! and 
@@ -302,6 +312,11 @@ Available types of jobs are:
 \end{dndtable}
 Each job can be executed manually or according to a schedule.
 
+\begin{quotebox}
+  The \lstinline!Last! column has links to log files from the
+  last {\bf successful} and {\bf un-successful} runs.
+\end{quotebox}
+
 %The task configuration can be {\bf tested} manually by pressing \includegraphics[height=13pt]{test.jpg}. 
 %Tasks can be {\bf executed} manually by pressing \includegraphics[height=13pt]{run.jpg}.
 %A running task can be {\bf stopped} manually by pressing \includegraphics[height=13pt]{stop.jpg}.
@@ -320,7 +335,7 @@ probably not realistic from a computer resource perspective.
 
 \section{HOW TO...}
 
-\subsection{Create a model index}
+\subsection{...create a model index}
 Change focus to the ``Model'' tab.
 \subsubsection{1. Make sure index does not exist}
 Enter the name of your new index in the \lstinline!setup file:! field, for instance \lstinline!test.cfg!,
@@ -368,11 +383,11 @@ When the job is finished, check the log. You may view the log by pressing the li
 \end{paperbox}
 The log lists the model-files added to the index together with the size and modification date of the index.
 \begin{quotebox}
-   The log of a successful contains \lstinline!Normal end of process...!.
+   The log of a successful run contains \lstinline!Normal end of process...!.
 \end{quotebox}
-Note that several processes flush output to the log, so the log appearance may vary.
+Note that several processes flush output to the log, giving it a somewhat ``shuffled'' appearance.
 
-\subsection{Create an observation index}
+\subsection{...create an observation index}
 Change focus to the ``Observation'' tab. 
 Creating the observation index setup is similar to creating the model index setup as indicated above.
 However, editing the setup file is explained in some detail here.
@@ -396,7 +411,7 @@ You may now add and run the job in the \lstinline!Auto tab! by pressing \raisebo
   \includegraphics[width=\columnwidth]{obslog.jpg}
 \end{paperbox}
 
-\subsection{Create a colocation setup}
+\subsection{...create a colocation setup}
 Change focus to the ``Colocation'' tab. 
 Creating the colocation setup is similar to creating the model index setup as indicated above.
 
@@ -412,7 +427,7 @@ When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13p
 
 It is not recommended to run a colocation-job in the \lstinline!Auto tab! since this is an extremely slow process that generates an enormous amount of output.
 
-\subsection{Create verification plots}
+\subsection{...create verification plots}
 Before you can make verification plots, you must have
 created a model and observation index, and a colocation {\em setup}.
 
@@ -426,14 +441,18 @@ To actually create the verification plots, press \raisebox{-0.2\height}{\include
   \includegraphics[width=\columnwidth]{plotlog.jpg}
 \end{paperbox}
 
-The plot log contains information on the indexes used, how many files they contained and when they were last modified. Note that {\bf old indexes may not contain any relevant data}, depending on you combination of indexes and filters.
+The plot log contains information on the indexes used, how many files they contained and when they were last modified.
+\begin{quotebox}
+  Keep your indexes up-to-date if you use time-dependent filters.
+\end{quotebox}
 
 The log also lists the model files that were processed, and a summary of how data was removed during the processing. This is a good place to start looking for missing data.
 
 The script command (usually listed at the end of the log), contains the root output directory for the verification results, which you specified in the \lstinline!Plot tab!. The next section shows some examples of verification plots that the ``synop'' verification script typically would place there.
 
 \subsection{Examples}
-Here are some examples of verification plots that can be produced by FARK using the ``synop'' verification script. Verification plots are typically found under \lstinline!/lustre/storeA/project/nwp/fark!.
+Here are some examples of verification plots.
+%that can be produced by FARK using the ``synop'' verification script. Verification plots are typically found under \lstinline!/lustre/storeA/project/nwp/fark!.
 
 \begin{paperbox}{FF10m score}
   \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_score_hl.jpg}}
@@ -447,13 +466,13 @@ Here are some examples of verification plots that can be produced by FARK using 
   \centerline{\includegraphics[width=0.75\columnwidth]{ff10m_prof.jpg}}
 \end{paperbox}
 
-\begin{paperbox}{FF10m SDE series}
-  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
-\end{paperbox}
+%\begin{paperbox}{FF10m SDE series}
+%  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
+%\end{paperbox}
 
-\begin{paperbox}{FF10m MEAN series}
-  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_time_hl.jpg}}
-\end{paperbox}
+%\begin{paperbox}{FF10m MEAN series}
+%  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_time_hl.jpg}}
+%\end{paperbox}
 
 %\begin{paperbox}{FF10m time series}
 %  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}

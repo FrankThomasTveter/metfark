@@ -1,11 +1,11 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2018.10.12)  16 OCT 2018 11:08
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Debian) (preloaded format=pdflatex 2018.10.13)  12 NOV 2018 12:12
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **fark.tex
 (./fark.tex
 LaTeX2e <2016/02/01>
-Babel <3.9q> and hyphenation patterns for 81 language(s) loaded.
+Babel <3.9q> and hyphenation patterns for 11 language(s) loaded.
 (/usr/share/texlive/texmf-dist/tex/latex/base/book.cls
 Document Class: book 2014/09/29 v1.4h Standard LaTeX document class
 (/usr/share/texlive/texmf-dist/tex/latex/base/bk10.clo
@@ -35,6 +35,8 @@ File: babel.def 2016/02/24 3.9q Babel common definitions
 \babel@savecnt=\count88
 \U@D=\dimen103
 )
+\l@british = a dialect from \language\l@english 
+\l@UKenglish = a dialect from \language\l@english 
 \l@canadian = a dialect from \language\l@american 
 \l@australian = a dialect from \language\l@british 
 \l@newzealand = a dialect from \language\l@british 
@@ -1670,17 +1672,22 @@ Underfull \hbox (badness 10000) in paragraph at lines 84--95
 Missing character: There is no ; in font nullfont!
 LaTeX Font Info:    Try loading font information for T1+fosj on input line 105.
 
-(/usr/share/texlive/texmf-dist/tex/latex/opensans/t1fosj.fd
-File: t1fosj.fd 2011/11/11 Fontinst v1.927 font definitions for T1/fosj.
-)
+LaTeX Font Info:    No file T1fosj.fd. on input line 105.
+
+LaTeX Font Warning: Font shape `T1/fosj/m/n' undefined
+(Font)              using `T1/cmr/m/n' instead on input line 105.
+
+
+LaTeX Font Warning: Font shape `T1/fosj/bx/n' undefined
+(Font)              using `T1/fosj/m/n' instead on input line 105.
+
 Package microtype Info: Loading generic settings for font family
 (microtype)             `fosj' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-LaTeX Font Info:    Font shape `T1/fosj/bx/n' in size <10> not available
-(Font)              Font shape `T1/fosj/b/n' tried instead on input line 105.
-LaTeX Font Info:    Font shape `T1/fosj/bx/sc' in size <10> not available
-(Font)              Font shape `T1/fosj/b/sc' tried instead on input line 105.
+
+LaTeX Font Warning: Font shape `T1/fosj/bx/sc' undefined
+(Font)              using `T1/fosj/bx/n' instead on input line 105.
 
 <fark_model.jpg, id=90, 1422.31375pt x 509.905pt>
 File: fark_model.jpg Graphic file (type jpg)
@@ -1809,463 +1816,476 @@ Underfull \hbox (badness 10000) in paragraph at lines 184--192
 
 Missing character: There is no ; in font nullfont!
 Missing character: There is no ; in font nullfont!
-<coloc_match.jpg, id=127, 1235.61626pt x 477.785pt>
+<coloc_match.jpg, id=126, 1235.61626pt x 477.785pt>
 File: coloc_match.jpg Graphic file (type jpg)
  <use coloc_match.jpg>
 Package pdftex.def Info: coloc_match.jpg used on input line 214.
 (pdftex.def)             Requested size: 218.72751pt x 84.57596pt.
 Missing character: There is no ; in font nullfont!
 
-<default.jpg, id=128, 765.86125pt x 85.31876pt>
+<default.jpg, id=127, 765.86125pt x 85.31876pt>
 File: default.jpg Graphic file (type jpg)
  <use default.jpg>
 Package pdftex.def Info: default.jpg used on input line 229.
 (pdftex.def)             Requested size: 218.72751pt x 24.36555pt.
 
+<filter_minmax.jpg, id=128, 718.685pt x 84.315pt>
+File: filter_minmax.jpg Graphic file (type jpg)
+ <use filter_minmax.jpg>
+Package pdftex.def Info: filter_minmax.jpg used on input line 240.
+(pdftex.def)             Requested size: 218.72751pt x 25.66006pt.
+
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 244.
+(pdftex.def)                using `viewport' instead on input line 241.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 244.
+Package pdftex.def Info: img/paper.jpg used on input line 241.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 244.
+(pdftex.def)                using `viewport' instead on input line 241.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 244.
+Package pdftex.def Info: img/paper.jpg used on input line 241.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 244.
+(pdftex.def)                using `viewport' instead on input line 241.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 244.
+Package pdftex.def Info: img/paper.jpg used on input line 241.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 244.
+(pdftex.def)                using `viewport' instead on input line 241.
 
 File: img/footerscroll.pdf Graphic file (type pdf)
 <use img/footerscroll.pdf>
-Package pdftex.def Info: img/footerscroll.pdf used on input line 244.
+Package pdftex.def Info: img/footerscroll.pdf used on input line 241.
 (pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
  [3 <./coloc_match.jpg> <./default.jpg>]
-Missing character: There is no ; in font nullfont!
-Missing character: There is no ; in font nullfont!
+<filter_minmaxlog.jpg, id=135, 474.77374pt x 42.1575pt>
+File: filter_minmaxlog.jpg Graphic file (type jpg)
 
-<fark_plot.jpg, id=135, 940.51375pt x 542.025pt>
+<use filter_minmaxlog.jpg>
+Package pdftex.def Info: filter_minmaxlog.jpg used on input line 245.
+(pdftex.def)             Requested size: 218.72751pt x 19.42162pt.
+Missing character: There is no ; in font nullfont!
+Missing character: There is no ; in font nullfont!
+ <fark_plot.jpg, id=136, 940.51375pt x 542.025pt>
 File: fark_plot.jpg Graphic file (type jpg)
- <use fark_plot.jpg>
-Package pdftex.def Info: fark_plot.jpg used on input line 269.
+
+<use fark_plot.jpg>
+Package pdftex.def Info: fark_plot.jpg used on input line 279.
 (pdftex.def)             Requested size: 218.72751pt x 126.05258pt.
 File: server.jpg Graphic file (type jpg)
-
-<use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 282.
+ <use server.jpg>
+Package pdftex.def Info: server.jpg used on input line 292.
 (pdftex.def)             Requested size: 16.8647pt x 13.0pt.
- <auto.jpg, id=136, 916.42375pt x 549.05125pt>
+
+<auto.jpg, id=137, 916.42375pt x 549.05125pt>
 File: auto.jpg Graphic file (type jpg)
  <use auto.jpg>
-Package pdftex.def Info: auto.jpg used on input line 291.
+Package pdftex.def Info: auto.jpg used on input line 301.
 (pdftex.def)             Requested size: 218.72751pt x 131.04611pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 320.
+(pdftex.def)                using `viewport' instead on input line 314.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 320.
+Package pdftex.def Info: img/paper.jpg used on input line 314.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 320.
+(pdftex.def)                using `viewport' instead on input line 314.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 320.
+Package pdftex.def Info: img/paper.jpg used on input line 314.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 320.
+(pdftex.def)                using `viewport' instead on input line 314.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 320.
+Package pdftex.def Info: img/paper.jpg used on input line 314.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 320.
+(pdftex.def)                using `viewport' instead on input line 314.
 
 File: img/footerscroll.pdf Graphic file (type pdf)
 <use img/footerscroll.pdf>
-Package pdftex.def Info: img/footerscroll.pdf used on input line 320.
+Package pdftex.def Info: img/footerscroll.pdf used on input line 314.
 (pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
- [4 <./fark_plot.jpg> <./auto.jpg>]
+ [4 <./filter_minmax.jpg> <./filter_minmaxlog.jpg> <./fark_plot.jpg> <./auto.jp
+g>]
+Missing character: There is no ; in font nullfont!
+
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 323.
+(hyperref)                be the same. Added a new anchor on input line 338.
 
 File: server.jpg Graphic file (type jpg)
 <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 327.
+Package pdftex.def Info: server.jpg used on input line 342.
 (pdftex.def)             Requested size: 16.8647pt x 13.0pt.
  <how_mod.jpg, id=143, 870.25125pt x 318.18875pt>
 File: how_mod.jpg Graphic file (type jpg)
 
 <use how_mod.jpg>
-Package pdftex.def Info: how_mod.jpg used on input line 329.
+Package pdftex.def Info: how_mod.jpg used on input line 344.
 (pdftex.def)             Requested size: 218.72751pt x 79.97424pt.
 File: server.jpg Graphic file (type jpg)
  <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 335.
+Package pdftex.def Info: server.jpg used on input line 350.
 (pdftex.def)             Requested size: 16.8647pt x 13.0pt.
-File: server.jpg Graphic file (type jpg)
- <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 338.
-(pdftex.def)             Requested size: 16.8647pt x 13.0pt.
-File: save.jpg Graphic file (type jpg)
- <use save.jpg>
-Package pdftex.def Info: save.jpg used on input line 343.
-(pdftex.def)             Requested size: 26.302pt x 13.0pt.
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
 File: server.jpg Graphic file (type jpg)
 
 <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 346.
-(pdftex.def)             Requested size: 16.8647pt x 13.0pt.
-File: server.jpg Graphic file (type jpg)
- <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 349.
+Package pdftex.def Info: server.jpg used on input line 353.
 (pdftex.def)             Requested size: 16.8647pt x 13.0pt.
 File: save.jpg Graphic file (type jpg)
  <use save.jpg>
-Package pdftex.def Info: save.jpg used on input line 351.
+Package pdftex.def Info: save.jpg used on input line 358.
 (pdftex.def)             Requested size: 26.302pt x 13.0pt.
 File: server.jpg Graphic file (type jpg)
  <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 355.
+Package pdftex.def Info: server.jpg used on input line 361.
+(pdftex.def)             Requested size: 16.8647pt x 13.0pt.
+File: server.jpg Graphic file (type jpg)
+ <use server.jpg>
+Package pdftex.def Info: server.jpg used on input line 364.
+(pdftex.def)             Requested size: 16.8647pt x 13.0pt.
+File: save.jpg Graphic file (type jpg)
+
+<use save.jpg>
+Package pdftex.def Info: save.jpg used on input line 366.
+(pdftex.def)             Requested size: 26.302pt x 13.0pt.
+File: server.jpg Graphic file (type jpg)
+ <use server.jpg>
+Package pdftex.def Info: server.jpg used on input line 370.
 (pdftex.def)             Requested size: 16.8647pt x 13.0pt.
 
 <how_auto.jpg, id=144, 861.2175pt x 195.73125pt>
 File: how_auto.jpg Graphic file (type jpg)
  <use how_auto.jpg>
-Package pdftex.def Info: how_auto.jpg used on input line 357.
+Package pdftex.def Info: how_auto.jpg used on input line 372.
 (pdftex.def)             Requested size: 218.72751pt x 49.7092pt.
-File: run.jpg Graphic file (type jpg)
-
-<use run.jpg>
-Package pdftex.def Info: run.jpg used on input line 360.
-(pdftex.def)             Requested size: 17.33356pt x 13.0pt.
 File: plus.jpg Graphic file (type jpg)
- <use plus.jpg>
-Package pdftex.def Info: plus.jpg used on input line 363.
-(pdftex.def)             Requested size: 16.17062pt x 13.0pt.
- <modlog.jpg, id=145, 1222.5675pt x 325.215pt>
-File: modlog.jpg Graphic file (type jpg)
 
-<use modlog.jpg>
-Package pdftex.def Info: modlog.jpg used on input line 369.
+<use plus.jpg>
+Package pdftex.def Info: plus.jpg used on input line 375.
+(pdftex.def)             Requested size: 16.17062pt x 13.0pt.
+File: run.jpg Graphic file (type jpg)
+ <use run.jpg>
+Package pdftex.def Info: run.jpg used on input line 377.
+(pdftex.def)             Requested size: 17.33356pt x 13.0pt.
+
+Underfull \vbox (badness 3417) has occurred while \output is active []
+
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 378.
+
+File: img/paper.jpg Graphic file (type jpg)
+<use img/paper.jpg>
+Package pdftex.def Info: img/paper.jpg used on input line 378.
+(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 378.
+
+File: img/paper.jpg Graphic file (type jpg)
+<use img/paper.jpg>
+Package pdftex.def Info: img/paper.jpg used on input line 378.
+(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 378.
+
+File: img/paper.jpg Graphic file (type jpg)
+<use img/paper.jpg>
+Package pdftex.def Info: img/paper.jpg used on input line 378.
+(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 378.
+
+File: img/footerscroll.pdf Graphic file (type pdf)
+<use img/footerscroll.pdf>
+Package pdftex.def Info: img/footerscroll.pdf used on input line 378.
+(pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
+ [5 <./how_mod.jpg>]
+<modlog.jpg, id=150, 1222.5675pt x 325.215pt>
+File: modlog.jpg Graphic file (type jpg)
+ <use modlog.jpg>
+Package pdftex.def Info: modlog.jpg used on input line 382.
 (pdftex.def)             Requested size: 218.72751pt x 58.17888pt.
 
-Underfull \hbox (badness 2512) in paragraph at lines 372--374
-\T1/lmss/m/n/10 (+20) The log of a suc-cess-ful con-tains 
+Underfull \hbox (badness 1248) in paragraph at lines 385--387
+\T1/lmss/m/n/10 (+20) The log of a suc-cess-ful run con-tains 
  []
 
 Missing character: There is no ; in font nullfont!
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 381.
-
-File: img/paper.jpg Graphic file (type jpg)
-<use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 381.
-(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
-
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 381.
-
-File: img/paper.jpg Graphic file (type jpg)
-<use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 381.
-(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
-
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 381.
-
-File: img/paper.jpg Graphic file (type jpg)
-<use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 381.
-(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
-
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 381.
-
-File: img/footerscroll.pdf Graphic file (type pdf)
-<use img/footerscroll.pdf>
-Package pdftex.def Info: img/footerscroll.pdf used on input line 381.
-(pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
- [5 <./how_mod.jpg> <./how_auto.jpg> <./modlog.jpg>]
 File: server.jpg Graphic file (type jpg)
-
 <use server.jpg>
-Package pdftex.def Info: server.jpg used on input line 383.
+Package pdftex.def Info: server.jpg used on input line 396.
 (pdftex.def)             Requested size: 16.8647pt x 13.0pt.
- <how_obs.jpg, id=150, 727.71875pt x 217.81375pt>
+ <how_obs.jpg, id=151, 727.71875pt x 217.81375pt>
 File: how_obs.jpg Graphic file (type jpg)
 
 <use how_obs.jpg>
-Package pdftex.def Info: how_obs.jpg used on input line 386.
+Package pdftex.def Info: how_obs.jpg used on input line 399.
 (pdftex.def)             Requested size: 218.72751pt x 65.46759pt.
 File: plus.jpg Graphic file (type jpg)
  <use plus.jpg>
-Package pdftex.def Info: plus.jpg used on input line 391.
+Package pdftex.def Info: plus.jpg used on input line 404.
 (pdftex.def)             Requested size: 16.17062pt x 13.0pt.
 File: minus.jpg Graphic file (type jpg)
  <use minus.jpg>
-Package pdftex.def Info: minus.jpg used on input line 392.
+Package pdftex.def Info: minus.jpg used on input line 405.
 (pdftex.def)             Requested size: 16.24947pt x 13.0pt.
 File: save.jpg Graphic file (type jpg)
  <use save.jpg>
-Package pdftex.def Info: save.jpg used on input line 394.
+Package pdftex.def Info: save.jpg used on input line 407.
 (pdftex.def)             Requested size: 26.302pt x 13.0pt.
-File: run.jpg Graphic file (type jpg)
- <use run.jpg>
-Package pdftex.def Info: run.jpg used on input line 396.
-(pdftex.def)             Requested size: 17.33356pt x 13.0pt.
 
-<obslog.jpg, id=151, 1265.72874pt x 261.97874pt>
+Underfull \vbox (badness 7631) has occurred while \output is active []
+
+File: run.jpg Graphic file (type jpg)
+
+<use run.jpg>
+Package pdftex.def Info: run.jpg used on input line 409.
+(pdftex.def)             Requested size: 17.33356pt x 13.0pt.
+ <obslog.jpg, id=152, 1265.72874pt x 261.97874pt>
 File: obslog.jpg Graphic file (type jpg)
- <use obslog.jpg>
-Package pdftex.def Info: obslog.jpg used on input line 398.
+
+<use obslog.jpg>
+Package pdftex.def Info: obslog.jpg used on input line 411.
 (pdftex.def)             Requested size: 218.72751pt x 45.27133pt.
 File: save.jpg Graphic file (type jpg)
-
-<use save.jpg>
-Package pdftex.def Info: save.jpg used on input line 413.
+ <use save.jpg>
+Package pdftex.def Info: save.jpg used on input line 426.
 (pdftex.def)             Requested size: 26.302pt x 13.0pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 429.
+
+File: img/paper.jpg Graphic file (type jpg)
+<use img/paper.jpg>
+Package pdftex.def Info: img/paper.jpg used on input line 429.
+(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 429.
+
+File: img/paper.jpg Graphic file (type jpg)
+<use img/paper.jpg>
+Package pdftex.def Info: img/paper.jpg used on input line 429.
+(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 429.
+
+File: img/paper.jpg Graphic file (type jpg)
+<use img/paper.jpg>
+Package pdftex.def Info: img/paper.jpg used on input line 429.
+(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
+
+
+Package pdftex.def Warning: Option `bb' does not make sense,
+(pdftex.def)                using `viewport' instead on input line 429.
+
+File: img/footerscroll.pdf Graphic file (type pdf)
+<use img/footerscroll.pdf>
+Package pdftex.def Info: img/footerscroll.pdf used on input line 429.
+(pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
+ [6 <./how_auto.jpg> <./modlog.jpg> <./how_obs.jpg> <./obslog.jpg>]
 File: save.jpg Graphic file (type jpg)
  <use save.jpg>
-Package pdftex.def Info: save.jpg used on input line 423.
+Package pdftex.def Info: save.jpg used on input line 436.
 (pdftex.def)             Requested size: 26.302pt x 13.0pt.
 File: run.jpg Graphic file (type jpg)
  <use run.jpg>
-Package pdftex.def Info: run.jpg used on input line 426.
+Package pdftex.def Info: run.jpg used on input line 439.
 (pdftex.def)             Requested size: 17.33356pt x 13.0pt.
 
-<plotlog.jpg, id=152, 1077.02374pt x 625.33624pt>
+<plotlog.jpg, id=157, 1077.02374pt x 625.33624pt>
 File: plotlog.jpg Graphic file (type jpg)
  <use plotlog.jpg>
-Package pdftex.def Info: plotlog.jpg used on input line 428.
+Package pdftex.def Info: plotlog.jpg used on input line 441.
 (pdftex.def)             Requested size: 218.72751pt x 126.99248pt.
+Missing character: There is no ; in font nullfont!
 
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 434.
-
-File: img/paper.jpg Graphic file (type jpg)
-<use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 434.
-(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
-
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 434.
-
-File: img/paper.jpg Graphic file (type jpg)
-<use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 434.
-(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
-
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 434.
-
-File: img/paper.jpg Graphic file (type jpg)
-<use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 434.
-(pdftex.def)             Requested size: 614.295pt x 694.59499pt.
-
-
-Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 434.
-
-File: img/footerscroll.pdf Graphic file (type pdf)
-<use img/footerscroll.pdf>
-Package pdftex.def Info: img/footerscroll.pdf used on input line 434.
-(pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
- [6 <./how_obs.jpg> <./obslog.jpg> <./plotlog.jpg>]
-<ff10m_score_hl.jpg, id=157, 481.8pt x 481.8pt>
+<ff10m_score_hl.jpg, id=158, 481.8pt x 481.8pt>
 File: ff10m_score_hl.jpg Graphic file (type jpg)
  <use ff10m_score_hl.jpg>
-Package pdftex.def Info: ff10m_score_hl.jpg used on input line 441.
+Package pdftex.def Info: ff10m_score_hl.jpg used on input line 458.
 (pdftex.def)             Requested size: 174.98267pt x 174.977pt.
 
-<ff10m_mslp_hl.jpg, id=158, 481.8pt x 481.8pt>
+<ff10m_mslp_hl.jpg, id=159, 481.8pt x 481.8pt>
 File: ff10m_mslp_hl.jpg Graphic file (type jpg)
  <use ff10m_mslp_hl.jpg>
-Package pdftex.def Info: ff10m_mslp_hl.jpg used on input line 445.
+Package pdftex.def Info: ff10m_mslp_hl.jpg used on input line 462.
 (pdftex.def)             Requested size: 174.98267pt x 174.977pt.
 
-<ff10m_prof.jpg, id=159, 481.8pt x 481.8pt>
+<ff10m_prof.jpg, id=160, 481.8pt x 481.8pt>
 File: ff10m_prof.jpg Graphic file (type jpg)
  <use ff10m_prof.jpg>
-Package pdftex.def Info: ff10m_prof.jpg used on input line 449.
+Package pdftex.def Info: ff10m_prof.jpg used on input line 466.
 (pdftex.def)             Requested size: 164.04562pt x 164.04507pt.
 
-Underfull \vbox (badness 1694) has occurred while \output is active []
-
-
-<ff10m_series_hl.jpg, id=160, 481.8pt x 481.8pt>
-File: ff10m_series_hl.jpg Graphic file (type jpg)
- <use ff10m_series_hl.jpg>
-Package pdftex.def Info: ff10m_series_hl.jpg used on input line 453.
-(pdftex.def)             Requested size: 174.98267pt x 174.977pt.
-
-<ff10m_time_hl.jpg, id=161, 481.8pt x 481.8pt>
-File: ff10m_time_hl.jpg Graphic file (type jpg)
- <use ff10m_time_hl.jpg>
-Package pdftex.def Info: ff10m_time_hl.jpg used on input line 457.
-(pdftex.def)             Requested size: 185.91971pt x 185.91629pt.
-
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 464.
+(pdftex.def)                using `viewport' instead on input line 481.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 464.
+Package pdftex.def Info: img/paper.jpg used on input line 481.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 464.
+(pdftex.def)                using `viewport' instead on input line 481.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 464.
+Package pdftex.def Info: img/paper.jpg used on input line 481.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 464.
+(pdftex.def)                using `viewport' instead on input line 481.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 464.
+Package pdftex.def Info: img/paper.jpg used on input line 481.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 464.
+(pdftex.def)                using `viewport' instead on input line 481.
 
 File: img/footerscroll.pdf Graphic file (type pdf)
 <use img/footerscroll.pdf>
-Package pdftex.def Info: img/footerscroll.pdf used on input line 464.
+Package pdftex.def Info: img/footerscroll.pdf used on input line 481.
 (pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
- [7 <./ff10m_score_hl.jpg> <./ff10m_mslp_hl.jpg> <./ff10m_prof.jpg> <./ff10m_se
-ries_hl.jpg> <./ff10m_time_hl.jpg>]
+ [7 <./plotlog.jpg> <./ff10m_score_hl.jpg> <./ff10m_mslp_hl.jpg> <./ff10m_prof.
+jpg>]
 
 Package hyperref Warning: The anchor of a bookmark and its parent's must not
-(hyperref)                be the same. Added a new anchor on input line 468.
+(hyperref)                be the same. Added a new anchor on input line 485.
 
-<bufr1.jpg, id=167, 876.27374pt x 664.4825pt>
+<bufr1.jpg, id=166, 876.27374pt x 664.4825pt>
 File: bufr1.jpg Graphic file (type jpg)
  <use bufr1.jpg>
-Package pdftex.def Info: bufr1.jpg used on input line 487.
+Package pdftex.def Info: bufr1.jpg used on input line 504.
 (pdftex.def)             Requested size: 218.72751pt x 165.85658pt.
 
-<bufr2.jpg, id=168, 888.31876pt x 283.0575pt>
+<bufr2.jpg, id=167, 888.31876pt x 283.0575pt>
 File: bufr2.jpg Graphic file (type jpg)
  <use bufr2.jpg>
-Package pdftex.def Info: bufr2.jpg used on input line 496.
+Package pdftex.def Info: bufr2.jpg used on input line 513.
 (pdftex.def)             Requested size: 218.72751pt x 69.69305pt.
 Missing character: There is no ; in font nullfont!
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 507.
+(pdftex.def)                using `viewport' instead on input line 524.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 507.
+Package pdftex.def Info: img/paper.jpg used on input line 524.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 507.
+(pdftex.def)                using `viewport' instead on input line 524.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 507.
+Package pdftex.def Info: img/paper.jpg used on input line 524.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 507.
+(pdftex.def)                using `viewport' instead on input line 524.
 
 File: img/paper.jpg Graphic file (type jpg)
 <use img/paper.jpg>
-Package pdftex.def Info: img/paper.jpg used on input line 507.
+Package pdftex.def Info: img/paper.jpg used on input line 524.
 (pdftex.def)             Requested size: 614.295pt x 694.59499pt.
 
 
 Package pdftex.def Warning: Option `bb' does not make sense,
-(pdftex.def)                using `viewport' instead on input line 507.
+(pdftex.def)                using `viewport' instead on input line 524.
 
 File: img/footerscroll.pdf Graphic file (type pdf)
 <use img/footerscroll.pdf>
-Package pdftex.def Info: img/footerscroll.pdf used on input line 507.
+Package pdftex.def Info: img/footerscroll.pdf used on input line 524.
 (pdftex.def)             Requested size: 596.2275pt x 42.15749pt.
  [8 <./bufr1.jpg> <./bufr2.jpg>]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 507.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 507.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 524.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 524.
  (./fark.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 507.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 507.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 524.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 524.
 Package rerunfilecheck Info: File `fark.out' has not changed.
-(rerunfilecheck)             Checksum: 5B071A13FF247E468F6F1B3186FF68D4;1393.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 507.
+(rerunfilecheck)             Checksum: 200184B267BC09D6F708A778EEB6442D;1405.
+
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 524.
  )
 (\end occurred inside a group at level 1)
 
-### simple group (level 1) entered at line 343 ({)
+### simple group (level 1) entered at line 358 ({)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 36044 strings out of 493029
- 683078 string characters out of 6136233
- 957895 words of memory out of 5000000
- 38872 multiletter control sequences out of 15000+600000
- 52734 words of font info for 94 fonts, out of 8000000 for 9000
- 1141 hyphenation exceptions out of 8191
+ 35946 strings out of 494506
+ 680900 string characters out of 6172961
+ 954922 words of memory out of 5000000
+ 38672 multiletter control sequences out of 15000+600000
+ 37080 words of font info for 80 fonts, out of 8000000 for 9000
+ 264 hyphenation exceptions out of 8191
  70i,18n,122p,10489b,2550s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/share/texmf/fonts/enc/dvips/lm/lm-ec.enc}{/usr/share/texl
-ive/texmf-dist/fonts/enc/dvips/opensans/opensans-04.enc}{/usr/share/texlive/tex
-mf-dist/fonts/enc/dvips/opensans/opensans-01.enc}{/usr/share/texlive/texmf-dist
-/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/
-opensans/OpenSans-Bold.pfb></usr/share/texmf/fonts/type1/public/lm/lmss10.pfb><
-/usr/share/texmf/fonts/type1/public/lm/lmssbx10.pfb></usr/share/texmf/fonts/typ
-e1/public/lm/lmsso10.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/bookman
-/ubkd8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/bookman/ubkl8a.pfb><
-/usr/share/texlive/texmf-dist/fonts/type1/urw/bookman/ubkli8a.pfb></usr/share/t
-exlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
-Output written on fark.pdf (8 pages, 3093095 bytes).
+{/usr/share/texmf/fonts/enc/dvips/lm/lm-ec.enc} </home/ubuntu/.
+texmf-var/fonts/pk/ljfour/jknappen/ec/ecrm1000.600pk>{/usr/share/texlive/texmf-
+dist/fonts/enc/dvips/base/8r.enc}</usr/share/texmf/fonts/type1/public/lm/lmss10
+.pfb></usr/share/texmf/fonts/type1/public/lm/lmssbx10.pfb></usr/share/texmf/fon
+ts/type1/public/lm/lmsso10.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/b
+ookman/ubkd8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/bookman/ubkl8a
+.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/bookman/ubkli8a.pfb></usr/s
+hare/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
+Output written on fark.pdf (8 pages, 3054165 bytes).
 PDF statistics:
- 213 PDF objects out of 1000 (max. 8388607)
- 161 compressed objects within 2 object streams
+ 248 PDF objects out of 1000 (max. 8388607)
+ 158 compressed objects within 2 object streams
  23 named destinations out of 1000 (max. 500000)
- 16733 words of extra memory for PDF output out of 17280 (max. 10000000)
+ 15709 words of extra memory for PDF output out of 17280 (max. 10000000)
 

@@ -5209,8 +5209,8 @@ CONTAINS
     WRITE(*,*)
     WRITE(*,998) MYNAME,                     'Possible obs file matches: ', css%fok(1)+css%frm(1)
     IF (CSS%FRM(1).NE.0) WRITE(*,999) MYNAME,'No overlap:                ', -CSS%FRM(1),PST(1)
-    IF (CSS%FRM(2).NE.0) WRITE(*,999) MYNAME,'Index search failed:       ', -CSS%FRM(2),PST(2)
-    IF (CSS%FRM(3).NE.0) WRITE(*,999) MYNAME,'Invalid index target range:', -CSS%FRM(3),PST(3)
+    IF (CSS%FRM(2).NE.0) WRITE(*,999) MYNAME,'Out of range for sure:     ', -CSS%FRM(2),PST(2)
+    IF (CSS%FRM(3).NE.0) WRITE(*,999) MYNAME,'Out of range fine check:   ', -CSS%FRM(3),PST(3)
     WRITE(*,997) MYNAME,     '--------------------------------------------------'
     pp=dfloat(css%fok(3))/max(1.0d0,dfloat(css%frm(1)+css%fok(1)))*100
     WRITE(*,999) MYNAME,                     'Obs file matches:          ', css%fok(3),pp
@@ -5268,24 +5268,15 @@ CONTAINS
     WRITE(*,998) MYNAME,                 'Locations:                   ', ook(1)+orm(1)
     IF (ORM(2).NE.0) WRITE(*,999) MYNAME,'Evaluation error:            ', -orm(2),PST(2)
     IF (ORM(3).NE.0) WRITE(*,999) MYNAME,'Index filter:                ', -orm(3),PST(3)
-    IF (ORM(4).NE.0) WRITE(*,999) MYNAME,'Target filter:               ', -orm(4),PST(4)
+    do ii=1,css%ntrg
+       pp=dfloat(css%trg_orm(ii))/max(1.0d0,dfloat(css%trg_orm(0)+css%trg_ook(0)))*100
+       IF (css%trg_orm(ii).NE.0) WRITE(*,996) MYNAME,"'"//css%trg80(ii)(1:css%trg_lent(ii))//"' filter:", &
+            & -css%trg_orm(ii),PP
+    end do
     IF (ORM(5).NE.0) WRITE(*,999) MYNAME,'Obs filter:                  ', -orm(5),PST(5)
     WRITE(*,997) MYNAME,     '----------------------------------------------------'
     pp=dfloat(ook(5))/max(1.0d0,dfloat(orm(1)+ook(1)))*100
     WRITE(*,999) MYNAME,                 'Accepted locations:          ', ook(5),pp
-    ! target statistics
-    if (css%trg_orm(0).ne.0) then
-       WRITE(*,*)
-       WRITE(*,998) MYNAME,                 'Target filter checks:        ', css%trg_orm(0)+css%trg_ook(0)
-       do ii=1,css%ntrg
-          pp=dfloat(css%trg_orm(ii))/max(1.0d0,dfloat(css%trg_orm(0)+css%trg_ook(0)))*100
-          IF (css%trg_orm(ii).NE.0) WRITE(*,996) MYNAME,"'"//css%trg80(ii)(1:css%trg_lent(ii))//"' check:", &
-               & -css%trg_orm(ii),PP
-       end do
-       WRITE(*,997) MYNAME,     '-----------------------------------------------------'
-       pp=dfloat(css%trg_ook(0))/max(1.0d0,dfloat(css%trg_orm(0)+css%trg_ook(0)))*100
-       WRITE(*,999) MYNAME,                 'Accepted target filter checks:', css%trg_ook(0),pp
-    end if
     !
 999 FORMAT(X,A12,X,A,I13,' (',F6.2,'%)')
 998 FORMAT(X,A12,X,A,I13)

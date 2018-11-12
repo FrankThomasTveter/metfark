@@ -106,7 +106,8 @@ sub findModel {
 	    $node->setAttribute("filterFile",      $filterFile//"");
 	    $node->setAttribute("indexTarget",     $indexTarget//"");
 	    $node->setAttribute("indexVariable",   $indexVariable//"");
-	    my @files=farkdir::FindFiles($filterDir,$filterFile,$filterDirMin,$filterDirMax,10);
+	    my @files=farkdir::FindFiles($filterDir,$filterFile,
+					 $filterDirMin,$filterDirMax,10);
 	    if (@files) {
 		$node->setAttribute("hits",            scalar @files);
 		foreach my $sfile (@files) {

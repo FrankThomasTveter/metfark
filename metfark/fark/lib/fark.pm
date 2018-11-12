@@ -886,8 +886,8 @@ sub updateObservationRegister {
     my $register_file = shift;
     my $mask_dir = shift;
     my $mask = shift;
-    my $min = farkdir::getOffset(shift // "",-1);
-    my $max = farkdir::getOffset(shift // "",0);
+    my $min = shift;
+    my $max = shift;
     my $test = shift // 0; 
     my $fill_file = shift // "";
     my $new_file_cnt = 0;

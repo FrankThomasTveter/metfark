@@ -727,8 +727,8 @@ sub FindFiles{
     use Cwd;
     my $wdir = shift;
     my $pattern = shift;
-    my $min = shift || "";
-    my $max = shift || "";
+    my $min =getOffset(shift//"",-1);
+    my $max = getOffset(shift//"",0);
     my $maxtime = shift || 0;
     my $root = shift || "";
     my $t = shift || time;
