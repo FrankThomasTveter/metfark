@@ -58,7 +58,7 @@ cols <- readComments(tablefile,"COLUMNS");
 
 area <-attr["area",];
 
-datafile <- grepFile(tablefile,paste0("#\\|area\\|",area),paste0(".",aera));
+datafile <- grepFile(tablefile,paste0("#\\|area\\|",area),paste0(".",area));
 
 raw <- readData(datafile);
 
