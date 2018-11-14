@@ -113,6 +113,7 @@ The index sorting variable is given a {\bf model index target} name.
   represent the model variable or observation 
   parameter.
 \end{quotebox}
+When a model file is being indexed, FARK will pre-scan the range of the variables with small array size.
 
 \subsection{Observation tab}
 \begin{paperbox}{Observation tab}
@@ -235,11 +236,10 @@ Co-location takes a lot of computer resources, and it is therefore a good strate
 to filter out unwanted data as early as possible in the data processing.
 The plot log in the \lstinline!Auto tab! contains summaries of how different filters and the quality control removed data.
 
-When a model file is being indexed, FARK will scan the range of the model variables with small array size.
 \begin{paperbox}{Model target filter}
   \includegraphics[width=\columnwidth]{filter_minmax.jpg}
 \end{paperbox}
-If a model target has {\bf min} and {\bf max} filter limits that are outside the scanned range,
+If a model target has {\bf min} and {\bf max} limits that are outside the pre-scanned range, 
 the model file will immediately be rejected. Below is an example of the resulting plot log summary.
 \begin{paperbox}{Plot log (model file filter)}
   \includegraphics[width=\columnwidth]{filter_minmaxlog.jpg}
@@ -247,18 +247,17 @@ the model file will immediately be rejected. Below is an example of the resultin
 
 The observation {\bf min} and {\bf max} filters are applied as the BUFR messages are read from the observation file.
 
-The {\bf observation filter} expression is applied when all locations in a BUFR message have been read from file,
-and this filter allows functions that apply to the whole message. 
-\begin{quotebox}
-  The {\bf observation filter} expression can only be based on observation targets.
-\end{quotebox}
-For instance \lstinline!msgclosest!
-selects the location that produces an expression closest to a list
+The {\bf observation filter} expression is applied to all locations in a BUFR message at once,
+and has functions like
 \begin{lstlisting}
    msgclosest(obs_pres*0.01,1000,500)
 \end{lstlisting}
+that selects the locations with the expression, \lstinline!obs_pres*0.01!, closest to the given list, \lstinline!1000,500!.
+\begin{quotebox}
+  The {\bf observation filter} expression can only be based on observation targets.
+\end{quotebox}
 
-The model {\bf min} and {\bf max} filters are applied immediately when the corresponding 
+The model {\bf min} and {\bf max} filters are re-applied immediately after the corresponding 
 model field has been interpolated to the observation location.
 
 The {\bf location filter} expression is applied when all relevant model fields have been interpolated to the observation location.
@@ -294,7 +293,7 @@ Special attributes can be used to enumerate other attributes and columns.
 
 A plotting script can compare different colocation datasets.
 The {\bf Dataset} table assigns every dataset an \lstinline!Id!, \lstinline!Colocation file! and 
-\lstinline!legend!, along with the column-expressions requested by the plotting script.
+\lstinline!legend!, along with the columns requested by the plotting script.
 
 \subsection{Auto tab}
 \begin{paperbox}{Auto tab}
@@ -320,18 +319,6 @@ Each job can be executed manually or according to a schedule.
 %The task configuration can be {\bf tested} manually by pressing \includegraphics[height=13pt]{test.jpg}. 
 %Tasks can be {\bf executed} manually by pressing \includegraphics[height=13pt]{run.jpg}.
 %A running task can be {\bf stopped} manually by pressing \includegraphics[height=13pt]{stop.jpg}.
-
-\section{Performance}
-
-Co-locating large amounts of data takes a lot of resources, and it is quite easy to
-set up jobs that are not able to run successfully. Generating {\bf table files}
-does not usually require too much memory but can take much processing time.
-However the {\bf plotting script} will typically not be able to process a {\bf table file} with 
-more than 10 million entries without running out of memory (on Ares). 
-This corresponds to 20 days of verification for northern Europe.
-Although FARK has all the features necessary for a full verification of
-operational forecast ensemble data using radiosonde data, this is option is
-probably not realistic from a computer resource perspective.
 
 \section{HOW TO...}
 
@@ -442,11 +429,10 @@ To actually create the verification plots, press \raisebox{-0.2\height}{\include
 \end{paperbox}
 
 The plot log contains information on the indexes used, how many files they contained and when they were last modified.
-\begin{quotebox}
-  Keep your indexes up-to-date if you use time-dependent filters.
-\end{quotebox}
-
 The log also lists the model files that were processed, and a summary of how data was removed during the processing. This is a good place to start looking for missing data.
+\begin{quotebox}
+  Check if your indexes are up-to-date if your time-dependent filters have removed all data.
+\end{quotebox}
 
 The script command (usually listed at the end of the log), contains the root output directory for the verification results, which you specified in the \lstinline!Plot tab!. The next section shows some examples of verification plots that the ``synop'' verification script typically would place there.
 
@@ -466,9 +452,9 @@ Here are some examples of verification plots.
   \centerline{\includegraphics[width=0.75\columnwidth]{ff10m_prof.jpg}}
 \end{paperbox}
 
-%\begin{paperbox}{FF10m SDE series}
-%  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
-%\end{paperbox}
+\begin{paperbox}{FF10m SDE series}
+  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
+\end{paperbox}
 
 %\begin{paperbox}{FF10m MEAN series}
 %  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_time_hl.jpg}}
@@ -478,7 +464,7 @@ Here are some examples of verification plots.
 %  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}
 %\end{paperbox}
 
-\newpage
+%%\newpage
 \hypertarget{appendix}{}
 \section{Appendix}
 \hypertarget{netcdf}{}
@@ -520,5 +506,21 @@ which will duplicate a sub-section of the BUFR sequence the specified number of 
   BUFR sequence positions after a {\bf delayed replicator} are not ``fixed''.
 \end{quotebox}
 
+\subsection{Performance}
+
+Co-locating large amounts of data takes a lot of resources, and it is quite easy to
+set up jobs that are not able to run successfully. Generating {\bf table files}
+does not usually require too much memory but can take much processing time.
+However the {\bf plotting script} will typically not be able to process a {\bf table file} with 
+more than 10 million entries without running out of memory (on Ares). 
+This corresponds to 20 days of verification for northern Europe.
+Although FARK has all the features necessary for a full verification of
+operational forecast ensemble data using radiosonde data, this is option is
+probably not realistic from a computer resource perspective.
+
+
+
+
 % End document
 \end{document}
+
