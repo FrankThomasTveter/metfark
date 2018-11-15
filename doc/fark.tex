@@ -114,9 +114,9 @@ When a model file is added to the index, the index variable is pre-scanned to
 find the range of the index variable. 
 Files overlap if their index variable range overlap.
 \begin{quotebox}
-Use the epoch-time as your index-variable.
+Use the epoch-time as your index variable.
 \end{quotebox}
-The index-variable must have a small array size. 
+The index variable must have a small array size. 
 FARK will also pre-scan the range of other variables with small array size (<1000).
 
 The index variable is given a target name.
@@ -145,9 +145,6 @@ The colocation tab contains several tables.
 The {\bf model targets} table lists model variables and their target names.
 The (saved) {\bf model index} target name is listed first.
 Model targets needed for matching and verification, are added here.
-\begin{quotebox}
-  Variables in red are not in the scanned model file.
-\end{quotebox}
 The {\bf model target} can also be a {\bf dimension}. 
 In this case enter the dimension name surrounded by brackets instead of a variable name,
 for instance \lstinline!(ensemble_member)!.
@@ -415,6 +412,9 @@ Define the targets that you need in your observation index expression by enterin
 in the bottom row of the \lstinline!observation targets! table, and by pressing the \raisebox{-0.2\height}{\includegraphics[height=13pt]{plus.jpg}} to the right.
 You may remove a row by pressing  \raisebox{-0.2\height}{\includegraphics[height=13pt]{minus.jpg}} to the right of the respective row.
 The values of the removed row are put in the bottom row.
+\begin{quotebox}
+  Targests in red are not found in the scanned observation file.
+\end{quotebox}
 Finally, add an observation index expression that gives the epoch-time 
 of the observation, that can be compared to the model index variable.
 When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to save your settings.
@@ -491,6 +491,7 @@ The log is a good place to start looking for missing data.
 
 The script command (usually listed at the end of the log), contains the root output directory for the verification results, which you specified in the \lstinline!Plot tab!. The next section shows some examples of verification plots that the ``synop'' verification script typically would place there.
 
+\newpage
 \subsection{Examples}
 Here are some examples of verification plots.
 %that can be produced by FARK using the ``synop'' verification script. Verification plots are typically found under \lstinline!/lustre/storeA/project/nwp/fark!.
@@ -507,9 +508,9 @@ Here are some examples of verification plots.
   \centerline{\includegraphics[width=0.75\columnwidth]{ff10m_prof.jpg}}
 \end{paperbox}
 
-\begin{paperbox}{FF10m SDE series}
-  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
-\end{paperbox}
+%\begin{paperbox}{FF10m SDE series}
+%  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
+%\end{paperbox}
 
 %\begin{paperbox}{FF10m MEAN series}
 %  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_time_hl.jpg}}
