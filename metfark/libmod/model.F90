@@ -900,6 +900,7 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,'Entering.',css%nFileIndexes,irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
+    mod_bdeb=.true.
     write(*,*)myname," Pushing '"//path250(1:lenp)//"'"
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
@@ -913,6 +914,7 @@ CONTAINS
     end if
     ! create new stack-item
     bok=.true.
+    //write(*,*)myname," Allocating"
     allocate(newFile,stat=irc)
     if (irc.ne.0) then
        bok=.false.

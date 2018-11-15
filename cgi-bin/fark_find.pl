@@ -27,7 +27,7 @@ use Capture::Tiny 'capture_merged';
 # 5 = parser
 #
 my $debug=0;
-#fark::debug($debug);
+fark::debug($debug);
 #
 #
 my $ref=CGI->new();
@@ -231,22 +231,7 @@ sub processModelFile {
     my $data = $fark->peekModelFile();
     if ($data) {
 	if($debug){$data->printTree("Model:");}
-	foreach my $index (sort {$data->{file}->{variable}->{$a}->{name} cmp $data->{file}->{variable}->{$b}->{name}} keys %{$data->{file}->{variable}}) {
-	    my $parent = XML::LibXML::Element->new( 'variable' );
-	    if (defined $data->{file}->{variable}->{$index}->{dimension}) {
-		my $dims="";
-		foreach my $dim (sort keys %{$data->{file}->{variable}->{$index}->{dimension}}) {
-		    if ($dims) {
-			$dims=$dims . "," . $data->{file}->{variable}->{$index}->{dimension}->{$dim};
-		    } else {
-			$dims=$data->{file}->{variable}->{$index}->{dimension}->{$dim};
-		    }
-		}
-		$parent->setAttribute("dims",$dims//"");
-	    };
-	    $parent->setAttribute("name",$data->{file}->{variable}->{$index}->{name}//"");
-	    $node->addChild( $parent );
-	}
+	my %dimhash;
 	foreach my $index (sort {$data->{file}->{dimension}->{$a} cmp 
 				     $data->{file}->{dimension}->{$b}} 
 			   keys %{$data->{file}->{dimension}}) {
@@ -256,9 +241,32 @@ sub processModelFile {
 		if (defined $data->{file}->{dimension}->{$index}->{$name}->{"size"}) {
 		    my $size = $data->{file}->{dimension}->{$index}->{$name}->{"size"}+0;
 		    $parent->setAttribute("size",$size//"");
+		    $dimhash{$name}=$size//1;
 		}
 		$node->addChild( $parent );
 	    }
+	}
+	foreach my $index (sort {$data->{file}->{variable}->{$a}->{name} cmp $data->{file}->{variable}->{$b}->{name}} keys %{$data->{file}->{variable}}) {
+	    my $parent = XML::LibXML::Element->new( 'variable' );
+	    my $name=$data->{file}->{variable}->{$index}->{name};
+	    my $size=1;
+	    if (defined $data->{file}->{variable}->{$index}->{dimension}) {
+		my $dims="";
+		foreach my $dim (sort keys %{$data->{file}->{variable}->{$index}->{dimension}}) {
+		    my $dimname=$data->{file}->{variable}->{$index}->{dimension}->{$dim};
+		    $size=$size*($dimhash{$dimname}||1)+0;
+		    if ($dims) {
+			$dims=$dims . "," . $data->{file}->{variable}->{$index}->{dimension}->{$dim};
+		    } else {
+			$dims=$data->{file}->{variable}->{$index}->{dimension}->{$dim};
+		    }
+		}
+		$parent->setAttribute("dims",$dims//"");
+	    };
+	    print "Var: $name  -> $size\n";
+	    $parent->setAttribute("name",$data->{file}->{variable}->{$index}->{name}//"");
+	    $parent->setAttribute("size",$size//1);
+	    $node->addChild( $parent );
 	}
 	if (defined $data->{file}->{index}->{start}) {
 	    $node->setAttribute("start",$data->{file}->{index}->{start}//"");

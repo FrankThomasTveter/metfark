@@ -68,6 +68,7 @@ sub cmdls {
 	    $doc->addChild( $parent );
 	    if (-d $fpath && opendir (DIR, $fpath)) {
 		my @entries = sort { $a cmp $b } readdir(DIR);
+		farkdir::checkRegex($filter);
 		my @files;
 		while (my $name = shift @entries) {
 		    next if (substr($name,0,1) eq ".");

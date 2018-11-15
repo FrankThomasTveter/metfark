@@ -1,3 +1,3 @@
 #! /bin/csh
-./fark_find.pl '?type=model&file=default2.cfg&password=fark&filterDir=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2Fmeps&filterDirMin=2018-10-10&filterDirMax=2018-10-01&filterFile=meps_mbr0_extracted_2_5km_%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5Cd%5CdT(00%7C06%7C12%7C18)Z.nc&indexTarget=time_trg&indexVariable=time'
+./fark_find.pl '?type=modelfile&file=default.cfg&password=&target=%2Flustre%2FstoreB%2Fimmutable%2Farchive%2Fprojects%2Fmetproduction%2Fmeps%2F2018%2F11%2F10%2Fmeps_mbr0_extracted_2_5km_20181110T12Z.nc'
 #

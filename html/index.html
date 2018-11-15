@@ -88,11 +88,11 @@
 			      onblur="model_setArray('indexTarget',this.value)"
 		       title="Model index target name"/> 
 		    </td>
-		    <td align="right">Variable:</td>
+		    <td align="right">Model index variable:</td>
 		    <td class="fill" width="70%">
 		      <input id="modelIndexVariable" type="text" value="" 
 			     style="width:100%" onblur="model_setArray('indexVariable',this.value);model_checkVariable(this)"
-		       title="The value range of this <model variable> is used to &#13;sort the <NETCDF model files> in an index.&#13;This index is used during colocation to find &#13;matching <BUFR observation files>."/>
+		       title="Epoch time:&#13;The value range of this <model variable> is used to &#13;sort the <NETCDF model files> in an index.&#13;This index is used during colocation to find &#13;matching <BUFR observation files>."/>
 		      <div id="modelIndexDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td align="center">
@@ -255,10 +255,10 @@ A new <setup file> will get this password.">
 		      <input  style="color:blue;width:100%" id="obsIndexTarget" type="text" value="" onblur="obs_setArray('indexTarget',this.value)"
 			      title="Observation index target name"/> 
 		    </td>
-		    <td align="right">Expression:</td>
+		    <td align="right">Observation index expression:</td>
 		    <td class="fill" width="70%">
 		      <input id="obsIndexExp" type="text" value="" style="width:100%" onblur="obs_setArray('indexExp',this.value)"
-			     title="The value range of this expression of <observation targets>&#13; is used to sort the <observation BUFR files> in an index.&#13;This index is used during colocation to find matching <NETCDF model files>."/> 
+			     title="Epoch time:&#13;The value range of this expression of <observation targets>&#13; is used to sort the <observation BUFR files> in an index.&#13;This index is used during colocation to find matching <NETCDF model files>."/> 
 		      <div id="obsIndexExpDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">

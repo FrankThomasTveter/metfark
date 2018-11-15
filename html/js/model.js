@@ -10,6 +10,8 @@ model_config = { "default.cfg" : {filterDir: "/opdata",
 				  min:"",
 				  max:"",
 				  variables : {def:""},
+				  dims : {},
+				  sizes : {},
 				  dimensions : {def:1},
 				  files : [],
 				  stack : "",
@@ -17,6 +19,7 @@ model_config = { "default.cfg" : {filterDir: "/opdata",
 				 }
 	       };
 model_configEd = 0;
+
 
 function model_allocate(file) {
     if (model_config[file] === undefined) {

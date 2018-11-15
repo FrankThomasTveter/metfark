@@ -75,15 +75,19 @@ eval {
 	    my $pass=($node->getAttribute("password")//"");
 	    $save=($pass eq $password);
 	    if (($param->{type}->[0]//"") eq "model") {
+		if (!$save) {farkdir::term("Permission denied (invalid password).");};
 		$modelr=&getCls("model",$node,$cron,$file);
 		&loopCls("model",$test, $abort, $modelr,$cron) || farkdir::term("Error return from loopModel:$file");
 	    } elsif (($param->{type}->[0]//"") eq "obs") {
+		if (!$save) {farkdir::term("Permission denied (invalid password).");};
 		$obsr=&getCls("obs",$node,$cron,$file);
 		&loopCls("obs",$test, $abort, $obsr,$cron) || farkdir::term("Error return from loopObs:$file");
 	    } elsif (($param->{type}->[0]//"") eq "coloc") {
+		if (!$save) {farkdir::term("Permission denied (invalid password).");};
 		$colocr=&getCls("coloc",$node,$cron,$file);
 		&loopCls("coloc",$test, $abort, $colocr,$cron) || farkdir::term("Error return from loopColoc:$file");
 	    } elsif (($param->{type}->[0]//"") eq "plot") {
+		if (!$save) {farkdir::term("Permission denied (invalid password).");};
 		$plotr=&getCls("plot",$node,$cron,$file);
 		&loopCls("plot",$test, $abort, $plotr,$cron) || farkdir::term("Error return from loopPlot:$file");
 	    } else {

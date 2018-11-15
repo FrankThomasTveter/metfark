@@ -497,6 +497,13 @@ sub docsave {
     }
 }
 
+sub checkRegex {
+   my $regchk=shift;
+   my $regexp="";
+   eval "\$regexp = qr/$regchk/;" or term("Invalid REGEXP '$regchk': $@"); 
+}
+
+
 sub sandbox (&@) {
     use 5.014;
     use File::Copy;

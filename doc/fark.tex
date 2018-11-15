@@ -54,17 +54,22 @@ organize the regular production of verification result.
    and don't want to spend your time writing scripts.
 \end{quotebox}
 
-\subsection{FARK production}
+FARK colocates {\bf NetCDF} model files and {\bf BUFR} observation files, 
+and generates {\bf ASCII} table data and {\bf splus} graphical files (jpg).
+
+The important stuff you need know about the NetCDF and BUFR file formats, is explained
+in the \hyperlink{appendix}{{\em appendix}}.
+
+\subsection{The FARK process}
 
 FARK first generates {\bf indexed lists} of the {\bf NetCDF} model files 
-and {\bf BUFR} observation files that will be used in the verification.
+and {\bf BUFR} observation files, sorted by time.
 
-A basic description of the NetCDF and BUFR file formats is available in the \hyperlink{appendix}{{\em appendix}}.
-
-Next, model fields are interpolated to relevant observation locations and time.
+FARK will then loop over the model files, and for each model file identify the relevant observation files.
+Model fields are interpolated to relevant observation locations and time.
 This co-located data is written to a {\bf table file} according to the specifications in a {\bf plotting script}.
 
-Finally, the {\bf plotting script} produces the {\bf verification plots}.
+Finally, the {\bf plotting script} reads the {\bf table file} and produces the {\bf verification plots}.
 
 \begin{quotebox}
 Verification results are found under:
@@ -104,28 +109,27 @@ Press the ``tab title'' to reload data from server.
   \includegraphics[width=\columnwidth]{fark_model.jpg}
 \end{paperbox}
 In this tab you specify which \hyperlink{netcdf}{NetCDF} model files to index.
-The user must also specify which variable to use for the index.
-The index variable is pre-scanned to find the range of the index.
-Files overlap if their index range overlaps.
+The user must also specify which variable to use to sort the index.
+When a model file is added to the index, the index variable is pre-scanned to 
+find the range of the index variable. 
+Files overlap if their index variable range overlap.
 \begin{quotebox}
 Use the epoch-time as your index-variable.
 \end{quotebox}
+The index-variable must have a small array size. 
+FARK will also pre-scan the range of other variables with small array size (<1000).
 
 The index variable is given a target name.
 A target name is a 'short name' used to
 represent the model variable or observation 
 parameter.
 
-When a model file is being indexed, FARK will also pre-scan the range of other 
-variables with small array size (<1000).
-
 \subsection{Observation tab}
 \begin{paperbox}{Observation tab}
   \includegraphics[width=\columnwidth]{fark_obs.jpg}
 \end{paperbox}
 Here you specify which \hyperlink{bufr}{BUFR} observation files to index.
-The user must also specify an {\em expression} for the index.
-The index expression is assigned a {\bf target} name. 
+The user must specify an {\em index expression}, which must be assigned a {\bf target} name. 
 The user must also define the {\bf observation targets} that are used in the index expression. 
 The observation targets point to specific positions in the \hyperlink{sequence}{BUFR sequence}.
 
@@ -140,6 +144,7 @@ The colocation tab contains several tables.
 \end{paperbox}
 The {\bf model targets} table lists model variables and their target names.
 The (saved) {\bf model index} target name is listed first.
+Model targets needed for matching and verification, are added here.
 \begin{quotebox}
   Variables in red are not in the scanned model file.
 \end{quotebox}
@@ -154,7 +159,7 @@ The square brackets added after the variable name should contain the
 name of the model target that should be offset and the offset amount (separated by colon).
 In this example model target \lstinline!precip_acc_m24! contains the accumulated precipitation 24 
 hours before the target \lstinline!precip_acc!.
-\hyperlink{matching}{\em Matching rules}) should not be defined for offset model targets .
+\hyperlink{matching}{\em Matching rules}) should not be defined for model targets that use an offset.
 
 \subsubsection{Observation targets table}
 \begin{paperbox}{Observation targets table}
@@ -162,11 +167,11 @@ hours before the target \lstinline!precip_acc!.
 \end{paperbox}
 In the {\bf observation targets} table the user can specify observation targets in the BUFR sequence.
 The targets already defined in the (saved) {\bf observation index} are listed first. 
-Additional observation targets needed to match the observation with the model fields are added here.
+Observation targets needed for matching and verification, are added here.
 
 \subsubsection{Position variables}
-In the example above \lstinline!obs_wdir! uses a {\bf position variable}, \lstinline!W! 
-instead of a number. 
+In the example above \lstinline!obs_wdir! uses a {\bf position variable}, \lstinline!W!,
+instead of a fixed number. 
 The reason for this is that the wind speed happens to appear after a \hyperlink{delayed}{\em delayed replicator} 
 in the BUFR sequence.
 The FARK system will search the BUFR sequence for the specified descriptor, \lstinline!11001!,
@@ -228,22 +233,24 @@ A location is discarded if a match rule has a target that is undefined.
 \hypertarget{default}{}
 \subsubsection{Default table}
 The {\bf default} table is only visible if the observation index file has been set to \lstinline!<none>!.
-The default table specifies how the model targets should match default values.
+The default table specifies how the model targets should match a set of fixed values.
 \begin{paperbox}{Default table}
   \includegraphics[width=\columnwidth]{default.jpg}
 \end{paperbox}
 
 \subsubsection{filters}
 
-Co-location takes a lot of computer resources, and it is therefore a good strategy
-to filter out unwanted data as early as possible in the data processing.
-The plot log in the \lstinline!Auto tab! contains summaries of how different filters and the quality control removed data.
+Although FARK has all the features necessary for a full verification of
+operational forecast ensemble data using radiosonde data, this is option is
+probably not realistic from a computer resource perspective.
 
+It is anyway a good strategy to filter out unwanted data as early as possible in the data processing.
+The plot log in the \lstinline!Auto tab! contains summaries of how different filters and the quality control removed data.
 \begin{paperbox}{Model target filter}
   \includegraphics[width=\columnwidth]{filter_minmax.jpg}
 \end{paperbox}
 If a model target has {\bf min} and {\bf max} limits that are outside the pre-scanned range, 
-the model file will immediately be rejected. Below is an example of the resulting plot log summary.
+the model file will be skipped. Below is an example of the resulting plot log summary.
 \begin{paperbox}{Plot log (model file filter)}
   \includegraphics[width=\columnwidth]{filter_minmaxlog.jpg}
 \end{paperbox}
@@ -292,7 +299,8 @@ The {\bf Attributes} table allows the user to specify attributes that apply for 
 for instance titles, units and labels.
 Some attributes can only have fixed values, indicated by an action button
  \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}}.
-Special attributes can be used to enumerate other attributes and columns.
+Special attributes can be used to enumerate columns and other attributes,
+for instance increasing \lstinline!n! to \lstinline!2! would add another column,  \lstinline!value2!, in the example above.
 
 A plotting script can compare different colocation datasets.
 The {\bf Dataset} table assigns every dataset an \lstinline!Id!, \lstinline!Colocation file! and 
@@ -328,31 +336,42 @@ Each job can be executed manually or according to a schedule.
 \subsection{...create a model index}
 Change focus to the ``Model'' tab.
 \subsubsection{1. Make sure index does not exist}
-Enter the name of your new index in the \lstinline!setup file:! field, for instance \lstinline!test.cfg!,
+Enter the name of your new index in the \lstinline!setup file! field, for instance \lstinline!test.cfg!,
 and press  \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} next to the field.
 \begin{paperbox}{Model tab}
   \includegraphics[width=\columnwidth]{how_mod.jpg}
 \end{paperbox}
 If your options include \lstinline!<mkfile>! then the index does not exist.
 If the index already exists, the index setup will be loaded automatically.
-In this case press \lstinline!<rmfile>! to delete the existing index.
+In this case press \lstinline!<rmfile>! to delete the existing index from the server.
 Remember to use the correct password when changing or deleting an existing index.
 Finally, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} again and ``forget'' the index on your client by pressing  \lstinline!<fgfile>!.
+
 \subsubsection{2. Find a suitable index to copy}
-Enter the name of the index you wish to copy in the \lstinline!setup file:! field.
+Enter the name of the index you wish to copy in the \lstinline!setup file! field.
 You may press \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} to navigate.
 The index setup will be loaded automatically when an existing index is specified.
+
 \subsubsection{3. Create new index setup}
-Enter the name of the new and non-existing index you wish to create in the \lstinline!setup file:! field.
-Select the password that has to provided when changing or deleting the new index.
+Enter the name of the new and non-existing index you wish to create in the \lstinline!setup file! field.
+Select the password that has to be provided when changing or deleting the new index.
 Press {\raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to create the index setup on the server.
-\subsubsection{4. Edit the new index setup}
-Edit the index setup fields.
-You may press \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} next to
-\lstinline!Model file filter(regexp)! to select which model file to scan.
-Variables in the scanned file appear as
-relevant options to other fields (when pressing \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}}),
-for instance  \lstinline!Variable:!.
+
+\subsubsection{4. Edit the model index setup}
+Set the regex file pattern to \lstinline!.*! if you do not already know the file name pattern.
+If you press \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} next to \lstinline!Search top directory! 
+and the directory contains files that match your file pattern, 
+FARK will list available file patterns and files in addition to any directories.
+When you have set the file pattern and search top directory,
+you may press \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} next to
+\lstinline!Model file filter(regexp)! to select which model file to scan for variables and dimensions.
+Variables in the scanned file appear as relevant options to other fields 
+(when pressing \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}}).
+Finally, set the model index variable so that it represents the epoch-time.
+\begin{quotebox}
+The index variable is used to sort the index. 
+The index variable range is used to determine if files overlap.
+\end{quotebox}
 When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to save your settings.
 \subsubsection{5. Create the model index}
 Switch to the \lstinline!Auto! tab.
@@ -384,18 +403,20 @@ Change focus to the ``Observation'' tab.
 Creating the observation index setup is similar to creating the model index setup as indicated above.
 
 \subsubsection{2. Edit the setup}
-After creating your new observation index setup, 
+After creating your new observation index setup, and set the file search parameters,
 you may press \raisebox{-0.2\height}{\includegraphics[height=13pt]{server.jpg}} next to
 \lstinline!Obs file filter(regexp)! to select which observation file to scan.
+Next, specify the \lstinline!BUFR type! and \lstinline!Sub type!.
 \begin{paperbox}{BUFR type and Sub type}
   \includegraphics[width=\columnwidth]{how_obs.jpg}
 \end{paperbox}
-The \lstinline!BUFR type! and \lstinline!Sub type! alternatives are extracted from the scanned file,
-along with their associated BUFR sequences.
+The alternatives are extracted from the scanned file, along with their associated BUFR sequences.
 Define the targets that you need in your observation index expression by entering values
 in the bottom row of the \lstinline!observation targets! table, and by pressing the \raisebox{-0.2\height}{\includegraphics[height=13pt]{plus.jpg}} to the right.
 You may remove a row by pressing  \raisebox{-0.2\height}{\includegraphics[height=13pt]{minus.jpg}} to the right of the respective row.
 The values of the removed row are put in the bottom row.
+Finally, add an observation index expression that gives the epoch-time 
+of the observation, that can be compared to the model index variable.
 When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to save your settings.
 
 \subsubsection{2. Create the observation index}
@@ -412,44 +433,49 @@ size and modification date of the index.
 
 \subsection{...create a colocation setup}
 Before you can make a colocation setup, you must have
-created a model and observation index. 
+created a model and observation index setup, 
+and scanned a corresponding model and observation file.
 Change focus to the ``Colocation'' tab. 
 
 \subsubsection{1. Create the setup file}
 Creating the colocation setup is similar to creating the model index setup as indicated above.
 
-\subsubsection{2. Scan files}
-Make sure you have scanned a model-file in the \lstinline!Model tab!,
-and observation-file in the \lstinline!Observation tab!,
-so that model variables and observation BUFR sequences can be listed where relevant.
-
-\subsubsection{3. Edit the setup}
+\subsubsection{2. Edit the setup}
 Add the model and observation targets needed to match an observation with the model, for instance
 \lstinline!time!, \lstinline!latitude! and \lstinline!longitude!.
-Add targets for the verification parameters, for instance \lstinline!pressure! and \lstinline!temperature!. 
-When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to save your settings.
-
+Add additional targets for the verification parameters, for instance \lstinline!pressure! and \lstinline!temperature!. 
 Finally define the matching expressions.
 Model targets with blank observation expressions are not used for matching.
+When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to save your settings.
 
-\subsubsection{4. Auto tab colocation job}
+\subsubsection{3. Auto tab colocation job}
 It is not recommended to run a colocation-job in the \lstinline!Auto tab! since this 
 is an extremely slow process that generates an enormous amount of output.
 
 \subsection{...create verification plots}
 Before you can make verification plots, you must have
-created a colocation {\em setup}.
+created a colocation {\em setup}, 
+updated the corresponding model and observation indexes and
+scanned a corresponding set og model and observation files.
 Change focus to the ``Plot'' tab.
 
 \subsubsection{1. Create the setup file} 
 Creating the plot setup is similar to creating the model index setup as indicated above. 
 Remember to change the output-fields if you copied the plot setup.
+Set the attributes and add your colocation datasets. 
+The table file will contain all the data from all the datasets. 
+\begin{quotebox}
+The verification script will only verify against observations that are present in all datasets, 
+\end{quotebox}
+so all datasets must overlap before the verification script can produce any output.
 When you are satisfied, press \raisebox{-0.2\height}{\includegraphics[height=13pt]{save.jpg}} to save your plot setup.
 
 \subsubsection{2. Create verification output} 
-Switch to the \lstinline!Auto tab!, add your plot-job to the table and 
-press \raisebox{-0.2\height}{\includegraphics[height=13pt]{run.jpg}} next to your plot job
-to run the job.
+Switch to the \lstinline!Auto tab!, add your plot-job to the table.
+\begin{quotebox}
+  The model and observation indexes must be available before you run your plot job.
+\end{quotebox}
+Press \raisebox{-0.2\height}{\includegraphics[height=13pt]{run.jpg}} next to your plot job, to run it.
 
 \subsubsection{3. Check to log}
 View the log-file by following the link in the \lstinline!Last! column. 
@@ -457,10 +483,10 @@ View the log-file by following the link in the \lstinline!Last! column.
   \includegraphics[width=\columnwidth]{plotlog.jpg}
 \end{paperbox}
 The plot log contains information on the indexes used, how many files they contained and when they were last modified.
-The log also lists the model files that were processed, and a summary of how data was removed during the processing. 
+The log also lists the model files that were processed, and a summary of why locations were removed during the processing. 
 The log is a good place to start looking for missing data.
 \begin{quotebox}
-  Check if your indexes are up-to-date if your time-dependent filters have removed all data.
+  Check if your indexes are up-to-date if your time-dependent filters have removed all the data.
 \end{quotebox}
 
 The script command (usually listed at the end of the log), contains the root output directory for the verification results, which you specified in the \lstinline!Plot tab!. The next section shows some examples of verification plots that the ``synop'' verification script typically would place there.
@@ -481,9 +507,9 @@ Here are some examples of verification plots.
   \centerline{\includegraphics[width=0.75\columnwidth]{ff10m_prof.jpg}}
 \end{paperbox}
 
-%\begin{paperbox}{FF10m SDE series}
-%  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
-%\end{paperbox}
+\begin{paperbox}{FF10m SDE series}
+  \centerline{\includegraphics[width=0.8\columnwidth]{ff10m_series_hl.jpg}}
+\end{paperbox}
 
 %\begin{paperbox}{FF10m MEAN series}
 %  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_time_hl.jpg}}
@@ -493,7 +519,7 @@ Here are some examples of verification plots.
 %  \centerline{\includegraphics[width=0.85\columnwidth]{ff10m_series_hl.jpg}}
 %\end{paperbox}
 
-%%\newpage
+\newpage
 \hypertarget{appendix}{}
 \section{Appendix}
 \hypertarget{netcdf}{}
@@ -535,18 +561,6 @@ which will duplicate a sub-section of the BUFR sequence the specified number of 
   BUFR sequence positions after a {\bf delayed replicator} are not ``fixed''.
 \end{quotebox}
 
-
-\section{Performance}
-
-Co-locating large amounts of data takes a lot of resources, and it is quite easy to
-set up jobs that are not able to run successfully. Generating {\bf table files}
-does not usually require too much memory but can take much processing time.
-However the {\bf plotting script} will typically not be able to process a {\bf table file} with 
-more than 10 million entries without running out of memory (on Ares). 
-This corresponds to 20 days of verification for northern Europe.
-Although FARK has all the features necessary for a full verification of
-operational forecast ensemble data using radiosonde data, this is option is
-probably not realistic from a computer resource perspective.
 
 
 

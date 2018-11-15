@@ -550,7 +550,7 @@ function showDropdown(target, arg = "") {
 		    documentLog.innerHTML="";
 		})
 	    .error(
-		function (error) { alert("Dropdown model filter request failed (system error)");}
+		function (error) { alert("Model dir filter request failed (system error)");}
 	    );
     } else if (target === 'modelFilterFile') { //***********************************
 	var file=model_getConfigFile();
@@ -599,7 +599,7 @@ function showDropdown(target, arg = "") {
 		    }
 		})
 	    .error(
-		function (error) { alert("Model filter request failed (system error)");}
+		function (error) { alert("Model file filter request failed (system error)");}
 	    );
     } else if (target === 'modelIndex') { //***********************************
 	var file=model_getConfigFile();
@@ -611,9 +611,13 @@ function showDropdown(target, arg = "") {
 		for (var variable in variables) {
 		    var fullname=variable;
 		    var dims=model_config[file]["variables"][variable];
+		    var size=model_config[file]["sizes"][variable]||1;
 		    if (dims != null) {fullname=fullname+"("+dims+")";};
-		    addChildButton(item,fullname,"model_setArray('indexVariable','"+variable+"');model_show();","Select <model variable>");
-		    added=true;
+		    console.log("Index:",fullname,size);
+		    if (size < 1000) {
+			addChildButton(item,fullname,"model_setArray('indexVariable','"+variable+"');model_show();","Select <model variable>");
+			added=true;
+		    }
 		}
 	    }
 	}
@@ -2065,7 +2069,7 @@ function dataToModel(data) {
 	    var path = loc + name;
 	}
 	if (model_config[path] === undefined) {
-	    model_config[path]={variables : {},dims:{}}
+	    model_config[path]={variables : {},dims:{},sizes : {}}
 	}
 	model_config[path]["filterDir"]=
 	    set(model_config[path]["filterDir"],models[ii].getAttribute("filterDir"));
@@ -2096,7 +2100,9 @@ function dataToModel(data) {
 	    for (var jj = 0; jj < variables.length; jj++) {
 		var name=variables[jj].getAttribute("name");
 		var dims=variables[jj].getAttribute("dims")||"";
+		var size=variables[jj].getAttribute("size")||"";
 		model_config[path]["variables"][name]=dims;
+		model_config[path]["sizes"][name]=size;
 	    }
 	} else if (model_config[path]["variables"] === undefined) {
 	    model_config[path]["variables"]={};
