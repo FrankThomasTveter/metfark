@@ -29,6 +29,7 @@
 # Column=time_epoch
 # Column=obs_file_id
 # Column=msg_id
+# Column=loc_id
 # Column=area
 # Column=lat_deg
 # Column=lon_deg
@@ -56,12 +57,15 @@ cols <- readComments(tablefile,"COLUMNS");
 
 print (paste("Reading data from ",tablefile));
 
-area <-attr["area",];
+area <-trim(getVal("area",attr));
 
-datafile <- grepFile(tablefile,paste0("#\\|area\\|",area),paste0(".",area));
-
-raw <- readData(datafile);
-
+if (area != "" ) {
+   datafile <- grepFile(tablefile,paste0("#\\|area\\|",area),paste0(".",area));
+   raw <- readData(datafile);
+} else {
+   raw <- readData(tablefile); 
+};
+   
 #raw <- raw[1:1000,];
 
 attr
@@ -74,16 +78,20 @@ timecol = "time_epoch";
 areacol = "area";
 altcol  = "altitude_meter";
 
-#thres = attr["geopotential_threshold",];
-thres = 20; # ~20 meter threshold for high/low stations 
-nw <- equals(raw,areacol,"Norway");
-
-print ("Extracting overlapping data.");
-data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id"),nw);
+if (area != "") {
+   nw <- equals(raw,areacol,area);
+   print ("Extracting overlapping data.");
+   data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id","loc_id"),nw);
+} else {
+   data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id","loc_id"));
+}
 
 rm(raw);gc(); # free memory
 
 print (paste("Splitting data"));
+
+#thres = attr["geopotential_threshold",];
+thres = 20; # ~20 meter threshold for high/low stations
 
 nl <- below(data[[1]],altcol,thres);
 nh <- above(data[[1]],altcol,thres);

@@ -56,12 +56,15 @@ leg <- readComments(tablefile,"LEGENDS");
 attr <- readComments(tablefile,"ATTRIBUTES");
 cols <- readComments(tablefile,"COLUMNS");
 
-area <-attr["area",];
+area <-trim(getVal("area",attr));
 
-datafile <- grepFile(tablefile,paste0("#\\|area\\|",area),paste0(".",area));
-
-raw <- readData(datafile);
-
+if (area != "" ) {
+   datafile <- grepFile(tablefile,paste0("#\\|area\\|",area),paste0(".",area));
+   raw <- readData(datafile);
+} else {
+   raw <- readData(tablefile);
+}
+   
 suffix = attr["Suffix",];
 
 setcol  = "set";
@@ -71,16 +74,18 @@ areacol = "area";
 altcol  = "altitude_meter";
 pcol   = "pressure_hpa";
 
-
-#thres = attr["geopotential_threshold",];
-nw <- equals(raw,areacol,"Norway");
-
-print ("Extracting overlapping data.");
-data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id","loc_id"),nw);
-
+if (area != "") {
+   nw <- equals(raw,areacol,area);
+   #if (sum(nw) < 1) { stop ("No norwegian stations found.");};
+   print ("Extracting overlapping data.");
+   data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id","loc_id"),nw);
+} else {
+   data <- overlap(raw,setcol,c("cycle_epoch","obs_file_id","msg_id","loc_id"));
+}
+   
 rm(raw);gc(); # free memory
 
-#if (sum(n) < 1) { stop ("No norwegian stations found.");};
+#thres = attr["geopotential_threshold",];
 
 for (ii in 1:attr["_N",]) {
 

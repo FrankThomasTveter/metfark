@@ -58,7 +58,7 @@ module observations
   integer :: KEY(JKEY)
   REAL*8 :: VALUES(KVALS)
   integer :: KTDLST(JELEM)
-  integer :: KTDEXP(JELEM)
+  integer :: KTDEXP(0:JELEM)
   CHARACTER*64 ::CNAMES(KELEM)
   CHARACTER*24 ::CUNITS(KELEM)
   CHARACTER*80 ::CVALS(KELEM)
@@ -2984,6 +2984,7 @@ CONTAINS
     type(obs_location), pointer :: currentLoc => null()
     character*25 :: myname="observation_makeLocList"
     integer :: ii
+    if(obs_bdeb)write(*,*)myname,"ind_pe:",associated(css%ind_pe),css%sid
     if (associated(css%firstLoc).and..not.css%locready.and.css%nloc.gt.0) then
        if (allocated(css%locdata)) deallocate(css%locdata)
        allocate(css%locdata(css%nloc),stat=irc)
@@ -3023,6 +3024,7 @@ CONTAINS
     integer :: cnt
     character*22 :: myname="observation_getNextLoc"
     if(obs_bdeb)write(*,*)myname,' Entering.',bok
+    if(obs_bdeb)write(*,*)myname,"ind_pe:",associated(css%ind_pe),css%sid
     ! get next observation from file
     if (.not.css%stackReady) then
        call observation_sortStack(css,crc250,irc)
@@ -3095,7 +3097,6 @@ CONTAINS
     character*250 :: crc250  ! error message string
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname="observation_getMsgObs"
-    type(obs_message), pointer :: newmsg => null()
     integer :: cnt, mcnt, ii, jj
     integer :: tcnt=0
     logical :: bbok
@@ -3146,7 +3147,7 @@ CONTAINS
                    return
                 end if
                 if(obs_bdeb)write(*,*)myname,' Setting msg obs.',css%msg%nobs,&
-                     & allocated(css%msg%trg_val),newmsg%ctrg,newmsg%cobs
+                     & allocated(css%msg%trg_val),css%msg%ctrg,css%msg%cobs
                 do ii=1,css%msg%ctrg
                    css%msg%trg_val(ii,css%msg%nobs)=css%trg_val(ii)
                    css%msg%trg_vok(ii,css%msg%nobs)=css%trg_vok(ii)
@@ -3196,8 +3197,17 @@ CONTAINS
     type(obs_message), pointer :: newmsg => null()
     integer :: cnt, ii, jj
     logical :: bbok
+    if(obs_bdeb)write(*,*)myname,"ind_pe:",associated(css%ind_pe),css%sid
     if (css%msg%nobs.gt.css%msg%cobs) then ! allocate more memory
        allocate(newmsg,stat=irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Unable to allocate newmsg:")
+          call observation_errorappendi(crc250,newmsg%nobs)
+          call observation_errorappendi(crc250,newmsg%cobs)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        newmsg%nobs=css%msg%nobs
        newmsg%vobs=css%msg%vobs
        newmsg%cobs=2*(css%msg%nobs)
@@ -3206,6 +3216,14 @@ CONTAINS
             & newmsg%trg_vok(newmsg%ctrg,newmsg%cobs),&
             & newmsg%trg_set(newmsg%cobs),newmsg%trg_res(newmsg%cobs),&
             & stat=irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Unable to allocate msg:")
+          call observation_errorappendi(crc250,newmsg%ctrg)
+          call observation_errorappendi(crc250,newmsg%cobs)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        if (allocated(css%msg%trg_val)&
             & .and.allocated(css%msg%trg_vok)&
             & .and.allocated(css%msg%trg_set)&
@@ -3223,7 +3241,8 @@ CONTAINS
           if (allocated(css%msg%trg_set)) deallocate(css%msg%trg_set)
           if (allocated(css%msg%trg_res)) deallocate(css%msg%trg_res)
        else if (obs_bdeb) then
-          write(*,*)myname,' Not allocated: msg%trg_* ',css%msg%nobs
+          write(*,*)myname,' Not allocated: msg%trg_* ',&
+               & css%msg%nobs,css%msg%cobs
        end if
        if (associated(css%msg)) deallocate(css%msg,stat=irc)
        observation_allocateMsg => newmsg
@@ -4471,7 +4490,7 @@ CONTAINS
        ISUBSET=1 ! start with first subset
        !write(*,*)myname,'G:'
        CALL BUSEL2(ISUBSET,KEL,KTDLEN,&
-            & KTDLST,KTDEXL,KTDEXP, &
+            & KTDLST,KTDEXL,KTDEXP(1), &
             & CNAMES,CUNITS,irc)
 
        !write(*,*)myname,'H:',ISUBSET
@@ -4538,6 +4557,8 @@ CONTAINS
        return
     end if
     unit=0
+    isubset=1
+    nsubset=0
     call observation_terminate(css,crc250,irc)
     IF (IRC.NE.0) THEN
        call observation_errorappend(crc250,myname)
@@ -5474,6 +5495,7 @@ CONTAINS
           return
        end if
        call parse_used(css%ind_pe,css%trg_req)
+       if(obs_bdeb)write(*,*)myname,' Parsed.',css%ind_exp250(1:css%ind_lene),associated(css%ind_pe)
     end if
     if (css%dyn_set) then
        ! parse position expressions
@@ -5530,6 +5552,7 @@ CONTAINS
     integer :: ii,dyn_pos,ipos
     logical :: bbok
     if(obs_bdeb) write(*,*)myname,' Entering.',css%int_val
+    if(obs_bdeb)write(*,*)myname,"ind_pe:",associated(css%ind_pe),css%sid
     !if(obs_bdeb) write(*,*)myname,'Position.',ntarget,css%dyn_pos,css%dyn_cnt,css%dyn_max
     !
     ! get next position
@@ -5642,6 +5665,7 @@ CONTAINS
              end if
           end do
           if (bok.and.css%ind_eset) then
+             if(obs_bdeb)write(*,*)myname,"ind_pe:",associated(css%ind_pe),css%sid
              if(obs_bdeb)write(*,*)myname,"Calling parse_evals.",&
                   & associated(css%ind_pe),allocated(css%trg_val),css%dyn_pos
              call parse_evals(css%ind_pe,css%trg_val,css%trg_vok,&
@@ -5654,6 +5678,7 @@ CONTAINS
                 return
              end if
           end if
+          if(obs_bdeb)write(*,*)myname,"Here ind_pe:",associated(css%ind_pe),css%sid
           if (bok.and.css%ind_tset) then
              call parse_evals(css%ind_pt,css%trg_val,css%trg_vok,&
                   & css%trg_val(css%ntrg),css%trg_vok(css%ntrg),crc250,irc)
@@ -5694,6 +5719,7 @@ CONTAINS
        end if
     end if
     observation_eval=bbok
+    if(obs_bdeb)write(*,*)myname,"Done ind_pe:",associated(css%ind_pe),css%sid
     return
   end function observation_eval
   !
@@ -5836,6 +5862,7 @@ CONTAINS
     integer :: irc           ! error return code (0=ok)
     character*22 :: myname="observation_terminate"
     if (css%ind_eset) then
+       if(obs_bdeb)write(*,*)myname,'Closing ind_pe:',associated(css%ind_pe),css%sid
        call parse_close(css%ind_pe,crc250,irc)
        if (irc.ne.0) then
           call observation_errorappend(crc250,myname)

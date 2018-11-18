@@ -778,6 +778,13 @@ CONTAINS
     integer, external :: length
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    if (.not.associated(css)) then
+       if(parse_bdeb)write(*,*)myname,"Input ",&
+            & imax,allocated(val)
+       irc=911
+       call parse_errorappend(crc250,myname//" Invalid session.")
+       return
+    end if
     imax=size(val)
     css%clen=0
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",imax,allocated(val)
@@ -1469,6 +1476,14 @@ CONTAINS
     integer, external :: length
     logical :: above,below,found
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    if (.not.associated(css)) then
+       if(parse_bdeb)write(*,*)myname,"Input ",&
+            & imax,size(set),&
+            & allocated(val),allocated(set)
+       irc=911
+       call parse_errorappend(crc250,myname//" Invalid session.")
+       return
+    end if
     imax=size(val)
     css%clen=0
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
@@ -2158,6 +2173,14 @@ CONTAINS
     integer, external :: length
     character*12 :: myname ="parse_evala"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
+    if (.not.associated(css)) then
+       if(parse_bdeb)write(*,*)myname,"Input ",&
+            & ctrg, cpos, npos, size(val),size(set),size(res),&
+            & allocated(val),allocated(set),allocated(res)
+       irc=911
+       call parse_errorappend(crc250,myname//" Invalid session.")
+       return
+    end if
     css%clen=0
     if(parse_bdeb)write(*,*)myname,"Entering '"//css%funcStr100(1:css%lenf)//"'",&
          & ctrg, cpos, npos, size(val),size(set),size(res),&

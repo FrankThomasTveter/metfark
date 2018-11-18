@@ -124,6 +124,7 @@ module model
      integer :: natt=0
      type(mod_attPointer), pointer :: att(:) => null()
      real :: scale = 1.0D0
+     real :: offset = 0.0D0
      ! missing value
      logical :: mmrange = .false. ! are limits set?
      logical :: mmset   = .false. ! were there any valid values?
@@ -900,7 +901,7 @@ CONTAINS
     if(mod_bdeb)write(*,*)myname,'Entering.',css%nFileIndexes,irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
-    mod_bdeb=.true.
+    !mod_bdeb=.true.
     write(*,*)myname," Pushing '"//path250(1:lenp)//"'"
     if (.not.associated(css%firstFile)) then
        call model_initfilestack(css,crc250,irc)
@@ -914,7 +915,7 @@ CONTAINS
     end if
     ! create new stack-item
     bok=.true.
-    //write(*,*)myname," Allocating"
+    !write(*,*)myname," Allocating"
     allocate(newFile,stat=irc)
     if (irc.ne.0) then
        bok=.false.
@@ -1523,6 +1524,7 @@ CONTAINS
     character*250 :: old250
     integer :: ook(10), orm(10)
     real :: pst(10)
+    character*80 :: buff80
     if(mod_bdeb)write(*,*) myname,' Entering.',irc
     call chop0(path250,250)
     lenp=length(path250,250,20)
@@ -1625,15 +1627,20 @@ CONTAINS
                   & currentFile%desc250(jj)(1:lend)
           end do
           do jj=1,currentFile%ndim
-             lend=length(currentFile%dim80(jj),80,5)
+             buff80=currentFile%dim80(jj)
+             call encode(buff80)
+             !call chop0(currentFile%var(jj)%ptr%var80,80)
+             lend=length(buff80,80,5)
              write(unitr,'(X,I0,X,A)',iostat=irc) currentFile%istop(jj),&
-                  & currentFile%dim80(jj)(1:lend)
+                  & buff80(1:lend)
           end do
           do jj=1,currentFile%nvar
+             buff80=currentFile%var(jj)%ptr%var80
+             call encode(buff80)
              !call chop0(currentFile%var(jj)%ptr%var80,80)
-             lenv=length(currentFile%var(jj)%ptr%var80,80,5)
+             lenv=length(buff80,80,5)
              write(unitr,'(I0,X,A)',advance="no",iostat=irc) &
-                  & currentFile%var(jj)%ptr%ndim, currentFile%var(jj)%ptr%var80(1:lenv)
+                  & currentFile%var(jj)%ptr%ndim,buff80(1:lenv)
              do kk=1,currentFile%var(jj)%ptr%ndim
                 write(unitr,'(X,I0)',advance="no",iostat=irc) currentFile%var(jj)%ptr%ind(kk)
              end do
@@ -1882,6 +1889,7 @@ CONTAINS
           pos=251 ! call findDelimiter(buff250(1:lenb)," ",pos)
           newFile%dim80(jj)=buff250(opos+1:min(opos+80,pos-1))
           call chop0(newFile%dim80(jj),80)
+          call decode(newFile%dim80(jj))
           lend=length(newFile%dim80(jj),80,10)
           newFile%dim_var(jj)=newFile%dim80(jj)(1:lend)
           newFile%dim_val(jj)=real(newFile%istop(jj))
@@ -1920,7 +1928,9 @@ CONTAINS
           opos=pos
           call findDelimiter(buff250(1:lenb)," ",pos)
           v%var80=buff250(opos+1:min(80+opos,pos-1))
-          v%lenv=pos-opos-1
+          call chop0(v%var80,80)
+          call decode(v%var80)
+          v%lenv=length(v%var80,80,pos-opos-1)
           newFile%var80(jj)=v%var80
           newFile%lenv(jj)=v%lenv
           allocate(v%ind(v%ndim),v%istart(v%ndim),v%icount(v%ndim),stat=irc)
@@ -5260,7 +5270,7 @@ CONTAINS
           else if (v%f1(ii).eq.v%m1) then
              model_getValue=.false.
           else
-             val=v%f1(ii)*v%scale
+             val=(v%f1(ii)*v%scale)+v%offset
           end if
        case (nf_int2)
           if (.not.allocated(v%f2)) then
@@ -5273,7 +5283,7 @@ CONTAINS
           else if (v%f2(ii).eq.v%m2) then
              model_getValue=.false.
           else
-             val=v%f2(ii)*v%scale
+             val=(v%f2(ii)*v%scale)+v%offset
           end if
        case (nf_int)
           if (.not.allocated(v%f4)) then
@@ -5286,7 +5296,7 @@ CONTAINS
           else if (v%f4(ii).eq.v%m4) then
              model_getValue=.false.
           else
-             val=v%f4(ii)*v%scale
+             val=(v%f4(ii)*v%scale)+v%offset
           end if
        case (nf_real)
           if (.not.allocated(v%fr)) then
@@ -5299,7 +5309,7 @@ CONTAINS
           else if (v%fr(ii).eq.v%mr) then
              model_getValue=.false.
           else
-             val=v%fr(ii)*v%scale
+             val=(v%fr(ii)*v%scale)+v%offset
           end if
        case (nf_double)
           if (.not.allocated(v%fd)) then
@@ -5312,7 +5322,7 @@ CONTAINS
           else if (v%fd(ii).eq.v%md) then
              model_getValue=.false.
           else
-             val=v%fd(ii)*v%scale
+             val=(v%fd(ii)*v%scale)+v%offset
           end if
        case DEFAULT
           model_getValue=.false.
@@ -8082,6 +8092,7 @@ CONTAINS
        call chop0(v%var80,80)
        ! process attributes
        v%scale=1.0
+       v%offset=0.0
        v%mc=char(nf_fill_char)
        v%m1=nf_fill_int1
        v%m2=nf_fill_int2
@@ -8168,6 +8179,14 @@ CONTAINS
                 v%scale=att%ad(1)
              case DEFAULT
              end select
+          else if (att%att80(1:att%lena).eq."add_offset") then
+             select case (att%type)
+             case(nf_real)
+                v%offset=att%ar(1)
+             case(nf_double)
+                v%offset=att%ad(1)
+             case DEFAULT
+             end select
           else if (att%att80(1:att%lena).eq."missing_value") then
              select case (att%type)
              case (nf_char)
@@ -8236,9 +8255,9 @@ CONTAINS
           select case (v%type)
           case (nf_char)
           case (nf_int1)
-             if (mod_bdeb)write(*,*)myname,"Int1.",v%scale
+             if (mod_bdeb)write(*,*)myname,"Int1.",v%scale,v%offset
              do ii=1,v%len
-                val=real(v%f1(ii)*v%scale)
+                val=real((v%f1(ii)*v%scale)+v%offset)
                 if (v%f1(ii).ne.v%m1) then
                    if (v%mmset) then
                       v%minval=min(v%minval,val)
@@ -8251,9 +8270,9 @@ CONTAINS
                 end if
              end do
           case (nf_int2)
-             if (mod_bdeb)write(*,*)myname,"Int2.",v%scale
+             if (mod_bdeb)write(*,*)myname,"Int2.",v%scale,v%offset
              do ii=1,v%len
-                val=real(v%f2(ii)*v%scale)
+                val=real((v%f2(ii)*v%scale)+v%offset)
                 if (v%f2(ii).ne.v%m2) then
                    if (v%mmset) then
                       v%minval=min(v%minval,val)
@@ -8266,9 +8285,9 @@ CONTAINS
                 end if
              end do
           case (nf_int)
-             if (mod_bdeb)write(*,*)myname,"Int4.",v%scale
+             if (mod_bdeb)write(*,*)myname,"Int4.",v%scale,v%offset
              do ii=1,v%len
-                val=real(v%f4(ii)*v%scale)
+                val=real((v%f4(ii)*v%scale)+v%offset)
                 if (v%f4(ii).ne.v%m4) then
                    if (v%mmset) then
                       v%minval=min(v%minval,val)
@@ -8281,9 +8300,9 @@ CONTAINS
                 end if
              end do
           case (nf_real)
-             if (mod_bdeb)write(*,*)myname,"Real.",v%scale
+             if (mod_bdeb)write(*,*)myname,"Real.",v%scale,v%offset
              do ii=1,v%len
-                val=real(v%fr(ii)*v%scale)
+                val=real((v%fr(ii)*v%scale)+v%offset)
                 if (v%fr(ii).ne.v%mr) then
                    if (v%mmset) then
                       v%minval=min(v%minval,val)
@@ -8296,9 +8315,9 @@ CONTAINS
                 end if
              end do
           case (nf_double)
-             if (mod_bdeb)write(*,*)myname,"Double.",v%scale
+             if (mod_bdeb)write(*,*)myname,"Double.",v%scale,v%offset
              do ii=1,v%len
-                val=v%fd(ii)*v%scale
+                val=(v%fd(ii)*v%scale)+v%offset
                 if (v%fd(ii).ne.v%md) then
                    if (v%mmset) then
                       v%minval=min(v%minval,val)
@@ -9014,5 +9033,44 @@ CONTAINS
        end if
     end do
   end subroutine findDelimiter
+
+  subroutine decode(string)
+    character*(*) :: string
+    string=replaceText(string,"%1%"," ")
+    return
+  end subroutine decode
+  !
+  subroutine encode(string)
+    character*(*) :: string
+    string=replaceText(string," ","%1%")
+    return
+  end subroutine encode
+  !
+  FUNCTION ReplaceText (s,text,rep)  RESULT(outs)
+    CHARACTER(*)        :: s,text,rep
+    CHARACTER(LEN(s)+100) :: outs     ! provide outs with extra 100 char len
+    INTEGER             :: i, mi, nt, nr, ns, ms
+    outs = "";
+    outs(1:len_trim(s))=trim(s) ;
+    nt = LEN(text) ;
+    nr = LEN(rep) ;
+    ns = len_trim(s) ;
+    ms = len(s)+100;
+    !write(*,*) "S:"//trim(s)//":",ns,":"//trim(outs)//":",nt,nr
+    mi=0
+    DO
+       i = mi+INDEX(outs(mi+1:ns),text(:nt)) ;
+       IF (i <= mi) EXIT
+       !write(*,*) "Outs:"//outs(:i-1)//"|"//outs(i:i+nt-1)//":",&
+       !     & i-1,":"//rep(:nr)//":",nr,":",i+nt,ns-nr-i+1,(i+nt)-(ns-nr-i+1)+1
+       if (ns+nr-nt <= ms) then
+          outs(1:ns+nr-nt) = outs(:i-1) // rep(:nr) // outs(i+nt:ns)
+          ns=ns+nr-nt
+          mi=i-1+nr;
+       else ! not enough space in string
+          EXIT
+       end if
+    END DO
+  END FUNCTION ReplaceText
   !
 end module model

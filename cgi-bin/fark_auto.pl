@@ -27,8 +27,8 @@ eval {
     my $debug=0;
     if (defined $param->{debug}[0]) {
 	$debug=1;       # debug this script (0=omit output)
-	fark::debug(1);  # debug observations
-	fark::debug(2);  # debug models
+	#fark::debug(1);  # debug observations
+	#fark::debug(2);  # debug models
 	fark::debug(3);  # debug colocation
 	fark::debug(4);  # debug plot
 	#fark::debug(5);  # debug parse

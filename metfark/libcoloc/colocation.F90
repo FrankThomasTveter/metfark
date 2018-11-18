@@ -1721,7 +1721,7 @@ CONTAINS
                 end if
                 !
                 ! set observation variables...
-                !if(col_bdeb)write(*,*)myname,'Set model values.'
+                if(col_bdeb)write(*,*)myname,'Set model values.'
                 call  model_setObsVal(mss,oss%ntrg,oss%trg_val,oss%trg_vok,crc250,irc)
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_setObsVal")
@@ -1729,7 +1729,7 @@ CONTAINS
                 end if
 
                 ! set match variables...
-                !if(col_bdeb)write(*,*)myname,'Set model targets.'
+                if(col_bdeb)write(*,*)myname,'Set model targets.'
                 call  model_setTargetVal(mss,css%cMatch,css%mat_2trg,css%mat_val,&
                      & crc250,irc)
                 if (irc.ne.0) then
@@ -1739,7 +1739,7 @@ CONTAINS
                 ! check target values
                 lok=.true.
                 ! make new location from observation
-                !if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
+                if(col_bdeb.and.model_lucky(locid))write(*,*)myname,'Push location:',locid
                 call model_locpushtarget(mss,locid,lok,crc250,irc) ! uses match variables
                 if (irc.ne.0) then
                    call colocation_errorappend(crc250,"model_locPush")

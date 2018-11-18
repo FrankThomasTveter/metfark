@@ -74,6 +74,23 @@ getOrientation <- function(attributes) {
   return (identical(toString(attributes["Orientation",1]),"landscape"));
 }
 
+# returns string w/o leading whitespace
+trim.leading <- function (x)  sub("^\\s+", "", x)
+
+# returns string w/o trailing whitespace
+trim.trailing <- function (x) sub("\\s+$", "", x)
+
+# returns string w/o leading or trailing whitespace
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+
+getVal <- function (x,y) {
+    if (x %in% rownames(y)) {
+        return(y[x,]);
+    } else {
+        return("");
+    }
+}
+
 ###################### output data
 
 ## function to open graphics output
