@@ -722,6 +722,13 @@ CONTAINS
                & currentFile%ind_start,currentFile%ind_stop,&
                & currentFile%nmessage,currentFile%ncat,currentFile%nsub,&
                & currentFile%lenf,currentFile%fn250(1:currentFile%lenf)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," unable to write to "//path250(1:lenp))
+             call observation_errorappendi(crc250,irc)
+             call observation_errorappend(crc250,"\n")
+             return
+          end if
           !
           if (currentFile%ind_lim) then
              write(*,'(2X,A," <",F0.1,",",F0.1,">")') currentFile%fn250(1:currentFile%lenf),&
@@ -734,9 +741,23 @@ CONTAINS
           do while (.not.associated(currentCat,target=currentFile%lastCategory)) 
              write(unitr,'(3(X,I0))',iostat=irc) currentCat%category,&
                   & currentCat%cnt,currentCat%nsub
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," unable to write to "//path250(1:lenp))
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
              currentSub=> currentCat%firstSubCategory%next
              do while (.not.associated(currentSub,target=currentCat%lastSubCategory)) 
                 write(unitr,'(2(X,I0))',iostat=irc) currentSub%subcategory,currentSub%cnt
+                if (irc.ne.0) then
+                   call observation_errorappend(crc250,myname)
+                   call observation_errorappend(crc250," unable to write to "//path250(1:lenp))
+                   call observation_errorappendi(crc250,irc)
+                   call observation_errorappend(crc250,"\n")
+                   return
+                end if
                 currentSub=>currentSub%next
              end do
              currentCat=>currentCat%next
@@ -914,6 +935,13 @@ CONTAINS
           newCat%lastSubCategory%prev => newCat%firstSubCategory
           newCat%firstSubCategory%next => newCat%lastSubCategory
           read(unitr,'(A)',iostat=irc) buff250
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," unable to read "//path250(1:lenp))
+             call observation_errorappendi(crc250,irc)
+             call observation_errorappend(crc250,"\n")
+             return
+          end if
           call chop0(buff250,250)
           pos=0
           opos=pos
@@ -945,6 +973,13 @@ CONTAINS
              newCat%lastSubCategory%prev%next => newSub
              newCat%lastSubCategory%prev => newSub
              read(unitr,'(A)',iostat=irc) buff250
+             if (irc.ne.0) then
+                call observation_errorappend(crc250,myname)
+                call observation_errorappend(crc250," unable to read "//path250(1:lenp))
+                call observation_errorappendi(crc250,irc)
+                call observation_errorappend(crc250,"\n")
+                return
+             end if
              call chop0(buff250,250)
              pos=0
              opos=pos
@@ -5069,6 +5104,9 @@ CONTAINS
           end if
           line=0
           read(iunit,'(I6,X,I4,X,I8,X,I2,X,A)',iostat=irc) code, scnt, subcode, lcnt, val250
+          if (irc.ne.0) then
+             return
+          end if
           line=line+1
           if (irc.ne.0) then
              if(obs_bdeb)write(*,*) myname,'Unable to read: ',c250(1:lent)
@@ -5093,6 +5131,9 @@ CONTAINS
              end if
              do pos = 2,scnt
                 read(iunit,'(12X,I8,X,I2,X,A)',iostat=irc) subcode, lcnt, val250
+                if (irc.ne.0) then
+                   return
+                end if
                 line=line+1
              if (irc.eq.0) then
                    call getRest(val250,iunit,lcnt-1)
@@ -5112,11 +5153,17 @@ CONTAINS
                 end if
              end do
              read(iunit,'(I6,X,I4,X,I8,X,I2,X,A)',iostat=irc) code, scnt, subcode, lcnt, val250
+             if (irc.ne.0) then
+                return
+             end if
              bdone=(irc.ne.0)
              line=line+1
              irc=0
           end do
           close(iunit,iostat=irc)
+          if (irc.ne.0) then
+             return
+          end if
           if (ii.eq.1) then
              ctable%maxnn=cnt;
              ctable%nn=cnt;
@@ -5880,9 +5927,16 @@ CONTAINS
     integer :: irc
     character*25 :: myname="observation_fileStartXml"
     if (associated(css%currentFile)) then
-       write(ounit,'(2X,A)')"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
+       write(ounit,'(2X,A)',iostat=irc)"<observationFile file='"//css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
     else
-       write(ounit,'(2X,A)')"<observationFile>"
+       write(ounit,'(2X,A)',iostat=irc)"<observationFile>"
+    end if
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," unable to write to file ")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
     end if
     return
   end subroutine observation_filestartxml
@@ -5919,7 +5973,14 @@ CONTAINS
        write(s1,'(I0)') locid
        call chop0(s1,50)
        len1=length(s1,50,10)
-       write(ounit,'(3X,A,I0,A)')"<message id='"//s1(1:len1)//"' subset='",isubset,"'>"
+       write(ounit,'(3X,A,I0,A)',iostat=irc)"<message id='"//s1(1:len1)//"' subset='",isubset,"'>"
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," unable to write to file ")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        !
        ! add target values
        !
@@ -6304,7 +6365,14 @@ CONTAINS
     type(obs_subCategory), pointer :: currentSub !  current file
     ! write summary
     if (associated(css%currentFile)) then
-       write(ounit,'(3X,A)')"<summary>"
+       write(ounit,'(3X,A)',iostat=irc)"<summary>"
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," unable to write to file ")
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
        if (css%currentFile%mok(1).eq.css%currentFile%mok(7)) then
           write(ounit,'(4X,A,I0,A,I0,A)')"<messages found='",css%currentFile%mok(1),&
                & "' accepted='",css%currentFile%mok(7),"'/>"

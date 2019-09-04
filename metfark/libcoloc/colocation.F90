@@ -1819,17 +1819,31 @@ CONTAINS
                 return
              end if
              if (ncol.ne.0) then
-                write(ounit,"(X,A)",advance="no") name80(1:lena)
+                write(ounit,"(X,A)",advance="no",iostat=irc) name80(1:lena)
              else
-                write(ounit,"(X,A)") name80(1:lena)
+                write(ounit,"(X,A)",iostat=irc) name80(1:lena)
+             end if
+             if (irc.ne.0) then
+                call colocation_errorappend(crc250,myname)
+                call colocation_errorappend(crc250," Unable to write 01 "//name80(1:lena))
+                call colocation_errorappendi(crc250,irc)
+                call colocation_errorappend(crc250,"\n")
+                return
              end if
              ocnt=ocnt+1
              fill=fillx
              do ii=1,ncol
                 if (ii.ne.ncol) then
-                   write(ounit,"(X,A)",advance="no") cval50(ii)(1:clen(ii))
+                   write(ounit,"(X,A)",advance="no",iostat=irc) cval50(ii)(1:clen(ii))
                 else
-                   write(ounit,"(X,A)") cval50(ii)(1:clen(ii))
+                   write(ounit,"(X,A)",iostat=irc) cval50(ii)(1:clen(ii))
+                end if
+                if (irc.ne.0) then
+                   call colocation_errorappend(crc250,myname)
+                   call colocation_errorappend(crc250," Unable to write 02 "//name80(1:lena))
+                   call colocation_errorappendi(crc250,irc)
+                   call colocation_errorappend(crc250,"\n")
+                   return
                 end if
              end do
              if(col_bdeb.and.locid.lt.100)then
@@ -3157,6 +3171,14 @@ CONTAINS
        return
     end if
     write(unitw,'("Data available.")',iostat=irc)
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Unable to write 03 "//fill250(1:lenf))
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
+       if (col_bdeb)write(*,*) myname,"unable to write 03 "//fill250(1:lenf)
+       return
+    end if
     close (unitw,iostat=irc)
     open (unit=unitw,form="formatted",action="read",iostat=irc,file=fill250(1:lenf))
     if (irc.ne.0) then
@@ -3168,6 +3190,14 @@ CONTAINS
        return
     end if
     read(unitw,*,iostat=irc) buff100
+    if (irc.ne.0) then
+       call colocation_errorappend(crc250,myname)
+       call colocation_errorappend(crc250," Unable to read 01"//fill250(1:lenf))
+       call colocation_errorappendi(crc250,irc)
+       call colocation_errorappend(crc250,"\n")
+       if (col_bdeb)write(*,*) myname,"unable to read 01 "//fill250(1:lenf)
+       return
+    end if
     close (unitw,iostat=irc)
     irc=chmod(fill250(1:lenf),"a+w")
     if (irc.ne.0) then

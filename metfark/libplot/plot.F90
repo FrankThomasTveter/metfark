@@ -393,7 +393,7 @@ CONTAINS
     type(plot_attribute), pointer :: cat !  current attribute
     lenn=length(name80,80,10)
     lenv=length(val250,250,10)
-    if (lenn.ne.0.and.lenv.ne.0) then
+    if (lenn.ne.0) then
        allocate(cat,stat=irc)
        if (irc.ne.0) then
           call plot_errorappend(crc250,myname)

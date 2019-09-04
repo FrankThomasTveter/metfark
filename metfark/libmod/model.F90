@@ -1618,6 +1618,13 @@ CONTAINS
                & currentFile%nvar,&
                & currentFile%lenf,&
                & currentFile%fn250(1:LENF)
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to read file 01.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
           ! write category summary
           do jj=1,currentFile%nsort
              lend=length(currentFile%desc250(jj),250,5)
@@ -1625,6 +1632,13 @@ CONTAINS
                   & currentFile%sort(jj),&
                   & currentFile%indsort(jj),&
                   & currentFile%desc250(jj)(1:lend)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to read file 02.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end do
           do jj=1,currentFile%ndim
              buff80=currentFile%dim80(jj)
@@ -1633,6 +1647,13 @@ CONTAINS
              lend=length(buff80,80,5)
              write(unitr,'(X,I0,X,A)',iostat=irc) currentFile%istop(jj),&
                   & buff80(1:lend)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to read file 03.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end do
           do jj=1,currentFile%nvar
              buff80=currentFile%var(jj)%ptr%var80
@@ -1641,14 +1662,42 @@ CONTAINS
              lenv=length(buff80,80,5)
              write(unitr,'(I0,X,A)',advance="no",iostat=irc) &
                   & currentFile%var(jj)%ptr%ndim,buff80(1:lenv)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to write to file 01.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
              do kk=1,currentFile%var(jj)%ptr%ndim
                 write(unitr,'(X,I0)',advance="no",iostat=irc) currentFile%var(jj)%ptr%ind(kk)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Unable to write to file 02.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
              end do
              write(unitr,'(X,L1)',advance="no",iostat=irc) &
                   & currentFile%var(jj)%ptr%mmrange
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to write to file 03.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
              if (currentFile%var(jj)%ptr%mmrange) then
                 write(unitr,'(X,L1)',advance="no",iostat=irc) &
                      & currentFile%var(jj)%ptr%mmset
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Unable to write to file 04.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
                 if (currentFile%var(jj)%ptr%mmset) then
                    call model_wash(currentFile%var(jj)%ptr%minval,minval50,lenmi)
                    call model_wash(currentFile%var(jj)%ptr%maxval,maxval50,lenma)
@@ -1656,8 +1705,22 @@ CONTAINS
                 else
                    write(unitr,*,iostat=irc)
                 end if
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Unable to write to file 05.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
              else
                 write(unitr,*,iostat=irc)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Unable to write to file 06.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
              end if
           end do
           if (currentFile%ind_lim) then
@@ -6898,9 +6961,23 @@ CONTAINS
     ! start xml output
     !
     if (nloc.eq.0) then
-       write(ounit,'(3X,A,I0,A)')"<model loc='",nloc,"'/>"
+       write(ounit,'(3X,A,I0,A)',iostat=irc)"<model loc='",nloc,"'/>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 07.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     else
-       write(ounit,'(3X,A,I0,A)')"<model loc='",nloc,"'>"
+       write(ounit,'(3X,A,I0,A)',iostat=irc)"<model loc='",nloc,"'>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 08.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
        !
        ! mark all variables as not-processed
        !
@@ -7147,7 +7224,14 @@ CONTAINS
        !
        ! stop xml output
        !
-       write(ounit,'(3X,"</model>")')
+       write(ounit,'(3X,"</model>")',iostat=irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 09.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
     ! !
     ! ! clear location positions
@@ -7193,7 +7277,14 @@ CONTAINS
             & f%dim80(loc%search(0))(1:f%lend(loc%search(0)))//"'"
        call chop0(buff250,250)
        lenb=length(buff250,250,10)
-       write(ounit,'(4X,A)') "<field "//buff250(1:lenb)//"/>"
+       write(ounit,'(4X,A)',iostat=irc) "<field "//buff250(1:lenb)//"/>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 10.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
     return
   end subroutine model_writeIgnoredLocXML
@@ -7339,8 +7430,15 @@ CONTAINS
           if(mod_bdeb)write(*,*)myname,"Calling Incrementing position."
           if (set) then ! val.ne.nf_fill_double
              if (first) then
-                write(ounit,'(4X,A)') "<field "//loc250(1:lenl)//" "//&
+                write(ounit,'(4X,A)',iostat=irc) "<field "//loc250(1:lenl)//" "//&
                      & var250(1:lenv)//pos250(1:lenp)//">"
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Unable to write to file 11.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
                 first=.false.
              end if
              wgt=model_getWeight(ninn,inn,loc,ff) ! current weight
@@ -7355,7 +7453,14 @@ CONTAINS
              call chop0(buff250,250)
              lenb=length(buff250,250,10)
              if (lenb.ne.0) then
-                write(ounit,'(5X,A)') buff250(1:lenb)
+                write(ounit,'(5X,A)',iostat=irc) buff250(1:lenb)
+                if (irc.ne.0) then
+                   call model_errorappend(crc250,myname)
+                   call model_errorappend(crc250," Unable to write to file 12.")
+                   call model_errorappendi(crc250,irc)
+                   call model_errorappend(crc250,"\n")
+                   return
+                end if
              end if
              tsum=tsum+wgt*val
              twgt=twgt+wgt
@@ -7407,7 +7512,14 @@ CONTAINS
           call chop0(buff250,250)
           lenb=length(buff250,250,10)
           if (lenb.ne.0) then
-             write(ounit,'(5X,A)') buff250(1:lenb)
+             write(ounit,'(5X,A)',iostat=irc) buff250(1:lenb)
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to write to file 13.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end if
        end if
        cout=model_incrementPos(nout,out,loc,ff)
@@ -7415,7 +7527,14 @@ CONTAINS
        if(mod_bdeb)write(*,*)myname,'Count outer:',cout,cnt,bout
     end do
     if (.not.first) then
-       write(ounit,'(4X,A)') "</field>"
+       write(ounit,'(4X,A)',iostat=irc) "</field>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 14.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
     if(allocated(out)) deallocate(out)
     if(allocated(inn)) deallocate(inn)
@@ -7442,8 +7561,22 @@ CONTAINS
     loc => css%locData(pos)%ptr
     if (associated(loc)) then
        if (loc%bok) then
-          write(ounit,'(3X,A,I0,A)') "<location id='",loc%locid,"' status='ok'>"
-          write(ounit,'(4X,A,I0,A)') "<model targets='",loc%ctrg,"'>"
+          write(ounit,'(3X,A,I0,A)',iostat=irc) "<location id='",loc%locid,"' status='ok'>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 15.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          write(ounit,'(4X,A,I0,A)',iostat=irc) "<model targets='",loc%ctrg,"'>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 16.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
           do ii=1,loc%ctrg
              if (loc%trg_set(ii)) then
                 call model_wash(loc%trg_val(ii),s3,len3)
@@ -7454,26 +7587,75 @@ CONTAINS
              else
                 len3=0
              end if
-             write (ounit,'(5X,A)') "<target name='"//&
+             write (ounit,'(5X,A)',iostat=irc) "<target name='"//&
                   & css%trg80(ii)(1:css%trg_lent(ii))//"'"//&
                   & s3(1:len3)//">"
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to write to file 17.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end do
-          write(ounit,'(4X,A)') "</model>"
-          write(ounit,'(4X,A,I0,A)') "<observation targets='",loc%cobs,"'>"
+          write(ounit,'(4X,A)',iostat=irc) "</model>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 18.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          write(ounit,'(4X,A,I0,A)',iostat=irc) "<observation targets='",loc%cobs,"'>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 19.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
           do ii=1,loc%cobs
              call model_wash(loc%obs_val(ii),s3,len3)
              if (len3.ne.0) then
                 s3=" value='"//s3(1:len3)//"'"
                 len3=len3+9
              end if
-             write (ounit,'(5X,A)') "<target name='"//&
+             write (ounit,'(5X,A)',iostat=irc) "<target name='"//&
                   & css%obs_var(ii)(1:css%obs_lenv(ii))//"'"//&
                   & s3(1:len3)//">"
+             if (irc.ne.0) then
+                call model_errorappend(crc250,myname)
+                call model_errorappend(crc250," Unable to write to file 20.")
+                call model_errorappendi(crc250,irc)
+                call model_errorappend(crc250,"\n")
+                return
+             end if
           end do
-          write(ounit,'(4X,A)') "</observation>"
-          write(ounit,'(3X,A)') "</location>"
+          write(ounit,'(4X,A)',iostat=irc) "</observation>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 21.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
+          write(ounit,'(3X,A)',iostat=irc) "</location>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 22.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
        else
-          write(ounit,'(3X,A,I0,A)') "<location id='",loc%locid,"' status='rejected'/>"
+          write(ounit,'(3X,A,I0,A)',iostat=irc) "<location id='",loc%locid,"' status='rejected'/>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 23.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
        end if
     end if
     return
@@ -7489,10 +7671,24 @@ CONTAINS
     integer, external :: length
     character*50 :: s1,s2,s3,s4
     integer :: ii
-    write(ounit,'(1X,A,I0,A)')"<model targets='",css%ctrg,"'>"
+    write(ounit,'(1X,A,I0,A)',iostat=irc)"<model targets='",css%ctrg,"'>"
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 24.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     if (css%trg_orm(0).ne.0) then
-       write(ounit,'(2X,A,I0,A)')"<check removed='",css%trg_orm(0),&
-               & "' reason='outside target limits.'>"
+       write(ounit,'(2X,A,I0,A)',iostat=irc)"<check removed='",css%trg_orm(0),&
+            & "' reason='outside target limits.'>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 25.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
     do ii=1,css%ctrg
        if (css%trg_orm(ii).ne.0) then
@@ -7519,14 +7715,35 @@ CONTAINS
           else
              len4=0
           end if
-          write(ounit,'(3X,A,I0,A)')"<target removed='",css%trg_orm(ii),&
+          write(ounit,'(3X,A,I0,A)',iostat=irc)"<target removed='",css%trg_orm(ii),&
                & "'"//s1(1:len1)//s3(1:len3)//s4(1:len4)//"/>"
+          if (irc.ne.0) then
+             call model_errorappend(crc250,myname)
+             call model_errorappend(crc250," Unable to write to file 26.")
+             call model_errorappendi(crc250,irc)
+             call model_errorappend(crc250,"\n")
+             return
+          end if
        end if
     end do
     if (css%trg_orm(0).ne.0) then
-       write(ounit,'(2X,A,I0,A)')"</check>"
+       write(ounit,'(2X,A,I0,A)',iostat=irc)"</check>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 27.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
-    write(ounit,'(1X,A)')"</model>"
+    write(ounit,'(1X,A)',iostat=irc)"</model>"
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 28.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     return
   end subroutine model_writeModelDataXML
   !
@@ -7831,10 +8048,17 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_filestartxml"
     if (associated(css%currentFile)) then
-       write(ounit,'(1X,A)')"<modelFile file='"//&
+       write(ounit,'(1X,A)',iostat=irc)"<modelFile file='"//&
             & css%currentFile%fn250(1:css%currentFile%lenf)//"'>"
     else
-       write(ounit,'(1X,A)')"<modelFile>"
+       write(ounit,'(1X,A)',iostat=irc)"<modelFile>"
+    end if
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 29.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
     end if
     return
   end subroutine model_filestartxml
@@ -7846,26 +8070,95 @@ CONTAINS
     integer :: irc
     character*25 :: myname="model_filestopxml"
     integer :: ii
-    write(ounit,'(2X,A)')"<summary>"
+    write(ounit,'(2X,A)',iostat=irc)"<summary>"
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 30.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     if (css%currentFile%ook(1).eq.css%currentFile%ook(4)) then
-       write(ounit,'(3X,A,I0,A,I0,A)')"<locations found='",css%currentFile%ook(1),&
+       write(ounit,'(3X,A,I0,A,I0,A)',iostat=irc)"<locations found='",css%currentFile%ook(1),&
             & "' accepted='",css%currentFile%ook(4),"'/>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 31.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     else
-       write(ounit,'(3X,A,I0,A,I0,A)')"<locations found='",css%currentFile%ook(1),&
+       write(ounit,'(3X,A,I0,A,I0,A)',iostat=irc)"<locations found='",css%currentFile%ook(1),&
             & "' accepted='",css%currentFile%ook(4),"'>"
-       if (css%currentFile%orm(2).ne.0) write(ounit,'(4X,A,I0,A)')"<check removed='",&
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 32.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       if (css%currentFile%orm(2).ne.0) then
+       write(ounit,'(4X,A,I0,A)',iostat=irc)"<check removed='",&
             & css%currentFile%orm(2),&
             & "' reason='rejected by target filter.'"
-       if (css%currentFile%orm(3).ne.0) write(ounit,'(4X,A,I0,A)')"<check removed='",&
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 33.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    if (css%currentFile%orm(3).ne.0) then
+       write(ounit,'(4X,A,I0,A)',iostat=irc)"<check removed='",&
             & css%currentFile%orm(3),&
             & "' reason='search failed.'/>"
-       if (css%currentFile%orm(4).ne.0) write(ounit,'(4X,A,I0,A)')"<check removed='",&
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 34.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    if (css%currentFile%orm(4).ne.0) then
+       write(ounit,'(4X,A,I0,A)',iostat=irc)"<check removed='",&
             & css%currentFile%orm(4),&
             & "' reason='rejected by model filter.'/>"
-       write(ounit,'(3X,A)')"</locations>"
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Unable to write to file 35.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
     end if
-    write(ounit,'(2X,A)')"</summary>"
-    write(ounit,'(1X,A)')"</modelFile>"
+    write(ounit,'(3X,A)',iostat=irc)"</locations>"
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 36.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    end if
+    write(ounit,'(2X,A)',iostat=irc)"</summary>"
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 37.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
+    write(ounit,'(1X,A)',iostat=irc)"</modelFile>"
+    if (irc.ne.0) then
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Unable to write to file 38.")
+       call model_errorappendi(crc250,irc)
+       call model_errorappend(crc250,"\n")
+       return
+    end if
     return
   end subroutine model_filestopxml
   ! get nice real value

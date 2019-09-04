@@ -7,8 +7,8 @@ getArguments <- function () {
    args = commandArgs(trailingOnly=TRUE);
    if (length(args)==0) {
       print ("At least one argument must be supplied (using defaults).");
-     args[1] = "syno_002d.table";
-     args[2] = "output/syno_002d/";
+     args[1] = "test.table";
+     args[2] = "output/test/";
    } else if (length(args)==1) {
      # default output file
      args[2] = "output/";
@@ -131,6 +131,7 @@ closePlot <- function() {
 overlap <- function (raw,setcol,selcols,sel) {
     trgcol = "index";
     if (missing(sel)) {
+        rawsel=c();
         len=length(raw[,1]);
         index=1:len;
         rawind=cbind(raw,index);
@@ -585,6 +586,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         xr <- c();
         yr <- c();
         rr <- c();
+        tcnt <- 0;
         for (ii in 1:length(isel)) { # loop over selections
             dsel <- (isel[[ii]] & valid);
             td <- thinned(nrow(data[[1]]),dsel);
@@ -604,6 +606,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 dcnt <- pretty(sum(dsel));
                 stat <- paste0("me=",dme,",sde=",dsde,",mae=",dmae,",cnt=",dcnt);
                 print (paste0("Set=",set," count=",pretty(sum(dsel))," (",l,")"));
+                tcnt=tcnt+sum(dsel);
                 if (sum(dsel) > 0) {
                     xl <- append(xl,list(obs[td]));
                     yl <- append(yl,list(mod[td]));
@@ -618,7 +621,8 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 };
             };
         };
-        if (length(xr)>0) {
+        if (tcnt>0) {
+            print ( paste("Tcnt:",tcnt));
             openPlot(filename,attr);
             plot(xr,yr,type="n",xlab=obslab,ylab=modlab,las=1);#,tck = 0.0
             title(title);
@@ -979,6 +983,7 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 ###x <- as.POSIXct(x, origin="1970-01-01");
                 lines(spline(x,ymod),type="l",lty=ss,col=ii,lwd=2);            # model
                 lines(spline(x,yobs),type="l",lty=ss,col=fadeColor(ii),lwd=3); # observations
+                # model
                 if (l=="") {
                     legs=append(legs,paste0(leg[ss]));
                 } else {
@@ -988,6 +993,12 @@ timePlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
                 ltys=append(ltys,ss);
                 lwds=append(lwds,2); # 3/0.75
                 stats=append(stats,stat);
+                # obs
+                legs=append(legs,paste0("obs"));
+                cols=append(cols,fadeColor(ii));
+                ltys=append(ltys,ss);
+                lwds=append(lwds,3); # 3/0.75
+                stats=append(stats,"");
             };
             lines(xr,c(0.,0.),type="l",lty=2,col=gray(0.75));
             info=paste("From",toString(dtgs[1]),
@@ -1409,8 +1420,13 @@ processHist <- function (mod,obs,ilab,isel,ii,valid,set,
     if (sum(dsel) > 0) {
         d <- mod[dsel]-obs[dsel];
         pp <- hist(d,nclass=50,plot=FALSE);
-        x <- pp$mids;
-        y <- pp$density;
+        lenp <- length(pp$mids);
+        x <- c();
+        y <- c();
+        for (jj in 1:lenp) {
+            x <- c(x,pp$breaks[jj],pp$breaks[jj+1]);
+            y <- c(y,pp$density[jj],pp$density[jj]);
+        };
         if (length(x)>0) {
             ;### store all values... and handle range 
             xl    <- append(xl,list(x));
