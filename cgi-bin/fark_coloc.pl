@@ -43,6 +43,7 @@ my $ret;
 eval {
     #$log=capture {
 	$fark = fark->open(); # open fark session
+	&setConfig($fark);
     #};
 };
 $ret=$@;
@@ -274,3 +275,20 @@ if ($ret) {
 $log=capture {
     $fark->close();
 };
+
+sub setConfig { # setConfig($fark,$variable,$value,$offset);
+    my $fark= shift;
+    my $variable=shift;
+    my $value=shift;
+    my $offset=shift;
+    if (defined $value  && ! "$value" eq "") {
+	$fark->setRerunVariable($variable);
+	$fark->setRerunValue($value);
+	$fark->setRerunOffset($offset);
+    } else {
+	if  ($debug) {print "No config\n";};
+	$fark->setRerunVariable("rid");
+	$fark->setRerunValue("0");
+	$fark->setRerunOffset("0");
+    }
+};	

@@ -11,6 +11,7 @@ module parse
   logical     :: parse_init=.false.
   real(rn)    :: secperday = 86400.0D0
   integer,dimension(8) :: val8    
+  real :: days
   real    :: eps  = 0.0D0
   logical :: leps = .false.
   real    :: t0 = 273.15
@@ -230,14 +231,49 @@ module parse
      type(parse_session), pointer  :: ptr => null()
   end type parse_pointer
   !
+  !------- -------- --------- --------- --------- --------- --------- --------- -------
+  ! Rerun variables
+  !------- -------- --------- --------- --------- --------- --------- --------- -------
+  ! 
+  integer :: rerun_nvar = 0
+  character*80,allocatable :: rerun_var80(:)
+  integer,allocatable :: rerun_lenv(:)
+  real,allocatable :: rerun_value(:)
+  character*250 :: rerun_off250 =""
+  integer :: rerun_leno=0
+  type(parse_session), pointer :: rerun_offset => null()  ! offset parse pointer
+  !
+  !------- -------- --------- --------- --------- --------- --------- --------- -------
+  ! Source code
+  !------- -------- --------- --------- --------- --------- --------- --------- -------
+  !
 CONTAINS
   !	
   subroutine parse_initialise()
+    real :: ss
     if (parse_init) return
     call date_and_time(VALUES=val8)
+    ss=real(val8(7))
+    call date2jd( days,val8(1),val8(2),val8(3),&
+         & val8(5),val8(6),ss)
     parse_init=.true.
     return
   end subroutine parse_initialise
+
+  subroutine parse_date_and_time(values)
+    integer,dimension(8) :: values
+    character*250 :: crc250
+    integer :: irc
+    real :: offset
+    real :: ss
+    call parse_initialise()
+    offset=parse_getTimeOffset(crc250,irc)
+    ! retrieve date from julian days...
+    call jd2date( days+offset,values(1),values(2),values(3),&
+         & values(5),values(6),ss)
+    values(7)=int(ss)
+    return
+  end subroutine parse_date_and_time
 
   SUBROUTINE parse_open (css,crc250,irc)
     IMPLICIT NONE
@@ -247,7 +283,7 @@ CONTAINS
     integer :: ii,nshp
     character*22 :: myname ="parse_open"
     !----- -------- --------- --------- --------- --------- --------- --------- -------
-    if(parse_bdeb)write(*,*)myname,"Opening"
+    if(parse_bdeb)write(*,*)myname,"Opening",nconst
     if (.not.allocated(const).or..not.allocated(constval)) then
        if (allocated(const))deallocate(const)
        if (allocated(constval))deallocate(constval)
@@ -258,7 +294,7 @@ CONTAINS
              nshp=nshp+1
           end if
        end do
-       nconst=3+nshp
+       nconst=3+nshp+rerun_nvar
        allocate(const(0:nconst),constval(0:nconst))
        const(0)='unknown'
        constval(0)=0
@@ -275,9 +311,16 @@ CONTAINS
        const(1+nshp)='pi'
        const(2+nshp)='e'
        const(3+nshp)='na'
+       if(parse_bdeb)write(*,*)myname,"Nvar:",rerun_nvar,rerun_var80
+       do ii=1,rerun_nvar
+          const(3+nshp+ii)=rerun_var80(ii)(1:rerun_lenv(ii))
+       end do
        constval(1+nshp)=3.14159265359
        constval(2+nshp)=2.71828182846
        constval(3+nshp)=1.7D38
+       do ii=1,rerun_nvar
+          constval(3+nshp+ii)=rerun_value(ii)
+       end do
        if(parse_bdeb)write(*,*)myname,"Added constants:",nconst
     end if
     ! css must be nullified if not declared...
@@ -3459,9 +3502,9 @@ CONTAINS
                    write(*,*) myname,"** MATCH: '"//str(ib:in-1)//"' == '"//trim(Var(j))//"'"
                 end if
                 EXIT
-                !          ELSE IF (PARSE_BDEB) THEN
-                !             write(*,*) myname,"no match: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
-                !                  & in-ib,len_trim(var(j))
+             !ELSE IF (PARSE_BDEB) THEN
+             !   write(*,*) myname,"no match: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
+             !        & in-ib,len_trim(var(j))
              END IF
           END DO
        end if
@@ -4597,5 +4640,128 @@ CONTAINS
     getname25="undefined"
     return
   end function getname25
+  !
+  !
+  !###############################################################################
+  ! RERUN ROUTINES
+  !###############################################################################
+  !
+  !
+  subroutine parse_setvariable(var,crc250,irc)
+    implicit none
+    character*(*) :: var
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    integer :: lenv
+    character*22 :: myname="parse_setvariable"
+    !if(parse_bdeb)write(*,*)myname,' Entering.',irc
+    if (allocated(rerun_var80)) deallocate (rerun_var80)
+    if (allocated(rerun_lenv)) deallocate (rerun_lenv)
+    if (allocated(rerun_value)) deallocate (rerun_value)
+    lenv=len_trim(var)
+    if (lenv.eq.0) then
+       rerun_nvar=0
+    else
+       rerun_nvar=1
+       allocate(rerun_var80(rerun_nvar),&
+            & rerun_lenv(rerun_nvar),&
+            & rerun_value(rerun_nvar),&
+            & stat=irc)
+       if (irc.ne.0) then
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250,"Unable to allocate &
+               & 'rerun_var80'.")
+          call parse_errorappend(crc250,"\n")
+          return
+       end if
+       rerun_var80(1)=trim(var)
+       call chop0(rerun_var80(1),80)
+       rerun_lenv(1)=length(rerun_var80(1),80,10)
+       if(parse_bdeb)write(*,*)myname,"Variable:'"//&
+            & rerun_var80(1)(1:rerun_lenv(1))//"'",irc
+    end if
+    return
+  end subroutine parse_setvariable
+  !
+  subroutine parse_setvalue(val,crc250,irc)
+    implicit none
+    integer :: val
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    character*22 :: myname="parse_setvariable"
+    !if(parse_bdeb)write(*,*)myname,' Entering.',irc
+    if (rerun_nvar.eq.1) then
+       rerun_value(1)=real(val)
+       if(parse_bdeb)write(*,*)myname,"Value:'",rerun_value(1),"'",irc
+    end if
+  end subroutine parse_setvalue
+  !
+  subroutine parse_setoffset(off,crc250,irc)
+    implicit none
+    character*(*) :: off
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    integer :: jj
+    character*22 :: myname="parse_setvariable"
+    !if(parse_bdeb)write(*,*)myname,' Entering.',irc
+    rerun_off250=trim(off)
+    call chop0(rerun_off250,250)
+    rerun_leno=length(rerun_off250,250,10)
+    if(parse_bdeb)write(*,*)myname,"Offset:'"//rerun_off250(1:rerun_leno)//"'",irc
+    if (associated(rerun_offset)) then
+       call parse_close (rerun_offset,crc250,irc)
+       if (irc.ne.0) then
+          call parse_errorappend(crc250,"parse_close")
+          return
+       end if
+    end if
+    if (rerun_leno.gt.0) then
+       call parse_open(rerun_offset,crc250,irc)
+       if (irc.ne.0) then
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250," Error return from parse_open.")
+          call parse_errorappend(crc250,"\n")
+          return
+       end if
+       call parse_parsef(rerun_offset,&
+            & rerun_off250(1:rerun_leno),rerun_var80,crc250,irc)
+       if (irc.ne.0) then
+          if(parse_bdeb)then
+             do jj=1,size(rerun_var80)
+                write(*,'(A,A,I0,A)')myname,"     var(",jj,") = '"//&
+                     & trim(rerun_var80(jj))//"'"
+             end do
+          end if
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250," Error return from parsef.")
+          call parse_errorappendi(crc250,irc)
+          call parse_errorappend(crc250,"\n")
+          return
+       end if
+    end if
+    return
+  end subroutine parse_setoffset
+  !
+  real function parse_gettimeoffset(crc250,irc)
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="parse_gettimeoffset"
+    if (associated(rerun_offset)) then
+       parse_gettimeoffset=parse_evalf(rerun_offset,rerun_value,crc250,irc)
+       if (irc.ne.0) then
+          call parse_errorappend(crc250,myname)
+          call parse_errorappend(crc250," Error return from evalf.")
+          call parse_errorappendi(crc250,irc)
+          call parse_errorappend(crc250,"\n")
+          return
+       end if
+    else
+       parse_gettimeoffset=0.0D0
+    end if
+    return
+  end function parse_gettimeoffset
   !
 end module parse

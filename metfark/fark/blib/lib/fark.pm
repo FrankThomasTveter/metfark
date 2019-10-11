@@ -1800,6 +1800,30 @@ sub makePlotTable {
 }
 
 
+################################# RERUN ##########################
+
+sub setRerunVariable { # $fark->setRerunVariable($variable);
+    my ($self,$variable)=@_;
+    my ($ret,$msg) = xs_setVariable($variable);
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+    return;
+};
+
+sub setRerunValue {    # $fark->setRerunValue($value);
+    my ($self,$value)=@_;
+    my ($ret,$msg) = xs_setValue($value);
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+    return;
+};
+
+sub setRerunOffset {    # $fark->setTimeOffset($offset);
+    my ($self,$offset)=@_;
+    my ($ret,$msg) = xs_setOffset($offset);
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+    return;
+};
+
+
 ################################# GENERAL ##########################
 
 sub getHash {

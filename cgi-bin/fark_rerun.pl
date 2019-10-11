@@ -34,25 +34,22 @@ eval {
 	#fark::debug(5);  # debug parse
     }
     #
-    my $shapeDir = farkdir::getRootDir("shape") || farkdir::term("Invalid root directory (shape)");
-    my $autoDir  = farkdir::getRootDir("auto") || farkdir::term("Invalid root directory (auto)");
+    my $shapeDir = farkdir::getRootDir("shape")  || farkdir::term("Invalid root directory (shape)");
+    my $rerunDir  = farkdir::getRootDir("rerun") || farkdir::term("Invalid root directory (rerun)");
     my $scriptDir= farkdir::getRootDir("script") || farkdir::term("Invalid root directory (script)");
-    my $lockDir  = farkdir::getRootDir("lock") || farkdir::term("Invalid root directory (lock)");
+    my $lockDir  = farkdir::getRootDir("lock")   || farkdir::term("Invalid root directory (lock)");
     #
     my $myname = basename($0);
     #
     $XML::LibXML::skipXMLDeclaration = 1;
     my $password = $param->{password}[0] // "";
-    my $autoFile = $param->{root}[0] // "";
+    my $file    = $param->{file}[0] // "";
     my $cron     = $param->{cron}[0];
-    my $ipath    = $param->{file}[0] // "";
-    my $cls      = $param->{type}[0] // "undef";
-    if (! defined $param->{root}) {farkdir::term("Undefined root file.".Dumper($param))};
     my $save=0;
-    my $autopath = $autoDir . $autoFile;
-    my ($dir,$name)=farkdir::splitName($ipath);
+    my $path = $rerunDir . $file;
+    my $cls="rerun";
+    my ($dir,$name)=farkdir::splitName($file);
     my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $file = $loc . $name;
     my $test = (defined $param->{test}[0]) ? 1 : 0;
     my $abort = (defined $param->{abort}[0]) ? 1 : 0;
     #
@@ -60,149 +57,97 @@ eval {
     ####if ($abort) {print "Aborting...\n"};
     #
     if ($debug) {print "Argument='" . shift . "'\n";}
-    if ($debug) {print "Processing $file\n";}
+    if ($debug) {print "Processing '$file'\n";}
     #
-    # auto config file...
+    # rerun config file...
     my $parser = XML::LibXML->new();
-    if (-f $autopath) { # we have a config file...
+    if (-f $path) { # we have a config file...
 	my $modelr;
 	my $obsr  ;
 	my $colocr;
 	my $plotr ;
 	# read config file into memory
-	my $doc = $parser->parse_file($autopath);
-	if ( my ($node)=$doc->findnodes("auto/auto_config")) {
+	if ($debug) {print "Parsing '$path'\n";}
+	my $doc = $parser->parse_file($path);
+	if ( my ($node)=$doc->findnodes("rerun/rerun_config")) {
 	    my $pass=($node->getAttribute("password")//"");
 	    $save=($pass eq $password);
-	    if (($param->{type}->[0]//"") eq "model") {
-		if (!$save) {farkdir::term("Permission denied (invalid password).");};
-		$modelr=&getCls("model",$node,$cron,$file);
-		&loopCls("model",$test, $abort, $modelr,$cron) || farkdir::term("Error return from loopModel:$file");
-	    } elsif (($param->{type}->[0]//"") eq "obs") {
-		if (!$save) {farkdir::term("Permission denied (invalid password).");};
-		$obsr=&getCls("obs",$node,$cron,$file);
-		&loopCls("obs",$test, $abort, $obsr,$cron) || farkdir::term("Error return from loopObs:$file");
-	    } elsif (($param->{type}->[0]//"") eq "coloc") {
-		if (!$save) {farkdir::term("Permission denied (invalid password).");};
-		$colocr=&getCls("coloc",$node,$cron,$file);
-		&loopCls("coloc",$test, $abort, $colocr,$cron) || farkdir::term("Error return from loopColoc:$file");
-	    } elsif (($param->{type}->[0]//"") eq "plot") {
-		if (!$save) {farkdir::term("Permission denied (invalid password).");};
-		$plotr=&getCls("plot",$node,$cron,$file);
-		&loopCls("plot",$test, $abort, $plotr,$cron) || farkdir::term("Error return from loopPlot:$file");
-	    } else {
-		if($debug){print "Processing all... '$cron'\n";}
-		$modelr=&getCls("model",$node,$cron);
-		&loopCls("model",$test, $abort, $modelr,$cron) || farkdir::term("Error return from loopModel:$file");
-		$obsr=&getCls("obs",$node,$cron);
-		&loopCls("obs",$test, $abort, $obsr,$cron) || farkdir::term("Error return from loopObs:$file");
-		$colocr=&getCls("coloc",$node,$cron);
-		&loopCls("coloc",$test, $abort, $colocr,$cron) || farkdir::term("Error return from loopColoc:$file");
-		$plotr=&getCls("plot",$node,$cron);
-		&loopCls("plot",$test, $abort, $plotr,$cron) || farkdir::term("Error return from loopPlot:$file");
-	    }
+	    if (!$save) {farkdir::term("Permission denied (invalid password).");};
+	    # loop settings
+	    my $variable=($node->getAttribute("variable")//"");
+	    my $start=($node->getAttribute("start")//"0");
+	    my $stop=($node->getAttribute("stop")//"0");
+	    my $offset=($node->getAttribute("offset")//"0");
+	    # rerun main loop
+	    if ($debug) {print "Looping '$variable' [$start,$stop]\n";}
+	    for (my $ii = $start; $ii <= $stop; $ii++) {
+		# maintain model lists
+		$modelr=&getCls("model",$node,$cron,$variable,$ii,$offset);
+		&loopCls("model",$test, $abort, $modelr,$cron,$variable,$ii,$offset) || 
+		    farkdir::term("Error return from loopModel:$file");
+		# maintain observation lists
+		$obsr=&getCls("obs",$node,$cron,$variable,$ii,$offset);
+		&loopCls("obs",$test, $abort, $obsr,$cron,$variable,$ii,$offset) || 
+		    farkdir::term("Error return from loopObs:$file");
+		# make colocation xmls for debugging
+		$colocr=&getCls("coloc",$node,$cron,$variable,$ii,$offset);
+		&loopCls("coloc",$test, $abort, $colocr,$cron,$variable,$ii,$offset) || 
+		    farkdir::term("Error return from loopColoc:$file");
+		# make colocation tables and plots
+		$plotr=&getCls("plot",$node,$cron,$variable,$ii,$offset);
+		&loopCls("plot",$test, $abort, $plotr,$cron,$variable,$ii,$offset) || 
+		    farkdir::term("Error return from loopPlot:$file");
+	    };
 	}
-	#$doc = $parser->parse_file($autopath);
+	#$doc = $parser->parse_file($path);
 	#print $doc->toString . "\n";
-	if ( my ($node)=$doc->findnodes("auto/auto_config")) {
+	if ( my ($node)=$doc->findnodes("rerun/rerun_config")) {
 	    &updateTime($node,"model");
 	    &updateTime($node,"obs");
 	    &updateTime($node,"coloc");
 	    &updateTime($node,"plot");
 	}
 	if ($save) {
-	    farkdir::docsave($autopath, $doc);
+	    farkdir::docsave($path, $doc);
 	};
-	if ( my ($node)=$doc->findnodes("auto/auto_config")) {
+	if ( my ($node)=$doc->findnodes("rerun/rerun_config")) {
 	    if (defined $node->getAttribute("password")) {$node->removeAttribute("password");}
 	}
 	print $doc->toString . "\n";
-    } else {  # config file does not exist, create temporary xml-structure
-	if (defined $param->{type}) {
-	    my $doc = $parser->parse_string("<auto><auto_config/></auto>");
-	    my ($node) = $doc->findnodes("auto/auto_config");
-	    if (($param->{type}->[0]//"") eq "model") {
-		my $parent = XML::LibXML::Element->new( 'model' );
-		$parent->setAttribute("file",$name);
-		$node->addChild( $parent );
-		my $modelr=&getCls("model",$node,$cron,$file);
-		&loopCls("model",$test, $abort, $modelr,$cron) || farkdir::term("Missing file '$file'");
-		&updateCls("model",$node,$modelr);
-	    } elsif (($param->{type}->[0]//"") eq "obs") {
-		my $parent = XML::LibXML::Element->new( 'obs' );
-		$parent->setAttribute("file",$name);
-		$node->addChild( $parent );
-		my $obsr=&getCls("obs",$node,$cron,$file);
-		&loopCls("obs",$test, $abort, $obsr,$cron) || farkdir::term("Missing file '$file'");
-		&updateCls("obs",$node,$obsr);
-	    } elsif (($param->{type}->[0]//"") eq "coloc") {
-		my $parent = XML::LibXML::Element->new( 'coloc' );
-		$parent->setAttribute("file",$name);
-		$node->addChild( $parent );
-		my $colocr=&getCls("coloc",$node,$cron,$file);
-		&loopCls("coloc",$test, $abort, $colocr,$cron) || farkdir::term("Missing file '$file'");
-		&updateCls("coloc",$node,$colocr);
-	    } elsif (($param->{type}->[0]//"") eq "plot") {
-		my $parent = XML::LibXML::Element->new( 'plot' );
-		$parent->setAttribute("file",$name);
-		$node->addChild( $parent );
-		my $plotr=&getCls("plot",$node,$cron,$file);
-		&loopCls("plot",$test, $abort, $plotr,$cron) || farkdir::term("Missing file '$file'");
-		&updateCls("plot",$node,$plotr);
-	    } else {
-		farkdir::term("Unknown type:",$param->{type}->[0]);
-	    }
-	    print $doc->toString . "\n";
-	} else {
-	    farkdir::term("No type specified.");
-	}
+    } elsif ($debug) {
+	print "No file '$path'\n";
     };
     1;
-
+    # subroutines
     sub getCls {
 	my $cls  = shift//"";
 	my $node = shift;
 	my $cron = shift//0;
-	my $file = shift//"";
+	my $variable = shift;
+	my $ii = shift//0;
+	my $offset = shift//0;
 	my %clshash=();
 	if ($node) {
 	    my @clsnodes=$node->findnodes($cls);
 	    my $found=0;
 	    foreach my $clsref (@clsnodes) {
-		my $auto=($clsref->getAttribute("auto") || "");
 		my $clsfile=$clsref->getAttribute("file");
-		if ($file) {
-		    if ($clsfile eq $file) {
-			$clshash{$clsfile}=[$clsref];
-			$found++;
-		    } 
-		} elsif (! $cron || ($cron && $auto eq $cron)) {
-		    if($debug){print "Should process '$clsfile'... '$auto'\n";}
-		    $clshash{$clsfile}=[$clsref];
-		} else {
-		    if($debug){print "Ignoring '$clsfile'... '$auto'\n";}
-		}
+		$clshash{$clsfile}=[$clsref];
 	    }
-	    if ($file && ! $found) {
-		my $clsref = XML::LibXML::Element->new( 'cls' );
-		$clsref->setAttribute("file",$file);
-		$node->addChild($clsref);
-		$clshash{$file}=[$clsref];
-	    }
-	} elsif ($file) {
-	    $clshash{$file}=[];
 	};
 	if ($debug){print "Found ".(keys %clshash) ." file(s).\n";};
 	return \%clshash;
-    }
-
+    };
     sub loopCls {
 	my $cls           = shift // "";
 	my $test          = shift // 0;
 	my $abort         = shift // 0;
 	my $clsr          = shift;
-	my $cron          = shift // 0;
-	my $clsDir=     farkdir::getRootDir("$cls") || 
+	my $cron = shift//0;
+	my $variable      = shift;
+	my $ii            = shift//0;
+	my $offset        = shift//0;
+	my $clsDir         =     farkdir::getRootDir("$cls") || 
 	    farkdir::term("Invalid root directory (".$cls.")");
 	my $clsLogDir=  farkdir::getRootDir($cls."_log") || 
 	    farkdir::term("Invalid root directory (".$cls."_log)");
@@ -228,7 +173,9 @@ eval {
 	    if ( $abort) {
 		my $logfile="";
 		farkdir::sandbox {
-		    my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+		    my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,
+				     $variable,$ii,$offset,
+				     $clsfile,$xmlfile,$logfile);
 		    if ($cmd) {system($cmd);};
 		}{abort     => $abort,
 		  abortfile => $abortfile,
@@ -268,7 +215,9 @@ eval {
 		    if($debug){print "Calling farkdir::sandbox (cron=$cron) '$clsfile'\n";};
 		    #if ($cls eq "model") { fark::debug(2);};  # debug models
 		    farkdir::sandbox {
-			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,
+					 $variable,$ii,$offset,
+					 $clsfile,$xmlfile,$logfile);
 			if ($cmd) {system($cmd);};
 		    }{logfile   => $logfile,
 		      fork      => 1,
@@ -281,7 +230,9 @@ eval {
 		} elsif ($debug) {
 		    if($debug){print "Calling farkdir::sandbox (debug) '$clsfile'\n";};
 		    farkdir::sandbox {
-			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,
+					 $variable,$ii,$offset,
+					 $clsfile,$xmlfile,$logfile);
 			if ($cmd) {system($cmd);};
 		    }{message=>"$myname Failed to process $xmlfile ($cls)\n",
 		      debug     => 1,
@@ -293,7 +244,9 @@ eval {
 		} else {
 		    if($debug){print "Calling farkdir::sandbox '$clsfile'\n";};
 		    farkdir::sandbox {
-			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,$clsfile,$xmlfile,$logfile);
+			my $cmd=&execCls($cls,$test, $abort,$clsr,$cron,
+					 $variable,$ii,$offset,
+					 $clsfile,$xmlfile,$logfile);
 			if ($cmd) {system($cmd);};
 		    }{message   => "$myname Failed to process $xmlfile ($cls)\nSee '$logfile.err' for more information.\n",
 		      logfile   => $logfile,
@@ -317,14 +270,17 @@ eval {
 	};
 	if($debug) {print "Ending loopCls... $cls\n";}
 	return $clsr;
-    }
+    };
     #
     sub execCls {
 	my $cls           = shift // "";
 	my $test          = shift // 0;
 	my $abort         = shift // 0;
 	my $clsr          = shift;
-	my $cron          = shift // 0;
+	my $cron          = shift//0;
+	my $variable      = shift;
+	my $ii            = shift//0;
+	my $offset        = shift//0;
 	my $clsfile       = shift;
 	my $xmlfile       = shift;
 	my $logfile       = shift;
@@ -356,8 +312,8 @@ eval {
 	    my $colocDir=     farkdir::getRootDir("coloc") || 
 		farkdir::term("Invalid root directory (coloc)");
 
-	    my $timeAuto = "";
-	    my $infoAuto = "";
+	    my $timeRerun = "";
+	    my $infoRerun = "";
 	    my $lastStart=time();
 	    my $clsFillFile=$clsFillDir . $clsfile; 
 	    my ($filldir,$fillname)=farkdir::splitName($clsFillFile);
@@ -370,7 +326,7 @@ eval {
 		farkdir::makePath($dir);
 		copy ($xmlfile,$xmloldfile);
 	    };
-	    # auto config file...
+	    # rerun config file...
 	    if ( ! -e $xmlfile) { farkdir::term("$myname unable to find: $xmlfile ($cls)");}
 	    # read config file into memory
 	    my $parser = XML::LibXML->new();
@@ -388,7 +344,9 @@ eval {
 				 $obsCacheDir,
 				 $obsRegDir,
 				 $cls,$clsfile,$clean,
-				 $test, $abort,$clsFillFile,$logfile);
+				 $test, $abort,
+				 $variable,$ii,$offset,
+				 $clsFillFile,$logfile);
 	    } else {
 		farkdir::term("$myname corrupted file: '$xmlfile' ::$cls");
 	    }
@@ -401,7 +359,7 @@ eval {
 	    farkdir::touchFile($clsUseFile) || farkdir::term("$myname unable to touch '$clsUseFile'");
 	    #system "ls -l $clsUseFile; date";
 	    my $lastStop=time();
-	    $timeAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
+	    $timeRerun=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastStart));
 	    my $duration = $lastStop-$lastStart;
 	    # last "fill" time, i.e. last time we had any data...
 	    my $lastFill=0;
@@ -413,25 +371,24 @@ eval {
 	    };
 	    my $timeFill=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($lastFill));
 	    if ($lastFill >= $lastStart) {
-		$infoAuto="> ok (".(farkdir::dtg($duration)) . ")";
+		$infoRerun="> ok (".(farkdir::dtg($duration)) . ")";
 	    } elsif ($cls eq "model" or $cls eq "obs") {
-		$infoAuto="# no new data (".(farkdir::dtg($duration)) . ")";
+		$infoRerun="# no new data (".(farkdir::dtg($duration)) . ")";
 	    } else {
-		$infoAuto="# no data (".(farkdir::dtg($duration)) . ")";
+		$infoRerun="# no data (".(farkdir::dtg($duration)) . ")";
 	    }
 	    if($debug){print "Last fill: '$timeFill'\n";}
-	    if($debug){print "Last time: '$timeAuto'\n";}
-	    if($debug){print "Last info: '$infoAuto'\n";}
-	    #if ($debug){print "Done '$lastStop' '$lastStart' $infoAuto\n";};
+	    if($debug){print "Last time: '$timeRerun'\n";}
+	    if($debug){print "Last info: '$infoRerun'\n";}
+	    #if ($debug){print "Done '$lastStop' '$lastStart' $infoRerun\n";};
 	    if (defined $clsr->{$clsfile}->[0]) {
-		$clsr->{$clsfile}->[1]=$timeAuto;
-		$clsr->{$clsfile}->[2]=$infoAuto;
+		$clsr->{$clsfile}->[1]=$timeRerun;
+		$clsr->{$clsfile}->[2]=$infoRerun;
 		$clsr->{$clsfile}->[3]=$logfile;
 	    }
 	if($debug) {print "Ending loopCls... $cls\n";}
 	return $cmd;
     };
-
     sub processCls{
 	my ($xmlfile,
 	    $clsnode,
@@ -443,7 +400,9 @@ eval {
 	    $obsCacheDir,
 	    $obsRegDir,
 	    $cls,$clsfile,$clean,
-	    $test, $abort,$clsFillFile,$logfile) =@_;
+	    $test, $abort,
+	    $variable,$ii,$offset,
+	    $clsFillFile,$logfile) =@_;
 	my $cmd="";
 	if($debug){print "Processing $cls $xmlfile\n";}
 	if ($cls eq "model") {
@@ -460,7 +419,9 @@ eval {
 			  $cachefile,
 			  $registerfile,
 			  $cls,
-			  $test, $abort,$clsFillFile);
+			  $test, $abort,
+			  $variable,$ii,$offset,
+			  $clsFillFile);
 	} elsif ($cls eq "obs") {
 	    my $cachefile=$obsCacheDir . $clsfile;
 	    my $registerfile=$obsRegDir . $clsfile;
@@ -475,7 +436,9 @@ eval {
 			$cachefile,
 			$registerfile,
 			$cls,
-			$test, $abort,$clsFillFile);
+			$test, $abort,
+			$variable,$ii,$offset,
+			$clsFillFile);
 	} elsif ($cls eq "coloc") {
 	    &processColoc($xmlfile,
 			  $clsnode,
@@ -485,7 +448,9 @@ eval {
 			  $obsDir,
 			  $obsCacheDir,
 			  $cls,
-			  $test, $abort,$clsFillFile);
+			  $test, $abort,
+			  $variable,$ii,$offset,
+			  $clsFillFile);
 	} elsif ($cls eq "plot") {
 	    $cmd=&processPlot($xmlfile,
 			      $clsnode,
@@ -495,12 +460,13 @@ eval {
 			      $obsDir,
 			      $obsCacheDir,
 			      $cls,
-			      $test, $abort,$clsFillFile,$logfile);
+			      $test, $abort,
+			      $variable,$ii,$offset,
+			      $clsFillFile,$logfile);
 	};
 	#### if (-e $clsFillFile) {chmod 0777, $clsFillFile;}
 	return $cmd;
     };
-
     sub updateCls { 
 	my $cls    = shift // "";
 	my $node   = shift;
@@ -516,8 +482,7 @@ eval {
 		$clsref->setAttribute("log", $clshash{$clsfile}->[3]);
 	    }
 	}
-    }
-
+    };
     sub updateTime {
 	my $node= shift;
 	my $cls = shift;
@@ -526,8 +491,8 @@ eval {
 	my @clss=$node->findnodes($cls);
 	foreach my $clsr (@clss) {
 	    my $file=$clsr->getAttribute("file");
-	    my $timeAuto="";
-	    my $infoAuto="";
+	    my $timeRerun="";
+	    my $infoRerun="";
 	    my $lastStart=0;
 	    my $lastStop=0;
 	    my $clsUseFile=$clsUseDir . $file; 
@@ -540,13 +505,13 @@ eval {
 	    if (-f $lockfilename) {
 		my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
 		    $mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
-		$timeAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
+		$timeRerun=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
 		$lastStart=$atime;
 		if ( not open(MLOCKFILE, ">$lockfilename") ) {
 		} elsif (flock (MLOCKFILE,2+4)) {
 		    my $duration = $lastStop-$lastStart;
 		    if ($duration < 0) {
-			$infoAuto="# abort";
+			$infoRerun="# abort";
 		    } else {
 			my $clsFillFile=$clsFillDir . $file; 
 			my $lastFill=0;
@@ -556,24 +521,23 @@ eval {
 			    $lastFill=$atime;
 			};
 			if ($lastFill >= $lastStart) {
-			    $infoAuto="> ok (".(farkdir::dtg($duration)) . ")";
+			    $infoRerun="> ok (".(farkdir::dtg($duration)) . ")";
 			} elsif ($cls eq "model" or $cls eq "obs") {
-			    $infoAuto="# no new data (".(farkdir::dtg($duration)) . ")";
+			    $infoRerun="# no new data (".(farkdir::dtg($duration)) . ")";
 			} else {
-			    $infoAuto="# no data (".(farkdir::dtg($duration)) . ")";
+			    $infoRerun="# no data (".(farkdir::dtg($duration)) . ")";
 			}
 		    }
 		} else {
 		    my $duration = time()-$lastStart;
-		    $infoAuto="# running (".farkdir::dtg($duration) . ")";
+		    $infoRerun="# running (".farkdir::dtg($duration) . ")";
 		};	
 		close(MLOCKFILE);
 	    };
-	    $clsr->setAttribute("last",        $timeAuto);
-	    $clsr->setAttribute("info",        $infoAuto);
+	    $clsr->setAttribute("last",        $timeRerun);
+	    $clsr->setAttribute("info",        $infoRerun);
 	}
     };
-
     sub processModel {
 	my $xmlfile = shift;
 	my $node = shift;
@@ -582,6 +546,9 @@ eval {
 	my $file = shift;
 	my $test = shift;
 	my $abort         = shift // 0;
+	my $variable      = shift;
+	my $ii            = shift//0;
+	my $offset        = shift//0;
 	my $clsFillFile = shift;
 	#
 	print ">>>>> Loading model file: $xmlfile\n";
@@ -590,7 +557,7 @@ eval {
 	my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
 	fark->setShapeFile($shapeFile);    # read shape file
 	my $fark=fark->open();
-	&setConfig($fark);
+	&setConfig($fark,$variable,$ii,$offset);
 	&setModelConfig($fark,$node,$cachefile);
 	#
 	my $filterDir=$node->getAttribute("filterDir");
@@ -611,8 +578,7 @@ eval {
 	    print ">>>>> Normal end of process...\n";
 	};
 	return;
-    }
-
+    };
     sub processObs {
 	my $xmlfile = shift;
 	my $node = shift;
@@ -621,6 +587,9 @@ eval {
 	my $file = shift;
 	my $test = shift;
 	my $abort         = shift // 0;
+	my $variable      = shift;
+	my $ii            = shift//0;
+	my $offset        = shift//0;
 	my $clsFillFile = shift;
 	#
 	print ">>>>> Loading obs file: $xmlfile\n";
@@ -629,7 +598,7 @@ eval {
 	my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
 	fark->setShapeFile($shapeFile);
 	my $fark=fark->open();
-	&setConfig($fark);
+	&setConfig($fark,$variable,$ii,$offset);
 	&setObsConfig($fark,$node,$cachefile);
 	#
 	my $filterDir=$node->getAttribute("filterDir");
@@ -663,6 +632,9 @@ eval {
 	my $file = shift;
 	my $test = shift;
 	my $abort         = shift // 0;
+	my $variable      = shift;
+	my $ii            = shift//0;
+	my $offset        = shift//0;
 	my $clsFillFile = shift;
 	#
 	print ">>>>> Loading coloc file $xmlfile\n";
@@ -672,7 +644,7 @@ eval {
 	my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
 	fark->setShapeFile($shapeFile);
 	my $fark=fark->open();
-	&setConfig($fark);
+	&setConfig($fark,$variable,$ii,$offset);
 	&setColocConfig($fark,$node,$modelDir,$modelCacheDir,$obsDir,$obsCacheDir);
 	#
 	# make the resulting XML
@@ -698,6 +670,9 @@ eval {
 	my $cls = shift;
 	my $test = shift;
 	my $abort         = shift // 0;
+	my $variable      = shift;
+	my $ii            = shift//0;
+	my $offset        = shift//0;
 	my $clsFillFile = shift;
 	my $logfile = shift;
 	#
@@ -712,7 +687,6 @@ eval {
 	my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
 	fark->setShapeFile($shapeFile);
 	my $fark=fark->open();
-	&setConfig($fark);
 	$fark->setPlotType($cat);
 	$fark->clearPlotAttributeStack();
 	my @attrs=$node->findnodes("attribute");
@@ -802,7 +776,6 @@ eval {
 	    $fark->setRerunOffset($offset);
 	} else {
 	    if  ($debug) {print "No config\n";};
-	    print "No config\n";
 	    $fark->setRerunVariable("rid");
 	    $fark->setRerunValue("0");
 	    $fark->setRerunOffset("0");
@@ -824,8 +797,7 @@ eval {
 	    $fark->loadModelCache($cachefile);# load cached model file stack
 	};
 	if($debug){print "Model config complete\n";}
-    }
-
+    };
     sub setObsConfig {
 	my $fark = shift;
 	my $node = shift;
@@ -860,8 +832,7 @@ eval {
 	if (-e $cachefile) {
 	    $fark->loadObservationCache($cachefile);
 	};
-    }
-
+    };
     sub setColocConfig {
 	my $fark = shift;
 	my $node = shift;

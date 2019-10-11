@@ -314,7 +314,7 @@ CONTAINS
     integer :: irc
     character*25 :: myname="colocation_importTargets"
     integer :: ii
-    if(mod_bdeb)write(*,*) myname,'Entering:',css%ctrg,mss%ctrg
+    if(col_bdeb)write(*,*) myname,'Entering:',css%ctrg,mss%ctrg
     if(associated(css%trg80)) deallocate(css%trg80)
     if(associated(css%trg_lent)) deallocate(css%trg_lent)
     css%ctrg=mss%ctrg
@@ -1980,7 +1980,8 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="colocation_clearsetstack"
-    call date_and_time(VALUES=css%values)
+    !call date_and_time(VALUES=css%values)
+    call parse_date_and_time(css%values)
     return
   end subroutine colocation_setTime
   !

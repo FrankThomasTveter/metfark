@@ -220,6 +220,7 @@ module observations
      integer :: fopened  = 0                 ! number of overlapping observation files
      integer :: fok(10), frm(10)
      !
+     !
      ! data selection
      !
      real                            :: ind_minval=0.0D0      ! lowest index
@@ -403,7 +404,8 @@ CONTAINS
        return
     end if
     !
-    call date_and_time(VALUES=css%values) ! get current date
+    !call date_and_time(VALUES=css%values) ! get current date
+    call parse_date_and_time(VALUES=css%values) ! get current date
     if (allocated(css%var)) deallocate (css%var)
     if (allocated(css%val)) deallocate (css%val)
     allocate(css%var(2),css%val(2),stat=irc)
@@ -3419,6 +3421,7 @@ CONTAINS
     end if
     return
   end subroutine observation_setfilter
+  !
   !
   subroutine observation_compileFilter(css,crc250,irc)
     implicit none

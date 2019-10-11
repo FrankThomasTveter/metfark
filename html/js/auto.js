@@ -308,16 +308,6 @@ function auto_setTable() {
 	auto_insertRow(tail,"plot",plot,auto_config["plot"][plot]["last"],auto_config["plot"][plot]["info"],auto_config["plot"][plot]["auto"],auto_config["plot"][plot]["status"],"#BDBDBD");
     }
 };
-
-
-
-function auto_setCheckbox(item,type,file) {
-    var checked = item.checked;
-   //console.log("Checked:",checked);
-    if (auto_config[type] !== undefined && auto_config[type][file] !== undefined) {
-	auto_config[type][file]["auto"] = checked;
-    }
-}
 // create auto table row
 function auto_insertRow(item,type,file,last,info,auto,status,color) {
     var row = document.createElement("TR");

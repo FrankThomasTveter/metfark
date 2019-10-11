@@ -1,6 +1,7 @@
 #! /bin/csh
 
-./fark_load.pl '?type=obs&arg%5B%5D=default.cfg'
+./fark_load.pl '?type=join&arg%5B%5D=default.cfg'
+./fark_load.pl '?type=plot&arg%5B%5D=default.cfg'
 
 #?type=obs&arg%5B%5D=default.cfg'
 #'?type%5B%5D=plot&type%5B%5D=cat&arg%5B%5D=default.cfg'

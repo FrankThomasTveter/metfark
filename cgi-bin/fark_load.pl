@@ -21,6 +21,7 @@ my $obsDir=   farkdir::getRootDir("obs")   || farkdir::term("Invalid root direct
 my $colocDir= farkdir::getRootDir("coloc") || farkdir::term("Invalid root directory (coloc)");
 my $plotDir=  farkdir::getRootDir("plot")  || farkdir::term("Invalid root directory (plot)");
 my $autoDir=  farkdir::getRootDir("auto")  || farkdir::term("Invalid root directory (auto)");
+my $rerunDir=  farkdir::getRootDir("rerun")  || farkdir::term("Invalid root directory (rerun)");
 #
 # system directories...
 #
@@ -40,7 +41,7 @@ my $args = $param->{"arg[]"};
 #
 my $len=@{$types};
 if ($len==0 || $types->[0] eq "") {
-    farkdir::term("Undefined type.".Dumper($param))
+    farkdir::term("Undefined 'type'.")
 };
 #
 my $doc = XML::LibXML::Document->new( '1.0', 'UTF-8' );
@@ -53,7 +54,7 @@ foreach my $cls (@{$types}) {
     } elsif ($cls eq "cat") {
 	&loadCat($doc,$top,$param);
     } else {
-	if (! defined $args) {farkdir::term("Undefined arg.".Dumper($param))};
+	if (! defined $args) {farkdir::term("Undefined $args.".Dumper($param))};
 	my $arg = $args->[0];
 	&loadCls($doc,$top,$param, $arg, $cls);
     }
@@ -74,6 +75,7 @@ sub loadCls {
 	($root, $loc, $priv) = farkdir::splitDir( $fpath, $cls );
 	$fpath=$root . $loc; # full absolute path
     }
+    #print ("$arg:$cls**$root:$loc:$priv\n");
     if (-d  $fpath && $priv eq "rw") {
 	my $path=$fpath . $name;
 	#print "Org: '$cls' '$arg' => '$root' '$loc' '$priv' '$name'\n";
@@ -199,6 +201,45 @@ sub loadAuto {
 	    if (-f $path) {
 		my $auto = $parser->parse_file($path) || next;
 		my ($node)=$auto->findnodes("auto/auto_config");
+		if ( $node ) {
+		    $node->removeAttribute("password"); # remove passwords
+		    &updateTime($node,"model");
+		    &updateTime($node,"obs");
+		    &updateTime($node,"coloc");
+		    &updateTime($node,"plot");
+		}
+		$parent->addChild( $node );
+	    } else {
+		farkdir::term("Invalid file: $path");
+	    };
+	}{message=> "Unable to process: $path",
+	  stdout=>"never"};
+    } else {
+	farkdir::term("Invalid directory ($fpath,$priv)");
+    };
+};
+
+sub loadRerun {
+    my $doc=shift;
+    my $top=shift;
+    my $param =shift;
+    my $cls = "rerun";
+    #farkdir::term("Debug:".Dumper($param).":".$param->{"arg[]"}->[0]);
+    my $file=($param->{"arg[]"}->[0]||"rerun.cfg");
+    my ($dir, $name) = farkdir::splitName($file);
+    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
+    my $fpath=$root . $loc; # full absolute path
+    if (-d  $fpath && $priv eq "rw") {
+	my $path=$fpath . $name;
+	my $parent = XML::LibXML::Element->new( 'rerun' );
+	$top->addChild( $parent );
+	# load obs data
+	my $parser = XML::LibXML->new();
+	#$parser->expand_entities( 0 ); # leave entities alone
+	farkdir::sandbox {
+	    if (-f $path) {
+		my $rerun = $parser->parse_file($path) || next;
+		my ($node)=$rerun->findnodes("rerun/rerun_config");
 		if ( $node ) {
 		    $node->removeAttribute("password"); # remove passwords
 		    &updateTime($node,"model");

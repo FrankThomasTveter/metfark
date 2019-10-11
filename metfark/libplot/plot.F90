@@ -656,7 +656,8 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="plot_clearsetstack"
-    call date_and_time(VALUES=pss%values)
+    !call date_and_time(VALUES=pss%values)
+    call parse_date_and_time(pss%values)
     return
   end subroutine plot_setTime
   !

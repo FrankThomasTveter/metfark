@@ -55,6 +55,9 @@ void col_getxmlfile_(int* pid, char* fn250, char* crc250, int* irc, int len1, in
 void par_setshapefile_(char* fn250, char* cname11, char* crc250, int* irc, int len1, int len2, int len3);
 void par_simplifyshapes_(char* tol20, char* crc250, int* irc, int len1, int len2);
 void par_clearshapefile_(char* crc250, int* irc, int len1);
+void par_setvariable_ (char* variable,  char* crc250, int* irc, int len1, int len2);
+void par_setvalue_ (int* value,  char* crc250, int* irc, int len1);
+void par_setoffset_ (char* offset,  char* crc250, int* irc, int len1, int len2);
 
 void plo_opensession_(int* pid, char* crc250, int* irc, int len1);
 void plo_closesession_(int* pid, char* crc250, int* irc, int len1);
@@ -1333,7 +1336,7 @@ xs_setModelFilter(int cid, char *filter);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      mod_setfilter_(&cid,filter, crc250, &irc, 250, 250);
+      mod_setfilter_(&cid,filter, crc250, &irc, strlen(filter), 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
@@ -1358,7 +1361,7 @@ xs_setObsFilter(int cid, char *filter);
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
-      obs_setfilter_(&cid,filter, crc250, &irc, 250, 250);
+      obs_setfilter_(&cid,filter, crc250, &irc, strlen(filter), 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };
@@ -1954,6 +1957,83 @@ xs_pushPlotSet(int pid, int cid, int mid, int oid, char *name, char *legend);
       free(name80);
       free(legend250);
       free(crc250);
+
+#
+#  "setVariable" set the  rerun variable
+#      (string) name of variable
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+
+void
+xs_setVariable(char *variable);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      par_setvariable_(variable, crc250, &irc, strlen(variable), 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "setValue" set the  rerun value
+#      (string) value of variable
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+
+void
+xs_setValue(int value);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      par_setvalue_(&value, crc250, &irc, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+#
+#  "setOffset" set the  rerun offset
+#      (string) time offset expression
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+
+void
+xs_setOffset(char *offset);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      par_setoffset_(offset, crc250, &irc, strlen(offset), 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+
 #
 #  "setDebug" set debug flag
 #      (int)  1=on, 0=off

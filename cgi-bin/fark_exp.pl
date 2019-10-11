@@ -42,12 +42,14 @@ my $shapeFile=$shapeDir . "ne_50m_admin_0_countries";
 fark->setShapeFile($shapeFile);
 if ($debug) {
     my $fark=fark->open();
+    &setConfig($fark);
     #print "Processing '".($param->{exp}[0]//"")."'\n";
     $res=$fark->expression($param->{exp}[0]//"");
     $fark->close();
 } else {
     farkdir::sandbox { 
 	my $fark=fark->open();
+	&setConfig($fark);
 	#print "Processing '".($param->{exp}[0]//"")."'\n";
 	$res=$fark->expression($param->{exp}[0]//"");
 	$fark->close();
@@ -66,3 +68,20 @@ if ($debug) {
 }
 # report xml-structure
 print $doc->toString . "\n";
+#
+sub setConfig { # setConfig($fark,$variable,$value,$offset);
+    my $fark= shift;
+    my $variable=shift;
+    my $value=shift;
+    my $offset=shift;
+    if (defined $value  && ! "$value" eq "") {
+	$fark->setRerunVariable($variable);
+	$fark->setRerunValue($value);
+	$fark->setRerunOffset($offset);
+    } else {
+	if  ($debug) {print "No config\n";};
+	$fark->setRerunVariable("rid");
+	$fark->setRerunValue("0");
+	$fark->setRerunOffset("0");
+    }
+};	

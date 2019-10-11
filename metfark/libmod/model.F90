@@ -239,7 +239,6 @@ module model
      integer,dimension(8)      :: values    
      integer :: fok(10),frm(10)
      !
-     !
      type(mod_offset), pointer :: firstOffset => null()   ! linked offset list start
      type(mod_offset), pointer :: lastOffset => null()    ! linked offset list end
      integer :: nOffsetIndexes = 0              ! total number of files on the stack
@@ -376,7 +375,9 @@ CONTAINS
        return
     end if
     !
-    call date_and_time(VALUES=css%values) ! get current date
+    !call date_and_time(VALUES=css%values) ! get current date and time
+    call parse_date_and_time(css%values) ! get current date and time
+    !call model_timeOffset(css)                ! add offset...
     if (allocated(css%sys_var)) deallocate (css%sys_var)
     if (allocated(css%sys_val)) deallocate (css%sys_val)
     allocate(css%sys_var(2),css%sys_val(2),stat=irc)
@@ -3824,8 +3825,7 @@ CONTAINS
        call chop0(css%flt250,250)
        css%lenf=length(css%flt250,250,10)
        if(mod_bdeb)write(*,*)myname,"Filter:'"//css%flt250(1:css%lenf)//"'",irc
- end if
-    !
+    end if
   end subroutine model_setfilter
   !
   subroutine model_compileFilter(css,crc250,irc)
@@ -7902,10 +7902,10 @@ CONTAINS
                      & trim(var(jj))//"'"
              end do
           end if
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from parsef.")
-          call observation_errorappendi(crc250,irc)
-          call observation_errorappend(crc250,"\n")
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from parsef.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
           return
        end if
        css%ind_minval=parse_evalf(plim,val,crc250,irc)
@@ -7931,10 +7931,10 @@ CONTAINS
                      & trim(var(jj))//"'"
              end do
           end if
-          call observation_errorappend(crc250,myname)
-          call observation_errorappend(crc250," Error return from parsef.")
-          call observation_errorappendi(crc250,irc)
-          call observation_errorappend(crc250,"\n")
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from parsef.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
           return
        end if
        css%ind_maxval=parse_evalf(plim,val,crc250,irc)
@@ -7951,8 +7951,8 @@ CONTAINS
     end if
     call parse_close(plim,crc250,irc)
     if (irc.ne.0) then
-       call observation_errorappend(crc250,myname)
-       call observation_errorappend(crc250," Error return from parse_close.")
+       call model_errorappend(crc250,myname)
+       call model_errorappend(crc250," Error return from parse_close.")
        return
     end if
     if(mod_bdeb)write(*,*)myname,"Done min='"//trim(smin)//"' max='"//smax//"'",&

@@ -1,4 +1,4 @@
-    model_file="default.cfg";
+model_file="default.cfg";
 model_config = { "default.cfg" : {filterDir: "/opdata",
 				  filterDirStat: "",
 				  filterDirMin: "",

@@ -1,4 +1,4 @@
-subroutine mod_setfilter(sid,flt, crc250, irc)
+subroutine mod_setfilter(sid,flt,crc250, irc)
   use model
   implicit none
   integer :: sid             ! session id

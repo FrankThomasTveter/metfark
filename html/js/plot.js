@@ -139,7 +139,8 @@ function plot_expandCat(cat) {
 }
 
 RegExp.quote = function(str) {
-    return (str+'').replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&");
+    var re = new RegExp("[.?*+^$[\]\\(){}|-]", "g");
+    return (str+'').replace(re, "\\$&");
 };
 function goclone(source) {
     if (Object.prototype.toString.call(source) === '[object Array]') {

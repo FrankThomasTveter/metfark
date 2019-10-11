@@ -100,9 +100,15 @@ our %farkdirs = ( data => {"/lustre/storeA/"   => "ro",                  # input
 		  plot_use =>  {"/metfark/config/use/plot/"    => "rw" },
 		  plot_fill => {"/metfark/config/fill/plot/"    => "rw" },
 		  plot_log =>  {"/metfark/config/log/plot/"    => "rw" },
+		  join =>      {"/metfark/config/join/"    => "rw" },
+		  join_old =>  {"/metfark/config/old/join/"    => "rw" },
+		  join_use =>  {"/metfark/config/use/join/"    => "rw" },
+		  join_fill => {"/metfark/config/fill/join/"    => "rw" },
+		  join_log =>  {"/metfark/config/log/join/"    => "rw" },
 		  auto  => {"/metfark/config/auto/"    => "rw" },       # auto config files
+		  rerun => {"/metfark/config/rerun/"    => "rw" },      # auto config files
 		  url  =>  {"/metfark/config/url/"     => "rw" },       # url config files (not used?)
-		  abort=>  {"/metfark/config/abort/"     => "rw" },       # url config files (not used?)
+		  abort=>  {"/metfark/config/abort/"     => "rw" },     # url config files (not used?)
 		  lock =>  {"/metfark/config/lock/"    => "rw" }        # lock files (must be local disk)
     );
 
@@ -134,7 +140,7 @@ sub splitDir {
     my $priv = "";   # ipath privileges
     my $root = "";   # root
     my $loc = "";    # location
-    makeRoot($cls);
+    makeRootDir($cls);
     my $ddir = (keys (%{$farkdirs{$cls}}))[0]; # get default path
     # ...get complete path
     my $pdir = $ipath;
@@ -194,7 +200,7 @@ sub splitPattern {
     my $priv = "";   # ipath privileges
     my $root = "";   # root
     my $loc = "";    # location
-    makeRoot($cls);
+    makeRootDir($cls);
     my $ddir = (keys (%{$farkdirs{$cls}}))[0]; # get default path
     # ...get complete path
     my $pdir = $ipath;
@@ -248,6 +254,22 @@ sub splitPattern {
 }
 
 sub makeRoot {
+    my @clss=keys %farkdirs;
+    my $gret=1;
+    foreach my $cls (@clss) {
+	print ("Initialising: $cls");
+	my $ret=&makeRootDir($cls);
+	if (! $ret) {
+	    $gret=0;
+	    print ("   failed\n");
+	} else {
+	    print ("       ok\n");
+	}
+    }
+    return $gret;
+}
+
+sub makeRootDir {
     my $cls = shift;
     my @dirs=keys %{$farkdirs{$cls}};
     if (@dirs) {
@@ -256,8 +278,10 @@ sub makeRoot {
 		chmod 0777, $dirs[0];
 		return $dirs[0];
 	    } else {
-		return;
+		return 0; # fail
 	    }
+	} else {
+	    return 1; # all ok
 	};
     }
     return 0; # fail
@@ -351,6 +375,7 @@ sub removeFile{
 	if (! @nodes) {@nodes=$doc->findnodes("obs/obs_config");};
 	if (! @nodes) {@nodes=$doc->findnodes("coloc/coloc_config");};
 	if (! @nodes) {@nodes=$doc->findnodes("plot/plot_config");};
+	if (! @nodes) {@nodes=$doc->findnodes("join/join_config");};
 	if (@nodes) {
 	    my $size = @nodes;
 	    #print "Found $size nodes in file $path\n";
@@ -405,6 +430,7 @@ sub removeDir {
 	    if (! @nodes) {@nodes=$doc->findnodes("obs/obs_config");};
 	    if (! @nodes) {@nodes=$doc->findnodes("coloc/coloc_config");};
 	    if (! @nodes) {@nodes=$doc->findnodes("plot/plot_config");};
+	    if (! @nodes) {@nodes=$doc->findnodes("join/join_config");};
 	    my $size = @nodes;
 	    #print "Found $size nodes in file $path\n";
 	    foreach my $node (@nodes) { 
