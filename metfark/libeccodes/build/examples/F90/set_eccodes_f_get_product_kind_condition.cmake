@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_get_product_kind_condition TRUE)
-  else()
-    set(_eccodes_f_get_product_kind_condition FALSE)
-  endif()

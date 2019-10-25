@@ -1,10 +1,12 @@
 
 // data structure
 rerun_file="default.cfg";
-rerun_config = { "default.cfg" : {model : {"default1.cfg" : {last:"",info:"",rerun:"",status:""}},
-				  obs :   {"default2.cfg" : {last:"",info:"",rerun:"",status:""}},
-				  coloc : {"default3.cfg" : {last:"",info:"",rerun:"",status:""}},
-				  plot :  {"default4.cfg" : {last:"",info:"",rerun:"",status:""}},
+rerun_config = { "default.cfg" : {model :  {"default.cfg" : {last:"",info:"",rerun:"",status:""}},
+				  obs   :  {"default.cfg" : {last:"",info:"",rerun:"",status:""}},
+				  coloc :  {"default.cfg" : {last:"",info:"",rerun:"",status:""}},
+				  table :  {"default.cfg" : {last:"",info:"",rerun:"",status:""}},
+				  join  :  {"default.cfg" : {last:"",info:"",rerun:"",status:""}},
+				  plot  :  {"default.cfg" : {last:"",info:"",rerun:"",status:""}},
 				  variable: {name: 'rid',start: '0',stop: '0'},
 				  offset:'-cnt'
 				 }
@@ -69,7 +71,7 @@ function rerun_updateData(arg=rerun_getConfigFile()) {
 	    function(data, status){
 		dataToArray(data,status,documentLog);
 		rerun_setConfigFile(args[0]);
-		rerun_setTable();
+		rerun_show();
 	    })
 	.error(
 	    function (error) { alert("Rerun request failed (system error)");}
@@ -95,6 +97,14 @@ function rerun_newSetupFile(item) {
 	    if (rerun_config[file]["coloc"][setup] === undefined) {
 		rerun_config[file]["coloc"][setup]={last:"",info:""};
 	    };
+	} else if (type === "table") {
+	    if (rerun_config[file]["table"][setup] === undefined) {
+		rerun_config[file]["table"][setup]={last:"",info:""};
+	    };
+	} else if (type === "join") {
+	    if (rerun_config[file]["join"][setup] === undefined) {
+		rerun_config[file]["join"][setup]={last:"",info:""};
+	    };
 	} else if (type === "plot") {
 	    if (rerun_config[file]["plot"][setup] === undefined) {
 		rerun_config[file]["plot"][setup]={last:"",info:""};
@@ -106,7 +116,7 @@ function rerun_newSetupFile(item) {
     } else {
 	alert("Invalid: Model config file ('"+setup+"')");
     }
-   //console.log("Adding ",type,setup,rerun);
+    //console.log("Adding ",type,setup,rerun);
 };
 function rerun_saveConfigFile() {
     var file=rerun_getConfigFile();
@@ -118,6 +128,8 @@ function rerun_saveConfigFile() {
     var modelFiles="";
     var obsFiles="";
     var colocFiles="";
+    var tableFiles="";
+    var joinFiles="";
     var plotFiles="";
     rerun_setTable();
     for (var model in rerun_config[file]["model"]) {
@@ -137,14 +149,30 @@ function rerun_saveConfigFile() {
 	//#+
 	//	    #rerun_config[file]["coloc"][coloc]["rerun"];
     }
+    for (var table in rerun_config[file]["table"]) {
+	tableFiles=tableFiles + "|" + table + "~" + 
+	    rerun_config[file]["table"][table]["last"] + "~" +
+	    rerun_config[file]["table"][table]["info"] ;
+    }
+    for (var join in rerun_config[file]["join"]) {
+	joinFiles=joinFiles + "|" + join + "~" + 
+	    rerun_config[file]["join"][join]["last"] + "~" +
+	    rerun_config[file]["join"][join]["info"] ;
+    }
     for (var plot in rerun_config[file]["plot"]) {
 	plotFiles=plotFiles + "|" + plot + "~" + 
 	    rerun_config[file]["plot"][plot]["last"] + "~" +
 	    rerun_config[file]["plot"][plot]["info"] ;
     }
     documentLog.innerHTML="Sent rerun-save request.";
-    $.get("cgi-bin/fark_save.pl",{type:"rerun",file:file,password:password,variable:variable,start:start,stop:stop,offset:offset,
-				  modelFiles:modelFiles,obsFiles:obsFiles,colocFiles:colocFiles,plotFiles:plotFiles})
+    $.get("cgi-bin/fark_save.pl",{type:"rerun",file:file,password:password,
+				  variable:variable,start:start,stop:stop,offset:offset,
+				  modelFiles:modelFiles,
+				  obsFiles:obsFiles,
+				  colocFiles:colocFiles,
+				  tableFiles:tableFiles,
+				  joinFiles:joinFiles,
+				  plotFiles:plotFiles})
 	.success(
 	    function(data, status){
 		if (status == "success") {
@@ -177,6 +205,9 @@ function rerun_show() {
     if (file != "") {
 	rerun_allocate(file);
 	rerun_setConfigFile(file);
+	showValue('rerunTimeOffset',rerun_config[file]["offset"]);
+	showValue('rerunVariableStart',rerun_config[file]["variable"]["start"]);
+	showValue('rerunVariableStop',rerun_config[file]["variable"]["stop"]);
 	rerun_setTable();
     };
 };
@@ -193,14 +224,13 @@ function rerun_setConfigFile(file) {
 function rerun_setTable() {
     var file=rerun_getConfigFile();
     console.log("Rerun set table:",file,JSON.stringify(rerun_config));
-    showValue('rerunTimeOffset',rerun_config[file]["offset"]);
-    showValue('rerunVariableStart',rerun_config[file]["variable"]["start"]);
-    showValue('rerunVariableStop',rerun_config[file]["variable"]["stop"]);
     var item=document.getElementById('rerunTable');
     var tail=removeTableChildFromTo(item,"labelsRerun","newlineRerun");
     var modell=[];
     var obsl=[];
     var colocl=[];
+    var tablel=[];
+    var joinl=[];
     var plotl=[];
     for (var model in rerun_config[file]["model"]) {
 	//console.log("*** Found: ",cron, model);
@@ -214,6 +244,14 @@ function rerun_setTable() {
 	//console.log("*** Found: ",cron,coloc);
 	colocl.push(coloc);
     }
+    for (var table in rerun_config[file]["table"]) {
+	//console.log("*** Found: ",cron,table);
+	tablel.push(table);
+    }
+    for (var join in rerun_config[file]["join"]) {
+	//console.log("*** Found: ",cron,join);
+	joinl.push(join);
+    }
     for (var plot in rerun_config[file]["plot"]) {
 	//console.log("*** Found: ",cron,plot);
 	plotl.push(plot);
@@ -222,6 +260,8 @@ function rerun_setTable() {
     modell.sort();
     obsl.sort();
     colocl.sort();
+    tablel.sort();
+    joinl.sort();
     plotl.sort();
     for (var ii = 0; ii < modell.length; ++ii) {
 	var model=modell[ii];
@@ -229,7 +269,7 @@ function rerun_setTable() {
 	rerun_insertRow(tail,"model",model,
 			rerun_config[file]["model"][model]["last"],
 			rerun_config[file]["model"][model]["info"],
-			rerun_config[file]["model"][model]["status"],"#01DFD7"); 
+			rerun_config[file]["model"][model]["status"],"#0A0"); 
     }
     for (var ii = 0; ii < obsl.length; ++ii) {
 	var obs=obsl[ii];
@@ -237,7 +277,7 @@ function rerun_setTable() {
 	rerun_insertRow(tail,"obs",obs,
 			rerun_config[file]["obs"][obs]["last"],
 			rerun_config[file]["obs"][obs]["info"],
-			rerun_config[file]["obs"][obs]["status"],"#F3E2A9");
+			rerun_config[file]["obs"][obs]["status"],"#AFA");
     }
     for (var ii = 0; ii < colocl.length; ++ii) {
 	var coloc=colocl[ii];
@@ -245,7 +285,23 @@ function rerun_setTable() {
 	rerun_insertRow(tail,"coloc",coloc,
 			rerun_config[file]["coloc"][coloc]["last"],
 			rerun_config[file]["coloc"][coloc]["info"],
-			rerun_config[file]["coloc"][coloc]["status"],"#66F");
+			rerun_config[file]["coloc"][coloc]["status"],"#FAA");
+    }
+    for (var ii = 0; ii < tablel.length; ++ii) {
+	var table=tablel[ii];
+	//console.log("Insert row: ",table);
+	rerun_insertRow(tail,"table",table,
+			rerun_config[file]["table"][table]["last"],
+			rerun_config[file]["table"][table]["info"],
+			rerun_config[file]["table"][table]["status"],"#FA0");
+    }
+    for (var ii = 0; ii < joinl.length; ++ii) {
+	var join=joinl[ii];
+	//console.log("Insert row: ",join);
+	rerun_insertRow(tail,"join",join,
+			rerun_config[file]["join"][join]["last"],
+			rerun_config[file]["join"][join]["info"],
+			rerun_config[file]["join"][join]["status"],"#AF0");
     }
     for (var ii = 0; ii < plotl.length; ++ii) {
 	var plot=plotl[ii];
@@ -253,7 +309,7 @@ function rerun_setTable() {
 	rerun_insertRow(tail,"plot",plot,
 			rerun_config[file]["plot"][plot]["last"],
 			rerun_config[file]["plot"][plot]["info"],
-			rerun_config[file]["plot"][plot]["status"],"#BDBDBD");
+			rerun_config[file]["plot"][plot]["status"],"#0AF");
     }
 };
 
@@ -280,12 +336,16 @@ function rerun_insertRow(item,type,setup,last,info,status,color) {
 	td.setAttribute("title","Maintain <observation file index>.");
     } else if (type == "coloc") {
 	td.setAttribute("title","Create <colocation xml> for debugging.");
+    } else if (type == "table") {
+	td.setAttribute("title","Create <table file>.");
+    } else if (type == "join") {
+	td.setAttribute("title","Join <table file> into new <table file>.");
     } else if (type == "plot") {
-	td.setAttribute("title","Create <table file> and run plotting script.");
+	td.setAttribute("title","Run plotting script using data in <table file>.");
     } else {
     };
     row.appendChild(td);
-   //console.log("Row file name=",setup);
+    //console.log("Row file name=",setup);
     // make select-FILE NAME column
     td=document.createElement("TD");
     td.setAttribute("style","min-width:25px;width:25px");
@@ -309,6 +369,10 @@ function rerun_insertRow(item,type,setup,last,info,status,color) {
 	td.title = "Show status of the model-index-file.";
     } else if (type =="obs") {
 	td.title = "Show status of the observation-index-file.";
+    } else if (type =="table") {
+	td.title = "Show status of the table-file.";
+    } else if (type =="join") {
+	td.title = "Show status of the joined table-file.";
     } else if (type =="plot") {
 	td.title = "Show status of the table-file.";
     } else {
@@ -347,33 +411,6 @@ function rerun_checkPassword() {
     };
     return true;
 }
-function rerun_fileFind(sfile) {
-    var file=rerun_getConfigFile();
-    rerun_config[file]["stack"]=sfile;
-    var password=document.getElementById("rerunConfigFilePsw").value;
-    documentLog.innerHTML="Sent rerun-find request.";
-    $.get("cgi-bin/fark_find.pl",{type:"rerunfile",
-				  file:file,
-				  password:password,
-				  target:sfile})
-	.success(
-	    function(data, status){
-		if (status == "success") {
-		    var errors=data.getElementsByTagName("error");
-		    if (errors.length > 0 ) {
-			var msg=getErrorMessage(errors);
-			alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
-		    } else {
-			dataToArray(data,status,documentLog);
-			rerun_show();
-		    };
-		    documentLog.innerHTML="";}
-	    })
-	.error(
-	    function (error) { alert("Rerun find request failed (system error)");}
-	);
-};
-
 function rerun_mkdir(path) {
     var password=document.getElementById("rerunConfigFilePsw").value;
     documentLog.innerHTML="Sent mkdir request.";
@@ -446,7 +483,7 @@ function rerun_rmfile(path) {
 };
 
 function rerun_mkfile(file) {
-   //console.log("Calling saveConfigFile: '"+file+"'");
+    //console.log("Calling saveConfigFile: '"+file+"'");
     rerun_setConfigFile(file);
     rerun_saveConfigFile(file);
 };
@@ -455,4 +492,195 @@ function rerun_fgfile(path) { // clear file from internal memory
     if (rerun_config[path] != undefined) {
 	delete rerun_config[path];
     }
+};
+
+function rerun_showConfigFile(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent rerun-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"rerun",arg:args})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    //console.log("Updating dropdown for ",target,JSON.stringify(data));
+		    var ret=dataToArray(data,status,documentLog);
+		    var root=ret[0]||{};
+		    //console.log("Got data ",target,JSON.stringify(root));
+		    removeChildren(item);
+		    var added=false;
+		    if (args.length >0 && looksLikeFile(args[0])) {
+			var file=getFile(args[0]);
+		    } else {
+			var file="";
+		    };
+		    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		    //console.log("Found entries: ",dirs.length-1,root);
+		    var parent=dirs[0];
+		    if (parent != null) {
+			var dd=parent;
+			addChildButton(item,"<up>","rerun_setConfigFile('"+dd+"');","Change to parent <directory>");
+			added=true;
+		    }
+		    if (args.length == 1) {
+			//console.log("Arg ret:",ret);
+			if (root["type"] == "dir" && root["loc"] != "") {
+			    addChildButton(item,"<rmdir>","rerun_rmdir('"+args[0]+"');","Remove <directory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<rmfile>","rerun_rmfile('"+args[0]+"');","Remove <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			    if (looksLikeFile(args[0])) {
+				addChildButton(item,"<mkfile>","rerun_mkfile('"+args[0]+"');rerun_show();","Make <file>");
+				if (rerun_config[args[0]] != undefined) {
+				    addChildButton(item,"<fgfile>","rerun_fgfile('"+args[0]+"');","Forget <file>");
+				}
+				added=true;
+			    } else {
+				addChildButton(item,"<mkdir>","rerun_mkdir('"+args[0]+"');","Make <directory>");
+				added=true;
+			    }
+			}
+		    } else if (args.length == 2) {
+			if (root["type"] == "dir") {
+			    addChildButton(item,"<cpdir>","rerun_cpdir('"+args[0]+"','"+args[1]+"');","Copy <directory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<cpfile>","rerun_cpfile('"+args[0]+"','"+args[1]+"');rerun_setConfigFile('"+args[2]+"');rerun_show();","Copy <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			}
+		    };
+		    //for (var rerun in rerun_config) {
+		    //console.log("Adding config button: ",rerun);
+		    //addChildButton(item,rerun,"rerun_setConfigFile('"+rerun+"');rerun_show();");
+		    // added=true;
+		    //}
+		    // add directories...
+		    for (var ii=1;ii<dirs.length;ii++) {
+			var dir=dirs[ii];
+			if (root["loc"] == "" || root["loc"] == ".") {
+			    var dd = dir;
+			} else {
+			    var dd = root["loc"]+dir;
+			};
+			//if (dd.substr(dd.length-1) == "/" || dd == "") {
+			//  dd=dd + file;
+			//}
+			//console.log("Adding dir button: ",dd,ii,dirs[ii]);
+			if (looksLikeFile(dd)) {
+			    addChildButton(item,dd,"rerun_setConfigFile('"+dd+"');rerun_show();","Use <file>");
+			    added=true;
+			} else {
+			    addChildButton(item,dd,"rerun_setConfigFile('"+dd+"');rerun_show();","Change <directory>");
+			    added=true;
+			}
+		    };
+		    if (! added) {addChildText(item,"No data available...");}
+		};
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Dropdown rerun request failed (system error)");}
+	);
+};
+
+function rerun_showTimeOffset(item,target,arg) {
+    var file=rerun_getConfigFile();
+    var variable=rerun_config[file]["variable"]["name"];
+    removeChildren(item);
+    addChildButton(item,'rid',"addValue('"+target+"','-rid');rerun_setOffset();","Rerun variable.");
+    addFunctionButtons(item,target);
+};
+
+function rerun_showType(item,target,arg) {
+    removeChildren(item);
+    addChildButton(item,"model","showValue('"+target+"','model');","Maintain model index");
+    addChildButton(item,"observation","showValue('"+target+"','obs');","Maintain observation index");
+    addChildButton(item,"colocation","showValue('"+target+"','coloc');","Make colocation XML (debugging only)");
+    addChildButton(item,"table","showValue('"+target+"','table');","Make table file");
+    addChildButton(item,"join","showValue('"+target+"','join');","Join table files");
+    addChildButton(item,"plot","showValue('"+target+"','plot');","Make plot table and graphics");
+};
+
+function rerun_showSetupFile(item,target,arg) {
+    var type=document.getElementById("rerunType").value // "obs";
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent rerun-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:type,arg:args})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    var ret=dataToArray(data,status,documentLog);
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
+		    } else if (ret[0] !== undefined) {
+			var root=ret[0]||{};
+			//console.log("Updating dropdown for ",target);
+			removeChildren(item);
+			var added=false;
+			if (args.length >0 && looksLikeFile(args[0])) {
+			    var file=getFile(args[0]);
+			} else {
+			    var file="";
+			};
+			// add directories...
+			var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+			//console.log("Found entries: ",dirs.length-1,root);
+			var parent=dirs[0];
+			if (parent != null) {
+			    var dd=parent;
+			    //console.log("Adding up: ",dd);
+			    addChildButton(item,"<up>","showValue('rerunSetupFile','"+dd+"');","Change to parent <directory>");
+			    added=true;
+			} else {
+			    //console.log("Adding clear: ",dd);
+			    addChildButton(item,"<up>","showValue('rerunSetupFile','');","Change to root <directory>");
+			    added=true;
+			}
+			if (dirs.length > 0) {
+			    for (var ii=1;ii<dirs.length;ii++) {
+				var dir=dirs[ii];
+				if (root["loc"] == "" || root["loc"] == ".") {
+				    var dd = dir;
+				} else {
+				    var dd = root["loc"]+dir;
+				};
+				if (dd !== null && dd !== undefined) {
+				    //if (dd.substr(dd.length-1) == "/" || dd == "") {
+				    //dd=dd + file;
+				    //}
+				    //console.log("Adding dir button: ",dd,ii);
+				    if (looksLikeFile(dd)) {
+					addChildButton(item,dd,"showValue('rerunSetupFile','"+dd+"');","Use <file>");
+					added=true;
+				    } else {
+					addChildButton(item,dd,"showValue('rerunSetupFile','"+dd+"');","Change <directory>");
+					added=true;
+				    };
+				}
+			    }
+			}
+			if (! added) {addChildText(item,"No data available...");}
+		    } else {
+			console.log("Undefined root.");
+		    }
+		};
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Rerun request failed (system error)");}
+	);
 };

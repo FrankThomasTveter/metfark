@@ -1,4 +1,4 @@
-    join_file = "default.cfg";
+join_file = "default.cfg";
 join_config = { "default.cfg" : { filterDir: "/opdata",
 				  filterDirStat: "",
 				  filterDirMin: "",
@@ -9,7 +9,7 @@ join_config = { "default.cfg" : { filterDir: "/opdata",
 				  max: {x:2,y:3},
 				  attributes : { def: "default"},
 				  table : "table.ps",
-				  graphics : "default.ps",
+				  graphics :"/lustre/storeA",
 				  cat : "Text",
 				  password: "test"
 				}
@@ -43,7 +43,7 @@ function join_setConfigFile(file) {
     showValue('joinConfigFile',file);
     showValue('joinConfigFileSave',file);
     //if (file != "") {
-   //console.log("Setting join config file:",file);
+    //console.log("Setting join config file:",file);
     join_allocate(file);
     join_file=file;
     //console.log("Cat:",join_config[file]["cat"]," Join_file:",join_file);
@@ -71,13 +71,13 @@ function join_getObsConfigFile() {
 };
 function join_setArray(parameter,value) {
     var file=join_getConfigFile();
-    //console.log("File:",file,parameter,join_config[file]);
+    console.log("File:",file,parameter,value,JSON.stringify(join_config[file]));
     join_config[file][parameter]=decodeURI(value);
 };
 
 function join_expandCat(cat) {
     var file=join_getConfigFile();
-    join_cats[cat]=goclone(join_org_cats[cat]);
+    join_cats[cat]=join_goclone(join_org_cats[cat]);
     if (join_org_cats[cat] ===undefined) {
 	console.log("Missing category:",cat);
 	return;
@@ -98,8 +98,8 @@ function join_expandCat(cat) {
 		    var nn=val;
 		}
 	    };
-	   //console.log("Duplicator attribute '"+attr+"' = ",nn);
-	    var re = new RegExp("(\w*)"+RegExp.quote(attr)+"(\w*)", "g");
+	    //console.log("Duplicator attribute '"+attr+"' = ",nn);
+	    var re = new RegExp("(\w*)"+join_quote(attr)+"(\w*)", "g");
 	    for (var aa in join_cats[cat]["attributes"]) {
 		if (aa.match(re) && aa !== attr) {
 		    //console.log("Attribute match '"+aa+"' == '"+attr+"'");
@@ -123,7 +123,7 @@ function join_expandCat(cat) {
 		var cc=join_cats[cat]["colnames_"][jj];
 		if (cc.match(re)) {
 		    // delete cc column
-		   //console.log("Column match '"+cc+"' == '"+attr+"'");
+		    //console.log("Column match '"+cc+"' == '"+attr+"'");
 		    var index = join_cats[cat]["colnames_"].indexOf(cc);
 		    join_cats[cat]["colnames_"].splice(index, 1);
 		    for (var ii=nn;ii>0;ii--) {
@@ -140,22 +140,22 @@ function join_expandCat(cat) {
     }
 }
 
-RegExp.quote = function(str) {
-    var re = new RegExp("[.?*+^$[\]\\(){}|-]", "g");
+function join_quote(str) {
+    var re = new RegExp("[.?*+^$[](){}|-\\]", "g");
     return (str+'').replace(re, "\\$&");
 };
-function goclone(source) {
+function join_goclone(source) {
     if (Object.prototype.toString.call(source) === '[object Array]') {
         var clone = [];
         for (var i=0; i<source.length; i++) {
-            clone[i] = goclone(source[i]);
+            clone[i] = join_goclone(source[i]);
         }
         return clone;
     } else if (typeof(source)=="object") {
         var clone = {};
         for (var prop in source) {
             if (source.hasOwnProperty(prop)) {
-                clone[prop] = goclone(source[prop]);
+                clone[prop] = join_goclone(source[prop]);
             }
         }
         return clone;
@@ -167,13 +167,18 @@ function goclone(source) {
 function join_setCat(value) {
     var file=join_getConfigFile();
     if (value===undefined) {
-	value=join_config[file]["cat"]
+	if (join_config[file] !== undefined) { 
+	    value=join_config[file]["cat"]
+	} else {
+	    value=document.getElementById("joinCat").value;
+	};
     };
     join_expandCat(value);
     if (join_cats[value] === undefined) {
 	console.log("Attempt to set undefined join-category:",value);
 	return;
     }
+    //console.log("SetCat:",file,value,JSON.stringify(join_cats));
     //console.log("File:",file,parameter,join_config[file]);
     join_config[file]["cat"]=value;
     // sync file and cat attributes
@@ -217,6 +222,7 @@ function join_setTypeAttribute(type,attr,value) {
     var file=join_getConfigFile();
     if (join_config[file] === undefined) {join_config[file] ={}};
     if (join_config[file][type] === undefined) {join_config[file][type] ={}};
+    console.log("SetTypeAttribute:",file,type,attr,value);
     join_config[file][type][attr]=value;
 };
 function join_show() {
@@ -227,10 +233,14 @@ function join_show() {
 	showValue('joinConfigFile',file);
 	showValue('joinConfigFileSave',file);
 	showValue('joinCat',join_config[file]["cat"]);
+	showValue('joinFilterDir',join_config[file]["filterDir"]);
+	showValue('joinFilterDirMin',join_config[file]["filterDirMin"]);
+	showValue('joinFilterDirMax',join_config[file]["filterDirMax"]);
+	showValue('joinFilterFile',join_config[file]["filterFile"]);
 	showValue('joinTable',join_config[file]["table"]);
 	showValue('joinGraphics',join_config[file]["graphics"]);
-	join_showDatasetTable();
 	join_showAttributesTable();
+	join_showDatasetTable();
     };
 };
 // joinervation config methods
@@ -271,11 +281,11 @@ function join_saveConfigFile() {
     var joinColMax="";
     var joinAttrs="";
     if (join_config[file] != undefined) {
-	filterDir=model_config[file]["filterDir"]//"";
-	filterDirMin=model_config[file]["filterDirMin"]//"";
-	filterDirMax=model_config[file]["filterDirMax"]//"";
-	filterFile=model_config[file]["filterFile"]//"";
-	hits=model_config[file]["hits"]//"";
+	filterDir=join_config[file]["filterDir"]//"";
+	filterDirMin=join_config[file]["filterDirMin"]//"";
+	filterDirMax=join_config[file]["filterDirMax"]//"";
+	filterFile=join_config[file]["filterFile"]//"";
+	hits=join_config[file]["hits"]//"";
 	cat=join_config[file]["cat"]//"";
 	table=join_config[file]["table"]//"";
 	graphics=join_config[file]["graphics"]//"";
@@ -285,12 +295,12 @@ function join_saveConfigFile() {
 		var col=colnames_[ii];
 		if (joinCols.length==0) {
 		    joinCols=col;
-		    joinColMin=join_config[file]["min"][col]||"";
-		    joinColMax=join_config[file]["max"][col]||"";
+		    joinColMin=(join_config[file]["min"][col]||"");
+		    joinColMax=(join_config[file]["max"][col]||"");
 		} else {
 		    joinCols=joinCols+"~"+colnames_[ii];
-		    joinColMin=joinColMin+"~"+join_config[file]["min"][col]||"";
-		    joinColMax=joinColMax+"~"+join_config[file]["max"][col]||"";
+		    joinColMin=joinColMin+"~"+(join_config[file]["min"][col]||"");
+		    joinColMax=joinColMax+"~"+(join_config[file]["max"][col]||"");
 		}
 	    }
 	    var order=join_cats[cat]['order']//[];
@@ -304,7 +314,7 @@ function join_saveConfigFile() {
 	    };
 	}
     };
-   //console.log("Saving: "+file+" "+cat+" "+table+" "+graphics+" "+joinCols+" "+joinAttrs, join_config[file]);
+    //console.log("Saving: "+file+" "+cat+" "+table+" "+joinCols+" "+joinAttrs, join_config[file]);
     join_configEd++;
     documentLog.innerHTML="Sent join-save request.";
     $.get("cgi-bin/fark_save.pl",
@@ -341,7 +351,7 @@ function join_saveConfigFile() {
 };
 // Transposed function...
 function join_showDatasetTable() {
-   //console.log(":::::::::: showDatasetTable");
+    //console.log(":::::::::: showDatasetTable");
     var file=join_getConfigFile();
     var cat=join_config[file]["cat"];
     var colnames_={};
@@ -361,25 +371,18 @@ function join_showDatasetTable() {
 	}
     }
     var item=document.getElementById('joinDatasetTable');
-    var tbody=removeTableChildren(item);
-    join_insertDataset(tbody,col1,colmin,colmax);
+    var head=removeTableChildFrom(item,"labelsJoinDataset");
+    join_insertDataset(head,col1,colmin,colmax);
 }
 //
 function join_insertDataset(item,col1,colmin,colmax) {
-    // insert header row
-    var row = document.createElement("TR");
-    join_insertHeader(row,["Column"],0);
-    join_insertHeader(row,["Min"],0);
-    join_insertHeader(row,["Max"],0);
-    
-    item.appendChild(row);
     // insert rows
     for (var ii=0;ii<col1.length;ii++) {
 	var row = document.createElement("TR");
 	join_insertHeader(row,col1,ii);
 	join_insertCell(row,col1,"min",colmin,ii);
 	join_insertCell(row,col1,"max",colmax,ii);
-	item.appendChild(row);
+	item.parentNode.insertBefore(row,item.nextSimbling);
     }
 }
 //
@@ -401,19 +404,45 @@ function join_insertCell(row,col1,type,col,ii) {
     //console.log("insertNew Inserting:",itemId);
     td=document.createElement("TD");
     td.setAttribute("class","fill");
-    td.setAttribute("style","width:50%");
+    //td.setAttribute("style","width:25%");
     inp=document.createElement("INPUT");
     inp.setAttribute("id",itemId);
     inp.setAttribute("type","text");
     inp.setAttribute("value","");
     inp.setAttribute("style","width:100%");
-    inp.setAttribute("onblur","join_setTypeAttribute('"+type+"','"+col1[[ii]]+"',this.value);");
+    //console.log("Added button:",ii,type,col1[[ii]]);
+    inp.setAttribute("onblur","join_setTypeAttribute('"+type+"','"+(col1[[ii]]||"")+"',this.value);");
     inp.setAttribute("title","Limit expression");
     inp.value=col[[ii]]||"";
     td.appendChild(inp);
     row.appendChild(td);
 }
 //
+//check if directory exists...
+function join_setFilterDir(value) {
+    var file=join_getConfigFile();
+   //console.log("File:",file,"filterDir",join_config[file],value);
+    var val=decodeURI(value);
+    join_config[file]["filterDir"]=val;
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:"data",path:val})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length == 0 ) {
+		    document.getElementById('joinFilterDir').style.color='black'
+		    join_config[file]["filterDirStat"]="";
+		   //console.log("Dir ok:",val);
+		} else {
+		    join_config[file]["filterDirStat"]=val;
+		    document.getElementById('joinFilterDir').style.color='red'
+		    console.log("Dir NOT ok:",val);
+		}
+		join_show();
+	    })
+	.error(
+	    function (error) { alert("Join filter dir request failed (system error)");}
+	);
+};
 function join_showAttributesTable() {
     var file=join_getConfigFile();
     var cat=join_config[file]["cat"];
@@ -423,6 +452,7 @@ function join_showAttributesTable() {
     } else {
 	console.log("Undefined category:",cat);
     }
+    //console.log("showAttributesTavble:",JSON.stringify(join_cats[cat]),JSON.stringify(order));
     var item=document.getElementById('joinAttributesTable');
     var head=removeTableChildFrom(item,"labelsJoinAttribute");
     var value=join_config[file]['attributes'];
@@ -476,7 +506,7 @@ function join_insertAttributeRow(item,cat,attr,value,val) {
 	td.setAttribute("style","min-width:25px;width:25px");
 	btn=document.createElement("BUTTON");
 	btn.setAttribute("title","Show available attribute values");
-	btn.setAttribute("onclick","showDropdown('"+itemId+"',document.getElementById('"+itemId+"').value)");
+	btn.setAttribute("onclick","showDropdown('"+itemId+"')");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
 	td.appendChild(btn);
@@ -501,7 +531,7 @@ function join_updateData(arg = join_getConfigFile()) {
     var types=[];
     types[0]="join";
     types[1]="cat";
-   //console.log("$$$$$ Loading join+cats with: ", args);
+    //console.log("$$$$$ Loading join+cats with: ", args);
     $.get("cgi-bin/fark_load.pl",{type:types,arg:args})
 	.success(
 	    function(data, status){
@@ -592,8 +622,576 @@ function join_rmdir(path) {
 };
 
 function join_mkfile(file) {
-   //console.log("Calling saveConfigFile: '"+file+"'");
+    //console.log("Calling saveConfigFile: '"+file+"'");
     join_setConfigFile(file);
     join_saveConfigFile(file);
 };
 
+
+function join_showConfigFile(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent join-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"join",arg:args})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    var ret=dataToArray(data,status,documentLog);
+		    var root=ret[0]||{};
+		    //console.log("Updating dropdown for ",target);
+		    removeChildren(item);
+		    var added=false;
+		    if (args.length >0 && looksLikeFile(args[0])) {
+			var file=getFile(args[0]);
+		    } else {
+			var file="";
+		    };
+		    // add directories...
+		    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		    //console.log("Found entries: ",dirs.length-1,root);
+		    var parent=dirs[0];
+		    if (parent != null) {
+			var dd=parent;
+			//console.log("Adding up button: ",dd);
+			addChildButton(item,"<up>","join_setConfigFile('"+dd+"');","Change to parent <directory>");
+			added=true;
+		    }
+		    if (args.length == 1) {
+			//console.log("Arg ret:",ret);
+			if (root["type"] == "dir" && root["loc"] != "") {
+			    addChildButton(item,"<rmdir>","join_rmdir('"+args[0]+"');","Remove <directory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<rmfile>","join_rmfile('"+args[0]+"');","Remove <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			    if (looksLikeFile(args[0])) {
+				addChildButton(item,"<mkfile>","join_mkfile('"+args[0]+"');join_show();","Make <file>");
+				if (join_config[args[0]] != undefined) {
+				    addChildButton(item,"<fgfile>","join_fgfile('"+args[0]+"');","Forget <file>");
+				}
+				added=true;
+			    } else {
+				addChildButton(item,"<mkdir>","join_mkdir('"+args[0]+"');","Make <directory>");
+				added=true;
+			    }
+			}
+		    } else if (args.length == 2) {
+			if (root["type"] == "dir") {
+			    addChildButton(item,"<cpdir>","join_cpdir('"+args[0]+"','"+args[1]+"');","Copy <diretory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<cpfile>","join_cpfile('"+args[0]+"','"+args[1]+"');join_setConfigFile('"+args[2]+"');","Copy <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			}
+		    };
+		    for (var ii=1;ii<dirs.length;ii++) {
+			var dir=dirs[ii];
+			if (root["loc"] == "" || root["loc"] == ".") {
+			    var dd = dir;
+			} else {
+			    var dd = root["loc"]+dir;
+			};
+			//if (dd.substr(dd.length-1) == "/" || dd == "") {
+			//  dd=dd + file;
+			//}
+			//console.log("Adding dir button: ",dd);
+			if (looksLikeFile(dd)) {
+			    addChildButton(item,dd,"join_setConfigFile('"+dd+"');join_show();","Use <file>");
+			    added=true;
+			} else {
+			    addChildButton(item,dd,"join_setConfigFile('"+dd+"');join_show();","Change <directory>");
+			    added=true;
+			}
+		    }
+		    if (! added) {addChildText(item,"No data available...");}
+		};
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Join request failed (system error)");}
+	);
+};
+
+function join_showCat(item,target,arg) {
+    var args=getArgs(arg);
+    //documentLog.innerHTML="Sent cat-load request.";
+    //$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args})
+    //    .success(
+    //	function(data, status){
+    //var ret=dataToArray(data,status,documentLog);
+    //var root=ret[0];
+    //console.log("Updating dropdown for ",target);
+    removeChildren(item);
+    var added=false;
+    for (var cat in join_org_cats) {
+	console.log("Adding config button: ",cat);
+	addChildButton(item,cat,"console.log('Button setcat','"+cat+"');join_setCat('"+cat+"');showValue('joinCat','"+cat+"');join_show()","Join category");
+	added=true;
+    }
+    //documentLog.innerHTML="";
+    //}).error(function (error) { alert("Request failed (system error)");});
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function join_showTable(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent dir-load request.";
+    var path=args[0] || "";
+    var cls = "output";
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path})
+	.success(		
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    addWildcardButtons(item,target);
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			console.log("Error:"+path+"  "+msg);
+			//alert("Unable to list '"+path+"'\n"+msg);
+		    } else {
+			var ls=data.getElementsByTagName("ls");
+			if (ls.length > 0) {
+			    var root=ls[0].getAttribute("root");
+			    var loc=ls[0].getAttribute("location");
+			    var pdirs=getSubDirs(cls,root,loc,"");
+			    var parent=pdirs[0];
+			    //console.log("Found parent: ",root,loc,parent);
+			    if (parent != null) {
+				var dd=root+parent;
+				addChildButton(item,"<up>",
+					       "join_setArray('table','"+dd+"');join_show();","Change to parent <directory>");
+				added=true;
+			    };
+			    var dirs=ls[0].getElementsByTagName("dir");
+			    //console.log("Found dir entries: ",dirs.length);
+			    for (var ii=0; ii< dirs.length; ii++) {
+				var dd = dirs[ii].getAttribute("path");
+				//console.log("Adding dir button: ",dd);
+				addChildButton(item,dd,"join_setArray('table','"+dd+"');join_show();","Change <directory>");
+				added=true;
+			    };
+			    var patts=ls[0].getElementsByTagName("pattern");
+			    //console.log("Found file entries: ",patts.length);
+			    for (var ii=0; ii< patts.length; ii++) {
+				var rr = path+"/"+ getFile(patts[ii].getAttribute("regexp"));
+				var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				if (dd !== '') {
+				    //console.log("Adding pattern button: ",dd,rr);
+				    addChildButtonShaded(item,dd,"join_setArray('table','"+rr+"');join_show();","Use pattern");
+				    added=true;
+				};
+			    };
+			    var fils=ls[0].getElementsByTagName("file");
+			    //console.log("Found file entries: ",fils.length);
+			    for (var ii=0; ii< fils.length; ii++) {
+				var dd = fils[ii].getAttribute("path");
+				var size = fils[ii].getAttribute("size")
+				if (dd !== '') {
+				    //console.log("Adding file button: ",dd,ii);
+				    addChildButton(item,size+" "+dd,"join_setArray('table','"+dd+"');join_show();","Use <file>");
+				    added=true;
+				};
+			    };
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Join table request failed (system error)");}
+	);
+};
+
+function join_showGraphics(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent dir-load request.";
+    var path=args[0] || "";
+    var cls = "output";
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path})
+	.success(
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    addWildcardButtons(item,target);
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			console.log("Error:"+path+"  "+msg);
+			//alert("Unable to list '"+path+"'\n"+msg);
+		    } else {
+			var ls=data.getElementsByTagName("ls");
+			if (ls.length > 0) {
+			    var root=ls[0].getAttribute("root");
+			    var loc=ls[0].getAttribute("location");
+			    var pdirs=getSubDirs(cls,root,loc,"");
+			    var parent=pdirs[0];
+			    //console.log("Found parent: ",root,loc,parent);
+			    if (parent != null) {
+				var dd=root+parent;
+				addChildButton(item,"<up>",
+					       "join_setArray('graphics','"+dd+"');join_show();","Change to parent <directory>");
+				added=true;
+			    };
+			    var dirs=ls[0].getElementsByTagName("dir");
+			    //console.log("Found dir entries: ",dirs.length);
+			    for (var ii=0; ii< dirs.length; ii++) {
+				var dd = dirs[ii].getAttribute("path");
+				//console.log("Adding dir button: ",dd);
+				addChildButton(item,dd,"join_setArray('graphics','"+dd+"');join_show();","Change <directory>");
+				added=true;
+			    };
+			    var patts=ls[0].getElementsByTagName("pattern");
+			    //console.log("Found file entries: ",patts.length);
+			    for (var ii=0; ii< patts.length; ii++) {
+				var rr = getFile(patts[ii].getAttribute("regexp"));
+				var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				if (dd !== '') {
+				    //console.log("Adding file button: ",dd,rr);
+				    addChildButtonShaded(item,dd,"join_setArray('graphics','"+rr+"');join_show();","Use <pattern>");
+				    added=true;
+				};
+			    };
+			    var fils=ls[0].getElementsByTagName("file");
+			    //console.log("Found file entries: ",fils.length);
+			    for (var ii=0; ii< fils.length; ii++) {
+				var dd = fils[ii].getAttribute("path");
+				var size = fils[ii].getAttribute("size")
+				if (dd !== '') {
+				    //console.log("Adding file button: ",dd,ii);
+				    addChildButton(item,size+" "+dd,"join_setArray('graphics','"+dd+"');join_show();","Use <file>");
+				    added=true;
+				};
+			    };
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Join dir request failed (system error)");}
+	);
+};
+
+function join_showFilterDir(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent join-load request.";
+    var file=join_getConfigFile();
+    var path=args[0] || "";
+    var cls = "data";
+    var filter=join_config[file]["filterFile"];
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path,filter:filter})
+	.success(
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+path+"'\n"+msg);
+		} else {
+		    var ls=data.getElementsByTagName("ls");
+		    if (ls.length > 0) {
+			var root=ls[0].getAttribute("root");
+			var loc=ls[0].getAttribute("location");
+			var pdirs=getSubDirs(cls,root,loc,"");
+			var parent=pdirs[0];
+			//console.log("Found parent: ",root,loc,parent);
+			if (parent != null) {
+			    var dd=root+parent;
+			    addChildButton(item,"<up>",
+					   "join_setArray('filterDir','"+dd+"');join_show();","Change to parent <directory>");
+			    added=true;
+			};
+			var dirs=ls[0].getElementsByTagName("dir");
+			//console.log("Found dir entries: ",dirs.length);
+			for (var ii=0; ii< dirs.length; ii++) {
+			    var dd = dirs[ii].getAttribute("path");
+			    console.log("Adding dir button: ",dd);
+			    if (looksLikeFile(dd)) {
+				addChildButton(item,dd,"join_setArray('filterDir','"+dd+"');join_show();","Use <file>");
+				added=true;
+			    } else {
+				addChildButton(item,dd,"join_setArray('filterDir','"+dd+"');join_show();","Change <directory>");
+				added=true;
+			    }
+			};
+			var patts=ls[0].getElementsByTagName("pattern");
+			//console.log("Found file entries: ",patts.length);
+			for (var ii=0; ii< patts.length; ii++) {
+			    var rr = getFile(patts[ii].getAttribute("regexp"));
+			    var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+			    if (dd !== '') {
+				//console.log("Adding file button: ",dd,rr);
+				addChildButtonShaded(item,dd,"join_setArray('filterFile','"+rr+"');join_show();","Copy <pattern> to filter");
+				added=true;
+			    };
+			};
+			var fils=ls[0].getElementsByTagName("file");
+			//console.log("Found file entries: ",fils.length);
+			for (var ii=0; ii< fils.length; ii++) {
+			    var dd = getFile(fils[ii].getAttribute("path"));
+			    var size = fils[ii].getAttribute("size")
+			    if (dd !== '') {
+				//console.log("Adding file button: ",dd,":",size,":");
+				addChildButton(item,size+" "+dd,"join_setArray('filterFile','"+dd+"');join_show();","Copy <file name> to filter");
+				added=true;
+			    };
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Join dir filter request failed (system error)");}
+	);
+};
+
+function join_showFilterFile(item,target,arg) {
+    var file=join_getConfigFile();
+    var password=document.getElementById("joinConfigFilePsw").value;
+    var filterDir = join_config[file]["filterDir"];
+    var filterDirMin = join_config[file]["filterDirMin"];
+    var filterDirMax = join_config[file]["filterDirMax"];
+    var filterFile = join_config[file]["filterFile"];
+    var indexTarget = join_config[file]["indexTarget"];
+    var indexVariable = join_config[file]["indexVariable"];
+    documentLog.innerHTML="Sent join-find request.";
+    $.get("cgi-bin/fark_find.pl",{type:"join",
+				  file:file,
+				  password:password,
+				  filterDir:filterDir,
+				  filterDirMin:filterDirMin,
+				  filterDirMax:filterDirMax,
+				  filterFile:filterFile,
+				  indexTarget:indexTarget,
+				  indexVariable:indexVariable
+				 })
+	.success(	
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			alert("Unable to find files at "+filterDir+" (filter:'"+filterFile+"', Setup file:"+file+")\n"+msg);
+		    } else {
+			dataToArray(data,status,documentLog);
+			setInnerHTML('joinPatternHits',join_config[file]["hits"]);
+			removeChildren(item);
+			var added=false;
+			var len=join_config[file]["files"].length;
+			for (var ii=0; ii<len;ii++) {
+			    var sfile=join_basename(join_config[file]["files"][ii][0]);
+			    var sage=parseFloat(join_config[file]["files"][ii][1]).toFixed(2);
+			    var ssize=join_config[file]["files"][ii][2];
+    			    addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","join_setArray('filterFile','"+sfile+"');join_show();","Copy file to filter.");
+			    added=true;
+			}
+			if (! added) {addChildText(item,"No data available...");}
+		    };
+		    documentLog.innerHTML="";
+		}
+	    })
+	.error(
+	    function (error) { alert("Join file filter request failed (system error)");}
+	);
+};
+function join_basename(string) {
+    var myRe = /^.*\/([^\/]*)$/g;
+    var myArray = myRe.exec(string);
+    console.log("Basename:",string,'->',myArray[1]);
+    return myArray[1];
+};
+function join_showSet(item,target,arg) {
+    var args=getArgs(arg);
+    //documentLog.innerHTML="Sent line-load request.";
+    //$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args})
+    //    .success(
+    //	function(data, status){
+    //var ret=dataToArray(data,status,documentLog);
+    //var root=ret[0];
+    //console.log("Updating dropdown for ",target);
+    removeChildren(item);
+    var added=false;
+    var file=join_getConfigFile();
+    //console.log("Looking for file:",file);
+    var cat=join_config[file]["cat"];
+    for (var line in join_cats[cat]["lines"]) {
+	//console.log("Adding config button: ",line);
+	addChildButton(item,line+" ("+join_cats[cat]["lines"][line]+")","showValue('joinSet','"+line+"');showValue('joinType',join_cats['"+cat+"'][\"lines\"]['"+line+"']);","Data set identification");
+	added=true;
+    }
+    if (! added) {addChildText(item,"No data available...");}
+    //documentLog.innerHTML="";
+    //}).error(function (error) { alert("Join set request failed (system error)");});}
+};
+
+function join_showColoc(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent join-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"coloc",arg:args})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    var ret=dataToArray(data,status,documentLog);
+		    var root=ret[0]||{};
+		    //console.log("Updating dropdown for ",target);
+		    removeChildren(item);
+		    var added=false;
+		    if (args.length >0 && looksLikeFile(args[0])) {
+			var file=getFile(args[0]);
+		    } else {
+			var file="";
+		    };
+		    // add directories...
+		    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		    //console.log("Found entries: ",dirs.length-1,root);
+		    var parent=dirs[0];
+		    if (parent != null) {
+			var dd=parent;
+			//console.log("Adding up: ",dd);
+			addChildButton(item,"<up>","showValue('joinColoc','"+dd+"');","Change to parent <directory>");
+			added=true;
+		    } else {
+			//console.log("Adding clear: ",dd);
+			addChildButton(item,"<up>","showValue('joinColoc','');","Change to root <directory>");
+			added=true;
+		    }
+		    if (dirs.length > 0) {
+			for (var ii=1;ii<dirs.length;ii++) {
+			    var dir=dirs[ii];
+			    if (root["loc"] == "" || root["loc"] == ".") {
+				var dd = dir;
+			    } else {
+				var dd = root["loc"]+dir;
+			    };
+			    if (dd !== null && dd !== undefined) {
+				//if (dd.substr(dd.length-1) == "/" || dd == "") {
+				//dd=dd + file;
+				//}
+				//console.log("Adding dir button: ",dd,ii);
+				// colocation file 'dd' must be 'loaded' if it is selected....!!!
+				addChildButton(item,dd,"showValue('joinColoc','"+dd+"');join_loadColoc('"+dd+"');","Change <directory>");
+				added=true;
+			    }
+			}
+		    }
+		    if (! added) {addChildText(item,"No data available...");}
+		    //console.log("There: ",dirs);
+		};
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Join coloc request failed (system error)");}
+	);
+};
+
+function join_showExpression(item,target,arg) {
+    var cnt = target.substring(14);
+    removeChildren(item);
+    var added=false;
+    var cfile=join_getColocConfigFile();
+    var mfile=join_getModelConfigFile();
+    var ofile=join_getObsConfigFile();
+    var mod=(mfile !== "");
+    var obs=(ofile !== "");
+    // model index
+    if (mod) {
+	if (model_config[mfile]!== undefined) {
+	    var indexTarget=model_config[mfile]["indexTarget"];
+	    addTargetButtonShaded(item,target,indexTarget,"model index target (see model index)");
+	};
+	// list model trgs in coloc_config
+ 	if (coloc_config[cfile] !== undefined) {
+	    var trgs=coloc_config[cfile]["modelConfigFile"]["targets"];
+	    for (var trg in trgs) {
+		addTargetButton(item,target,trg,"model target");
+	    };
+	};
+    };
+    // list obs trgs in obs_config
+    if (obs) {
+	if (obs_config[ofile] !== undefined) {
+	    var trgs=obs_config[ofile]["targets"];
+	    for (var trg in trgs) {
+		addTargetButton(item,target,trg,"observation target (see observation index)");
+	    };
+	    trg = obs_config[ofile]["indexTarget"];
+	    addTargetButtonShaded(item,target,trg,"observation index target (see observation index)");
+	}
+	// list obs trgs in coloc_config
+ 	if (coloc_config[cfile] !== undefined) {
+	    var trgs=coloc_config[cfile]["obsConfigFile"]["targets"];
+	    for (var trg in trgs) {
+		addTargetButton(item,target,trg,"observation target");
+	    };
+	};
+    };
+    addFunctionButtons(item,target);
+    added=true;
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function join_showAttribute(item,target,arg) {
+    var attr = target.substring(13);
+    var file=join_getConfigFile();
+    var cat=join_config[file]["cat"];
+    if (join_cats[cat] === undefined) {join_setCat(cat);}
+    var val=join_cats[cat]["attributes"][attr];
+    var radio=val instanceof Array; // should we have radio button?
+    var dup=(attr.substr(0,1) === "_");
+    removeChildren(item);
+    var added=false;
+    if (radio) {
+	for (var vv=0; vv < val.length;vv++) {
+	    //console.log("Attribute '",attr,"' value  ",vv,val[vv]);
+	    if (dup) {
+		addChildButton(item,val[vv],"join_setAttribute('"+attr+"','"+val[vv]+"');join_setCat('"+cat+"');join_show();","Use <attribute duplicator>");
+		added=true;
+	    } else {
+		addChildButton(item,val[vv],"join_setAttribute('"+attr+"','"+val[vv]+"');","Use <attribute value>");
+		added=true;
+	    };
+	};
+    }
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function join_showDebugExpression(item,target,arg) {
+    removeChildren(item);
+    var added=false;
+    addLogicalButtons(item,target);
+    addFunctionButtons(item,target);
+    added=true;
+    if (! added) {addChildText(item,"No data available...");}
+};

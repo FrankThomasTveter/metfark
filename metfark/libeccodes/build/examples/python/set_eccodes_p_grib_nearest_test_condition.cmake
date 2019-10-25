@@ -1,5 +1,0 @@
-  if(  HAVE_PYTHON )
-    set(_eccodes_p_grib_nearest_test_condition TRUE)
-  else()
-    set(_eccodes_p_grib_nearest_test_condition FALSE)
-  endif()

@@ -1,5 +1,0 @@
-  if(  HAVE_PYTHON )
-    set(_p_grib_count_messages_condition TRUE)
-  else()
-    set(_p_grib_count_messages_condition FALSE)
-  endif()

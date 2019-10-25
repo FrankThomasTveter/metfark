@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/bufr_get_element.dir/bufr_get_element.c.o  -o bufr_get_element -rdynamic ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

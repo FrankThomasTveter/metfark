@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/multi_from_message.dir/multi_from_message.c.o  -o multi_from_message -rdynamic ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

@@ -1,5 +1,0 @@
-  if(  ECCODES_INSTALL_EXTRA_TOOLS )
-    set(_grib_check_gaussian_grid_condition TRUE)
-  else()
-    set(_grib_check_gaussian_grid_condition FALSE)
-  endif()

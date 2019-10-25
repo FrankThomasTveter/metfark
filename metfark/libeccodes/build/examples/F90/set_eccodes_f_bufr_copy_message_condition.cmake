@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_bufr_copy_message_condition TRUE)
-  else()
-    set(_eccodes_f_bufr_copy_message_condition FALSE)
-  endif()

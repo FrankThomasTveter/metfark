@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_bufr_read_temp_condition TRUE)
-  else()
-    set(_eccodes_f_bufr_read_temp_condition FALSE)
-  endif()

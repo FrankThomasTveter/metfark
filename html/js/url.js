@@ -241,7 +241,7 @@ function url_showModelTargetTable() {
 	url_insertModelTargetRow(tail,target,targets[target]["variable"],targets[target]["min"],targets[target]["max"]);
     }
 };
-// create auto table row
+// create exec table row
 function url_insertModelTargetRow(item,target,variable,min,max) {
     var row = document.createElement("TR");
     var file = url_getModelConfigFile();
@@ -531,7 +531,7 @@ function url_showObsTargetTable() {
 			       targets[target]["info"],targets[target]["min"],targets[target]["max"]);
     }
 };
-// create auto table row
+// create exec table row
 function url_insertOTargetRow(item,target,pos,descr,info,min,max) {
     var row = document.createElement("TR");
     var td, inp;
@@ -571,7 +571,7 @@ function url_insertOTargetRow(item,target,pos,descr,info,min,max) {
     item.parentNode.insertBefore(row,item);
     return row;
 }
-// create auto table row
+// create exec table row
 function url_insertObsTargetRow(item,target,pos,descr,info,min,max) {
     var row = document.createElement("TR");
     var td, inp;
@@ -658,7 +658,7 @@ function url_showTargetMatchTable() {
     url_check('matchExpression','urlDebugExpression');
 
 };
-// create auto table row
+// create exec table row
 function url_insertTargetMatchRow(item,target,expr) {
     var row = document.createElement("TR");
     var file = url_getConfigFile();

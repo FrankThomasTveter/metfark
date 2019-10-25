@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_grib_precision_condition TRUE)
-  else()
-    set(_eccodes_f_grib_precision_condition FALSE)
-  endif()

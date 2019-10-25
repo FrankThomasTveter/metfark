@@ -16,18 +16,20 @@ print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 #
 # make sure config directories exist...
 #
-my $modelDir= farkdir::getRootDir("model") || farkdir::term("invalid root directory (model)");
-my $obsDir=   farkdir::getRootDir("obs")   || farkdir::term("Invalid root directory (obs)");
-my $colocDir= farkdir::getRootDir("coloc") || farkdir::term("Invalid root directory (coloc)");
-my $plotDir=  farkdir::getRootDir("plot")  || farkdir::term("Invalid root directory (plot)");
-my $autoDir=  farkdir::getRootDir("auto")  || farkdir::term("Invalid root directory (auto)");
-my $rerunDir=  farkdir::getRootDir("rerun")  || farkdir::term("Invalid root directory (rerun)");
+my $modelDir= farkdir::getRootDir("model")  || farkdir::term("invalid root directory (model)");
+my $obsDir=   farkdir::getRootDir("obs")    || farkdir::term("Invalid root directory (obs)");
+my $colocDir= farkdir::getRootDir("coloc")  || farkdir::term("Invalid root directory (coloc)");
+my $tableDir= farkdir::getRootDir("table")  || farkdir::term("Invalid root directory (table)");
+my $plotDir=  farkdir::getRootDir("plot")   || farkdir::term("Invalid root directory (plot)");
+my $rerunDir= farkdir::getRootDir("rerun")  || farkdir::term("Invalid root directory (rerun)");
+my $cleanDir= farkdir::getRootDir("clean")  || farkdir::term("Invalid root directory (clean)");
+my $execDir=  farkdir::getRootDir("exec")|| farkdir::term("Invalid root directory (exec)");
 #
 # system directories...
 #
 my $colocUseDir= farkdir::getRootDir("coloc_use") || farkdir::term("Invalid root directory (coloc_use)");
-my $plotUseDir=  farkdir::getRootDir("plot_use")  || farkdir::term("Invalid root directory (plot_use)");
-my $lockDir=    farkdir::getRootDir("lock")       || farkdir::term("Invalid root directory (lock)");
+my $tableUseDir=  farkdir::getRootDir("table_use")  || farkdir::term("Invalid root directory (table_use)");
+my $lockDir=     farkdir::getRootDir("lock")       || farkdir::term("Invalid root directory (lock)");
 my $scriptDir=   farkdir::getRootDir("script")    || farkdir::term("Invalid root directory (script)");
 #
 #
@@ -49,8 +51,8 @@ my $top = XML::LibXML::Element->new( 'load' );
 $doc->addChild( $top );
 foreach my $cls (@{$types}) {
 #
-    if ($cls eq "auto") {
-	&loadAuto($doc,$top,$param);
+    if ($cls eq "exec") {
+	&loadExec($doc,$top,$param);
     } elsif ($cls eq "cat") {
 	&loadCat($doc,$top,$param);
     } else {
@@ -181,32 +183,35 @@ sub loadCls {
     };
 }
 
-sub loadAuto {
+sub loadExec {
     my $doc=shift;
     my $top=shift;
     my $param =shift;
-    my $cls = "auto";
-    my $file=($param->{root}->[0]||"auto.cfg");
+    my $cls = "exec";
+    my $file=($param->{root}->[0]||"exec.cfg");
     my ($dir, $name) = farkdir::splitName($file);
     my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
     my $fpath=$root . $loc; # full absolute path
     if (-d  $fpath && $priv eq "rw") {
 	my $path=$fpath . $name;
-	my $parent = XML::LibXML::Element->new( 'auto' );
+	my $parent = XML::LibXML::Element->new( 'exec' );
 	$top->addChild( $parent );
 	# load obs data
 	my $parser = XML::LibXML->new();
 	#$parser->expand_entities( 0 ); # leave entities alone
 	farkdir::sandbox {
 	    if (-f $path) {
-		my $auto = $parser->parse_file($path) || next;
-		my ($node)=$auto->findnodes("auto/auto_config");
+		my $exec = $parser->parse_file($path) || next;
+		my ($node)=$exec->findnodes("exec/exec_config");
 		if ( $node ) {
 		    $node->removeAttribute("password"); # remove passwords
 		    &updateTime($node,"model");
 		    &updateTime($node,"obs");
 		    &updateTime($node,"coloc");
+		    &updateTime($node,"table");
 		    &updateTime($node,"plot");
+		    &updateTime($node,"rerun");
+		    &updateTime($node,"clean");
 		}
 		$parent->addChild( $node );
 	    } else {
@@ -219,44 +224,6 @@ sub loadAuto {
     };
 };
 
-sub loadRerun {
-    my $doc=shift;
-    my $top=shift;
-    my $param =shift;
-    my $cls = "rerun";
-    #farkdir::term("Debug:".Dumper($param).":".$param->{"arg[]"}->[0]);
-    my $file=($param->{"arg[]"}->[0]||"rerun.cfg");
-    my ($dir, $name) = farkdir::splitName($file);
-    my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
-    my $fpath=$root . $loc; # full absolute path
-    if (-d  $fpath && $priv eq "rw") {
-	my $path=$fpath . $name;
-	my $parent = XML::LibXML::Element->new( 'rerun' );
-	$top->addChild( $parent );
-	# load obs data
-	my $parser = XML::LibXML->new();
-	#$parser->expand_entities( 0 ); # leave entities alone
-	farkdir::sandbox {
-	    if (-f $path) {
-		my $rerun = $parser->parse_file($path) || next;
-		my ($node)=$rerun->findnodes("rerun/rerun_config");
-		if ( $node ) {
-		    $node->removeAttribute("password"); # remove passwords
-		    &updateTime($node,"model");
-		    &updateTime($node,"obs");
-		    &updateTime($node,"coloc");
-		    &updateTime($node,"plot");
-		}
-		$parent->addChild( $node );
-	    } else {
-		farkdir::term("Invalid file: $path");
-	    };
-	}{message=> "Unable to process: $path",
-	  stdout=>"never"};
-    } else {
-	farkdir::term("Invalid directory ($fpath,$priv)");
-    };
-};
 
 sub updateTime {
     my $node= shift;
@@ -266,7 +233,7 @@ sub updateTime {
     my @clss=$node->findnodes($cls);
     foreach my $clsr (@clss) {
 	my $file=$clsr->getAttribute("file");
-	my $lastAuto="";
+	my $lastExec="";
 	my $lastAccess="";
 	my $lastStart=0;
 	my $lastStop=0;
@@ -282,7 +249,7 @@ sub updateTime {
 	if (-f $lockfilename) {
 	    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
 		$mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
-	    $lastAuto=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
+	    $lastExec=strftime('%Y-%m-%dT%H:%M:%SZ', gmtime($atime));
 	    $lastStart=$atime;
 	    if ( not open(MLOCKFILE, ">$lockfilename") ) {
 	    } elsif (flock (MLOCKFILE,2+4)) {
@@ -311,7 +278,7 @@ sub updateTime {
 	    };	
 	    close(MLOCKFILE);
 	};
-	$clsr->setAttribute("last",        $lastAuto);
+	$clsr->setAttribute("last",        $lastExec);
 	$clsr->setAttribute("info",        $lastAccess);
     }
 };

@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/c_set_missing.dir/set_missing.c.o  -o c_set_missing -rdynamic ../../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

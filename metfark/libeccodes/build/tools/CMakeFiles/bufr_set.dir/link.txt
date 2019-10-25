@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/bufr_set.dir/bufr_set.c.o  -o ../bin/bufr_set -rdynamic libgrib_tools.a ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,"\$ORIGIN/../lib" 

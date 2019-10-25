@@ -1,5 +1,0 @@
-  if(  HAVE_PYTHON )
-    set(_p_grib_print_data_condition TRUE)
-  else()
-    set(_p_grib_print_data_condition FALSE)
-  endif()

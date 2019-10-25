@@ -1,4 +1,4 @@
-    obs_file = "default.cfg";
+obs_file = "default.cfg";
 obs_config = { "default.cfg" : { filterDir : "/home/www/bufr/",
 				 filterDirStat : "",
 				 filterDirMin: "",
@@ -59,7 +59,7 @@ function obs_setFilterDir(value) {
 		if (errors.length == 0 ) {
 		    document.getElementById('obsFilterDir').style.color='black'
 		    obs_config[file]["filterDirStat"]="";
-		   //console.log("Dir ok:",val);
+		    //console.log("Dir ok:",val);
 		} else {
 		    obs_config[file]["filterDirStat"]=val;
 		    document.getElementById('obsFilterDir').style.color='red'
@@ -483,7 +483,7 @@ function obs_rmdir(path) {
 };
 
 function obs_mkfile(file) {
-   //console.log("Calling saveConfigFile: '"+file+"'");
+    //console.log("Calling saveConfigFile: '"+file+"'");
     obs_setConfigFile(file);
     obs_saveConfigFile(file);
 };
@@ -514,3 +514,396 @@ function obs_targetUp(ii) {
 	arrayUp(targeto,ii);
     }
 }
+
+function obs_showConfigFile(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent obs-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    var ret=dataToArray(data,status,documentLog);
+		    var root=ret[0]||{};
+		    //console.log("Updating dropdown for ",target);
+		    removeChildren(item);
+		    var added=false;
+		    if (args.length >0 && looksLikeFile(args[0])) {
+			var file=getFile(args[0]);
+		    } else {
+			var file="";
+		    };
+		    // add directories...
+		    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		    //console.log("Found entries: ",dirs.length-1,root);
+		    var parent=dirs[0];
+		    if (parent != null) {
+			var dd=parent;
+			addChildButton(item,"<up>","obs_setConfigFile('"+dd+"');","Change to parent <directory>");
+			added=true;
+		    }
+		    if (args.length == 1) {
+			//console.log("Arg ret:",ret);
+			if (root["type"] == "dir" && root["loc"] != "") {
+			    addChildButton(item,"<rmdir>","obs_rmdir('"+args[0]+"');","Remove <directory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<rmfile>","obs_rmfile('"+args[0]+"');","Remove <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			    if (looksLikeFile(args[0])) {
+				addChildButton(item,"<mkfile>","obs_mkfile('"+args[0]+"');obs_show();","Make <file>");
+				if (obs_config[args[0]] != undefined) {
+				    addChildButton(item,"<fgfile>","obs_fgfile('"+args[0]+"');","Forget <file>");
+				}
+				added=true;
+			    } else {
+				addChildButton(item,"<mkdir>","obs_mkdir('"+args[0]+"');","Make <directory>");
+				added=true;
+			    }
+			}
+		    } else if (args.length == 2) {
+			if (root["type"] == "dir") {
+			    addChildButton(item,"<cpdir>","obs_cpdir('"+args[0]+"','"+args[1]+"');","Copy <directory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<cpfile>","obs_cpfile('"+args[0]+"','"+args[1]+"');obs_setConfigFile('"+args[2]+"');obs_show();","Copy <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			}
+		    };
+		    //for (var obs in obs_config) {
+		    //console.log("Adding config button: ",obs);
+		    //addChildButton(item,obs,"obs_setConfigFile('"+obs+"');obs_show();");
+		    //added=true;
+		    //}
+		    for (var ii=1;ii<dirs.length;ii++) {
+			var dir=dirs[ii];
+			if (root["loc"] == "" || root["loc"] == ".") {
+			    var dd = dir;
+			} else {
+			    var dd = root["loc"]+dir;
+			};
+			//if (dd.substr(dd.length-1) == "/" || dd == "") {
+			//dd=dd + file;
+			//}
+			//console.log("Adding dir button: ",dd);
+			if (looksLikeFile(dd)) {
+			    addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();","Use <file>");
+			    added=true;
+			} else {
+			    addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();","Change <directory>");
+			    added=true;
+			}
+		    }
+		    if (! added) {addChildText(item,"No data available...");}
+		}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Obs config request failed (system error)");}
+	);
+    // documentLog.innerHTML="Sent obs-load request.";
+    // $.get("cgi-bin/fark_load.pl",{type:"obs",arg:args},function(data, status){
+    //     dataToArray(data,status,documentLog);
+    //     //console.log("Updating dropdown for ",target);
+    //     removeChildren(item);
+    //     var added=false;
+    //     for (var obs in obs_config) {
+    // 	addChildButton(item,obs,"obs_setConfigFile('"+obs+"');obs_show();");
+    //      added=true;
+    //     };
+    //     documentLog.innerHTML="";
+    // });
+}
+
+function obs_showFilterDir(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent obs-load request.";
+    var file=obs_getConfigFile();
+    var path=args[0] || "";
+    var cls = "data";
+    var filter=obs_config[file]["filterFile"];
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path,filter:filter})
+	.success(
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+path+"'\n"+msg);
+		} else {
+		    var ls=data.getElementsByTagName("ls");
+		    if (ls.length > 0) {
+			var root=ls[0].getAttribute("root");
+			var loc=ls[0].getAttribute("location");
+			var pdirs=getSubDirs(cls,root,loc,"");
+			var parent=pdirs[0];
+			//console.log("Found parent: ",root,loc,parent);
+			if (parent != null) {
+			    var dd=root+parent;
+			    addChildButton(item,"<up>",
+					   "obs_setArray('filterDir','"+dd+"');obs_show();","Change to parent <directory>");
+			    added=true;
+			};
+			var dirs=ls[0].getElementsByTagName("dir");
+			//console.log("Found dir entries: ",dirs.length);
+			for (var ii=0; ii< dirs.length; ii++) {
+			    var dd = dirs[ii].getAttribute("path");
+			    //console.log("Adding dir button: ",dd);
+			    addChildButton(item,dd,"obs_setArray('filterDir','"+dd+"');obs_show();","Change <directory>");
+			    added=true;
+			};
+			var patts=ls[0].getElementsByTagName("pattern");
+			//console.log("Found file entries: ",patts.length);
+			for (var ii=0; ii< patts.length; ii++) {
+			    var rr = getFile(patts[ii].getAttribute("regexp"));
+			    var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+			    if (dd !== '') {
+				//console.log("Adding file button: ",dd,rr);
+				addChildButtonShaded(item,dd,"obs_setArray('filterFile','"+rr+"');obs_show();","Copy <pattern> to filter");
+				added=true;
+			    };
+			};
+			var fils=ls[0].getElementsByTagName("file");
+			//console.log("Found file entries: ",fils.length);
+			for (var ii=0; ii< fils.length; ii++) {
+			    var dd = getFile(fils[ii].getAttribute("path"));
+			    var size = fils[ii].getAttribute("size")
+			    if (dd !== '') {
+				//console.log("Adding file button: ",dd);
+				addChildButton(item,size+" "+dd,"obs_setArray('filterFile','"+dd+"');obs_show();","Copy <file name> to filter");
+				added=true;
+			    };
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Obs filter request failed (system error)");}
+	);
+};
+
+function obs_showFilterFile(item,target,arg) {
+    var file=obs_getConfigFile();
+    var password=document.getElementById("obsConfigFilePsw").value;
+    var filterDir = obs_config[file]["filterDir"];
+    var filterDirMin = obs_config[file]["filterDirMin"];
+    var filterDirMax = obs_config[file]["filterDirMax"];
+    var filterFile = obs_config[file]["filterFile"];
+    var table = obs_config[file]["tablePath"];
+    var obsTargets = "";
+    var obsTrg=obs_config[file]["targets"];
+    for (var target in obsTrg) {
+	obsTargets=obsTargets + "|" + target + "~" + 
+	    obsTrg[target]["pos"] + "~" + 
+	    obsTrg[target]["descr"] + "~" + 
+	    obsTrg[target]["info"] + "~" + 
+	    obsTrg[target]["min"] + "~" + 
+	    obsTrg[target]["max"];
+    };
+    var indexTarget = obs_config[file]["indexTarget"];
+    var indexExp = obs_config[file]["indexExp"];
+    var bufrType = obs_config[file]["bufrType"];
+    var subType = obs_config[file]["subType"];
+    var typeInfo=obs_config[file]["typeInfo"];
+    documentLog.innerHTML="Sent obs-find request.";
+    $.get("cgi-bin/fark_find.pl",{type:"obs",
+				  file:file,
+				  password:password,
+				  filterDir:filterDir,
+				  filterDirMin:filterDirMin,
+				  filterDirMax:filterDirMax,
+				  filterFile:filterFile,
+				  table:obs_config[file]["tablePath"],
+				  obsTargets:obsTargets,
+				  indexTarget:indexTarget,
+				  indexExp:indexExp,
+				  bufrType:bufrType,
+				  subType:subType,
+				  typeInfo:typeInfo})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			alert("Unable to find files at "+filterDir+" (filter:'"+filterFile+"', Setup file:"+file+")\n"+msg);
+		    } else {
+			dataToArray(data,status,documentLog);
+			setInnerHTML('obsPatternHits',obs_config[file]["hits"]);
+			removeChildren(item);
+			var added=false;
+			var len=obs_config[file]["files"].length;
+			for (var ii=0; ii<len;ii++) {
+			    var sfile=obs_config[file]["files"][ii][0];
+			    var sage=parseFloat(obs_config[file]["files"][ii][1]).toFixed(2);
+			    var ssize=obs_config[file]["files"][ii][2];
+			    addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","obs_fileFind('"+sfile+"');","Scan <observation file>");
+			    added=true;
+			}
+			if (! added) {addChildText(item,"No data available...");}
+		    };
+		    documentLog.innerHTML="";
+		}
+	    })
+	.error(
+	    function (error) { alert("Obs filter file request failed (system error)");}
+	);
+};
+
+function obs_showTablePath(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent obs-load request.";
+    var path=args[0] || "";
+    var cls = "tables";
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path})
+	.success(
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+path+"'\n"+msg);
+		} else {
+		    var ls=data.getElementsByTagName("ls");
+		    if (ls.length > 0) {
+			var root=ls[0].getAttribute("root");
+			var loc=ls[0].getAttribute("location");
+			var pdirs=getSubDirs(cls,root,loc,"");
+			var parent=pdirs[0];
+			//console.log("Found parent: ",root,loc,parent);
+			if (parent != null) {
+			    var dd=root+parent;
+			    addChildButton(item,"<up>",
+					   "obs_setArray('tablePath','"+dd+"');obs_show();","Change to parent <directory>");
+			    added=true;
+			};
+			var dirs=ls[0].getElementsByTagName("dir");
+			//console.log("Found dir entries: ",dirs.length);
+			for (var ii=0; ii< dirs.length; ii++) {
+			    var dd = dirs[ii].getAttribute("path");
+			    //console.log("Adding dir button: ",dd);
+			    addChildButton(item,dd,"obs_setArray('tablePath','"+dd+"');obs_show();","Change <directory>");
+			    added=true;
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Table request failed (system error)");}
+	);
+};
+
+function obs_showBufrType(item,target,arg) {
+    var file=obs_getConfigFile();
+    removeChildren(item);
+    var added=false;
+    if (obs_config[file] !== undefined) {
+	var bufr=obs_config[file]["bufr"];
+	if (bufr !== undefined) {
+	    for (var bufrType in bufr) {
+		var info=obs_config[file]["bufr"][bufrType]["info"] || "";
+		var cnt=obs_config[file]["bufr"][bufrType]["cnt"] || "";
+		var ccnt="";
+		if (cnt !== "") {
+		    ccnt=" ("+cnt+")";
+		}
+		addChildButton(item,bufrType+" "+info+ccnt,"obs_setArray('bufrType','"+bufrType+"');showValue('obsBufrType','"+bufrType+"');","Use <BUFR type>");
+		added=true;
+	    }
+	}
+    }
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function obs_showSubType(item,target,arg) {
+    var file=obs_getConfigFile();
+    var bufrType=obs_config[file]["bufrType"];
+    removeChildren(item);
+    var added=false;
+    if (obs_config[file] !== undefined) {
+	var bufr=obs_config[file]["bufr"];
+	if (bufr !== undefined) {
+	    for (var subType in bufr[bufrType]) {
+		if (subType !== "info" && subType !== "cnt")  {
+		    var info=bufr[bufrType][subType]["info"];
+		    var cnt=bufr[bufrType][subType]["cnt"] || "";
+		    var ccnt="";
+		    if (cnt !== "") {
+			ccnt=" ("+cnt+")";
+		    }
+		    addChildButton(item,subType+" : "+info+ccnt,"obs_setArray('subType','"+subType+"');obs_setArray('typeInfo','"+info+"');showValue('obsSubType','"+subType+"');showValue('obsTypeInfo','"+info+"');","Use <BUFR sub type>");
+		    added=true;
+		}
+	    }
+	}
+    }
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function obs_showIndexPos(item,target,arg) {
+    var file=obs_getConfigFile();
+    var bufrType=obs_config[file]["bufrType"];
+    var subType=obs_config[file]["subType"];
+    removeChildren(item);
+    var added=false;
+    if (bufrType !== undefined && bufrType !== "" &&
+	subType !== undefined && subType !== "" && subType !== "info" &&subType !== "cnt" &&
+	obs_config[file] !== undefined && 
+	obs_config[file]["bufr"] !== undefined && 
+	obs_config[file]["bufr"][bufrType] !== undefined && 
+	obs_config[file]["bufr"][bufrType][subType] !== undefined) {
+	var bufr=obs_config[file]["bufr"][bufrType][subType];
+	for (var pos in bufr) {
+	    if (pos !== "info" && pos !== "cnt")  {
+		var descr=bufr[pos]["descr"];
+		var info=" "+bufr[pos]["info"];
+		if (bufr[pos]["val1"] !== undefined && bufr[pos]["val1"] != "NA") {
+		    var value="    ~ "+bufr[pos]["val1"];
+		} else {
+		    var value="";
+		};
+		if (descr == "31001") {
+		    addChildButtonShaded(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","use <BUFR delayed replicator>");
+		    added=true;
+		} else {
+		    addChildButton(item,pos+" : "+descr + info + value,"showValue('obsIndexPOS','"+pos+"');showValue('obsIndexDESCR','"+descr+"');showValue('obsIndexInfo','"+info+"');","Use <BUFR sequence element>");
+		    added=true;
+		}
+	    }
+	}
+    }
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function obs_showIndexExp(item,target,arg) {
+    console.log("showIndexExp target='" + target + "'  arg='"+arg+"'");
+    var file=obs_getConfigFile();
+    var bufrType=obs_config[file]["bufrType"];
+    var subType=obs_config[file]["subType"];
+    removeChildren(item);
+    var added=false;
+    if ( obs_config[file] !== undefined &&
+	 obs_config[file]["targets"] !== undefined ) {
+	for (var trg in obs_config[file]["targets"]) {
+	    addChildButton(item,trg,"addValue('obsIndexExp','"+trg+"');","observation target");
+	    added=true;
+	}
+	addFunctionButtons(item,target);
+    }
+    if (! added) {addChildText(item,"No data available...");}
+};

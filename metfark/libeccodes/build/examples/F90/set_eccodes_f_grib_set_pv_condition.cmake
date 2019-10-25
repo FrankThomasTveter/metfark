@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_grib_set_pv_condition TRUE)
-  else()
-    set(_eccodes_f_grib_set_pv_condition FALSE)
-  endif()

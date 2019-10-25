@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_bufr_get_keys_condition TRUE)
-  else()
-    set(_eccodes_f_bufr_get_keys_condition FALSE)
-  endif()

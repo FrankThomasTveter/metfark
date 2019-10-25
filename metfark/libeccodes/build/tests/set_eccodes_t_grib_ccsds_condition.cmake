@@ -1,5 +1,0 @@
-  if(  HAVE_AEC )
-    set(_eccodes_t_grib_ccsds_condition TRUE)
-  else()
-    set(_eccodes_t_grib_ccsds_condition FALSE)
-  endif()

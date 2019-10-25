@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/metar_copy.dir/metar_copy.c.o  -o ../bin/metar_copy -rdynamic libgrib_tools.a ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,"\$ORIGIN/../lib" 

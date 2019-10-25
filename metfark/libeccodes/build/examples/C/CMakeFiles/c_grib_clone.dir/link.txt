@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/c_grib_clone.dir/grib_clone.c.o  -o c_grib_clone -rdynamic ../../lib/libeccodes.so -lm -lpthread -Wl,-rpath,/metfark/metfark/metfark/libeccodes/build/lib 

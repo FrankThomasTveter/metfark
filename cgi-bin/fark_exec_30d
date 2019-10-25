@@ -1,0 +1,20 @@
+#!/bin/csh
+#
+# Note: if "test" is defined, it is always true (regardless of value)!
+# ;debug=1
+#
+./fark_exec.pl '?root=exec.cfg&password=&type=plot&file=meps_syno_030d.cfg;debug=1'
+# '?root=exec.cfg&password=&type=plot&file=meps_syno20180102.cfg'
+# '?root=exec.cfg&password=&type=model&file=meps%2Fmember0.cfg'
+#
+# '?root=exec.cfg&password=&type=plot&file=meps_syno_2d.cfg'
+#  '?root=exec.cfg&password=&type=plot&file=meps_syno_3d.cfg&test=1'
+#  '?root=exec.cfg&cron=daily;'
+#  '?root=exec.cfg&password=&type=plot&file=meps_syno_2d.cfg'
+#  '?root=exec.cfg&password=&type=model&file=meps%2Fmember0_20180101.cfgX'
+# ./fark_exec.pl  '?root=exec.cfg&password=fark&type=plot&file=meps_syno_1d.cfg'
+#
+#./fark_exec.pl '?root=exec.cfg&password=fark&type=obs&file=starc%2Fsyno20180102.cfg'
+#./fark_exec.pl '?root=exec.cfg&password=&type=plot&file=starc_syno30d.cfg'
+#./fark_exec.pl '?root=exec.cfg&password=&type=plot&file=starc.cfg'
+#

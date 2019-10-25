@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/gts_copy.dir/gts_copy.c.o  -o ../bin/gts_copy -rdynamic libgrib_tools.a ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,"\$ORIGIN/../lib" 

@@ -1,5 +1,0 @@
-  if(  HAVE_PYTHON )
-    set(_eccodes_p_binary_message_test_condition TRUE)
-  else()
-    set(_eccodes_p_binary_message_test_condition FALSE)
-  endif()

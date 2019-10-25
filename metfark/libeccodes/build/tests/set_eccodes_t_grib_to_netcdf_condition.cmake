@@ -1,5 +1,0 @@
-  if(  HAVE_NETCDF )
-    set(_eccodes_t_grib_to_netcdf_condition TRUE)
-  else()
-    set(_eccodes_t_grib_to_netcdf_condition FALSE)
-  endif()

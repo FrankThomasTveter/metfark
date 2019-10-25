@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../lib/libeccodes_f90.a  CMakeFiles/eccodes_f90-static.dir/grib_fortran.c.o CMakeFiles/eccodes_f90-static.dir/grib_f90.f90.o CMakeFiles/eccodes_f90-static.dir/eccodes_f90.f90.o
-/usr/bin/ranlib ../lib/libeccodes_f90.a

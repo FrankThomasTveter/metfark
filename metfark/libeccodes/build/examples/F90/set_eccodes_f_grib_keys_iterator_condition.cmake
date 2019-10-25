@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_grib_keys_iterator_condition TRUE)
-  else()
-    set(_eccodes_f_grib_keys_iterator_condition FALSE)
-  endif()

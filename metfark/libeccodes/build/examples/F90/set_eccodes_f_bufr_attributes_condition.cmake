@@ -1,5 +1,0 @@
-  if(  HAVE_FORTRAN )
-    set(_eccodes_f_bufr_attributes_condition TRUE)
-  else()
-    set(_eccodes_f_bufr_attributes_condition FALSE)
-  endif()

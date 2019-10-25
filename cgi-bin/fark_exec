@@ -1,0 +1,14 @@
+#!/bin/csh
+# wget --tries=1 -O - "http://localhost/cgi-bin/fark_exec.pl?root=exec.cfg&password=&type=plot&file=meps_syno_365d.cfg"
+#
+# Note: if "test" is defined, it is always true (regardless of value)!
+# ;debug=1
+
+#;test=1&debug=1
+
+# ./fark_exec.pl '?root=exec.cfg&password=fark&type=rerun&file=default.cfg&debug=1'
+# ./fark_exec.pl '?root=exec.cfg&password=fark&type=coloc&file=default.cfg'
+
+./fark_exec.pl '?root=exec.cfg&password=fark&type=rerun&file=default.cfg&debug=1'
+
+###&debug=1'

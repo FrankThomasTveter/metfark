@@ -1,1 +1,0 @@
-/usr/bin/cc   -pipe -pedantic -O2 -g      -Wl,--disable-new-dtags CMakeFiles/grib_count.dir/codes_count.c.o  -o ../bin/grib_count -rdynamic libgrib_tools.a ../lib/libeccodes.so -lm -lpthread -Wl,-rpath,"\$ORIGIN/../lib" 

@@ -1,5 +1,0 @@
-  if(  HAVE_PYTHON AND HAVE_AEC )
-    set(_eccodes_p_grib_ccsds_test_condition TRUE)
-  else()
-    set(_eccodes_p_grib_ccsds_test_condition FALSE)
-  endif()

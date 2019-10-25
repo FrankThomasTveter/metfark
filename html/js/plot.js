@@ -1,4 +1,4 @@
-    plot_file = "default.cfg";
+plot_file = "default.cfg";
 plot_config = { "default.cfg" : { dataset : { 1 : {line:1,
 						   coloc:"coloc", 
 						   legend:"legend",
@@ -41,7 +41,7 @@ function plot_setConfigFile(file) {
     showValue('plotConfigFile',file);
     showValue('plotConfigFileSave',file);
     //if (file != "") {
-   //console.log("Setting plot config file:",file);
+    //console.log("Setting plot config file:",file);
     plot_allocate(file);
     plot_file=file;
     //console.log("Cat:",plot_config[file]["cat"]," PLot_file:",plot_file);
@@ -75,7 +75,7 @@ function plot_setArray(parameter,value) {
 
 function plot_expandCat(cat) {
     var file=plot_getConfigFile();
-    plot_cats[cat]=goclone(plot_org_cats[cat]);
+    plot_cats[cat]=plot_goclone(plot_org_cats[cat]);
     if (plot_org_cats[cat] ===undefined) {
 	console.log("Missing category:",cat);
 	return;
@@ -96,8 +96,8 @@ function plot_expandCat(cat) {
 		    var nn=val;
 		}
 	    };
-	   //console.log("Duplicator attribute '"+attr+"' = ",nn);
-	    var re = new RegExp("(\w*)"+RegExp.quote(attr)+"(\w*)", "g");
+	    //console.log("Duplicator attribute '"+attr+"' = ",nn);
+	    var re = new RegExp("(\w*)"+plot_quote(attr)+"(\w*)", "g");
 	    for (var aa in plot_cats[cat]["attributes"]) {
 		if (aa.match(re) && aa !== attr) {
 		    //console.log("Attribute match '"+aa+"' == '"+attr+"'");
@@ -121,7 +121,7 @@ function plot_expandCat(cat) {
 		var cc=plot_cats[cat]["colnames_"][jj];
 		if (cc.match(re)) {
 		    // delete cc column
-		   //console.log("Column match '"+cc+"' == '"+attr+"'");
+		    //console.log("Column match '"+cc+"' == '"+attr+"'");
 		    var index = plot_cats[cat]["colnames_"].indexOf(cc);
 		    plot_cats[cat]["colnames_"].splice(index, 1);
 		    for (var ii=nn;ii>0;ii--) {
@@ -138,22 +138,22 @@ function plot_expandCat(cat) {
     }
 }
 
-RegExp.quote = function(str) {
-    var re = new RegExp("[.?*+^$[\]\\(){}|-]", "g");
+function plot_quote(str) {
+    var re = new RegExp("[.?*+^$[](){}|-\\]", "g");
     return (str+'').replace(re, "\\$&");
 };
-function goclone(source) {
+function plot_goclone(source) {
     if (Object.prototype.toString.call(source) === '[object Array]') {
         var clone = [];
         for (var i=0; i<source.length; i++) {
-            clone[i] = goclone(source[i]);
+            clone[i] = plot_goclone(source[i]);
         }
         return clone;
     } else if (typeof(source)=="object") {
         var clone = {};
         for (var prop in source) {
             if (source.hasOwnProperty(prop)) {
-                clone[prop] = goclone(source[prop]);
+                clone[prop] = plot_goclone(source[prop]);
             }
         }
         return clone;
@@ -218,11 +218,11 @@ function plot_show() {
 	plot_allocate(file);
 	showValue('plotConfigFile',file);
 	showValue('plotConfigFileSave',file);
-	showValue('plotCat',plot_config[file]["cat"]);
+	//showValue('plotCat',plot_config[file]["cat"]);
 	showValue('plotTable',plot_config[file]["table"]);
 	showValue('plotGraphics',plot_config[file]["graphics"]);
-	plot_showDatasetTable();
-	plot_showAttributesTable();
+	//plot_showDatasetTable();
+	//plot_showAttributesTable();
     };
 };
 // plotervation config methods
@@ -267,7 +267,7 @@ function plot_newDataset() {
 	}
     }
     fark_last["coloc"]=coloc.value;
-   //console.log("New: trg:",set.value," file:",coloc.value," columns:",clmns," leg:",legend.value);
+    //console.log("New: trg:",set.value," file:",coloc.value," columns:",clmns," leg:",legend.value);
     if (set.value !== "" && coloc.value !== "") {
 	if (plot_config[file] === undefined) {
 	    plot_config[file]={dataset : {},
@@ -376,7 +376,7 @@ function plot_saveConfigFile() {
 	    };
 	}
     };
-   //console.log("Saving: "+file+" "+cat+" "+table+" "+graphics+" "+plotSets+" "+plotAttrs, plot_config[file]);
+    //console.log("Saving: "+file+" "+cat+" "+table+" "+graphics+" "+plotSets+" "+plotAttrs, plot_config[file]);
     plot_configEd++;
     documentLog.innerHTML="Sent plot-save request.";
     $.get("cgi-bin/fark_save.pl",
@@ -407,7 +407,7 @@ function plot_saveConfigFile() {
 };
 // Transposed function...
 function plot_showDatasetTable() {
-   //console.log(":::::::::: showDatasetTable");
+    //console.log(":::::::::: showDatasetTable");
     var file=plot_getConfigFile();
     var cat=plot_config[file]["cat"];
     var colnames_={};
@@ -477,7 +477,7 @@ function plot_insertDataset(item,type,col1,data) {
     for (var ii=0;ii<type.length;ii++) {
 	if (type[[ii]] == 6 && offset==-1) {offset=ii;}
     }
-   //console.log("Offset=",offset);
+    //console.log("Offset=",offset);
     for (var ii=0;ii<type.length;ii++) {
 	var row = document.createElement("TR");
 	plot_insertHeader(row,type,col1,ii,offset);
@@ -561,7 +561,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
 	btn.setAttribute("title","Show available identifications");
-	btn.setAttribute("onclick","showDropdown('plotSet',document.getElementById('plotSet').value)");
+	btn.setAttribute("onclick","showDropdown('plotSet')");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
 	td.appendChild(btn);
@@ -603,7 +603,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
 	btn.setAttribute("title","Show available colocation <setup files>");
-	btn.setAttribute("onclick","showDropdown('plotColoc',document.getElementById('plotColoc').value)");
+	btn.setAttribute("onclick","showDropdown('plotColoc')");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
 	td.appendChild(btn);
@@ -647,8 +647,7 @@ function plot_insertNew(row,type,ii,offset) {
 	td.setAttribute("align","center");
 	btn=document.createElement("BUTTON");
 	btn.setAttribute("title","Show available <model targets>, <observation targets> and functions");
-	btn.setAttribute("onclick","showDropdown('"+itemId
-			 + "',document.getElementById('"+itemId+"').value)");
+	btn.setAttribute("onclick","showDropdown('"+itemId+ "')");
 	btn.setAttribute("class","dropbtn");
 	//var t=document.createTextNode("&#9776");
 	//btn.appendChild(t);
@@ -720,7 +719,7 @@ function plot_insertAttributeRow(item,cat,attr,value,val) {
 	td.setAttribute("style","min-width:25px;width:25px");
 	btn=document.createElement("BUTTON");
 	btn.setAttribute("title","Show available attribute values");
-	btn.setAttribute("onclick","showDropdown('"+itemId+"',document.getElementById('"+itemId+"').value)");
+	btn.setAttribute("onclick","showDropdown('"+itemId+"')");
 	btn.setAttribute("class","dropbtn");
 	btn.innerHTML="&#9776";
 	td.appendChild(btn);
@@ -745,7 +744,7 @@ function plot_updateData(arg = plot_getConfigFile()) {
     var types=[];
     types[0]="plot";
     types[1]="cat";
-   //console.log("$$$$$ Loading plot+cats with: ", args);
+    //console.log("$$$$$ Loading plot+cats with: ", args);
     $.get("cgi-bin/fark_load.pl",{type:types,arg:args})
 	.success(
 	    function(data, status){
@@ -836,8 +835,275 @@ function plot_rmdir(path) {
 };
 
 function plot_mkfile(file) {
-   //console.log("Calling saveConfigFile: '"+file+"'");
+    //console.log("Calling saveConfigFile: '"+file+"'");
     plot_setConfigFile(file);
     plot_saveConfigFile(file);
 };
 
+
+function plot_showConfigFile(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent plot-load request.";
+    $.get("cgi-bin/fark_load.pl",{type:"plot",arg:args})
+	.success(
+	    function(data, status){
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    var ret=dataToArray(data,status,documentLog);
+		    var root=ret[0]||{};
+		    //console.log("Updating dropdown for ",target);
+		    removeChildren(item);
+		    var added=false;
+		    if (args.length >0 && looksLikeFile(args[0])) {
+			var file=getFile(args[0]);
+		    } else {
+			var file="";
+		    };
+		    // add directories...
+		    var dirs=getSubDirs(root["cls"],root["root"],root["loc"],root["child"]);
+		    //console.log("Found entries: ",dirs.length-1,root);
+		    var parent=dirs[0];
+		    if (parent != null) {
+			var dd=parent;
+			//console.log("Adding up button: ",dd);
+			addChildButton(item,"<up>","plot_setConfigFile('"+dd+"');","Change to parent <directory>");
+			added=true;
+		    }
+		    if (args.length == 1) {
+			//console.log("Arg ret:",ret);
+			if (root["type"] == "dir" && root["loc"] != "") {
+			    addChildButton(item,"<rmdir>","plot_rmdir('"+args[0]+"');","Remove <directory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<rmfile>","plot_rmfile('"+args[0]+"');","Remove <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			    if (looksLikeFile(args[0])) {
+				addChildButton(item,"<mkfile>","plot_mkfile('"+args[0]+"');plot_show();","Make <file>");
+				if (plot_config[args[0]] != undefined) {
+				    addChildButton(item,"<fgfile>","plot_fgfile('"+args[0]+"');","Forget <file>");
+				}
+				added=true;
+			    } else {
+				addChildButton(item,"<mkdir>","plot_mkdir('"+args[0]+"');","Make <directory>");
+				added=true;
+			    }
+			}
+		    } else if (args.length == 2) {
+			if (root["type"] == "dir") {
+			    addChildButton(item,"<cpdir>","plot_cpdir('"+args[0]+"','"+args[1]+"');","Copy <diretory>");
+			    added=true;
+			} else if (root["type"] == "file") {
+			    addChildButton(item,"<cpfile>","plot_cpfile('"+args[0]+"','"+args[1]+"');plot_setConfigFile('"+args[2]+"');","Copy <file>");
+			    added=true;
+			} else if (root["type"] == "unknown") {
+			}
+		    };
+		    for (var ii=1;ii<dirs.length;ii++) {
+			var dir=dirs[ii];
+			if (root["loc"] == "" || root["loc"] == ".") {
+			    var dd = dir;
+			} else {
+			    var dd = root["loc"]+dir;
+			};
+			//if (dd.substr(dd.length-1) == "/" || dd == "") {
+			//  dd=dd + file;
+			//}
+			//console.log("Adding dir button: ",dd);
+			if (looksLikeFile(dd)) {
+			    addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();","Use <file>");
+			    added=true;
+			} else {
+			    addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();","Change <directory>");
+			    added=true;
+			}
+		    }
+		    if (! added) {addChildText(item,"No data available...");}
+		};
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Plot request failed (system error)");}
+	);
+};
+
+function plot_showCat(item,target,arg) {
+    var args=getArgs(arg);
+    //documentLog.innerHTML="Sent cat-load request.";
+    //$.get("cgi-bin/fark_load.pl",{type:"cat",arg:args})
+    //    .success(
+    //	function(data, status){
+    //var ret=dataToArray(data,status,documentLog);
+    //var root=ret[0];
+    //console.log("Updating dropdown for ",target);
+    removeChildren(item);
+    var added=false;
+    for (var cat in plot_org_cats) {
+	//console.log("Adding config button: ",cat);
+	addChildButton(item,cat,"plot_setCat('"+cat+"');showValue('plotCat','"+cat+"');plot_show()","Plot category");
+	added=true;
+    }
+    //documentLog.innerHTML="";
+    //}).error(function (error) { alert("Request failed (system error)");});
+    if (! added) {addChildText(item,"No data available...");}
+};
+
+function plot_showTable(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent dir-load request.";
+    var path=args[0] || "";
+    var cls = "output";
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path})
+	.success(		
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    addWildcardButtons(item,target);
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			console.log("Error:"+path+"  "+msg);
+			//alert("Unable to list '"+path+"'\n"+msg);
+		    } else {
+			var ls=data.getElementsByTagName("ls");
+			if (ls.length > 0) {
+			    var root=ls[0].getAttribute("root");
+			    var loc=ls[0].getAttribute("location");
+			    var pdirs=getSubDirs(cls,root,loc,"");
+			    var parent=pdirs[0];
+			    //console.log("Found parent: ",root,loc,parent);
+			    if (parent != null) {
+				var dd=root+parent;
+				addChildButton(item,"<up>",
+					       "plot_setArray('table','"+dd+"');plot_show();","Change to parent <directory>");
+				added=true;
+			    };
+			    var dirs=ls[0].getElementsByTagName("dir");
+			    //console.log("Found dir entries: ",dirs.length);
+			    for (var ii=0; ii< dirs.length; ii++) {
+				var dd = dirs[ii].getAttribute("path");
+				//console.log("Adding dir button: ",dd);
+				addChildButton(item,dd,"plot_setArray('table','"+dd+"');plot_show();","Change <directory>");
+				added=true;
+			    };
+			    var patts=ls[0].getElementsByTagName("pattern");
+			    //console.log("Found file entries: ",patts.length);
+			    for (var ii=0; ii< patts.length; ii++) {
+				var rr = getFile(patts[ii].getAttribute("regexp"));
+				var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				if (dd !== '') {
+				    //console.log("Adding pattern button: ",dd,rr);
+				    addChildButtonShaded(item,dd,"plot_setArray('table','"+rr+"');plot_show();","Use pattern");
+				    added=true;
+				};
+			    };
+			    var fils=ls[0].getElementsByTagName("file");
+			    //console.log("Found file entries: ",fils.length);
+			    for (var ii=0; ii< fils.length; ii++) {
+				var dd = fils[ii].getAttribute("path");
+				var size = fils[ii].getAttribute("size")
+				if (dd !== '') {
+				    //console.log("Adding file button: ",dd,ii);
+				    addChildButton(item,size+" "+dd,"plot_setArray('table','"+dd+"');plot_show();","Use <file>");
+				    added=true;
+				};
+			    };
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Plot table request failed (system error)");}
+	);
+};
+
+function plot_showGraphics(item,target,arg) {
+    var args=getArgs(arg);
+    documentLog.innerHTML="Sent dir-load request.";
+    var path=args[0] || "";
+    var cls = "output";
+    $.get("cgi-bin/fark_dir.pl",{cmd:"ls",cls:cls,path:path})
+	.success(
+	    function(data, status){
+		removeChildren(item);
+		var added=false;
+		var errors=data.getElementsByTagName("error");
+		if (errors.length > 0 ) {
+		    item.classList.toggle("show");
+		    var msg=getErrorMessage(errors);
+		    alert("Unable to list '"+arg+"'\n"+msg);
+		} else {
+		    addWildcardButtons(item,target);
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			item.classList.toggle("show");
+			var msg=getErrorMessage(errors);
+			console.log("Error:"+path+"  "+msg);
+			//alert("Unable to list '"+path+"'\n"+msg);
+		    } else {
+			var ls=data.getElementsByTagName("ls");
+			if (ls.length > 0) {
+			    var root=ls[0].getAttribute("root");
+			    var loc=ls[0].getAttribute("location");
+			    var pdirs=getSubDirs(cls,root,loc,"");
+			    var parent=pdirs[0];
+			    //console.log("Found parent: ",root,loc,parent);
+			    if (parent != null) {
+				var dd=root+parent;
+				addChildButton(item,"<up>",
+					       "plot_setArray('graphics','"+dd+"');plot_show();","Change to parent <directory>");
+				added=true;
+			    };
+			    var dirs=ls[0].getElementsByTagName("dir");
+			    //console.log("Found dir entries: ",dirs.length);
+			    for (var ii=0; ii< dirs.length; ii++) {
+				var dd = dirs[ii].getAttribute("path");
+				//console.log("Adding dir button: ",dd);
+				addChildButton(item,dd,"plot_setArray('graphics','"+dd+"');plot_show();","Change <directory>");
+				added=true;
+			    };
+			    var patts=ls[0].getElementsByTagName("pattern");
+			    //console.log("Found file entries: ",patts.length);
+			    for (var ii=0; ii< patts.length; ii++) {
+				var rr = getFile(patts[ii].getAttribute("regexp"));
+				var dd = decodeURI(getFile(patts[ii].getAttribute("struct")));
+				if (dd !== '') {
+				    //console.log("Adding file button: ",dd,rr);
+				    addChildButtonShaded(item,dd,"plot_setArray('graphics','"+rr+"');plot_show();","Use <pattern>");
+				    added=true;
+				};
+			    };
+			    var fils=ls[0].getElementsByTagName("file");
+			    //console.log("Found file entries: ",fils.length);
+			    for (var ii=0; ii< fils.length; ii++) {
+				var dd = fils[ii].getAttribute("path");
+				var size = fils[ii].getAttribute("size")
+				if (dd !== '') {
+				    //console.log("Adding file button: ",dd,ii);
+				    addChildButton(item,size+" "+dd,"plot_setArray('graphics','"+dd+"');plot_show();","Use <file>");
+				    added=true;
+				};
+			    };
+			};
+		    };
+		};
+		if (! added) {addChildText(item,"No data available...");}
+		documentLog.innerHTML="";
+	    })
+	.error(
+	    function (error) { alert("Plot dir request failed (system error)");}
+	);
+};

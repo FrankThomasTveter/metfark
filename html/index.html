@@ -17,10 +17,12 @@
 	<li id="model_tab" class="active" title="Model index setup"><a data-toggle="pill" href="#model">Model</a></li>
 	<li id="obs_tab" title="Observation index setup"><a data-toggle="pill" href="#obs">Observation</a></li>
 	<li id="coloc_tab" title="Model and observation colocation setup"><a data-toggle="pill" href="#coloc">Colocation</a></li>
-	<li id="plot_tab" title="Plot setup"><a data-toggle="pill" href="#plot">Plot</a></li>
+	<li id="table_tab" title="Table setup"><a data-toggle="pill" href="#table">Table</a></li>
 	<li id="join_tab" title="Join setup"><a data-toggle="pill" href="#join">Join</a></li>
-	<li id="auto_tab" title="Automatic index maintenance and plot generation"><a data-toggle="pill" href="#auto">Auto</a></li>
+	<li id="plot_tab" title="Plot setup"><a data-toggle="pill" href="#plot">Plot</a></li>
 	<li id="rerun_tab" title="Rerun scripts in a loop"><a data-toggle="pill" href="#rerun">Rerun</a></li>
+	<li id="clean_tab" title="Clean directory and files"><a data-toggle="pill" href="#clean">Clean</a></li>
+	<li id="exec_tab" title="Execute jobs for making indexes, tables and plots"><a data-toggle="pill" href="#exec">Execute</a></li>
       </ul>
       <div class="tab-content">
 	<div id="model" class="tab-pane fade in active">
@@ -45,7 +47,7 @@
 	      </td>
 	      <td align="center"><button onclick="model_setConfigFile(fark_last['model']);model_updateData();"
 					 title="Fetch recently used <setup file>">←</button></td>
-	      <td align="center"><button onclick="showDropdown('modelConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('modelConfigFile')" class="dropbtn"
 					 title="Show available <setup files> and actions">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -55,7 +57,7 @@
 		       title="Path to <top directory> used in search of <NetCDF model files>"/> 
 		<div id="modelFilterDirDropdown" class="dropdown-content"></div>
 	      </td>
-	      <td align="center"><button onclick="showDropdown('modelFilterDir',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('modelFilterDir')" class="dropbtn"
 					 title="Show available <top directories> and patterns">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -67,7 +69,7 @@
 			     title="Regex filter used in search of <NetCDF model files>"/> 
 		      <div id="modelFilterFileDropdown" class="dropdown-content"></div>
 		    </td>
-		    <td align="center"><button onclick="showDropdown('modelFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		    <td align="center"><button onclick="showDropdown('modelFilterFile')" class="dropbtn"
 					       title="Show <NETCDF model files> that can be scanned &#13;for <model variables> and <model dimensions>">&#9776;</button></td>
 		    <td> Max age:</td> <td><input id="modelFilterDirMax" type="text" value="" style="width:100px"
 						  title="Maximum age of <NETCDF model files> in days, or start date YYYY-MM-DD."
@@ -98,7 +100,7 @@
 		      <div id="modelIndexDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td align="center">
-		      <button onclick="showDropdown('modelIndex',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('modelIndex')" class="dropbtn"
 			      title="Show available <model variables>">&#9776;</button>
 		    </td>
 		  </tr>
@@ -139,7 +141,7 @@
 	      </td>
 	      <td align="center"><button onclick="obs_setConfigFile(fark_last['obs']);obs_updateData();"
 					 title="Fetch recently used <setup file>">←</button></td>
-	      <td align="center"><button onclick="showDropdown('obsConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('obsConfigFile')" class="dropbtn"
 					 title="Show available <setup files> and actions">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -149,7 +151,7 @@
 		       title="Path to <top directory> used in search of <BUFR observation files>"/> 
 		<div id="obsFilterDirDropdown" class="dropdown-content"></div>
 	      </td>
-	      <td align="center"><button onclick="showDropdown('obsFilterDir',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('obsFilterDir')" class="dropbtn"
 					 title="Show available <top directories> and patterns">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -162,7 +164,7 @@
 			     title="Regex filter used in search of <BUFR observation files>"/> 
 		      <div id="obsFilterFileDropdown" class="dropdown-content"></div>
 		    </td>
-		    <td align="center"><button onclick="showDropdown('obsFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		    <td align="center"><button onclick="showDropdown('obsFilterFile')" class="dropbtn"
 					       title="Show <BUFR observation files> that can be scanned for the BUFR sequence">&#9776;</button></td>
 		    <td> Max age:</td> <td><input id="obsFilterDirMax" type="text" value="" style="width:100px"
 						  title="Maximum age of <BUFR observation files> in days, or start date YYYY-MM-DD."
@@ -183,7 +185,7 @@
 		       title="Path to <BUFR table directory>"/> 
 		<div id="obsTablePathDropdown" class="dropdown-content"></div>
 	      </td>
-	      <td align="center"><button onclick="showDropdown('obsTablePath',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('obsTablePath')" class="dropbtn"
 					 title="Available <BUFR table directories>">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -197,7 +199,7 @@
 			     title="Requested BUFR type"/> 
 		      <div id="obsBufrTypeDropdown" class="dropdown-content"></div>
 		    </td>
-		    <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('obsBufrType',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		    <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('obsBufrType')" class="dropbtn"
 										 title="Show scanned <BUFR types>">&#9776;</button></td>
 		    <td align="right">Sub type:</td>
 		    <td class="fill" width="30%">
@@ -205,7 +207,7 @@
 			     title="Requested BUFR sub-type"/> 
 		      <div id="obsSubTypeDropdown" class="dropdown-content"></div>
 		    </td>
-		    <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('obsSubType',this.parentNode.parentNode.children[4].children[0].value)" class="dropbtn"
+		    <td style="min-width:25px;width:25px" align="center"><button onclick="showDropdown('obsSubType')" class="dropbtn"
 										 title="Show scanned <BUFR sub-types>">&#9776;</button></td>
 		    <td align="right">Info:</td>
 		    <td class="fill" width="30%">
@@ -237,7 +239,7 @@
 		      <div id="obsIndexPOSDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('obsIndexPOS',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('obsIndexPOS')" class="dropbtn"
 			      title="Show scanned BUFR sequence">&#9776;</button></td>
 		    <td class="fill"><input id="obsIndexDESCR" type="text" value="" style="width:100%"
 					    title="BUFR descriptor"/></td>
@@ -267,7 +269,7 @@
 		      <div id="obsIndexExpDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('obsIndexExp',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('obsIndexExp')" class="dropbtn"
 			      title="Show available <observation targets> and functions">&#9776;</button></td>
 		  </tr>
 		</table>
@@ -307,7 +309,7 @@
 	      <td align="center"><button onclick="coloc_setConfigFile(fark_last['coloc']);coloc_updateData();"
 					 title="Fetch recently used <setup file>">←</button></td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('colocConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('colocConfigFile')" class="dropbtn"
 			title="Show available <setup files> and actions">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -317,7 +319,7 @@
 		<div id="colocModelConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('colocModelConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('colocModelConfigFile')" class="dropbtn"
 			title="Show available model <setup files>">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -327,7 +329,7 @@
 		<div id="colocObsConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('colocObsConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('colocObsConfigFile')" class="dropbtn"
 			title="Show available model <setup files>">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -338,7 +340,7 @@
 		<div id="colocXMLDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('colocXML',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('colocXML')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr id="displayModelTargets" style="display:none">
@@ -363,7 +365,7 @@
 		      <div id="colocModelTargetVariableDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td align="center">
-		      <button onclick="showDropdown('colocModelTargetVariable',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('colocModelTargetVariable')" class="dropbtn"
 			      title="Show <model dimensions> and <model variables>"> &#9776;</button></td>
 		    <td class="fill">
 		      <input id="colocModelTargetMin" type="text" value="" style="width:100%" onblur="this.value=this.value.replace(/[^\d\.]/g,'')" title="Minimum <BUFR sequence item> value. Observations with values below this threshold are rejected. &#13; (Duplicator: start value)"/>
@@ -428,7 +430,7 @@
 		      <div id="colocObsPOSDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('colocObsPOS',this.parentNode.parentNode.children[2].children[0].value)"
+		      <button onclick="showDropdown('colocObsPOS')"
 			      class="dropbtn" title="Show scanned BUFR sequence, duplicators and internal variables" >&#9776;</button></td>
 		    <td class="fill"><input id="colocObsDESCR" type="text" value=""
 					    title="BUFR sequence descriptor:&#13; * integer code&#13;Duplicator:&#13; * Blank&#13;Internal variable:&#13; * Blank"/></td>
@@ -451,7 +453,7 @@
 		<table>
 		  <tr>
 		    <td width="100%">
-		      <textarea id="colocObsFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArrayPar('obsConfigFile','filter',this.value)" title="Observation filter using <obervation targets> only. This filter is applied to each BUFR message. A BUFR message may contain several observations (locations). The observation is rejected if the filter expression returns 0."></textarea>
+		      <textarea id="colocObsFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArrayPar('obsConfigFile','filter',this.value);" title="Observation filter using <obervation targets> only. This filter is applied to each BUFR message. A BUFR message may contain several observations (locations). The observation is rejected if the filter expression returns 0."></textarea>
 		      <div id="colocObsFilterDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="right">
@@ -481,26 +483,12 @@
 		<table>
 		  <tr>
 		    <td width="100%">
-		      <textarea id="colocModelFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArray('filter',this.value)"
+		      <textarea id="colocModelFilter" rows="2" style="position:relative;width:100%" onblur="coloc_setArray('filter',this.value);"
 				title="Location filter using <observation targets> and <model targets>. This filter is applied to each observation (location). The observation is rejected if the filter expression returns 0."></textarea>
 		      <div id="colocModelFilterDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="right">
-		      <button onclick="showDropdown('colocModelFilter')" class="dropbtn" title="Show <model targets>, <observation targets> and functions">&#9776;</button></td>
-		  </tr>
-		</table>
-	    </tr>
-	    <tr id="colocDebugExpression">
-	      <td>Debug expression:</td>
-	      <td colspan="3"> 
-		<table width="100%" border="1" id="debugExpression"> 
-		  <tr>
-		    <td class="fill">
-		      <input id="colocDebugExp" value="" title="Expression to execute. Only internal variables are available">
-		      <div id="colocDebugExpDropdown" class="dropdown-content"></div>
-		    </td>
-		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('colocDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('colocModelFilter')" class="dropbtn" title="Show <model targets>)" class="dropbtn"
 			      title="Show available functions">&#9776;</button></td>
 		    <td style="min-width:25px;width:25px" align="center">
 		      <button class="run" onclick="debugExp('colocDebugExp','colocDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
@@ -522,12 +510,12 @@
 	    </tr>
 	  </table>
 	</div>
-	<div id="plot" class="tab-pane fade in">
+	<div id="table" class="tab-pane fade in">
 	  <table style="width:100%">
 	    <tr style="background:#09C;">
 	      <td>
-		<div id="farkPlot">
-		  <button class="request" style="width:100%" onclick="plot_updateData()" title="Re-load <setup file> from server"><h1>Plot setup</h1></button>
+		<div id="farkTable">
+		  <button class="request" style="width:100%" onclick="table_updateData()" title="Re-load <setup file> from server"><h1>Table setup</h1></button>
 		</div>
 	      </td>
 	    </tr>
@@ -536,54 +524,54 @@
 	    <tr>
 	      <td style="white-space: nowrap;"><em>Setup file:</em></td>
 	      <td class="fill" width="100%">
-		<input id="plotConfigFile" type="text" value="" style="width:100%" onblur="plot_setConfigFile(this.value);plot_show();"
+		<input id="tableConfigFile" type="text" value="" style="width:100%" onblur="table_setConfigFile(this.value);table_show();"
 		       title="Name of existing or new <setup file>"/> 
-		<div id="plotConfigFileDropdown" class="dropdown-content"></div>
+		<div id="tableConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="plot_setConfigFile(fark_last['plot']);plot_updateData();"
+		<button onclick="table_setConfigFile(fark_last['table']);table_updateData();"
 			title="Fetch recently used <setup file>">←</button>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('plotConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('tableConfigFile')" class="dropbtn"
 			title="Show available <setup files> and actions">&#9776;</button>
 	      </td>
 	      <td>Category:</td>
 	      <td class="fill" width="25px">
-		<input id="plotCat" type="text" value="" style="min-width:100px;width:100%;background-color:#00b9f2"  onblur="" disabled/> 
-		<div id="plotCatDropdown" class="dropdown-content"></div>
+		<input id="tableCat" type="text" value="" style="min-width:100px;width:100%;background-color:#00b9f2"  onblur="" disabled/> 
+		<div id="tableCatDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('plotCat',this.parentNode.parentNode.children[5].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('tableCat')" class="dropbtn"
 			title="Show available categories">&#9776;</button></td>
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output table file:</td>
 	      <td class="fill" width="100%" colspan="5">
-		<input id="plotTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="plot_setArray('table',this.value);"
-		       title="Output <table file> path pattern. The <table file> contains &#13;R-readable colocation data used to generate the graphics output."/> 
-		<div id="plotTableDropdown" class="dropdown-content"></div>
+		<input id="tableTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="table_setArray('table',this.value);"
+		       title="Output <table file> path pattern. The <table file> contains all data&#13;needed to generate the graphics output."/> 
+		<div id="tableTableDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('plotTable',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('tableTable')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td style="white-space: nowrap;">Output prefix:</td>
+	      <td style="white-space: nowrap;">Output plot directory:</td>
 	      <td class="fill" width="100%" colspan="5">
-		<input id="plotGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="plot_setArray('graphics',this.value);"
-		       title="Output <graphics file> path pattern.&#13;This path pattern is used as a prefix to the graphics output files."/> 
-		<div id="plotGraphicsDropdown" class="dropdown-content"></div>
+		<input id="tableGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="table_setArray('graphics',this.value);"
+		       title="Output <graphics file> directory pattern.&#13;This path is used as a prefix to the graphics output files.&#13;This path can be overridden in the plot setup."/> 
+		<div id="tableGraphicsDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('plotGraphics',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('tableGraphics')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
-	    <tr id="displayPlotAttributes" >
+	    <tr id="displayTableAttributes" >
 	      <td valign="top">Attributes:</td> <!-- style="display:none" -->
 	      <td colspan="6">
-		<table width="100%" border="1" id="plotAttributesTable">
-		  <tr style="background-color:#00b9f2" id="labelsPlotAttribute"> 
+		<table width="100%" border="1" id="tableAttributesTable">
+		  <tr style="background-color:#00b9f2" id="labelsTableAttribute"> 
 		    <th width="150px">Name</th>
 		    <th>Value</th>
 		    <th style="min-width:25px;width:25px"></th>
@@ -591,25 +579,25 @@
 		</table>
 	      </td>
 	    </tr>
-	    <tr id="displayPlotDataset">
+	    <tr id="displayTableDataset">
 	      <td valign="top">Dataset:</td> <!-- tr style="display:none"-->
-	      <td colspan="6"><table border="2" id="plotDatasetTable"><tbody></tbody></table></td>
+	      <td colspan="6"><table border="2" id="tableDatasetTable"><tbody></tbody></table></td>
 	    </tr>
-	    <tr id="plotDebugExpression">
+	    <tr id="tableDebugExpression">
 	      <td>Debug expression:</td>
 	      <td colspan="6"> 
 		<table width="100%" border="1" id="debugExpression"> 
 		  <tr>
 		    <td class="fill">
-		      <input id="plotDebugExp" value="" title="Expression to execute. Only internal variables are available">
-		      <div id="plotDebugExpDropdown" class="dropdown-content"></div>
+		      <input id="tableDebugExp" value="" title="Expression to execute. Only internal variables are available">
+		      <div id="tableDebugExpDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('plotDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('tableDebugExp')" class="dropbtn"
 			      title="Show available functions">&#9776;</button></td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button class="run" onclick="debugExp('plotDebugExp','plotDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
-		    <td width="20%" id="plotDebugRes">0</td>
+		      <button class="run" onclick="debugExp('tableDebugExp','tableDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
+		    <td width="20%" id="tableDebugRes">0</td>
 		  </tr>
 		</table>
 	      </td>
@@ -618,11 +606,11 @@
 	  <table width="100%">
 	    <tr>
 	      <td align="right">
-		File:<input id="plotConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
-		Password:<input type="password" id="plotConfigFilePsw" value=""
+		File:<input id="tableConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
+		Password:<input type="password" id="tableConfigFilePsw" value=""
 				title="Password needed to save the <setup file> to server. 
 				       A new <setup file> will get this password.">
-		<button onclick="plot_saveConfigFile('plotConfigFilePsw')"
+		<button onclick="table_saveConfigFile('tableConfigFilePsw')"
 			title="Save the <setup file> to server.">Save</button></td>
 	    </tr>
 	  </table>
@@ -650,7 +638,7 @@
 			title="Fetch recently used <setup file>">←</button>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('joinConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('joinConfigFile')" class="dropbtn"
 			title="Show available <setup files> and actions">&#9776;</button>
 	      </td>
 	      <td>Category:</td>
@@ -659,29 +647,29 @@
 		<div id="joinCatDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('joinCat',this.parentNode.parentNode.children[5].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('joinCat')" class="dropbtn"
 			title="Show available categories">&#9776;</button></td>
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output table file:</td>
 	      <td class="fill" width="100%" colspan="5">
 		<input id="joinTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="join_setArray('table',this.value);"
-		       title="Output <table file> path pattern. The <table file> contains &#13;R-readable colocation data used to generate the graphics output."/> 
+		       title="Output <table file> path pattern. The <table file> contains all data&#13;needed to generate the graphics output."/> 
 		<div id="joinTableDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('joinTable',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('joinTable')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td style="white-space: nowrap;">Output prefix:</td>
+	      <td style="white-space: nowrap;">Output plot directory:</td>
 	      <td class="fill" width="100%" colspan="5">
 		<input id="joinGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="join_setArray('graphics',this.value);"
-		       title="Output <graphics file> path pattern.&#13;This path pattern is used as a prefix to the graphics output files."/> 
+		       title="Output <graphics file> directory pattern.&#13;This path is used as a prefix to the graphics output files.&#13;This path can be overridden in the plot setup."/> 
 		<div id="joinGraphicsDropdown" class="dropdown-content"></div>
 	      </td>
 	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('joinGraphics',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		<button onclick="showDropdown('joinGraphics')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -691,7 +679,7 @@
 		       title="Path to <top directory> used in search of <table files>"/> 
 		<div id="joinFilterDirDropdown" class="dropdown-content"></div>
 	      </td>
-	      <td align="center"><button onclick="showDropdown('joinFilterDir',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('joinFilterDir')" class="dropbtn"
 					 title="Show available <top directories> and patterns">&#9776;</button></td>
 	    </tr>
 	    <tr>
@@ -703,7 +691,7 @@
 			     title="Regex filter used in search of <table files>"/> 
 		      <div id="joinFilterFileDropdown" class="dropdown-content"></div>
 		    </td>
-		    <td align="center"><button onclick="showDropdown('joinFilterFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+		    <td align="center"><button onclick="showDropdown('joinFilterFile')" class="dropbtn"
 					       title="Show <table files> that can be scanned &#13;for <join variables> and <join dimensions>">&#9776;</button></td>
 		    <td> Max age:</td> <td><input id="joinFilterDirMax" type="text" value="" style="width:100px"
 						  title="Maximum age of <table files> in days, or start date YYYY-MM-DD."
@@ -730,7 +718,15 @@
 	    </tr>
 	    <tr id="displayJoinDataset">
 	      <td valign="top">Dataset:</td> <!-- tr style="display:none"-->
-	      <td colspan="6"><table border="2" id="joinDatasetTable"><tbody></tbody></table></td>
+	      <td colspan="6">
+		<table border="2" id="joinDatasetTable" width="100%">
+		  <tr style="background-color:#00b9f2" id="labelsJoinDataset"> 
+		    <th>Column</th>
+		    <th width="50%">Minimum</th>
+		    <th width="50%">Maximum</th>
+		  </tr>
+		</table>
+	      </td>
 	    </tr>
 	    <tr id="joinDebugExpression">
 	      <td>Debug expression:</td>
@@ -742,7 +738,7 @@
 		      <div id="joinDebugExpDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('joinDebugExp',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('joinDebugExp')" class="dropbtn"
 			      title="Show available functions">&#9776;</button></td>
 		    <td style="min-width:25px;width:25px" align="center">
 		      <button class="run" onclick="debugExp('joinDebugExp','joinDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
@@ -764,66 +760,6 @@
 	    </tr>
 	  </table>
 	</div>
-	<div id="auto" class="tab-pane fade in">
-	  <table style="width:100%">
-	    <tr style="background:#09C;">
-	      <td>
-		<div id="farkAuto">
-		  <button class="request" style="width:100%" onclick="auto_updateData()" title="Re-load <setup file> from server"><h1>Auto run</h1></button>
-		</div>
-	      </td>
-	    </tr>
-	  </table>
-	  <table id="autoTable"  width="100%" border="1">
-	    <tr id="labelsAuto" style="background-color:#00b9f2"> 
-	      <th style="min-width:50px;width:50px">Type</th>
-	      <th style="min-width:25px;width:25px"></th>
-	      <th>Setup file</th>
-	      <th style="min-width:25px;width:25px"></th>
-	      <th style="min-width:50px;width:50px" align="center">Schedule</th>
-	      <th style="min-width:25px;width:25px"></th>
-	      <th style="min-width:75px;width:75px" align="center">Manual</th>
-	      <th width="200px">Last</th>
-	      <th width="200px">Info</th>
-	      <th style="min-width:25px;width:25px"></th>
-	    </tr>
-	    <tr id="newlineAuto">
-	      <td class="fill">
-		<input id="autoType" type="text" value="" style="width:100%" disabled/> 
-		<div id="autoTypeDropdown" class="dropdown-content"></div>
-	      </td>
-	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('autoType',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
-			title="Show available types">&#9776;</button></td>
-	      <td class="fill">
-		<input id="autoConfigFile" type="text" value="" style="width:100%" disabled/> 
-		<div id="autoConfigFileDropdown" class="dropdown-content"></div>
-	      </td>
-	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('autoConfigFile',this.parentNode.parentNode.children[3].children[0].value)" class="dropbtn"
-			title="Show available setup files">&#9776;</button></td>
-	      <td class="fill">
-		<input id="autoCron" type="text" value="" style="width:100%" disabled/> 
-		<div id="autoCronDropdown" class="dropdown-content"></div>
-	      </td>
-	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="showDropdown('autoCron',document.getElementById('autoCron').value)" class="dropbtn"
-			title="Show available intervals">&#9776;</button></td>
-	      <td style="min-width:75px;width:75px" align="center">
-	      <td id="autoLastTime"></td>
-	      <td id="autoLastInfo"></td>
-	      <td style="min-width:25px;width:25px" align="center">
-		<button onclick="auto_newConfigFile(this)" title="Add automatic job">&#43;</button></td>
-	    </tr>
-	  </table>
-	  <table width="100%">
-	    <tr>
-	      <td align="right">
-		Password:<input type="password" id="autoConfigFilePsw" value="" title="Password needed to save the setup to server.">
-		<button onclick="auto_saveConfigFile()" title="Save the setup to server.">Save</button></td>
-	    </tr>
-	  </table>
-	</div>
 	<div id="rerun" class="tab-pane fade in">
 	  <table style="width:100%">
 	    <tr style="background:#09C;">
@@ -837,17 +773,17 @@
 	  <table style="width:100%">
 	    <tr>
 	      <td style="white-sgpace: nowrap;"><em>Setup file:</em></td>
-	      <td class="fill" width="100%" colspan="7">
+	      <td class="fill" width="100%" colspan="6">
 		<input id="rerunConfigFile" type="text" value="" style="width:100%" onblur="rerun_setConfigFile(this.value);rerun_show();"
 		       title="Name of existing or new <setup file>"/>
                 <!-- onblur="coloc_setConfigFile(this.value);coloc_show()" -->
 		<div id="rerunConfigFileDropdown" class="dropdown-content"></div>
 	      </td>
-	      <td align="center"><button onclick="showDropdown('rerunConfigFile',this.parentNode.parentNode.children[1].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('rerunConfigFile')" class="dropbtn"
 					 title="Show available <setup files> and actions">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td title="Rerun variable."> rid:</td>
+	      <td title="Rerun variable."> Rerun id (rid):</td>
 	      <td>Start:</td> 
 	      <td><input id="rerunVariableStart" type="text" value="" style="width:100px"
 			 title="Start value (Integer)."
@@ -856,18 +792,17 @@
 	      <td><input id="rerunVariableStop" type="text" value="" style="width:100px"
 			 title="Stop value (Integer)."
 			 onblur="rerun_setArray('stop',this.value)"/> </td>
-	      <td><button onclick="rerun_run()" class="run" title="Rerun files.">&#9654;</button></td>
-	      <td>Time offset expression:</td>
+	      <td>Time offset expression (days):</td>
 	      <td class="fill" width="100%">
 		<input id="rerunTimeOffset" type="text" value="" style="width:100%" onblur="rerun_setOffset(this.value);"
 		       title="Time offset in days..."/> 
 		<div id="rerunTimeOffsetDropdown" class="dropdown-content"></div>
 	      </td>
-	      <td align="center"><button onclick="showDropdown('rerunTimeOffset',this.parentNode.parentNode.children[7].children[0].value)" class="dropbtn"
+	      <td align="center"><button onclick="showDropdown('rerunTimeOffset')" class="dropbtn"
 					 title="Show available variables and functions.">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td valign="top"> Rerun sequence:</td> 
+	      <td valign="top"> Rerun jobs:</td> 
 	      <td class="fill" width="100%" colspan="9">
 		<table id="rerunTable"  width="100%" border="1">
 		  <tr id="labelsRerun" style="background-color:#00b9f2"> 
@@ -885,14 +820,14 @@
 		      <div id="rerunTypeDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('rerunType',this.parentNode.parentNode.children[0].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('rerunType')" class="dropbtn"
 			      title="Show available types">&#9776;</button></td>
 		    <td class="fill">
 		      <input id="rerunSetupFile" type="text" value="" style="width:100%" disabled/> 
 		      <div id="rerunSetupFileDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td style="min-width:25px;width:25px" align="center">
-		      <button onclick="showDropdown('rerunSetupFile',this.parentNode.parentNode.children[2].children[0].value)" class="dropbtn"
+		      <button onclick="showDropdown('rerunSetupFile')" class="dropbtn"
 			      title="Show available setup files">&#9776;</button></td>
 		    <td id="rerunLastTime"></td>
 		    <td id="rerunLastInfo"></td>
@@ -912,6 +847,200 @@
 	    </tr>
 	  </table>
 	</div>
+	<div id="plot" class="tab-pane fade in">
+	  <table style="width:100%">
+	    <tr style="background:#09C;">
+	      <td>
+		<div id="farkPlot">
+		  <button class="request" style="width:100%" onclick="plot_updateData()" title="Re-load <setup file> from server"><h1>Plot setup</h1></button>
+		</div>
+	      </td>
+	    </tr>
+	  </table>
+	  <table style="width:100%">
+	    <tr>
+	      <td style="white-space: nowrap;"><em>Setup file:</em></td>
+	      <td class="fill" width="100%">
+		<input id="plotConfigFile" type="text" value="" style="width:100%" onblur="plot_setConfigFile(this.value);plot_show();"
+		       title="Name of existing or new <setup file>"/> 
+		<div id="plotConfigFileDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="plot_setConfigFile(fark_last['plot']);plot_updateData();"
+			title="Fetch recently used <setup file>">←</button>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="showDropdown('plotConfigFile')" class="dropbtn"
+			title="Show available <setup files> and actions">&#9776;</button>
+	      </td>
+	    </tr>
+	    <tr>
+	      <td style="white-space: nowrap;">Input table file:</td>
+	      <td class="fill" width="100%" colspan="2">
+		<input id="plotTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="plot_setArray('table',this.value);"
+		       title="Output <table file> path pattern. The <table file> contains &#13;R-readable colocation data used to generate the graphics output."/> 
+		<div id="plotTableDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="showDropdown('plotTable')" class="dropbtn"
+			title="Show directories and wildcards">&#9776;</button></td>
+	    </tr>
+	    <tr>
+	      <td style="white-space: nowrap;">Output directory:</td>
+	      <td class="fill" width="100%" colspan="2">
+		<input id="plotGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="plot_setArray('graphics',this.value);"
+		       title="Override the output directory given in the Table/Join setup"/> 
+		<div id="plotGraphicsDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="showDropdown('plotGraphics')" class="dropbtn"
+			title="Show directories and wildcards">&#9776;</button></td>
+	    </tr>
+	  </table>
+	  <table width="100%">
+	    <tr>
+	      <td align="right">
+		File:<input id="plotConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
+		Password:<input type="password" id="plotConfigFilePsw" value=""
+				title="Password needed to save the <setup file> to server. 
+				       A new <setup file> will get this password.">
+		<button onclick="plot_saveConfigFile('plotConfigFilePsw')"
+			title="Save the <setup file> to server.">Save</button></td>
+	    </tr>
+	  </table>
+	</div>
+	<div id="clean" class="tab-pane fade in">
+	  <table style="width:100%">
+	    <tr style="background:#09C;">
+	      <td>
+		<div id="farkClean">
+		  <button class="request" style="width:100%" onclick="clean_updateData()" title="Re-load <setup file> from server"><h1>Cleaning jobs</h1></button>
+		</div>
+	      </td>
+	    </tr>
+	  </table>
+
+	  <table style="width:100%">
+	    <tr>
+	      <td style="white-sgpace: nowrap;"><em>Setup file:</em></td>
+	      <td class="fill" width="100%">
+		<input id="cleanConfigFile" type="text" value="" style="width:100%" onblur="clean_setConfigFile(this.value);clean_show();"
+		       title="Name of existing or new <setup file>"/>
+                <!-- onblur="clean_setConfigFile(this.value);clean_show()" -->
+		<div id="cleanConfigFileDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td align="center"><button onclick="showDropdown('cleanConfigFile')" class="dropbtn"
+					 title="Show available <setup files> and actions">&#9776;</button></td>
+	    </tr>
+	    <tr> 
+	      <td style="white-sgpace: nowrap;">Clean: </td>
+	      <td width="100%" colspan="2">
+		<table id="cleanTable"  width="100%" border="1">
+		  <tr id="labelsClean" style="background-color:#00b9f2"> 
+		    <th>Root directory</th>
+		    <th style="min-width:25px;width:25px"></th>
+		    <th>File filter (regexp)</th>
+		    <th style="min-width:25px;width:25px"></th>
+		    <th>Min age (days)</th>
+		    <th style="min-width:25px;width:25px"></th>
+		  </tr>
+		  <tr id="newlineClean">
+		    <td class="fill" width="40%">
+		      <input id="cleanFilterDir" type="text" value="" style="width:100%"
+			       onblur="clean_setArray('filterDir',encodeURI(this.value));"/> 
+		      <div id="cleanFilterDirDropdown" class="dropdown-content"></div>
+		    </td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="showDropdown('cleanFilterDir')" class="dropbtn"
+			      title="Show available types">&#9776;</button></td>
+		    <td class="fill" width="40%">
+		      <input id="cleanFilterFile" type="text" value="" style="width:100%"
+			     onblur="clean_setArray('filterFile',encodeURI(this.value));"/> 
+		      <div id="cleanFilterFileDropdown" class="dropdown-content"></div>
+		    </td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="showDropdown('cleanFilterFile')" class="dropbtn"
+			      title="Show available setup files">&#9776;</button></td>
+		    <td class="fill" width="20%">
+		      <input id="cleanFilterAge" type="text" value="" style="width:100%"
+			     onblur="clean_setArray('filterAge',encodeURI(this.value));"/> 
+		    </td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="clean_newJob(this)" title="Add job">&#43;</button></td>
+		  </tr>
+		</table>
+	      </td>
+	    </tr>
+	  </table>
+	  <table width="100%">
+	    <tr>
+	      <td align="right">
+		File:<input id="cleanConfigFileSave" type="text" value="" title="Current <setup file>." readonly/>
+		Password:<input type="password" id="cleanConfigFilePsw" value="" title="Password needed to save the setup to server.">
+		<button onclick="clean_saveConfigFile()" title="Save the setup to server.">Save</button></td>
+	    </tr>
+	  </table>
+	</div>
+	<div id="exec" class="tab-pane fade in">
+	  <table style="width:100%">
+	    <tr style="background:#09C;">
+	      <td>
+		<div id="farkExec">
+		  <button class="request" style="width:100%" onclick="exec_updateData()" title="Re-load <setup file> from server"><h1>Execute jobs</h1></button>
+		</div>
+	      </td>
+	    </tr>
+	  </table>
+	  <table id="execTable"  width="100%" border="1">
+	    <tr id="labelsExec" style="background-color:#00b9f2"> 
+	      <th style="min-width:50px;width:50px">Type</th>
+	      <th style="min-width:25px;width:25px"></th>
+	      <th>Setup file</th>
+	      <th style="min-width:25px;width:25px"></th>
+	      <th style="min-width:50px;width:50px" align="center">Schedule</th>
+	      <th style="min-width:25px;width:25px"></th>
+	      <th style="min-width:75px;width:75px" align="center" colspan="3">Manual</th>
+	      <th width="200px">Last</th>
+	      <th width="200px">Info</th>
+	      <th style="min-width:25px;width:25px"></th>
+	    </tr>
+	    <tr id="newlineExec">
+	      <td class="fill">
+		<input id="execType" type="text" value="" style="width:100%" disabled/> 
+		<div id="execTypeDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="showDropdown('execType')" class="dropbtn"
+			title="Show available types">&#9776;</button></td>
+	      <td class="fill">
+		<input id="execConfigFile" type="text" value="" style="width:100%" disabled/> 
+		<div id="execConfigFileDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="showDropdown('execConfigFile')" class="dropbtn"
+			title="Show available setup files">&#9776;</button></td>
+	      <td class="fill">
+		<input id="execCron" type="text" value="" style="width:100%" disabled/> 
+		<div id="execCronDropdown" class="dropdown-content"></div>
+	      </td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="showDropdown('execCron')" class="dropbtn"
+			title="Show available intervals">&#9776;</button></td>
+	      <td style="min-width:75px;width:75px" align="center" colspan="3">
+	      <td id="execLastTime"></td>
+	      <td id="execLastInfo"></td>
+	      <td style="min-width:25px;width:25px" align="center">
+		<button onclick="exec_newConfigFile(this)" title="Add job">&#43;</button></td>
+	    </tr>
+	  </table>
+	  <table width="100%">
+	    <tr>
+	      <td align="right">
+		Password:<input type="password" id="execConfigFilePsw" value="" title="Password needed to save the setup to server.">
+		<button onclick="exec_saveConfigFile()" title="Save the setup to server.">Save</button></td>
+	    </tr>
+	  </table>
+	</div>
       </div>
       <table style="width:100%">
 	<tr>
@@ -926,9 +1055,11 @@
       <script src="js/model.js"></script>
       <script src="js/obs.js"></script>
       <script src="js/coloc.js"></script>
-      <script src="js/plot.js"></script>
+      <script src="js/table.js"></script>
       <script src="js/join.js"></script>
-      <script src="js/auto.js"></script>
+      <script src="js/plot.js"></script>
+      <script src="js/exec.js"></script>
+      <script src="js/clean.js"></script>
       <script src="js/rerun.js"></script>
       <script src="js/metfark.js"></script>
     </div>

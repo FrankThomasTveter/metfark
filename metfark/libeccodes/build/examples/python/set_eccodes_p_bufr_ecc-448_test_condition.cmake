@@ -1,5 +1,0 @@
-  if(  HAVE_PYTHON )
-    set(_eccodes_p_bufr_ecc-448_test_condition TRUE)
-  else()
-    set(_eccodes_p_bufr_ecc-448_test_condition FALSE)
-  endif()

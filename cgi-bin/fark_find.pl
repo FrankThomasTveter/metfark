@@ -44,6 +44,12 @@ if ($param->{type}->[0] eq "model") {
     &findObs($param,"obs");
 } elsif ($param->{type}->[0] eq "obsfile") {
     &findObsFile($param,"obs");
+} elsif ($param->{type}->[0] eq "join") {
+    &findJoin($param,"join");
+} elsif ($param->{type}->[0] eq "clean") {
+    &findClean($param,"clean");
+} else {
+    farkdir::term("Invalid type: ".$param->{type}->[0]);
 }
 
 sub findModel {
@@ -505,8 +511,8 @@ sub processObsFile {
 	if ($indexTarget && $indexExp) {
 	    if ($debug) {print "fark_find.pl Setting observation index $indexTarget, $indexExp\n";}
 	    $fark->setObservationIndex($indexTarget,$indexExp);
-	} else {
-	    die "No observation index specified.";
+	} elsif ($indexTarget || $indexExp) {
+	    die "Missing index information.";
 	}
     } else {
 	die "No bufr/subType specified.";
@@ -568,6 +574,177 @@ sub processObsFile {
     $fark->close();
 }
 
+sub findJoin {
+    my $param =shift;
+    my $cls=shift;
+    my $ipath=$param->{file}[0];
+    my $password=($param->{password}[0] // "");
+    my $filterDir = ($param->{filterDir}->[0] // "/");
+    my $filterFile = ($param->{filterFile}->[0] // "");
+    my $filterDirMin = ($param->{filterDirMin}->[0] // "");
+    my $filterDirMax = ($param->{filterDirMax}->[0] // "");
+    # get config file paths...
+    my ($idir,$ifile) = farkdir::splitName($ipath);
+    my ($root, $loc, $priv) = farkdir::splitDir($idir,$cls);
+    my $lpath = $loc.$ifile; # local path
+    my $fpath = $root.$lpath; # full path
+    # get filter paths...
+    my ($filterroot, $filterloc, $filterpriv) = 
+	farkdir::splitDir($filterDir,"output");
+    # xml
+    my $parser = XML::LibXML->new();
+    my $doc;
+    my $node;
+    # read old config file into memory
+    my $passok=1;
+    if (-e $fpath && $priv eq "rw") {
+	$doc = $parser->parse_file($fpath);
+	if ( ($node)=$doc->findnodes("join/join_config")) {
+	    my $pass=($node->getAttribute("password")//"");
+	    if ($pass ne $password) {
+		$passok=0;
+		$doc = $parser->parse_string("<join><join_config/></join>");
+		($node) = $doc->findnodes("join/join_config");
+	    }
+	} else {
+	    farkdir::term("Corrupt file: ".$fpath);
+	}
+    } else {
+	$doc = $parser->parse_string("<join><join_config/></join>");
+	($node) = $doc->findnodes("join/join_config");
+    }
+    # put inventory of first join-file into xml-structure
+    my @oldNodes=$node->findnodes("stack");
+    foreach my $oldNode (@oldNodes) {
+	$node->removeChild($oldNode);
+    };
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
+    if ($filterpriv eq "ro" || $filterpriv eq "rw") {
+    	farkdir::sandbox {
+	    $node->setAttribute("password",        $password//"");
+	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterFile",      $filterFile//"");
+	    $node->setAttribute("filterDirMin",    $filterDirMin // "");
+	    $node->setAttribute("filterDirMax",    $filterDirMax // "");
+	    my @files=farkdir::FindFiles($filterDir,$filterFile,
+					 $filterDirMin,$filterDirMax,10);
+	    if (@files) {
+		$node->setAttribute("hits",            scalar @files);
+		foreach my $sfile (@files) {
+		    my $parent = XML::LibXML::Element->new( 'stack' );
+		    $parent->setAttribute("name",$sfile//"");
+		    if (-f $sfile) {
+			$parent->setAttribute("age",(-M $sfile//""));
+			$parent->setAttribute("size",size_in_mb(-s $sfile))
+		    };
+		    $node->addChild( $parent );
+		};
+		# put xml-structure into file
+		if ($passok) {
+		    farkdir::docsave($fpath,$doc);
+		}
+	    } else {
+		my $parent = XML::LibXML::Element->new( 'stack' );
+		$node->addChild( $parent );
+		return "No files found.";
+	    }
+	}{message=>"Unable to findfiles: $filterDir,$filterFile,$filterDirMin,$filterDirMax",
+	  stdout=>"never"}; #ignore output
+	# report xml-structure
+	print $doc->toString . "\n";
+    } else {
+	farkdir::term("Permission denied.");
+    };
+};
+
+sub findClean {
+    my $param =shift;
+    my $cls=shift;
+    my $ipath=$param->{file}[0];
+    my $password=($param->{password}[0] // "");
+    my $filterDir = ($param->{filterDir}->[0] // "/");
+    my $filterFile = ($param->{filterFile}->[0] // "");
+    my $filterAge = ($param->{filterAge}->[0] // "");
+    # get config file paths...
+    my ($idir,$ifile) = farkdir::splitName($ipath);
+    my ($root, $loc, $priv) = farkdir::splitDir($idir,$cls);
+    my $lpath = $loc.$ifile; # local path
+    my $fpath = $root.$lpath; # full path
+    # get filter paths...
+    my ($filterroot, $filterloc, $filterpriv) = 
+	farkdir::splitDir($filterDir,"output");
+    # xml
+    my $parser = XML::LibXML->new();
+    my $doc;
+    my $node;
+    # read old config file into memory
+    my $passok=1;
+    if (-e $fpath && $priv eq "rw") {
+	$doc = $parser->parse_file($fpath);
+	if ( ($node)=$doc->findnodes("clean/clean_config")) {
+	    my $pass=($node->getAttribute("password")//"");
+	    if ($pass ne $password) {
+		$passok=0;
+		$doc = $parser->parse_string("<clean><clean_config/></clean>");
+		($node) = $doc->findnodes("clean/clean_config");
+	    }
+	} else {
+	    farkdir::term("Corrupt file: ".$fpath);
+	}
+    } else {
+	$doc = $parser->parse_string("<clean><clean_config/></clean>");
+	($node) = $doc->findnodes("clean/clean_config");
+    }
+    # put inventory of first clean-file into xml-structure
+    my @oldNodes=$node->findnodes("stack");
+    foreach my $oldNode (@oldNodes) {
+	$node->removeChild($oldNode);
+    };
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
+    if ($filterpriv eq "ro" || $filterpriv eq "rw") {
+    	farkdir::sandbox {
+	    $node->setAttribute("password",        $password//"");
+	    $node->setAttribute("filterDir",       $filterDir//"");
+	    $node->setAttribute("filterFile",      $filterFile//"");
+	    $node->setAttribute("filterAge",       $filterAge//0);
+	    my @files=farkdir::FindFiles($filterDir,$filterFile,
+					 $filterAge,9999,10);
+	    if (@files) {
+		$node->setAttribute("hits",            scalar @files);
+		foreach my $sfile (@files) {
+		    my $parent = XML::LibXML::Element->new( 'stack' );
+		    $parent->setAttribute("name",$sfile//"");
+		    if (-f $sfile) {
+			$parent->setAttribute("age",(-M $sfile//""));
+			$parent->setAttribute("size",size_in_mb(-s $sfile))
+		    };
+		    $node->addChild( $parent );
+		};
+		# put xml-structure into file
+		if ($passok) {
+		    farkdir::docsave($fpath,$doc);
+		}
+	    } else {
+		my $parent = XML::LibXML::Element->new( 'stack' );
+		$node->addChild( $parent );
+		return "No files found.";
+	    }
+	}{message=>"Unable to findfiles: $filterDir,$filterFile,$filterAge",
+	  stdout=>"never"}; #ignore output
+	# report xml-structure
+	print $doc->toString . "\n";
+    } else {
+	farkdir::term("Permission denied.");
+    };
+};
 
 sub tostring (&) {
     my $s;
