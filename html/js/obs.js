@@ -182,19 +182,19 @@ function obs_saveConfigFile() {
     var stack="";
     var obsTargets="";
     if (obs_config[file]!= undefined) {
-	filterDir=obs_config[file]["filterDir"]//"";
-	filterDirMin=obs_config[file]["filterDirMin"]//"";
-	filterDirMax=obs_config[file]["filterDirMax"]//"";
-	filterFile=obs_config[file]["filterFile"]//"";
+	filterDir=obs_config[file]["filterDir"]||"";
+	filterDirMin=obs_config[file]["filterDirMin"]||"";
+	filterDirMax=obs_config[file]["filterDirMax"]||"";
+	filterFile=obs_config[file]["filterFile"]||"";
 	var sfile=obs_config[file]["stack"];
 	if (sfile !== "") {
 	    stack=stack+"|"+sfile;
 	};
-	bufrType=obs_config[file]["bufrType"]//"";
-	subType=obs_config[file]["subType"]//"";
-	typeInfo=obs_config[file]["typeInfo"]//"";
-	indexTarget=obs_config[file]["indexTarget"]//"";
-	indexExp=obs_config[file]["indexExp"]//"";
+	bufrType=obs_config[file]["bufrType"]||"";
+	subType=obs_config[file]["subType"]||"";
+	typeInfo=obs_config[file]["typeInfo"]||"";
+	indexTarget=obs_config[file]["indexTarget"]||"";
+	indexExp=obs_config[file]["indexExp"]||"";
 	var targeto=obs_config[file]["targeto"];
 	var targets=obs_config[file]["targets"];
 	//for (var target in targets) {
@@ -205,7 +205,7 @@ function obs_saveConfigFile() {
 	    var info=targets[target]["info"];
 	    obsTargets=obsTargets + "|" + target + "~" + pos + "~" + descr + "~" + info;
 	};
-	table=obs_config[file]["tablePath"]//"";
+	table=obs_config[file]["tablePath"]||"";
     }
     if (obsTargets == "") {obsTargets="none";}
     obs_configEd++;

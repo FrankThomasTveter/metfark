@@ -36,10 +36,9 @@ if ($param->{type}->[0] eq "model") {
     &saveExec($param);
 }
 
-
 sub saveModel {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $filterDir=($param->{filterDir}[0] // "");
     my $filterDirMin=($param->{filterDirMin}[0] // "");
@@ -53,7 +52,7 @@ sub saveModel {
     my $stack=($param->{stack}[0]// "");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     my $logfile="/tmp/fark_save.tmp";
     farkdir::touchFile($logfile);
     farkdir::sandbox {
@@ -71,7 +70,7 @@ sub saveModel {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("model/model_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -163,7 +162,7 @@ sub saveModel {
 
 sub saveObs {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $filterDir=($param->{filterDir}[0] // "*");
     my $filterDirMin=($param->{filterDirMin}[0] // "*");
@@ -179,7 +178,7 @@ sub saveObs {
     my $obsTargets=($param->{obsTargets}[0] // "");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -195,7 +194,7 @@ sub saveObs {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("obs/obs_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$file);
 		    }
@@ -283,7 +282,7 @@ sub saveObs {
 }
 sub saveColoc {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password     = ($param->{password}[0] // "");
     my $host         = ($param->{host}[0] // "localhost");
     my $xml          = ($param->{xml}[0] // "");
@@ -304,7 +303,7 @@ sub saveColoc {
     my @ostrings = ("xml=\"$xml\"");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -320,7 +319,7 @@ sub saveColoc {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("coloc/coloc_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -462,10 +461,11 @@ sub saveColoc {
 }
 sub saveTable {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $table=($param->{table}[0] // "");
-    my $graphics=($param->{graphics}[0] // "");
+    my $graphics=($param->{graphics}[0] // "true");
+    my $overwrite=($param->{overwrite}[0] // "");
     my $cat=($param->{cat}[0] // "");
     my $tableCols=($param->{columns}[0] // "");
     my $tableSets=($param->{sets}[0] // "");
@@ -474,7 +474,7 @@ sub saveTable {
     my @ostrings = ("table=\"$table\"","graphics=\"$graphics\"");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -492,7 +492,7 @@ sub saveTable {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("table/table_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -517,6 +517,7 @@ sub saveTable {
 	    $node->setAttribute("file",        $file);
 	    $node->setAttribute("table",       $table);
 	    $node->setAttribute("graphics",    $graphics);
+	    $node->setAttribute("overwrite",   $overwrite);
 	    $node->setAttribute("cat",         $cat);
 	    #print "Processing\n";
 	    # remove target nodes...
@@ -600,10 +601,11 @@ sub saveTable {
 
 sub saveJoin {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $table=($param->{table}[0] // "");
-    my $graphics=($param->{graphics}[0] // "");
+    my $graphics=($param->{graphics}[0] // "true");
+    my $overwrite=($param->{overwrite}[0] // "");
     my $filterDir=($param->{filterDir}[0] // "");
     my $filterDirMin=($param->{filterDirMin}[0] // "");
     my $filterDirMax=($param->{filterDirMax}[0] // "");
@@ -618,7 +620,7 @@ sub saveJoin {
     my @ostrings = ("table=\"$table\"","graphics=\"$graphics\"");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -636,7 +638,7 @@ sub saveJoin {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("join/join_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -661,6 +663,7 @@ sub saveJoin {
 	    $node->setAttribute("file",        $file);
 	    $node->setAttribute("table",       $table);
 	    $node->setAttribute("graphics",    $graphics);
+	    $node->setAttribute("overwrite",   $overwrite);
 	    $node->setAttribute("filterDir",   $filterDir);
 	    $node->setAttribute("filterDirMin",$filterDirMin);
 	    $node->setAttribute("filterDirMax",$filterDirMax);
@@ -684,13 +687,13 @@ sub saveJoin {
 		my $ii=0;
 		while ($ii <= $len) {
 		    my $col=$cols[$ii];
-		    my $min=$colMin[$ii]||"";
-		    my $max=$colMax[$ii]||"";
+		    my $min=$colMin[$ii]//"";
+		    my $max=$colMax[$ii]//"";
 		    #print "Col($ii) $len= '$col' '$min' '$max'\n";
 		    my $child = XML::LibXML::Element->new( 'column' );
 		    $child->setAttribute("name",$col);
-		    if ($min) {$child->setAttribute("min",$min);};
-		    if ($max) {$child->setAttribute("max",$max);};
+		    if ("$min" ne "") {$child->setAttribute("min",$min);};
+		    if ("$max" ne "") {$child->setAttribute("max",$max);};
 		    $node->addChild( $child );
 		    $ii++;
 		}
@@ -729,7 +732,7 @@ sub saveJoin {
 }
 sub savePlot {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $table=($param->{table}[0] // "");
     my $graphics=($param->{graphics}[0] // "");
@@ -741,7 +744,7 @@ sub savePlot {
     my @ostrings = ("table=\"$table\"","graphics=\"$graphics\"");
     #
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -759,7 +762,7 @@ sub savePlot {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("plot/plot_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -866,7 +869,7 @@ sub savePlot {
 }
 sub saveRerun {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $offset=($param->{offset}[0] // "");
     my $variable=($param->{variable}[0] // "");
@@ -879,7 +882,7 @@ sub saveRerun {
     my $joinFiles=($param->{joinFiles}[0] // "");
     my $plotFiles=($param->{plotFiles}[0] // "");
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -895,7 +898,7 @@ sub saveRerun {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("rerun/rerun_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -1058,11 +1061,11 @@ sub saveRerun {
 
 sub saveClean {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $jobs=($param->{jobs}[0] // "");
     if (! defined ($param->{file}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{file}->[0]||"";
+    my $ifile=$param->{file}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -1078,7 +1081,7 @@ sub saveClean {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("clean/clean_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }
@@ -1132,7 +1135,7 @@ sub saveClean {
 
 sub saveExec {
     my $param = shift;
-    my $cls=$param->{type}->[0] || "";
+    my $cls=$param->{type}->[0] // "";
     my $password=($param->{password}[0] // "");
     my $modelFiles=($param->{modelFiles}[0] // "");
     my $obsFiles=($param->{obsFiles}[0] // "");
@@ -1143,7 +1146,7 @@ sub saveExec {
     my $rerunFiles=($param->{rerunFiles}[0] // "");
     my $cleanFiles=($param->{cleanFiles}[0] // "");
     if (! defined ($param->{root}->[0])) {farkdir::term("Undefined file.");};
-    my $ifile=$param->{root}->[0]||"";
+    my $ifile=$param->{root}->[0]//"";
     farkdir::sandbox {
 	my ($dir, $file) = farkdir::splitName($ifile);
 	my ($root, $loc, $priv) = farkdir::splitDir( $dir, $cls );
@@ -1159,7 +1162,7 @@ sub saveExec {
 	    } elsif (-e $path) {
 		$doc = $parser->parse_file($path);
 		if ( ($node)=$doc->findnodes("exec/exec_config")) {
-		    my $pass=($node->getAttribute("password")||"");
+		    my $pass=($node->getAttribute("password")//"");
 		    if ($pass ne $password) {
 			farkdir::term("Invalid password for file: ".$path);
 		    }

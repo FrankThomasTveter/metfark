@@ -580,6 +580,13 @@ function showDropdown(target) {
     }
     //document.getElementById(dropdown).classList.toggle("show");
 }
+function setValue(target,value) {
+    if (document.getElementById(target) == null) {
+	console.log("Undefined target:",target," Value:",value);
+    } else {
+	document.getElementById(target).checked=((value||"true")==="true");
+    }
+}
 function showValue(target,value) {
     if (document.getElementById(target) == null) {
 	console.log("Undefined target:",target," Value:",value);
@@ -926,8 +933,9 @@ function dataToTable(data) {
 	}
 	var table=tables[ii].getAttribute("table")||"";
 	var graphics=tables[ii].getAttribute("graphics")||"";
+	var overwrite=tables[ii].getAttribute("overwrite")||"";
 	var cat=tables[ii].getAttribute("cat");
-	table_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,cat:cat};
+	table_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,overwrite:overwrite,cat:cat};
 	colnames=[];
 	var cols=tables[ii].getElementsByTagName("column");
 	for (var jj = 0; jj < cols.length; jj++) {
@@ -987,9 +995,10 @@ function dataToJoin(data) {
 	}
 	var table=joins[ii].getAttribute("table")||"";
 	var graphics=joins[ii].getAttribute("graphics")||"";
+	var overwrite=joins[ii].getAttribute("overwrite")||"true";
 	var cat=joins[ii].getAttribute("cat");
 	if (cat) {
-	    join_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,cat:cat,min:{},max:{}};
+	    join_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,overwrite:overwrite,cat:cat,min:{},max:{}};
 	    join_config[path]["filterDir"]=
 		set(join_config[path]["filterDir"],joins[ii].getAttribute("filterDir"));
 	    join_config[path]["filterDirMin"]=

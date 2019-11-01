@@ -792,6 +792,7 @@ eval {
 	if($debug){print "processTable Entering with '$xmlfile' '$cls'\n";}
 	my $table=$node->getAttribute("table");
 	my $graphics=$node->getAttribute("graphics");
+	my $overwrite=$node->getAttribute("overwrite")//"true";
 	my $cat=$node->getAttribute("cat");
 	#print "Processing table: $xmlfile\n";
 	my $tolerance = "10.0";            # shape tolerance in km
@@ -800,75 +801,80 @@ eval {
 	fark->setShapeFile($shapeFile);
 	my $fark=fark->open();
 	&setRerunConfig($fark,$variable,$value,$offset);
-	$fark->setTableType($cat);
-	$fark->clearTableAttributeStack();
-	my @attrs=$node->findnodes("attribute");
-	foreach my $attr (@attrs) {
-	    $fark->pushTableAttribute($attr->getAttribute("name"),
-				     $attr->getAttribute("value"));
-	}
-	my @cols=$node->findnodes("column");
-	if($debug){print "Set coloc model obs\n";}
-	$fark->clearTableSetStack();
-	my @sets=$node->findnodes("set");
-	foreach my $trg (@sets) {
-	    # load XML-data into coloc-, model- and obs-modules
-	    my $colocfile=$colocDir.$trg->getAttribute("coloc");
-	    if($debug){print "Coloc file '$colocfile'\n";}
-	    if (!-e $colocfile) {farkdir::term("Undefined coloc file '$colocfile'");};
-	    print ">>>> Loading coloc file: $colocfile (set:".
-		$trg->getAttribute("name").",". 
-		$trg->getAttribute("legend").")\n";
-	    my $parser = XML::LibXML->new();
-	    my $doc = $parser->parse_file($colocfile);
-	    if ( my ($node) = $doc->findnodes("coloc/coloc_config")) {
-		# set colocation config parameters
-		eval {
-		    &setColocConfig($fark,$node,$modelDir,$modelCacheDir,
-				    $obsDir,$obsCacheDir);
-		};
-		my $mret=$@;if ($mret) {
-		    my $modelFile = $node->getAttribute("modelFile");
-		    my $obsFile   = $node->getAttribute("obsFile");
-		    if($debug){print "Failed setColocConfig '$mret'.\n";}
-		    die("model:$modelFile obs:$obsFile $mret");
-		};
-		# push columns
-		if($debug){print "Setting columns.\n";};
-		$fark->clearTableColumn();
-		my @colv=$trg->findnodes("col");
-		for ( my $i = 0; $i < @cols; $i++) {
-		    my $nam=$cols[$i]->getAttribute("name");
-		    my $val=$colv[$i]->getAttribute("value");
-		    if($debug){print "Setting column: $nam -> $val\n";};
-		    $fark->pushTableColumn($nam,$val);
-		}
-		# push all the data onto the table-stack...
-		if($debug){print "Push data to table-stack obs\n";}
-		$fark->pushTableSet($trg->getAttribute("name"),
-				   $trg->getAttribute("legend"));
-	    }
-	}
-	#
-	# colocate and generate table file...
-	my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
-	my $fpath=$root . $loc . $cat;
 	if($debug){print "****** Make table A\n";}
 	my $tablefile=$fark->strepTableFile($table);
-	my ($troot, $tloc, $tpriv) = farkdir::splitPattern( $tablefile, "output" );
-	if ($tpriv ne "rw") {
-	    farkdir::term("$myname Permission denied for output: $table $tpriv");
-	}
-	my ($dir,$name)=farkdir::splitName($tablefile);
-	if (farkdir::makePath($dir) && $debug){
-	    print "****** Made directory '$dir'\n";
+	if ( ! -f $tablefile || "$overwrite" eq "true") {
+	    $fark->setTableType($cat);
+	    $fark->clearTableAttributeStack();
+	    my @attrs=$node->findnodes("attribute");
+	    foreach my $attr (@attrs) {
+		$fark->pushTableAttribute($attr->getAttribute("name"),
+					  $attr->getAttribute("value"));
+	    }
+	    my @cols=$node->findnodes("column");
+	    if($debug){print "Set coloc model obs\n";}
+	    $fark->clearTableSetStack();
+	    my @sets=$node->findnodes("set");
+	    foreach my $trg (@sets) {
+		# load XML-data into coloc-, model- and obs-modules
+		my $colocfile=$colocDir.$trg->getAttribute("coloc");
+		if($debug){print "Coloc file '$colocfile'\n";}
+		if (!-e $colocfile) {farkdir::term("Undefined coloc file '$colocfile'");};
+		print ">>>> Loading coloc file: $colocfile (set:".
+		    $trg->getAttribute("name").",". 
+		    $trg->getAttribute("legend").")\n";
+		my $parser = XML::LibXML->new();
+		my $doc = $parser->parse_file($colocfile);
+		if ( my ($node) = $doc->findnodes("coloc/coloc_config")) {
+		    # set colocation config parameters
+		    eval {
+			&setColocConfig($fark,$node,$modelDir,$modelCacheDir,
+					$obsDir,$obsCacheDir);
+		    };
+		    my $mret=$@;if ($mret) {
+			my $modelFile = $node->getAttribute("modelFile");
+			my $obsFile   = $node->getAttribute("obsFile");
+			if($debug){print "Failed setColocConfig '$mret'.\n";}
+			die("model:$modelFile obs:$obsFile $mret");
+		    };
+		    # push columns
+		    if($debug){print "Setting columns.\n";};
+		    $fark->clearTableColumn();
+		    my @colv=$trg->findnodes("col");
+		    for ( my $i = 0; $i < @cols; $i++) {
+			my $nam=$cols[$i]->getAttribute("name");
+			my $val=$colv[$i]->getAttribute("value");
+			if($debug){print "Setting column: $nam -> $val\n";};
+			$fark->pushTableColumn($nam,$val);
+		    }
+		    # push all the data onto the table-stack...
+		    if($debug){print "Push data to table-stack obs\n";}
+		    $fark->pushTableSet($trg->getAttribute("name"),
+					$trg->getAttribute("legend"));
+		}
+	    }
+	    #
+	    # colocate and generate table file...
+	    my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
+	    my $fpath=$root . $loc . $cat;
+	    my ($troot, $tloc, $tpriv) = farkdir::splitPattern( $tablefile, "output" );
+	    if ($tpriv ne "rw") {
+		farkdir::term("$myname Permission denied for output: $table $tpriv");
+	    }
+	    my ($dir,$name)=farkdir::splitName($tablefile);
+	    if (farkdir::makePath($dir) && $debug){
+		print "****** Made directory '$dir'\n";
+	    } else {
+		print "****** Directory exists '$dir'\n";
+	    };
+	    my ($tablefile,$graphicsdir) = $fark->makeTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
+	    #
+	    #   my $cmd="Rscript --vanilla $fpath $tablefile $graphicsdir $test";
+	    #
 	} else {
-	    print "****** Directory exists '$dir'\n";
+	    if($debug){print "****** Table file exists: '$tablefile'\n";}
+	    farkdir::touchFile($clsFillFile) || farkdir::term("$myname unable to touch '$clsFillFile'");
 	};
-	my ($tablefile,$graphicsdir) = $fark->makeTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
-	#
-	my $cmd="Rscript --vanilla $fpath $tablefile $graphicsdir $test";
-	if($debug){print "****** Make table B file: '$tablefile'\n";}
 	#
 	$fark->close();
 	print ">>>> Normal end of process...\n";
@@ -896,6 +902,7 @@ eval {
 	if($debug){print "processJoin Entering with '$xmlfile' '$cls'\n";}
 	my $table=$node->getAttribute("table");
 	my $graphics=$node->getAttribute("graphics");
+	my $overwrite=$node->getAttribute("overwrite")//"true";
 	my $cat=$node->getAttribute("cat");
 	#print "Processing join: $xmlfile\n";
 	#
@@ -908,52 +915,58 @@ eval {
 	# write attributes to output file
 	my $fark=fark->open();
 	&setRerunConfig($fark,$variable,$value,$offset);
-	$fark->setTableType($cat);
-	if($debug){print "****** Make table C\n";}
-	my ($troot, $tloc, $tpriv) = farkdir::splitPattern( $table, "output" );
-	if ($tpriv ne "rw") {
-	    farkdir::term("$myname Permission denied for output: $table $tpriv");
-	}
-	$fark->clearTableAttributeStack();
-	my @attrs=$node->findnodes("attribute");
-	foreach my $attr (@attrs) {
-	    $fark->pushTableAttribute($attr->getAttribute("name"),
-				     $attr->getAttribute("value"));
-	}
-	my @cols=$node->findnodes("column");
-	if($debug){print "Set coloc model obs\n";}
-	for ( my $i = 0; $i < @cols; $i++) {
-	    my $nam=$cols[$i]->getAttribute("name")//"";
-	    my $val=$cols[$i]->getAttribute("value")//"";
-	    my $min=$cols[$i]->getAttribute("min")//"";
-	    my $max=$cols[$i]->getAttribute("max")//"";
-	    $fark->pushTableColumn($nam,$val);
-	    if ($min && $max) {
-		if($debug){print "Setting column limits for '$nam' -> '$min' '$max'\n";}
-		$fark->limitTableColumn($nam,$min,$max);
-	    } else {
-		if($debug){print "No column limits for '$nam'\n";}
+	my $tablefile=$fark->strepTableFile($table);
+	if ( ! -f $tablefile || "$overwrite" eq "true") {
+	    $fark->setTableType($cat);
+	    if($debug){print "****** Make table C\n";}
+	    my ($troot, $tloc, $tpriv) = farkdir::splitPattern( $table, "output" );
+	    if ($tpriv ne "rw") {
+		farkdir::term("$myname Permission denied for output: $table $tpriv");
 	    }
-	}
-	$fark->clearTableFileStack();
-	#
-	my $timeoffset=$fark->getRerunOffset();
-	# min/max may be expressions depending on the rerun variable
-	my $filterNumMin=("$filterDirMin" ne ""?$fark->expression($filterDirMin) - $timeoffset:$filterDirMin);
-	my $filterNumMax=("$filterDirMax" ne ""?$fark->expression($filterDirMax) - $timeoffset:$filterDirMax);
-	#
-	print ">>>> Looking for files in '$filterDir' matching '$filterFile' ($filterNumMin,$filterNumMax) Offset=$timeoffset\n";
-	$fark->addTableFiles($filterDir,$filterFile,$filterNumMin,$filterNumMax,$test,$clsFillFile);
-	#
-	my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
-	my $fpath=$root . $loc . $cat;
-	my ($tablefile,$graphicsdir) = $fark->joinTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
-	#
-	my $cmd="Rscript --vanilla $fpath $tablefile $test";
-	if($debug){print "****** Make table D file: '$tablefile'\n";}
-	#
+	    $fark->clearTableAttributeStack();
+	    my @attrs=$node->findnodes("attribute");
+	    foreach my $attr (@attrs) {
+		$fark->pushTableAttribute($attr->getAttribute("name"),
+					  $attr->getAttribute("value"));
+	    }
+	    my @cols=$node->findnodes("column");
+	    if($debug){print "Set coloc model obs\n";}
+	    for ( my $i = 0; $i < @cols; $i++) {
+		my $nam=$cols[$i]->getAttribute("name")//"";
+		my $val=$cols[$i]->getAttribute("value")//"";
+		my $min=$cols[$i]->getAttribute("min")//"";
+		my $max=$cols[$i]->getAttribute("max")//"";
+		$fark->pushTableColumn($nam,$val);
+		if ("$min" ne "" && "$max" ne "") {
+		    if($debug){print "Setting column limits for '$nam' -> '$min' '$max'\n";}
+		    $fark->limitTableColumn($nam,$min,$max);
+		} else {
+		    if($debug){print "No column limits for '$nam'\n";}
+		}
+	    }
+	    $fark->clearTableFileStack();
+	    #
+	    my $timeoffset=$fark->getRerunOffset();
+	    # min/max may be expressions depending on the rerun variable
+	    my $filterNumMin=("$filterDirMin" ne ""?$fark->expression($filterDirMin) - $timeoffset:$filterDirMin);
+	    my $filterNumMax=("$filterDirMax" ne ""?$fark->expression($filterDirMax) - $timeoffset:$filterDirMax);
+	    #
+	    print ">>>> Looking for files in '$filterDir' matching '$filterFile' ($filterNumMin,$filterNumMax) Offset=$timeoffset\n";
+	    $fark->addTableFiles($filterDir,$filterFile,$filterNumMin,$filterNumMax,$test,$clsFillFile);
+	    #
+	    my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
+	    my $fpath=$root . $loc . $cat;
+	    my ($tablefile,$graphicsdir) = $fark->joinTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
+	    #
+	    # my $cmd="Rscript --vanilla $fpath $tablefile $test";
+	    if($debug){print "****** Make table D file: '$tablefile'\n";}
+	    #
+	    farkdir::touchFile($clsFillFile) || farkdir::term("$myname unable to touch '$clsFillFile'");
+	} else {
+	    if($debug){print "****** Table file exists: '$tablefile'\n";}
+	    farkdir::touchFile($clsFillFile) || farkdir::term("$myname unable to touch '$clsFillFile'");
+	};
 	$fark->close();
-	farkdir::touchFile($clsFillFile) || farkdir::term("$myname unable to touch '$clsFillFile'");
 	print ">>>> Normal end of process...\n";
 	if($debug){print "processJoin Exiting.\n";}
 	return; # no system command will be run afterwards

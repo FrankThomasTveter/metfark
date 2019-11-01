@@ -5,6 +5,4 @@
 #### 'type=obs&arg[]=default.cfg'
  ./fark_load.pl '?type=model&arg%5B%5D=default.cfg'
 
- ./fark_load.pl '?type=clean&arg%5B%5D=default.cfg'
-
 #

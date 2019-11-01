@@ -325,11 +325,11 @@ function plot_saveConfigFile() {
     var plotSets="";
     var plotAttrs="";
     if (plot_config[file] != undefined) {
-	cat=plot_config[file]["cat"]//"";
-	table=plot_config[file]["table"]//"";
-	graphics=plot_config[file]["graphics"]//"";
+	cat=plot_config[file]["cat"]||"";
+	table=plot_config[file]["table"]||"";
+	graphics=plot_config[file]["graphics"]||"";
 	if (plot_cats[cat] != undefined) {
-	    var colnames_=plot_cats[cat]["colnames_"]//[];
+	    var colnames_=plot_cats[cat]["colnames_"]||[];
 	    for (var ii =0; ii< colnames_.length;ii++) {
 		if (plotCols.length==0) {
 		    plotCols=colnames_[ii];
@@ -337,15 +337,15 @@ function plot_saveConfigFile() {
 		    plotCols=plotCols+"~"+colnames_[ii];
 		}
 	    }
-	    var sets=plot_config[file]["dataset"]//{};
+	    var sets=plot_config[file]["dataset"]||{};
 	    for (var set in sets) {
-		var colnames=sets[set]["colnames"]//"";
-		var columns=sets[set]["columns"]//"";
+		var colnames=sets[set]["colnames"]||"";
+		var columns=sets[set]["columns"]||"";
 		var panick ={};
 		for (var ii =0; ii< colnames.length;ii++) {
 		    panick[colnames]=columns[ii]||0;
 		};
-		var coloc=sets[set]["coloc"]//"";
+		var coloc=sets[set]["coloc"]||"";
 		var clmns="";
 		for (var ii =0; ii< colnames_.length;ii++) {
 		    var expr;
@@ -360,13 +360,13 @@ function plot_saveConfigFile() {
 		    }
 		    clmns=clmns + expr + "~";
 		}
-		var legend=sets[set]["legend"]//"";
+		var legend=sets[set]["legend"]||"";
 		if (coloc === undefined) {coloc="";}
 		if (legend === undefined) {legend="";}
 		plotSets=plotSets + "|" + set + "~" + coloc + "~" + legend + "~" + clmns;
 	    };
-	    var order=plot_cats[cat]['order']//[];
-	    var attrs=plot_config[file]["attributes"]//{};
+	    var order=plot_cats[cat]['order']||[];
+	    var attrs=plot_config[file]["attributes"]||{};
 	    for (var ii=0;ii<order.length;ii++) {
 		var attr=order[ii];
 		var value=attrs[attr];

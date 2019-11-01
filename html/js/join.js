@@ -10,6 +10,7 @@ join_config = { "default.cfg" : { filterDir: "/opdata",
 				  attributes : { def: "default"},
 				  table : "table.ps",
 				  graphics :"/lustre/storeA",
+				  overwrite:"true",
 				  cat : "Text",
 				  password: "test"
 				}
@@ -71,8 +72,8 @@ function join_getObsConfigFile() {
 };
 function join_setArray(parameter,value) {
     var file=join_getConfigFile();
-    console.log("File:",file,parameter,value,JSON.stringify(join_config[file]));
     join_config[file][parameter]=decodeURI(value);
+    console.log("File:",file,parameter,value,JSON.stringify(join_config[file]));
 };
 
 function join_expandCat(cat) {
@@ -239,6 +240,7 @@ function join_show() {
 	showValue('joinFilterFile',join_config[file]["filterFile"]);
 	showValue('joinTable',join_config[file]["table"]);
 	showValue('joinGraphics',join_config[file]["graphics"]);
+	setValue('joinOverwrite',join_config[file]["overwrite"]);
 	join_showAttributesTable();
 	join_showDatasetTable();
     };
@@ -276,21 +278,23 @@ function join_saveConfigFile() {
     var cat="";
     var table="";
     var graphics="";
+    var overwrite="";
     var joinCols="";
     var joinColMin="";
     var joinColMax="";
     var joinAttrs="";
     if (join_config[file] != undefined) {
-	filterDir=join_config[file]["filterDir"]//"";
-	filterDirMin=join_config[file]["filterDirMin"]//"";
-	filterDirMax=join_config[file]["filterDirMax"]//"";
-	filterFile=join_config[file]["filterFile"]//"";
-	hits=join_config[file]["hits"]//"";
-	cat=join_config[file]["cat"]//"";
-	table=join_config[file]["table"]//"";
-	graphics=join_config[file]["graphics"]//"";
+	filterDir=join_config[file]["filterDir"]||"";
+	filterDirMin=join_config[file]["filterDirMin"]||"";
+	filterDirMax=join_config[file]["filterDirMax"]||"";
+	filterFile=join_config[file]["filterFile"]||"";
+	hits=join_config[file]["hits"]||"";
+	cat=join_config[file]["cat"]||"";
+	table=join_config[file]["table"]||"";
+	graphics=join_config[file]["graphics"]||"";
+	overwrite=join_config[file]["overwrite"]||"true";
 	if (join_cats[cat] != undefined) {
-	    var colnames_=join_cats[cat]["colnames_"]//[];
+	    var colnames_=join_cats[cat]["colnames_"]||[];
 	    for (var ii =0; ii< colnames_.length;ii++) {
 		var col=colnames_[ii];
 		if (joinCols.length==0) {
@@ -303,8 +307,8 @@ function join_saveConfigFile() {
 		    joinColMax=joinColMax+"~"+(join_config[file]["max"][col]||"");
 		}
 	    }
-	    var order=join_cats[cat]['order']//[];
-	    var attrs=join_config[file]["attributes"]//{};
+	    var order=join_cats[cat]['order']||[];
+	    var attrs=join_config[file]["attributes"]||{};
 	    for (var ii=0;ii<order.length;ii++) {
 		var attr=order[ii];
 		var value=attrs[attr];
@@ -329,6 +333,7 @@ function join_saveConfigFile() {
 	   cat:cat,
 	   table:table,
 	   graphics:graphics,
+	   overwrite:overwrite,
 	   columns:joinCols,
 	   columnMin:joinColMin,
 	   columnMax:joinColMax,
@@ -546,6 +551,34 @@ function join_updateData(arg = join_getConfigFile()) {
 	    function (error) { alert("Join request failed (system error)");}
 	);
 };
+
+function join_fileFind(sfile) {
+    var file=join_getConfigFile();
+    join_config[file]["stack"]=sfile;
+    var password=document.getElementById("joinConfigFilePsw").value;
+    documentLog.innerHTML="Sent join-find request.";
+    $.get("cgi-bin/fark_find.pl",{type:"joinfile",
+				  file:file,
+				  password:password,
+				  target:sfile})
+	.success(
+	    function(data, status){
+		if (status == "success") {
+		    var errors=data.getElementsByTagName("error");
+		    if (errors.length > 0 ) {
+			var msg=getErrorMessage(errors);
+			alert("Unable to scan file: "+sfile+" (file:"+file+")\n"+msg);
+		    } else {
+			dataToArray(data,status,documentLog);
+			join_show();
+		    };
+		    documentLog.innerHTML="";}
+	    })
+	.error(
+	    function (error) { alert("Join find request failed (system error)");}
+	);
+};
+
 function join_mkdir(path) {
     var password=document.getElementById("joinConfigFilePsw").value;
     $.get("cgi-bin/fark_dir.pl",{cmd:"mk",
@@ -1006,10 +1039,11 @@ function join_showFilterFile(item,target,arg) {
 			var added=false;
 			var len=join_config[file]["files"].length;
 			for (var ii=0; ii<len;ii++) {
-			    var sfile=join_basename(join_config[file]["files"][ii][0]);
+			    var sfile=join_config[file]["files"][ii][0];
+			    var bfile=join_basename(sfile);
 			    var sage=parseFloat(join_config[file]["files"][ii][1]).toFixed(2);
 			    var ssize=join_config[file]["files"][ii][2];
-    			    addChildButton(item,ssize+" "+sfile+" ("+sage+"d)","join_setArray('filterFile','"+sfile+"');join_show();","Copy file to filter.");
+    			    addChildButton(item,ssize+" "+bfile+" ("+sage+"d)","join_fileFind('"+sfile+"');join_show();","Scan <table> file.");
 			    added=true;
 			}
 			if (! added) {addChildText(item,"No data available...");}

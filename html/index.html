@@ -547,11 +547,12 @@
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output table file:</td>
-	      <td class="fill" width="100%" colspan="5">
+	      <td class="fill" width="100%" colspan="4">
 		<input id="tableTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="table_setArray('table',this.value);"
 		       title="Output <table file> path pattern. The <table file> contains all data&#13;needed to generate the graphics output."/> 
 		<div id="tableTableDropdown" class="dropdown-content"></div>
 	      </td>
+	      <td> <input id="tableOverwrite" onClick="table_setArray('overwrite',this.checked);" type="checkbox" checked>Overwrite</input></td>
 	      <td style="min-width:25px;width:25px" align="center">
 		<button onclick="showDropdown('tableTable')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>
@@ -652,11 +653,12 @@
 	    </tr>
 	    <tr>
 	      <td style="white-space: nowrap;">Output table file:</td>
-	      <td class="fill" width="100%" colspan="5">
+	      <td class="fill" width="100%" colspan="4">
 		<input id="joinTable" type="text" value="/elysium/data/default/YYYYMMDDHH.txt" onblur="join_setArray('table',this.value);"
 		       title="Output <table file> path pattern. The <table file> contains all data&#13;needed to generate the graphics output."/> 
 		<div id="joinTableDropdown" class="dropdown-content"></div>
 	      </td>
+	      <td> <input id="joinOverwrite" onClick="join_setArray('overwrite',this.checked);" type="checkbox" checked>Overwrite</input></td>
 	      <td style="min-width:25px;width:25px" align="center">
 		<button onclick="showDropdown('joinTable')" class="dropbtn"
 			title="Show directories and wildcards">&#9776;</button></td>

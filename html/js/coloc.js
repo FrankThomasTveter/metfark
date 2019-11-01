@@ -1268,7 +1268,7 @@ function coloc_saveConfigFile(target) {
 		modelTrg[target]["max"];
 	};
 	// model defaults
-	var modelDef=coloc_config[file]["modelConfigFile"]["def"]//[];
+	var modelDef=coloc_config[file]["modelConfigFile"]["def"]||[];
 	var len=modelDef.length;
 	for (var ii=0; ii<len;ii++) {
 	    var info=modelDef[ii]["info"];
@@ -1284,12 +1284,12 @@ function coloc_saveConfigFile(target) {
 		    defTrg[target];
 	    };
 	};
-	indexExp=coloc_config[file]["modelConfigFile"]["exp"]//"";
+	indexExp=coloc_config[file]["modelConfigFile"]["exp"]||"";
 	matchTrg=coloc_config[file]["modelConfigFile"]["targets"];
     };
     var indexTarget="";
     if (model_config[modelFile] != undefined) {
-	indexTarget=model_config[modelFile]["indexTarget"]//"";
+	indexTarget=model_config[modelFile]["indexTarget"]||"";
     }
     var matchRules = "|" + indexTarget + "~" + indexExp;
     for (var target in matchTrg) {
@@ -1302,12 +1302,12 @@ function coloc_saveConfigFile(target) {
     var obsStop = "";
     var obsTargets = "";
     if (coloc_config[file] != undefined && coloc_config[file]["obsConfigFile"] != undefined) {
-	obsFile = coloc_config[file]["obsConfigFile"]["file"]//"";
-	obsFilter = coloc_config[file]["obsConfigFile"]["filter"]//"";
-	obsStart = coloc_config[file]["obsConfigFile"]["min"]//"";
-	obsStop = coloc_config[file]["obsConfigFile"]["max"]//"";
-	var obsTrgo=coloc_config[file]["obsConfigFile"]["targeto"]//[];
-	var obsTrg=coloc_config[file]["obsConfigFile"]["targets"]//{};
+	obsFile = coloc_config[file]["obsConfigFile"]["file"]||"";
+	obsFilter = coloc_config[file]["obsConfigFile"]["filter"]||"";
+	obsStart = coloc_config[file]["obsConfigFile"]["min"]||"";
+	obsStop = coloc_config[file]["obsConfigFile"]["max"]||"";
+	var obsTrgo=coloc_config[file]["obsConfigFile"]["targeto"]||[];
+	var obsTrg=coloc_config[file]["obsConfigFile"]["targets"]||{};
 	//for (var target in obsTrg) {
 	for (var ii =0; ii< obsTrgo.length;ii++) {
 	    var target=obsTrgo[ii];

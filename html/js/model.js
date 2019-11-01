@@ -135,26 +135,26 @@ function model_saveConfigFile() {
     var variables="";
     var dims="";
     if (model_config[file]!= undefined) {
-	filterDir=model_config[file]["filterDir"]//"";
-	filterDirMin=model_config[file]["filterDirMin"]//"";
-	filterDirMax=model_config[file]["filterDirMax"]//"";
-	filterFile=model_config[file]["filterFile"]//"";
-	hits=model_config[file]["hits"]//"";
-	indexTarget=model_config[file]["indexTarget"]//"";
-	indexVariable=model_config[file]["indexVariable"]//"";
-	var sfile=model_config[file]["stack"]//"";
+	filterDir=model_config[file]["filterDir"]||"";
+	filterDirMin=model_config[file]["filterDirMin"]||"";
+	filterDirMax=model_config[file]["filterDirMax"]||"";
+	filterFile=model_config[file]["filterFile"]||"";
+	hits=model_config[file]["hits"]||"";
+	indexTarget=model_config[file]["indexTarget"]||"";
+	indexVariable=model_config[file]["indexVariable"]||"";
+	var sfile=model_config[file]["stack"]||"";
 	if (sfile !== "") {
 	    stack=stack+"|"+sfile;
 	};
 	if (model_config[file]["variables"] != undefined) {
 	    for (var variable in model_config[file]["variables"]) {
-		var dims=model_config[file]["variables"][variable]//"";
+		var dims=model_config[file]["variables"][variable]||"";
 		variables=variables+"|"+variable+"~"+dims;
 	    };
 	};
 	if (model_config[file]["dimensions"] != undefined) {
 	    for (var dim in model_config[file]["dimensions"]) {
-		var dimv=model_config[file]["dimensions"][dim]//"";
+		var dimv=model_config[file]["dimensions"][dim]||"";
 		dims=dims+"|"+dim+"~"+dimv;
 	    };
 	};

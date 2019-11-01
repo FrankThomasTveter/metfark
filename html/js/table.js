@@ -8,6 +8,7 @@ table_config = { "default.cfg" : { dataset : { 1 : {line:1,
 				   attributes : { def: "default"},
 				   table : "table.ps",
 				   graphics :"/lustre/storeA",
+				   overwrite :"true",
 				   cat : "Text",
 				   password: "test"
 				 }
@@ -221,6 +222,7 @@ function table_show() {
 	showValue('tableCat',table_config[file]["cat"]);
 	showValue('tableTable',table_config[file]["table"]);
 	showValue('tableGraphics',table_config[file]["graphics"]);
+	setValue('tableOverwrite',table_config[file]["overwrite"]);
 	table_showDatasetTable();
 	table_showAttributesTable();
     };
@@ -321,15 +323,17 @@ function table_saveConfigFile() {
     var cat="";
     var table="";
     var graphics="";
+    var overwrite="";
     var tableCols="";
     var tableSets="";
     var tableAttrs="";
     if (table_config[file] != undefined) {
-	cat=table_config[file]["cat"]//"";
-	table=table_config[file]["table"]//"";
-	graphics=table_config[file]["graphics"]//"";
+	cat=table_config[file]["cat"]||"";
+	table=table_config[file]["table"]||"";
+	graphics=table_config[file]["graphics"]||"";
+	overwrite=table_config[file]["overwrite"]||"true";
 	if (table_cats[cat] != undefined) {
-	    var colnames_=table_cats[cat]["colnames_"]//[];
+	    var colnames_=table_cats[cat]["colnames_"]||[];
 	    for (var ii =0; ii< colnames_.length;ii++) {
 		if (tableCols.length==0) {
 		    tableCols=colnames_[ii];
@@ -337,15 +341,15 @@ function table_saveConfigFile() {
 		    tableCols=tableCols+"~"+colnames_[ii];
 		}
 	    }
-	    var sets=table_config[file]["dataset"]//{};
+	    var sets=table_config[file]["dataset"]||{};
 	    for (var set in sets) {
-		var colnames=sets[set]["colnames"]//"";
-		var columns=sets[set]["columns"]//"";
+		var colnames=sets[set]["colnames"]||"";
+		var columns=sets[set]["columns"]||"";
 		var panick ={};
 		for (var ii =0; ii< colnames.length;ii++) {
 		    panick[colnames]=columns[ii]||0;
 		};
-		var coloc=sets[set]["coloc"]//"";
+		var coloc=sets[set]["coloc"]||"";
 		var clmns="";
 		for (var ii =0; ii< colnames_.length;ii++) {
 		    var expr;
@@ -360,13 +364,13 @@ function table_saveConfigFile() {
 		    }
 		    clmns=clmns + expr + "~";
 		}
-		var legend=sets[set]["legend"]//"";
+		var legend=sets[set]["legend"]||"";
 		if (coloc === undefined) {coloc="";}
 		if (legend === undefined) {legend="";}
 		tableSets=tableSets + "|" + set + "~" + coloc + "~" + legend + "~" + clmns;
 	    };
-	    var order=table_cats[cat]['order']//[];
-	    var attrs=table_config[file]["attributes"]//{};
+	    var order=table_cats[cat]['order']||[];
+	    var attrs=table_config[file]["attributes"]||{};
 	    for (var ii=0;ii<order.length;ii++) {
 		var attr=order[ii];
 		var value=attrs[attr];
@@ -386,6 +390,7 @@ function table_saveConfigFile() {
 	   cat:cat,
 	   table:table,
 	   graphics:graphics,
+	   overwrite:overwrite,
 	   columns:tableCols,
 	   sets:tableSets,
 	   attributes:tableAttrs

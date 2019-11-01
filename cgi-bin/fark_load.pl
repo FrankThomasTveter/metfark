@@ -20,6 +20,7 @@ my $modelDir= farkdir::getRootDir("model")  || farkdir::term("invalid root direc
 my $obsDir=   farkdir::getRootDir("obs")    || farkdir::term("Invalid root directory (obs)");
 my $colocDir= farkdir::getRootDir("coloc")  || farkdir::term("Invalid root directory (coloc)");
 my $tableDir= farkdir::getRootDir("table")  || farkdir::term("Invalid root directory (table)");
+my $joinDir= farkdir::getRootDir("join")    || farkdir::term("Invalid root directory (join)");
 my $plotDir=  farkdir::getRootDir("plot")   || farkdir::term("Invalid root directory (plot)");
 my $rerunDir= farkdir::getRootDir("rerun")  || farkdir::term("Invalid root directory (rerun)");
 my $cleanDir= farkdir::getRootDir("clean")  || farkdir::term("Invalid root directory (clean)");
@@ -29,6 +30,7 @@ my $execDir=  farkdir::getRootDir("exec")|| farkdir::term("Invalid root director
 #
 my $colocUseDir= farkdir::getRootDir("coloc_use") || farkdir::term("Invalid root directory (coloc_use)");
 my $tableUseDir=  farkdir::getRootDir("table_use")  || farkdir::term("Invalid root directory (table_use)");
+my $joinUseDir=  farkdir::getRootDir("join_use")  || farkdir::term("Invalid root directory (join_use)");
 my $lockDir=     farkdir::getRootDir("lock")       || farkdir::term("Invalid root directory (lock)");
 my $scriptDir=   farkdir::getRootDir("script")    || farkdir::term("Invalid root directory (script)");
 #
@@ -209,6 +211,7 @@ sub loadExec {
 		    &updateTime($node,"obs");
 		    &updateTime($node,"coloc");
 		    &updateTime($node,"table");
+		    &updateTime($node,"join");
 		    &updateTime($node,"plot");
 		    &updateTime($node,"rerun");
 		    &updateTime($node,"clean");

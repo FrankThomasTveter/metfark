@@ -22,19 +22,23 @@ use farkdir;
 use Capture::Tiny 'capture_merged';
 # must end with slash...
 #
-# 1 = obs
-# 2 = model
-# 5 = parser
-#
-my $debug=0;
-fark::debug($debug);
-#
 #
 my $ref=CGI->new();
 
 $XML::LibXML::skipXMLDeclaration = 1;
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 my $param= $ref->{param};
+#
+# 1 = obs
+# 2 = model
+# 5 = parser
+#
+my $debug=0;
+if (defined $param->{debug}[0]) {
+    $debug=1;       # debug this script (0=omit output)
+    fark::debug($debug);
+}
+#
 if (! defined $param->{type}) {farkdir::term("Undefined type.".Dumper($param))};
 if ($param->{type}->[0] eq "model") {
     &findModel($param,"model");
@@ -46,6 +50,8 @@ if ($param->{type}->[0] eq "model") {
     &findObsFile($param,"obs");
 } elsif ($param->{type}->[0] eq "join") {
     &findJoin($param,"join");
+} elsif ($param->{type}->[0] eq "joinfile") {
+    &findJoinFile($param,"join");
 } elsif ($param->{type}->[0] eq "clean") {
     &findClean($param,"clean");
 } else {
@@ -218,7 +224,7 @@ sub findModelFile {
 	# report xml-structure
 	print $doc->toString . "\n";
     } else {
-	farkdir::term("Unable to open $spath.");
+	farkdir::term("Unable to open '$spath'.");
     };
 }
 
@@ -455,7 +461,7 @@ sub findObsFile {
 	# report xml-structure
 	print $doc->toString . "\n";
     } else {
-	farkdir::term("Unable to open $spath.");
+	farkdir::term("Unable to open '$spath'.");
     }
 };
 
@@ -660,6 +666,112 @@ sub findJoin {
 	farkdir::term("Permission denied.");
     };
 };
+
+sub findJoinFile {
+    my $param =shift;
+    my $cls=shift;
+    my $ipath=$param->{file}[0]; # input path
+    my $password=($param->{password}[0] // "");
+    my $spath = $param->{target}[0] // "";
+    # get config file paths...
+    my ($idir,$ifile) = farkdir::splitName($ipath);
+    my ($root, $loc, $priv) = farkdir::splitDir($idir,$cls);
+    my $lpath = $loc.$ifile; # local path
+    my $fpath = $root.$lpath; # full path
+    # get stack paths...
+    if ($debug) { print "reading file: $fpath\n";}
+    my ($sdir,$sfile) = farkdir::splitName($spath);
+    my ($sroot, $sloc, $spriv) = farkdir::splitDir($sdir,"data");
+    # xml
+    my $parser = XML::LibXML->new();
+    my $doc;
+    my $node;
+    # read config file into memory
+    my $passok=0;
+    if (-e $fpath && $priv eq "rw") {
+	$doc = $parser->parse_file($fpath);
+	if ( ($node)=$doc->findnodes("join/join_config")) {
+	    my $pass=($node->getAttribute("password")//"");
+	    if ($pass ne $password) {
+		if ($debug) { print "*** Invalid password: $fpath\n";}
+		$passok=0;
+		$node->setAttribute("password",        $password//"");
+	    } else {
+		$passok=1;
+		if ($debug) { print "Password ok: $fpath\n";}
+	    }
+	} else {
+	    farkdir::term("Corrupt file: ".$fpath);
+	}
+    } else {
+	if ($debug) { print "strange file: $fpath '$priv'\n";}
+	$doc = $parser->parse_string("<join><join_config/></join>");
+	($node) = $doc->findnodes("join/join_config");
+    }
+    # put inventory of first join-file into xml-structure
+    $node->setAttribute("file",      $ifile//"");
+    $node->setAttribute("class",     $cls//"");
+    $node->setAttribute("root",      $root//"");
+    $node->setAttribute("location",  $loc//"");
+    $node->setAttribute("status",    $priv//"");
+    my @attributes=$node->findnodes("attribute");
+    if (-f $spath) {
+	my %names;
+	foreach my $attribute (@attributes) {
+	    my $name=$attribute->getAttribute("name");
+	    $names{$name}=$attribute;
+	    if ($debug) {print "Old attribute: $name\n";}
+	}
+	# scan files for internal attributes
+	my $mode=0;
+	my $lines=0;
+	open(my $fh, '<:encoding(UTF-8)', $spath) or farkdir::term("Could not open '$spath'");
+	while (my $row = <$fh>) {
+	    chomp $row;
+	    # check for the attributes block...
+	    if ($mode==0) {
+		if ($row =~ /^# ATTRIBUTES:(\d+)/) {
+		    if ($debug) {print "Attribute: $row\n";}
+		    $lines=$1;
+		    if ($lines>0){$mode=1;}
+		} elsif ( $row =~ /^#/) { # this is a comment...
+		    if ($debug) {print "Comment: $row\n";}
+		} else {     # nothing more to do...
+		    last;
+		}
+	    } elsif ($mode==1) {
+		if ($row =~ /^# ([^\s]+):(.*\S)\s*$/) {
+		    my $n=$1;
+		    my $v=$2;
+		    # overwrite internal variables
+		    if ($debug) {print "Internal: $row '$n=>$v'\n";}
+		    my $att=$names{$n};
+		    if ($att ) {
+			$att->setAttribute("value",$v);
+		    } else {
+			if ($debug) {print "*** No attribute: $n\n";}
+		    };	
+		} else {
+		    if ($debug) {print "Unknown: $row\n";}
+		}
+		$lines=$lines-1;
+		if ($lines==0) {
+		    $mode=0;
+		}
+	    }
+	}
+	close($fh);
+	if ($passok) {
+	    # put xml-structure into file
+	    farkdir::docsave($fpath,$doc);
+	}
+	# report xml-structure
+	print $doc->toString . "\n";
+    } else {
+	farkdir::term("Unable to open '$spath'.");
+    };
+}
+
 
 sub findClean {
     my $param =shift;

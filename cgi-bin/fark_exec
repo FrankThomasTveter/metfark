@@ -9,6 +9,6 @@
 # ./fark_exec.pl '?root=exec.cfg&password=fark&type=rerun&file=default.cfg&debug=1'
 # ./fark_exec.pl '?root=exec.cfg&password=fark&type=coloc&file=default.cfg'
 
-./fark_exec.pl '?root=exec.cfg&password=fark&type=rerun&file=default.cfg&debug=1'
+./fark_exec.pl '?root=exec.cfg&password=fark&type=join&file=default.cfg'
 
 ###&debug=1'
