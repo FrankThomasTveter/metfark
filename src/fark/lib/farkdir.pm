@@ -353,10 +353,14 @@ sub makePath{
 
 sub touchFile {
     my $path=shift;
+    my $offset=shift;
     my ($dir,$name)=splitName($path);
     if (! -d $dir) {makePath($dir);}
     #print "Touching $path\n";
-    if (touch($path)) {
+    my $time = time();
+    if (defined $offset) {$time=$time - $offset * 86400.0;};
+    my $ref = File::Touch->new( mtime => $time );
+    if ($ref->touch($path)) {
 	if (chmod 0777, $path) {
 	    #print "Touched $path\n";
 	    return 1;
@@ -364,7 +368,11 @@ sub touchFile {
 	    return 0;
 	}
     } else {
-	system "touch $path";
+	if (defined $offset) {
+	    system "touch -d '".$offset." days ago' $path";
+	} else {
+	    system "touch $path";
+	}
 	if ($? == -1 || $? & 127) {
 	    return 0;
 	} else {

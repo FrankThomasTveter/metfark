@@ -47,7 +47,7 @@ eval {
     my $execFile = $param->{root}[0] // "";
     my $cron     = $param->{cron}[0]//"";
     my $ipath    = $param->{file}[0] // "";
-    my $cls      = $param->{type}[0] // "undef";
+    my $cls      = $param->{type}[0] // "";
     if (! defined $param->{root}) {farkdir::term("Undefined root file.".Dumper($param))};
     my $save=0;
     my $execpath = $execDir . $execFile;
@@ -801,6 +801,7 @@ eval {
 	fark->setShapeFile($shapeFile);
 	my $fark=fark->open();
 	&setRerunConfig($fark,$variable,$value,$offset);
+	my $timeoffset=$fark->getRerunOffset();
 	if($debug){print "****** Make table A\n";}
 	my $tablefile=$fark->strepTableFile($table);
 	if ( ! -f $tablefile || "$overwrite" eq "true") {
@@ -868,6 +869,10 @@ eval {
 		print "****** Directory exists '$dir'\n";
 	    };
 	    my ($tablefile,$graphicsdir) = $fark->makeTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
+	    #
+	    if (-e $tablefile) {
+		farkdir::touchFile($tablefile,$timeoffset);
+	    };
 	    #
 	    #   my $cmd="Rscript --vanilla $fpath $tablefile $graphicsdir $test";
 	    #
