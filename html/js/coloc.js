@@ -2202,6 +2202,7 @@ function coloc_showObsFilter(item,target,arg) {
 	    addTargetButton(item,target,t,"Observation target");
 	}
     };
+    addMessageButtons(item,target);
     addLogicalButtons(item,target);
     addFunctionButtons(item,target);
     added=true;

@@ -11,7 +11,8 @@ join_config = { "default.cfg" : { filterDir: "/opdata",
 				  table : "table.ps",
 				  graphics :"/lustre/storeA",
 				  overwrite:"true",
-				  cat : "Text",
+				  cat : "Text",	
+				  filter: "1",
 				  password: "test"
 				}
 	      };
@@ -240,6 +241,7 @@ function join_show() {
 	showValue('joinFilterFile',join_config[file]["filterFile"]);
 	showValue('joinTable',join_config[file]["table"]);
 	showValue('joinGraphics',join_config[file]["graphics"]);
+	showValue('joinFilter',join_config[file]["filter"]);
 	setValue('joinOverwrite',join_config[file]["overwrite"]);
 	join_showAttributesTable();
 	join_showDatasetTable();
@@ -278,6 +280,7 @@ function join_saveConfigFile() {
     var cat="";
     var table="";
     var graphics="";
+    var filter="";
     var overwrite="";
     var joinCols="";
     var joinColMin="";
@@ -292,6 +295,7 @@ function join_saveConfigFile() {
 	cat=join_config[file]["cat"]||"";
 	table=join_config[file]["table"]||"";
 	graphics=join_config[file]["graphics"]||"";
+	filter=join_config[file]["filter"]||"";
 	overwrite=join_config[file]["overwrite"]||"true";
 	if (join_cats[cat] != undefined) {
 	    var colnames_=join_cats[cat]["colnames_"]||[];
@@ -333,6 +337,7 @@ function join_saveConfigFile() {
 	   cat:cat,
 	   table:table,
 	   graphics:graphics,
+	   filter:filter,
 	   overwrite:overwrite,
 	   columns:joinCols,
 	   columnMin:joinColMin,
@@ -451,11 +456,12 @@ function join_setFilterDir(value) {
 function join_showAttributesTable() {
     var file=join_getConfigFile();
     var cat=join_config[file]["cat"];
+    if (join_cats[cat] === undefined) {join_setCat(cat);};
     var order=[];
     if (join_cats[cat] !== undefined) {
-	order=join_cats[cat]['order'];;
+	order=join_cats[cat]['order'];
     } else {
-	console.log("Undefined category:",cat);
+	console.log("Undefined category:",cat,JSON.stringify(join_cats));
     }
     //console.log("showAttributesTavble:",JSON.stringify(join_cats[cat]),JSON.stringify(order));
     var item=document.getElementById('joinAttributesTable');
@@ -1220,6 +1226,21 @@ function join_showAttribute(item,target,arg) {
     }
     if (! added) {addChildText(item,"No data available...");}
 };
+function join_showFilter(item,target,arg) {
+    var file = join_getConfigFile();
+    var cat=join_config[file]["cat"];
+    removeChildren(item);
+    if (join_cats[cat] !== undefined) {
+	colnames_=join_cats[cat]["colnames_"];
+	for (var ii =0; ii< colnames_.length;ii++) {
+	    var t=join_cats[cat]["colnames_"][ii];
+	    addTargetButton(item,target,t,"Column value.");
+	}
+    }
+    addLogicalButtons(item,target);
+    addFunctionButtons(item,target);
+};
+
 
 function join_showDebugExpression(item,target,arg) {
     removeChildren(item);

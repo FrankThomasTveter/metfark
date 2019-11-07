@@ -97,7 +97,9 @@ module table
      integer, allocatable :: lenmin(:)
      integer, allocatable :: lenmax(:)
      logical, allocatable :: sets(:)
+     integer, allocatable :: mok(:),mrm(:)
      integer, allocatable :: cok(:),crm(:)
+     integer, allocatable :: tok(:),trm(:)
   end type table_columns
   !
   type :: table_set
@@ -164,7 +166,7 @@ module table
   type :: table_file
      character*250  :: fn250 = ""          ! file name
      integer        :: lenf=0              ! length of file name string
-     integer :: mok(10),mrm(10),ook(10),orm(10),lenh(10)
+!     integer :: mok(10),mrm(10),ook(10),orm(10),lenh(10)
      integer :: unit=0
      logical :: fopen = .false.  ! is file open?
      character*80 :: hint80(10)
@@ -181,8 +183,8 @@ module table
      integer, allocatable :: lenc(:)
      character*250, allocatable :: exp250(:)
      integer, allocatable :: lene(:)
-     integer, allocatable :: colind(:)
-     integer, allocatable :: invind(:)
+     integer, allocatable :: colind(:) ! index:  file_col -> glob_col
+     integer, allocatable :: invind(:) ! index:  glob_col -> file_col
      type(table_file), pointer :: prev => null() ! linked list
      type(table_file), pointer :: next => null() ! linked list
   end type table_file
@@ -247,8 +249,16 @@ module table
      integer, allocatable :: lenc(:)
      character*250, allocatable :: exp250(:)
      integer, allocatable :: lene(:)
+     logical, allocatable        :: col_req(:)
+     logical, allocatable        :: col_vok(:)
+     real, allocatable           :: col_val(:)
+     logical ::  col_set=.false.
      !
-     integer :: ncols=0    ! number of columns in linked list
+     CHARACTER*250 :: FLT250
+     integer :: lenf=0
+     type(parse_session), pointer :: psf => null()
+     !
+     integer :: ncoll=0    ! number of columns in linked list
      type(table_column), pointer :: firstColumn => null()   ! linked list start
      type(table_column), pointer :: lastColumn => null()    ! linked list end
      !
@@ -418,6 +428,14 @@ CONTAINS
     character*25 :: myname="table_removeSession"
     tss%prev%next => tss%next
     tss%next%prev => tss%prev
+    call table_clearColumnStack(tss,crc250,irc)
+    if (irc.ne.0) then
+       call table_errorappend(crc250,myname)
+       call table_errorappend(crc250," Error return from clearColumnStack.")
+       call table_errorappendi(crc250,irc)
+       call table_errorappend(crc250,"\n")
+       return
+    end if
     call table_clearAttrStack(tss,crc250,irc)
     if (irc.ne.0) then
        call table_errorappend(crc250,myname)
@@ -434,6 +452,19 @@ CONTAINS
        call table_errorappend(crc250,"\n")
        return
     end if
+    if (allocated(tss%nam80)) deallocate(tss%nam80)
+    if (allocated(tss%lenn)) deallocate(tss%lenn)
+    if (allocated(tss%leg250)) deallocate(tss%leg250)
+    if (allocated(tss%lenl)) deallocate(tss%lenl)
+    if (allocated(tss%col80)) deallocate(tss%col80)
+    if (allocated(tss%lenc)) deallocate(tss%lenc)
+    if (allocated(tss%exp250)) deallocate(tss%exp250)
+    if (allocated(tss%lene)) deallocate(tss%lene)
+    if (allocated(tss%col_req)) deallocate(tss%col_req)
+    if (allocated(tss%col_vok)) deallocate(tss%col_vok)
+    if (allocated(tss%col_val)) deallocate(tss%col_val)
+    if (associated(tss%psf)) call parse_close(tss%psf,crc250,irc)
+    !
     !call table_clearSetStack(tss)
     deallocate(tss%firstAttribute,tss%lastAttribute,tss%firstSet,tss%lastSet)
     deallocate(tss)
@@ -457,6 +488,25 @@ CONTAINS
     return
   end subroutine table_settype
   !
+  subroutine table_clearcolumnstack(tss,crc250,irc)
+    implicit none
+    type(table_session), pointer :: tss !  current session
+    character*250 :: crc250
+    integer :: irc
+    integer :: irc2
+    character*22 :: myname="table_clearcolumnstack"
+    type(table_column), pointer :: ccol,ncol !  current column
+    ccol => tss%firstColumn%next
+    do while (.not.associated(ccol,target=tss%lastColumn))
+       ncol => ccol%next
+       call table_unlinkColumn(ccol)
+       call table_deallocateColumn(ccol)
+       tss%ncoll=tss%ncoll-1
+       ccol  => ncol
+    end do
+    return
+  end subroutine table_clearcolumnstack
+  !
   subroutine table_clearattrstack(tss,crc250,irc)
     implicit none
     type(table_session), pointer :: tss !  current session
@@ -475,6 +525,22 @@ CONTAINS
     end do
     return
   end subroutine table_clearattrstack
+  !
+  subroutine table_unlinkColumn(col)
+    implicit none
+    type(table_column), pointer :: col !  current attribute
+    col%prev%next => col%next
+    col%next%prev => col%prev
+    return
+  end subroutine table_unlinkColumn
+  !
+  subroutine table_deallocateColumn(col)
+    implicit none
+    type(table_column), pointer :: col !  current attribute
+    integer :: irc2
+    deallocate(col,stat=irc2) ! ignore any errors
+    return
+  end subroutine table_deallocateColumn
   !
   subroutine table_unlinkAttribute(cat)
     implicit none
@@ -926,6 +992,7 @@ CONTAINS
     character*100 :: src100(nn) = (/'YY','MM','DD','HH','MI','SS'/)
     character*100 :: rep100(nn)
     logical :: lrep(nn)
+    ! write(*,*)myname,'Irc:',irc
     call table_settime(tss,crc250,irc)
     if (irc.ne.0) then
        call table_errorappend(crc250,myname)
@@ -948,6 +1015,7 @@ CONTAINS
     write(rep100(5),'(i2.2)')tss%values(6)
     write(rep100(6),'(i2.2)')tss%values(7)
     if (tss%lent.ne.0)call table_strep(tss%tab250,nn,src100,rep100,lrep,irc)
+    !write(*,*)myname,"Date:",tss%values(1),tss%values(2),tss%values(3),irc
     return
   end subroutine table_strepTablefile
   !
@@ -1120,7 +1188,7 @@ CONTAINS
        nullify(col)
        col=>ncol
     end do
-    tss%ncol=0
+    tss%ncoll=0
     !tss%firstColumn%next=>tss%lastColumn
     !tss%lastColumn%prev=>tss%firstColumn
     !if(table_bdeb)write(*,*)myname, 'Done.',irc
@@ -1152,7 +1220,8 @@ CONTAINS
     col%next => tss%lastColumn
     col%prev%next => col
     col%next%prev => col
-    tss%ncols=tss%ncols+1
+    tss%ncoll=tss%ncoll+1
+    !write(*,*)myname,'Pushcol:',tss%ncoll,col%name80(1:col%lenn)
     return
   end subroutine table_pushcolumn
   !
@@ -1168,8 +1237,8 @@ CONTAINS
     if (allocated(set%col_lenn)) deallocate(set%col_lenn)
     if (allocated(set%col_exp250)) deallocate(set%col_exp250)
     if (allocated(set%col_lene)) deallocate(set%col_lene)
-    if (tss%ncols > 0) then
-       set%ccol=tss%ncols
+    if (tss%ncoll > 0) then
+       set%ccol=tss%ncoll
        allocate(set%col80(set%ccol), &
             & set%col_lenn(set%ccol), &
             & set%col_exp250(set%ccol), &
@@ -1190,6 +1259,13 @@ CONTAINS
           set%col_lene(ii)=col%lene
           col=>col%next
        end do
+       if (ii.ne.set%ccol) then
+          irc=844
+          call table_errorappend(crc250,myname)
+          call table_errorappend(crc250,"Column chain error.")
+          call table_errorappendi(crc250,ii)
+          call table_errorappendi(crc250,set%ccol)
+       end if
     end if
     return
   end subroutine table_makeColumn
@@ -2529,6 +2605,58 @@ CONTAINS
     return
   end subroutine table_colExport
   !
+  subroutine table_setfilter(css,flt,crc250,irc)
+    implicit none
+    type(table_session), pointer :: css !  current session
+    character*(*) :: flt
+    character*250 :: crc250
+    integer :: irc
+    integer, external :: length
+    character*22 :: myname="table_setfilter"
+    !if(mod_bdeb)write(*,*)myname,' Entering.',irc
+    if (associated(css)  .and. .not.associated(css,target=lastSession)) then
+       css%flt250=trim(flt)
+       call chop0(css%flt250,250)
+       css%lenf=length(css%flt250,250,10)
+       if(table_bdeb)write(*,*)myname,"Filter:'"//css%flt250(1:css%lenf)//"'",irc
+    end if
+  end subroutine table_setfilter
+  !
+  subroutine table_compileFilter(tss,crc250,irc)
+    implicit none
+    type(table_session), pointer :: tss !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="table_compileFilter"
+    integer :: jj
+    if (tss%lenf.ne.0) then
+       call parse_open(tss%psf,crc250,irc)
+       if (irc.ne.0) then
+          call table_errorappend(crc250,myname)
+          call table_errorappend(crc250," Error return from parse_open.")
+          return
+       end if
+       tss%col_set=.true.
+       call parse_parsef(tss%psf,tss%flt250(1:tss%lenf),tss%col80,crc250,irc)
+       if (irc.ne.0) then
+          !if(table_bdeb)then
+             write(*,*)myname,"Unable to parse:'"//tss%flt250(1:tss%lenf)//"'"
+             write(*,*)myname,'ncol:',tss%ncol
+             do jj=1,tss%ncol
+                write(*,*) myname,'col:',jj,tss%col80(jj)(1:tss%lenc(jj))
+             end do
+          !end if
+          call table_errorappend(crc250,myname)
+          call table_errorappend(crc250," Error return from parsef.")
+          call table_errorappendi(crc250,irc)
+          call table_errorappend(crc250,"\n")
+          return
+       end if
+       call parse_used(tss%psf,tss%col_req)
+    end if
+    return
+  end subroutine table_compileFilter
+  !
   !
   !###############################################################################
   ! OUTPUT ROUTINES
@@ -2563,6 +2691,15 @@ CONTAINS
     character*250, allocatable :: exp250(:)
     !
     if(table_bdeb)write(*,*)myname,'Entering.',irc
+    ! compile filter
+    call table_compileFilter(tss,crc250,irc)
+    if (irc.ne.0) then
+       call table_errorappend(crc250,myname)
+       call table_errorappend(crc250," Error return from compilefilter.")
+       call table_errorappendi(crc250,irc)
+       call table_errorappend(crc250,"\n")
+       return
+    end if
     !
     ! open table file
     call table_openFile(tss,ounit,tab250,lent,crc250,irc)
@@ -3108,7 +3245,7 @@ CONTAINS
     !
     nfound=0 ! columns not in session
     do ii=1,file%ncol
-       file%colind(ii)=0
+       file%colind(ii)=0 ! points to global column index
        do jj=1,tss%ncol
           if (tss%col80(jj)(1:tss%lenc(jj)).eq.file%col80(ii)(1:file%lenc(ii))) then
              file%colind(ii)=jj
@@ -3136,9 +3273,15 @@ CONTAINS
        if (allocated(tss%lenc)) deallocate(tss%lenc)
        if (allocated(tss%exp250)) deallocate(tss%exp250)
        if (allocated(tss%lene)) deallocate(tss%lene)
+       if (allocated(tss%col_req)) deallocate(tss%col_req)
+       if (allocated(tss%col_vok)) deallocate(tss%col_vok)
+       if (allocated(tss%col_val)) deallocate(tss%col_val)
        allocate(tss%col80(tss%ncol),&
             & tss%lenc(tss%ncol),&
             & tss%exp250(tss%ncol),&
+            & tss%col_req(tss%ncol), &
+            & tss%col_vok(tss%ncol), &
+            & tss%col_val(tss%ncol), &
             & tss%lene(tss%ncol),stat=irc)
        if (irc.ne.0) then
           call table_errorappend(crc250,myname)
@@ -3147,10 +3290,13 @@ CONTAINS
           return
        end if
        do ii=1,tss%ncol
-          tss%col80(ii)=col80(ii)
+          tss%col80(ii)=col80(ii)(1:lenc(ii))
           tss%lenc(ii)=lenc(ii)
           tss%exp250(ii)=exp250(ii)
           tss%lene(ii)=lene(ii)
+          tss%col_req(ii)=.false.
+          tss%col_vok(ii)=.false.
+          tss%col_val(ii)=0.0D0
        end do
     end if
     return
@@ -3281,6 +3427,15 @@ CONTAINS
     logical :: bok ! is line ok?
     !
     if(table_bdeb)write(*,*)myname,'Entering.',irc
+    ! compile filter
+    call table_compileFilter(tss,crc250,irc)
+    if (irc.ne.0) then
+       call table_errorappend(crc250,myname)
+       call table_errorappend(crc250," Error return from compilefilter.")
+       call table_errorappendi(crc250,irc)
+       call table_errorappend(crc250,"\n")
+       return
+    end if
     ! make new table file header...
     ! open table file
     call table_openFile(tss,ounit,tab250,lent,crc250,irc)
@@ -3327,6 +3482,15 @@ CONTAINS
           call table_errorappend(crc250,"\n")
           return
        end if
+       ! reset report statistics for file
+       call table_resetColumnStat(tss,cols,crc250,irc)
+       if (irc.ne.0) then
+          call table_errorappend(crc250,myname)
+          call table_errorappend(crc250," Error return from resetcolumnstat.")
+          call table_errorappendi(crc250,irc)
+          call table_errorappend(crc250,"\n")
+          return
+       end if
        ! read next line...
        if(table_bdeb)write(*,*)myname,'Looping:'//currentFile%fn250(1:currentFile%lenf)
        do while (table_readNextRow(tss,currentFile,cols,row1000,lenr,bok,crc250,irc))
@@ -3345,6 +3509,15 @@ CONTAINS
        if (irc.ne.0) then
           call table_errorappend(crc250,myname)
           call table_errorappend(crc250," unable to read "//currentFile%fn250(1:currentFile%lenf))
+          call table_errorappendi(crc250,irc)
+          call table_errorappend(crc250,"\n")
+          return
+       end if
+       ! report column-summary for file
+       call table_reportColumnStat(tss,cols,crc250,irc)
+       if (irc.ne.0) then
+          call table_errorappend(crc250,myname)
+          call table_errorappend(crc250," Error return from reportcolumnstat.")
           call table_errorappendi(crc250,irc)
           call table_errorappend(crc250,"\n")
           return
@@ -3469,8 +3642,10 @@ CONTAINS
     integer :: ii,jj,ll,pp,leno
     logical bdone, inside
     integer :: istart(tss%ncol), istop(tss%ncol)
+    integer :: irc2
+    real :: val
     ll=len_trim(inp1000)
-    if(table_bdeb)write(*,*)myname,'Checking hdr:',inp1000(1:ll),ll
+    !if(table_bdeb)write(*,*)myname,'Checking hdr:',inp1000(1:ll),ll
     ! sanity check
     if (tss%ncol.le.1) then
        call table_errorappend(crc250,myname)
@@ -3507,40 +3682,69 @@ CONTAINS
     end if
     leno=0
     lenn=0
+    cols%cok(0)=cols%cok(0)+1
+    cols%tok(0)=cols%tok(0)+1
     ! make first column of output...
     do  ii=1,file%nleg
        if (file%nam80(ii)(1:file%lenn(ii)).eq.inp1000(istart(1):istop(1))) then
           lenn=tss%lenn(file%legind(ii))
           out1000(leno+1:lenn)=tss%nam80(file%legind(ii))(1:tss%lenn(file%legind(ii)))
+          if (tss%col_set) then
+             read(out1000(leno+1:lenn),*,iostat=irc2) tss%col_val(1)
+             tss%col_vok(1)=(irc2.eq.0)
+          end if
           leno=lenn
        end if
     end do
     if (.not.table_checkColumn(inp1000,tss%ncol,1,istart,istop,1,cols)) then
+       if (tss%col_set) tss%col_vok(1)=.false.
        bok=.false.
        cols%crm(1)=cols%crm(1)+1
+       cols%trm(1)=cols%trm(1)+1
        return
     else
        cols%cok(1)=cols%cok(1)+1
+       cols%tok(1)=cols%tok(1)+1
     end if
     ! make remaining columns
-    do ii=2,tss%ncol
-       jj=file%invind(ii)
-       if (.not.table_checkColumn(inp1000,tss%ncol,jj,istart,istop,ii,cols)) then
+    do ii=2,cols%ncols      ! points to output column
+       jj=file%invind(ii) ! points to file column
+       if (jj.eq.0) then ! missing column...
+          cols%mrm(ii)=cols%mrm(ii)+1
+          cols%crm(0)=cols%crm(0)+1
+          cols%trm(0)=cols%trm(0)+1
+          cols%cok(0)=cols%cok(0)-1
+          cols%tok(0)=cols%tok(0)-1
           bok=.false.
+          return
+       else
+          cols%mok(ii)=cols%mok(ii)+1
+       end if
+       if (.not.table_checkColumn(inp1000,tss%ncol,jj,istart,istop,ii,cols)) then
+          !if(table_bdeb)write(*,*)myname,'Failed column check:',ii,jj
           cols%crm(ii)=cols%crm(ii)+1
+          cols%trm(ii)=cols%trm(ii)+1
+          bok=.false.
           return
        else
           cols%cok(ii)=cols%cok(ii)+1
+          cols%tok(ii)=cols%tok(ii)+1
        end if
        if (jj.eq.0) then
           lenn=leno+3
           out1000(leno:lenn)=" NA"
           leno=lenn
+          if (tss%col_set) tss%col_vok(ii)=.false.
        else
           lenn=leno+1+istop(jj)-istart(jj)+1
           if (lenn.le.1000) then
              out1000(leno+1:lenn)=" "//inp1000(istart(jj):istop(jj))
+             if (tss%col_set) then
+                read(out1000(leno+1:lenn),*,iostat=irc2) tss%col_val(ii)
+                tss%col_vok(ii)=(irc2.eq.0)
+             end if
           else
+             if (tss%col_set) tss%col_vok(ii)=.false.
              call table_errorappend(crc250,myname)
              call table_errorappend(crc250,"Invalid column:")
              call table_errorappend(crc250,inp1000(1:100))
@@ -3550,27 +3754,48 @@ CONTAINS
           leno=lenn
        end if
     end do
+    !
+    if (bok .and. tss%col_set) then
+       val=parse_evalf(tss%psf,tss%col_val,crc250,irc)
+       if (irc.ne.0) then
+          call model_errorappend(crc250,myname)
+          call model_errorappend(crc250," Error return from evalf.")
+          call model_errorappendi(crc250,irc)
+          call model_errorappend(crc250,"\n")
+          return
+       end if
+       !write(*,'(X,A,A,X,F0.2,X,I0,100(X,F0.2))') myname,"Filter value:",val,nint(val),tss%col_val
+       if (nint(val).ne.0) then
+          cols%cok(cols%ncols+1)=cols%cok(cols%ncols+1)+1
+          cols%tok(cols%ncols+1)=cols%tok(cols%ncols+1)+1
+       else 
+          bok=.false.
+          cols%crm(cols%ncols+1)=cols%crm(cols%ncols+1)+1
+          cols%trm(cols%ncols+1)=cols%trm(cols%ncols+1)+1
+       end if
+    end if
     return
   end subroutine table_washRow
   !
   logical function table_checkColumn(inp1000,ncol,jj,istart,istop,ii,cols)
     character*1000 :: inp1000
     integer :: ncol
-    integer :: jj
+    integer :: jj   ! global index
     integer :: istart(ncol)
     integer :: istop(ncol)
-    integer :: ii
+    integer :: ii   ! file index
     type(table_columns) :: cols
     real :: val
     logical bok
+    logical :: bdeb=.false.
     integer :: irc2
-    if (jj.eq.0) then
+    if (jj.eq.0) then ! column not in file
        bok=.false.
     else
        bok=.true.
     end if
     if (bok) then
-       if (cols%setc(ii)) then
+       if (cols%setc(ii)) then ! check is available
           read(inp1000(istart(jj):istop(jj)),*,iostat=irc2) val
           if (irc2.ne.0) then
              bok=.false.
@@ -3585,13 +3810,28 @@ CONTAINS
     end if
     if (bok) then
        if (cols%sets(ii)) then
+          !bdeb=(inp1000(istart(jj):istart(jj)).eq."N")
           if (cols%lenmin(ii).ne.0) then
              if (inp1000(istart(jj):istop(jj)).ne.cols%min80(ii)(1:cols%lenmin(ii))) then
+                if (bdeb)write(*,*) 'table_checkColumn Failed Mins check:',jj,ii,&
+                     & "'"//inp1000(istart(jj):istop(jj))//"'",istop(jj)-istart(jj),&
+                     & "'"//cols%min80(ii)(1:cols%lenmin(ii))//"'",cols%lenmin(ii)
                 bok=.false.
+             else
+                if (bdeb)write(*,*) 'table_checkColumn Passed Mins check:',jj,ii,&
+                     & "'"//inp1000(istart(jj):istop(jj))//"'",istop(jj)-istart(jj),&
+                     & "'"//cols%min80(ii)(1:cols%lenmin(ii))//"'",cols%lenmin(ii)
              end if
           else if (cols%lenmax(ii).ne.0) then
              if (inp1000(istart(jj):istop(jj)).ne.cols%max80(ii)(1:cols%lenmax(ii))) then
+                if (bdeb)write(*,*) 'table_checkColumn Failed Maxs check:',jj,ii,&
+                     & "'"//inp1000(istart(jj):istop(jj))//"'",istop(jj)-istart(jj),&
+                     & "'"//cols%max80(ii)(1:cols%lenmax(ii))//"'",cols%lenmax(ii)
                 bok=.false.
+             else
+                if (bdeb)write(*,*) 'table_checkColumn Passed Maxs check:',jj,ii,&
+                     & "'"//inp1000(istart(jj):istop(jj))//"'",istop(jj)-istart(jj),&
+                     & "'"//cols%max80(ii)(1:cols%lenmax(ii))//"'",cols%lenmax(ii)
              end if
           end if
        end if
@@ -3646,22 +3886,29 @@ CONTAINS
     type(table_column), pointer :: col => null()
     integer :: ii
     character*22 :: myname="table_makeColumns"
-    cols%ncols=tss%ncols+1
+    cols%ncols=tss%ncoll+1
     allocate(cols%col80(cols%ncols),cols%lenc(cols%ncols),&
          & cols%minc(cols%ncols),cols%maxc(cols%ncols), &
          & cols%setc(cols%ncols),&
          & cols%min80(cols%ncols),cols%max80(cols%ncols), &
          & cols%lenmin(cols%ncols),cols%lenmax(cols%ncols), &
          & cols%sets(cols%ncols), &
-         & cols%cok(cols%ncols),cols%crm(cols%ncols),stat=irc)
+         & cols%mok(0:cols%ncols+1),cols%mrm(0:cols%ncols+1),&
+         & cols%cok(0:cols%ncols+1),cols%crm(0:cols%ncols+1),&
+         & cols%tok(0:cols%ncols+1),cols%trm(0:cols%ncols+1),&
+         & stat=irc)
     if (irc.ne.0) then
        call table_errorappend(crc250,myname)
        call table_errorappend(crc250,"Unable to allocate 'cols%'.")
        return
     end if
-    do ii=1,cols%ncols
+    do ii=0,cols%ncols+1
+       cols%mok(ii)=0
+       cols%mrm(ii)=0
        cols%cok(ii)=0
        cols%crm(ii)=0
+       cols%tok(ii)=0
+       cols%trm(ii)=0
     end do
     ii=1
     cols%col80(ii)="set"
@@ -3676,7 +3923,8 @@ CONTAINS
     cols%sets(ii)=.false.
     col=>tss%firstColumn%next
     do while (.not.associated(col,target=tss%lastColumn))
-       ii=ii+1
+       ii=min(cols%ncols,ii+1)
+       !write(*,*)myname,'Column:',ii,col%name80(1:col%lenn)
        cols%col80(ii)=col%name80
        cols%lenc(ii)=col%lenn
        cols%minc(ii)=col%minc
@@ -3689,8 +3937,73 @@ CONTAINS
        cols%sets(ii)=col%sets
        col=>col%next
     end do
+    if (ii.ne.cols%ncols) then
+       irc=845
+       call table_errorappend(crc250,myname)
+       call table_errorappend(crc250,"Column chain error.")
+       call table_errorappendi(crc250,ii)
+       call table_errorappendi(crc250,cols%ncols)
+    end if
     return
   end subroutine table_makeColumns
+  !
+  subroutine table_resetColumnStat(tss,cols,crc250,irc)
+    type(table_session), pointer :: tss !  current session
+    type(table_columns) :: cols
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    do ii=0,cols%ncols+1
+       cols%mok(ii)=0
+       cols%mrm(ii)=0
+       cols%cok(ii)=0
+       cols%crm(ii)=0
+    end do
+    return
+  end subroutine table_resetColumnStat
+  !
+  subroutine table_reportColumnStat(tss,cols,crc250,irc)
+    type(table_session), pointer :: tss !  current session
+    type(table_columns) :: cols
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="table_reportColumnStat"
+    integer :: ii
+    real :: pst
+    !
+    WRITE(*,998) MYNAME,                    'Rows in file:', cols%cok(1)+cols%crm(cols%ncols)
+    do ii=1,cols%ncols
+       pst=dfloat(cols%crm(ii))/max(1.0d0,dfloat(cols%crm(ii)+cols%cok(ii)))*100
+       if (cols%crm(ii).ne.0) write(*,996) myname,'Column-filter "'//cols%col80(ii)(1:cols%lenc(ii))//'":',&
+            & -cols%crm(ii),pst
+    end do
+    ii=cols%ncols+1
+    pst=dfloat(cols%crm(ii))/max(1.0d0,dfloat(cols%crm(ii)+cols%cok(ii)))*100
+    if (cols%crm(ii).ne.0) write(*,996) myname,'Row-filter:',&
+         & -cols%crm(ii),pst
+    do ii=1,cols%ncols
+       pst=dfloat(cols%mrm(ii))/max(1.0d0,dfloat(cols%mrm(ii)+cols%mok(ii)))*100
+       if (cols%mrm(ii).ne.0) write(*,996) myname,'Missing "'//cols%col80(ii)(1:cols%lenc(ii))//'":',&
+            & -cols%mrm(ii),pst
+    end do
+    WRITE(*,997) MYNAME,     '--------------------------------------------------'
+    pst=dfloat(cols%cok(cols%ncols+1))/max(1.0d0,dfloat(cols%crm(1)+cols%cok(1)))*100
+    WRITE(*,996) MYNAME,                      'Accepted rows:', cols%cok(cols%ncols+1),pst
+    WRITE(*,*)
+    !
+999 FORMAT(X,A12,X,A,I13,' (',F6.2,'%)')
+998 FORMAT(X,A12,X,A30,I13)
+997 FORMAT(X,A12,X,A)
+996 FORMAT(X,A12,X,A30,I13,' (',F6.2,'%)')
+    do ii=0,cols%ncols+1
+       cols%mok(ii)=0
+       cols%mrm(ii)=0
+       cols%cok(ii)=0
+       cols%crm(ii)=0
+    end do
+    return
+  end subroutine table_reportColumnStat
+  !
   subroutine table_removeColumns(tss,cols,crc250,irc)
     type(table_session), pointer :: tss !  current session
     type(table_columns) :: cols
@@ -3701,15 +4014,23 @@ CONTAINS
     real :: pst
     !
     WRITE(*,*)
-    WRITE(*,998) MYNAME,                      'Total rows:', cols%cok(1)+cols%crm(cols%ncols)
+    WRITE(*,998) MYNAME,                      'Total rows:', cols%tok(1)+cols%trm(cols%ncols)
     do ii=1,cols%ncols
-       pst=dfloat(cols%crm(ii))/max(1.0d0,dfloat(cols%crm(ii)+cols%cok(ii)))*100
-       if (cols%crm(ii).ne.0) write(*,996) myname,'Join-filter "'//cols%col80(ii)(1:cols%lenc(ii))//'":',&
-            & -cols%crm(ii),pst
+       pst=dfloat(cols%trm(ii))/max(1.0d0,dfloat(cols%trm(ii)+cols%tok(ii)))*100
+       if (cols%trm(ii).ne.0) write(*,996) myname,'Column-filter "'//cols%col80(ii)(1:cols%lenc(ii))//'":',&
+            & -cols%trm(ii),pst
     end do
+    ii=cols%ncols+1
+    pst=dfloat(cols%trm(ii))/max(1.0d0,dfloat(cols%trm(ii)+cols%tok(ii)))*100
+    if (cols%trm(ii).ne.0) write(*,996) myname,'Row-filter:',&
+         & -cols%trm(ii),pst
+    ii=0
+    pst=dfloat(cols%trm(ii))/max(1.0d0,dfloat(cols%trm(ii)+cols%tok(ii)))*100
+    if (cols%trm(ii).ne.0) write(*,996) myname,'Missing column:',&
+         & -cols%trm(ii),pst
     WRITE(*,997) MYNAME,     '--------------------------------------------------'
-    pst=dfloat(cols%cok(cols%ncols))/max(1.0d0,dfloat(cols%crm(1)+cols%cok(1)))*100
-    WRITE(*,996) MYNAME,                      'Accepted rows:', cols%cok(cols%ncols),pst
+    pst=dfloat(cols%tok(cols%ncols+1))/max(1.0d0,dfloat(cols%trm(1)+cols%tok(1)))*100
+    WRITE(*,996) MYNAME,                      'Accepted rows:', cols%tok(cols%ncols+1),pst
     !
 999 FORMAT(X,A12,X,A,I13,' (',F6.2,'%)')
 998 FORMAT(X,A12,X,A30,I13)
@@ -3726,8 +4047,12 @@ CONTAINS
     if (allocated(cols%lenmin)) deallocate(cols%lenmin)
     if (allocated(cols%lenmax)) deallocate(cols%lenmax)
     if (allocated(cols%sets)) deallocate(cols%sets)
+    if (allocated(cols%mok)) deallocate(cols%mok)
+    if (allocated(cols%mrm)) deallocate(cols%mrm)
     if (allocated(cols%cok)) deallocate(cols%cok)
     if (allocated(cols%crm)) deallocate(cols%crm)
+    if (allocated(cols%tok)) deallocate(cols%tok)
+    if (allocated(cols%trm)) deallocate(cols%trm)
     cols%ncols=0
     return
   end subroutine table_removeColumns

@@ -157,7 +157,7 @@ sub open {
     }
     if (my ($ret,$msg,$pid) = xs_openTableSession()){
 	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-	$self->{PID}=$pid;
+	$self->{TID}=$pid;
     } else {
 	die "Unable to create class $class\n";
     }
@@ -188,7 +188,7 @@ sub close {
     if (my ($ret,$msg) = xs_closeColocSession($self->{CID})){
 	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
-    if (my ($ret,$msg) = xs_closeTableSession($self->{PID})){
+    if (my ($ret,$msg) = xs_closeTableSession($self->{TID})){
 	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     }
 }
@@ -767,6 +767,26 @@ sub clearObservationFileStack {
     return;
 }
 
+=head2 parseMd5
+
+parseMd5 - copies Md5 from observation files to parser
+
+=head4 EXAMPLE
+
+$fark->parseMd5();
+
+=cut
+
+
+sub parseMd5 {
+    my ($self)=@_;
+    # list obs types that should be used...
+    #print "clearObsFile: $self->{OID}\n";
+    my ($ret,$msg) = xs_parseMd5($self->{OID});
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+    return;
+}
+
 =head2 pushObservationFile
 
 pushObservationFile - adds observation file to the observation file stack.
@@ -787,9 +807,14 @@ Arguments:
 =cut
 
 sub pushObservationFile {
+    use Digest::MD5::File qw(file_md5_hex);
     my ($self,@args)=@_;
-    my ($ret,$msg) = xs_pushObsFile($self->{OID},@args);
-    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+    foreach my $file (@args) {
+	my $digest = file_md5_hex($file);
+	#print "Digest: $digest $file\n";
+	my ($ret,$msg) = xs_pushObsFile($self->{OID},$file,$digest);
+	if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+    }
     return;
 }
 
@@ -1328,6 +1353,31 @@ sub setObservationFilter {
 }
 
 
+=head2 setTableFilter
+
+setTableFilter - add a table filter.
+
+Arguments:
+
+=over 4
+
+=item (string) table filter (can contain observation targets).
+
+=back
+
+=head4 EXAMPLE
+
+ $fark->setTableFilter("member(obs_id,1047,1049)");
+
+=cut
+
+sub setTableFilter {
+    my ($self,$filter)=@_;
+    my ($ret,$msg) = xs_setTableFilter($self->{TID},$filter);
+    if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
+}
+
+
 =head2 makeColocXML
 
 makeColocXML - make XML file...
@@ -1353,9 +1403,9 @@ sub makeColocXML {
     my $test = shift//0;
     my $fill_file = shift // "";
     #print "fark.pm Pattern $patt";
-    my ($ret,$msg)= xs_setColocXMLFile($self->{PID},$patt);
+    my ($ret,$msg)= xs_setColocXMLFile($self->{TID},$patt);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-    ($ret,$msg,my $xml)= xs_getColocXMLFile($self->{PID});
+    ($ret,$msg,my $xml)= xs_getColocXMLFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     my ($dir,$name)=farkdir::splitName($xml);
     farkdir::makePath($dir);
@@ -1473,7 +1523,7 @@ $fark->setTableType("rms+stdv");
 
 sub setTableType {
     my ($self,$type)=@_;
-    my ($ret,$msg) = xs_setTableType($self->{PID},$type);
+    my ($ret,$msg) = xs_setTableType($self->{TID},$type);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1500,7 +1550,7 @@ $fark->setTableFile("rms+stdv");
 
 sub setTableFile {
     my ($self,$tableFile)=@_;
-    my ($ret,$msg) = xs_setTableFile($self->{PID},$tableFile);
+    my ($ret,$msg) = xs_setTableFile($self->{TID},$tableFile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1527,7 +1577,7 @@ $fark->getTableFile("rms+stdv");
 
 sub getTableFile {
     my ($self,$tableFile)=@_;
-    my ($ret,$msg,$fn) = xs_getTableFile($self->{PID},$tableFile);
+    my ($ret,$msg,$fn) = xs_getTableFile($self->{TID},$tableFile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return $fn;
 }
@@ -1554,7 +1604,7 @@ $fark->setGraphicsFile("rms+stdv");
 
 sub setGraphicsFile {
     my ($self,$graphicsFile)=@_;
-    my ($ret,$msg) = xs_setGraphicsFile($self->{PID},$graphicsFile);
+    my ($ret,$msg) = xs_setGraphicsFile($self->{TID},$graphicsFile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1581,7 +1631,7 @@ $fark->getGraphicsFile("rms+stdv");
 
 sub getGraphicsFile {
     my ($self,$graphicsFile)=@_;
-    my ($ret,$msg,$fn) = xs_getGraphicsFile($self->{PID},$graphicsFile);
+    my ($ret,$msg,$fn) = xs_getGraphicsFile($self->{TID},$graphicsFile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return $fn;
 }
@@ -1601,8 +1651,8 @@ $fark->clearTableSetStack();
 sub clearTableSetStack {
     my ($self)=@_;
     # list obs types that should be used...
-    #print "clearTableSetStack: $self->{PID}\n";
-    my ($ret,$msg) = xs_clearTableSetStack($self->{PID});
+    #print "clearTableSetStack: $self->{TID}\n";
+    my ($ret,$msg) = xs_clearTableSetStack($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1620,7 +1670,7 @@ clearTableColumn - clears all output columns from the set.
 
 sub clearTableColumn {
     my ($self)=@_;
-    my ($ret,$msg) = xs_clearTableColumn($self->{PID});
+    my ($ret,$msg) = xs_clearTableColumn($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1647,7 +1697,7 @@ Arguments:
 
 sub pushTableColumn {
     my ($self,$name,$expr)=@_;
-    my ($ret,$msg) = xs_pushTableColumn($self->{PID},$name,$expr);
+    my ($ret,$msg) = xs_pushTableColumn($self->{TID},$name,$expr);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1682,7 +1732,7 @@ Arguments:
 
 sub pushTableSet {
     my ($self,$name,$legend)=@_;
-    my ($ret,$msg) = xs_pushTableSet($self->{PID},$self->{CID},$self->{MID},
+    my ($ret,$msg) = xs_pushTableSet($self->{TID},$self->{CID},$self->{MID},
 				   $self->{OID},$name,$legend);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
@@ -1702,8 +1752,8 @@ $fark->clearTableAttributeStack;
 sub clearTableAttributeStack {
     my ($self)=@_;
     # list obs types that should be used...
-    #print "clearTableSet: $self->{PID}\n";
-    my ($ret,$msg) = xs_clearTableAttributeStack($self->{PID});
+    #print "clearTableSet: $self->{TID}\n";
+    my ($ret,$msg) = xs_clearTableAttributeStack($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1730,7 +1780,7 @@ Arguments:
 
 sub pushTableAttribute {
     my ($self,$name,$value)=@_;
-    my ($ret,$msg) = xs_pushTableAttribute($self->{PID},$name,$value);
+    my ($ret,$msg) = xs_pushTableAttribute($self->{TID},$name,$value);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1759,7 +1809,7 @@ Arguments:
 
 sub limitTableColumn {
     my ($self,$name,$min,$max)=@_;
-    my ($ret,$msg) = xs_limitTableColumn($self->{PID},$name,$min,$max);
+    my ($ret,$msg) = xs_limitTableColumn($self->{TID},$name,$min,$max);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     return;
 }
@@ -1801,21 +1851,21 @@ sub makeTableFile {
     my $name;
     # set file names
     print ">>>> makeTableFile Entering....\n";
-    ($ret,$msg)= xs_setTableFile($self->{PID},$tfile);
+    ($ret,$msg)= xs_setTableFile($self->{TID},$tfile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     # replace wildcards in file names
     print ">>>> makeTableFile Table strep....\n";
-    ($ret,$msg)= xs_strepTableFile($self->{PID});
+    ($ret,$msg)= xs_strepTableFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-    ($ret,$msg,$tfile)= xs_getTableFile($self->{PID});
+    ($ret,$msg,$tfile)= xs_getTableFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     #
-    ($ret,$msg)= xs_setGraphicsDir($self->{PID},$gdir);
+    ($ret,$msg)= xs_setGraphicsDir($self->{TID},$gdir);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     print ">>>> makeTableFile Graphics strep....\n";
-    ($ret,$msg)= xs_strepGraphicsDir($self->{PID});
+    ($ret,$msg)= xs_strepGraphicsDir($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-    ($ret,$msg,$gdir)= xs_getGraphicsDir($self->{PID});
+    ($ret,$msg,$gdir)= xs_getGraphicsDir($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     $| = 1 ;
     # make sure output file directories exist...
@@ -1824,7 +1874,7 @@ sub makeTableFile {
     # make the output...
     print ">>>> makeTableFile calling xs_makeTableFile....\n";
     ($ret,$msg,my $tablefile,my $graphicsdir) = 
-	xs_makeTableFile($self->{PID},$self->{CID},$self->{MID},$self->{OID},
+	xs_makeTableFile($self->{TID},$self->{CID},$self->{MID},$self->{OID},
 			 $tfile,$gdir,$cfile,$test,$fill_file);
     if ($ret != 0) {
 	if (-e $tablefile) {unlink $tablefile;};
@@ -1978,19 +2028,19 @@ sub joinTableFile {
     my $dir;
     my $name;
     # set file names
-    ($ret,$msg)= xs_setTableFile($self->{PID},$tfile);
+    ($ret,$msg)= xs_setTableFile($self->{TID},$tfile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     # replace wildcards in file names
-    ($ret,$msg)= xs_strepTableFile($self->{PID});
+    ($ret,$msg)= xs_strepTableFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-    ($ret,$msg,my $tablefile)= xs_getTableFile($self->{PID});
+    ($ret,$msg,my $tablefile)= xs_getTableFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     #
-    ($ret,$msg)= xs_setGraphicsDir($self->{PID},$tfile);
+    ($ret,$msg)= xs_setGraphicsDir($self->{TID},$tfile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-    ($ret,$msg)= xs_strepGraphicsDir($self->{PID});
+    ($ret,$msg)= xs_strepGraphicsDir($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
-    ($ret,$msg,my $graphicsdir)= xs_getGraphicsDir($self->{PID});
+    ($ret,$msg,my $graphicsdir)= xs_getGraphicsDir($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     $| = 1 ;
     # make sure output file directories exist...
@@ -1998,7 +2048,7 @@ sub joinTableFile {
     farkdir::makePath($dir);
     # make the output...
     ($ret,$msg,$tablefile,$graphicsdir)= 
-	xs_joinTableFile($self->{PID},$self->{CID},$self->{MID},$self->{OID},
+	xs_joinTableFile($self->{TID},$self->{CID},$self->{MID},$self->{OID},
 			  $tfile,$gdir,$cfile,$test,$fill_file);
     if ($ret != 0) {
 	if (-e $tablefile) {unlink $tablefile;};
@@ -2043,13 +2093,13 @@ sub strepTableFile {
     my $dir;
     my $name;
     # set file names
-    ($ret,$msg)= xs_setTableFile($self->{PID},$tfile);
+    ($ret,$msg)= xs_setTableFile($self->{TID},$tfile);
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     # replace wildcards in file names
-    ($ret,$msg)= xs_strepTableFile($self->{PID});
+    ($ret,$msg)= xs_strepTableFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     # retrieve file names
-    ($ret,$msg,$tfile)= xs_getTableFile($self->{PID});
+    ($ret,$msg,$tfile)= xs_getTableFile($self->{TID});
     if ($ret != 0) {$msg =~ s/\\n/\n/g;die $msg;}
     #
     $| = 1 ;

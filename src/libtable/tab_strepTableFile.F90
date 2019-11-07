@@ -25,6 +25,6 @@ subroutine tab_streptablefile(pid, crc250, irc)
      call table_errorappend(crc250,"\n")
      return
   end if
-  !write(*,*) myname,' Done.'
+  !write(*,*) myname,' Done.',irc
   return
 end subroutine tab_streptablefile

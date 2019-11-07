@@ -6,8 +6,8 @@
 #
 
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
-
 
 my $query = CGI->new;
 print $query->header;

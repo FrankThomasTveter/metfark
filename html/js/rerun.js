@@ -223,7 +223,7 @@ function rerun_setConfigFile(file) {
 // create rerun table
 function rerun_setTable() {
     var file=rerun_getConfigFile();
-    console.log("Rerun set table:",file,JSON.stringify(rerun_config));
+    //console.log("Rerun set table:",file,JSON.stringify(rerun_config));
     var item=document.getElementById('rerunTable');
     var tail=removeTableChildFromTo(item,"labelsRerun","newlineRerun");
     var modell=[];

@@ -1,11 +1,7 @@
 #!/usr/bin/perl -w
 #
-use ExtUtils::testlib;
-use fark;
-use farkdata;
-use farkdir;
-#
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
@@ -14,6 +10,11 @@ use Data::Dumper;
 #dont know if you need this: sudo apt-get install libpath-tiny-perl
 #but you need this: sudo apt-get install libcapture-tiny-perl
 use Capture::Tiny 'capture';
+#
+use ExtUtils::testlib;
+use fark;
+use farkdata;
+use farkdir;
 #
 my $ref=CGI->new();
 my $param= $ref->{param};

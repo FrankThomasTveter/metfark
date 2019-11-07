@@ -1,11 +1,7 @@
 #!/usr/bin/perl -w
 #
-use ExtUtils::testlib;
-use fark;
-use farkdata;
-use farkdir;
-#
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 #use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
@@ -16,14 +12,22 @@ use File::Basename;
 use File::Compare;
 use File::Copy;
 #
+use ExtUtils::testlib;
+use fark;
+use farkdata;
+use farkdir;
+#
 my $ref=CGI->new();
 my $param    = $ref->{param};
 #
 print "Content-type: text/xml;\n\n<?xml version='1.0' encoding='utf-8'?>\n";
 #
 eval {
+    #fark::debug(1);  # debug observations
     #fark::debug(2);  # debug models
+    #fark::debug(4);  # debug table
     #fark::debug(3);  # debug colocation
+    #fark::debug(5);  # debug parse
     my $debug=0;
     if (defined $param->{debug}[0]) {
 	$debug=1;       # debug this script (0=omit output)
@@ -597,7 +601,7 @@ eval {
 		$lastStop=$atime;
 	    };
 	    my $lockfilename=$lockDir."$cls/$file.lock";
-	    if ($debug) {print "### Usefile: $clsUseFile Lockfile: $lockfilename\n"};
+	    #if ($debug) {print "### Usefile: $clsUseFile Lockfile: $lockfilename\n"};
 	    if (-f $lockfilename) {
 		my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,
 		    $mtime,$ctime,$blksize,$blocks) = stat($lockfilename);
@@ -802,8 +806,8 @@ eval {
 	my $fark=fark->open();
 	&setRerunConfig($fark,$variable,$value,$offset);
 	my $timeoffset=$fark->getRerunOffset();
-	if($debug){print "****** Make table A\n";}
 	my $tablefile=$fark->strepTableFile($table);
+	if($debug){print "****** Make table $tablefile ($timeoffset,$value)\n";}
 	if ( ! -f $tablefile || "$overwrite" eq "true") {
 	    $fark->setTableType($cat);
 	    $fark->clearTableAttributeStack();
@@ -870,8 +874,10 @@ eval {
 	    };
 	    my ($tablefile,$graphicsdir) = $fark->makeTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
 	    #
-	    if (-e $tablefile) {
-		farkdir::touchFile($tablefile,$timeoffset);
+	    if (-f $tablefile) {
+		if ($debug){print("****** Touching:$tablefile ($timeoffset)\n");}
+		farkdir::touchFile($tablefile,-($timeoffset));
+		if ($debug){system("ls -l $tablefile");};
 	    };
 	    #
 	    #   my $cmd="Rscript --vanilla $fpath $tablefile $graphicsdir $test";
@@ -907,6 +913,7 @@ eval {
 	if($debug){print "processJoin Entering with '$xmlfile' '$cls'\n";}
 	my $table=$node->getAttribute("table");
 	my $graphics=$node->getAttribute("graphics");
+	my $filter=$node->getAttribute("filter")||"";
 	my $overwrite=$node->getAttribute("overwrite")//"true";
 	my $cat=$node->getAttribute("cat");
 	#print "Processing join: $xmlfile\n";
@@ -923,6 +930,7 @@ eval {
 	my $tablefile=$fark->strepTableFile($table);
 	if ( ! -f $tablefile || "$overwrite" eq "true") {
 	    $fark->setTableType($cat);
+	    $fark->setTableFilter($filter);
 	    if($debug){print "****** Make table C\n";}
 	    my ($troot, $tloc, $tpriv) = farkdir::splitPattern( $table, "output" );
 	    if ($tpriv ne "rw") {
@@ -962,6 +970,12 @@ eval {
 	    my ($root, $loc, $priv) = farkdir::splitDir( $scriptDir, "script" );
 	    my $fpath=$root . $loc . $cat;
 	    my ($tablefile,$graphicsdir) = $fark->joinTableFile($table,$graphics,$fpath,$test,$clsFillFile); 
+	    #
+	    if (-f $tablefile) {
+		if ($debug){print("****** Touching:$tablefile ($timeoffset)\n");}
+		farkdir::touchFile($tablefile,-($timeoffset));
+		if ($debug){system("ls -l $tablefile");};
+	    };
 	    #
 	    # my $cmd="Rscript --vanilla $fpath $tablefile $test";
 	    if($debug){print "****** Make table D file: '$tablefile'\n";}
@@ -1184,6 +1198,7 @@ eval {
 	$fark->setObservationCache($cachefile);
 	if (-e $cachefile) {
 	    $fark->loadObservationCache($cachefile);
+	    $fark->parseMd5();
 	};
     }
 

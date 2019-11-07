@@ -1,14 +1,15 @@
 #!/usr/bin/perl -w
 #
-############use ExtUtils::testlib;
-use fark;
-use farkdata;
-#
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
 use Data::Dumper;
+#
+############use ExtUtils::testlib;
+use fark;
+use farkdata;
 use farkdir;
 #
 #dont know if you need this: sudo apt-get install libpath-tiny-perl

@@ -1,3 +1,5 @@
+use strict;
+use warnings;
 use 5.014002;
 #use lib '/elysium/franktt/mir/fark/src/libfark';
 use ExtUtils::MakeMaker;

@@ -113,6 +113,8 @@ module observations
      character*250  :: fn250 = ""          ! file name
      integer        :: lenf=0              ! length of file name string
      character*250  :: tablepath = ""      ! table path
+     character*50   :: md50 = ""           ! md5sum (unique file id)
+     integer        :: lenm=0              ! length of file name string
      real           :: ind_start=0.0D0     ! lowest index value in file
      real           :: ind_stop=0.0D0      ! highest index value in file
      logical        :: ind_lim = .false.   ! are ind_start/ind_stop available
@@ -719,11 +721,20 @@ CONTAINS
     do ii=1,css%newnFileSortIndexes(1)
        currentFile=>css%fileStack(css%fileStackInd(ii,1))%ptr
        if (old250(1:leno).ne.currentFile%fn250(1:currentFile%lenf)) then
-          write(unitr,'(L1,2(X,F0.10),4(X,I0),X,A)',iostat=irc) &
+          write(unitr,'(L1,2(X,F0.10),4(X,I0),X,A,X,I0,X,A)',iostat=irc) &
                & currentFile%ind_lim,&
                & currentFile%ind_start,currentFile%ind_stop,&
                & currentFile%nmessage,currentFile%ncat,currentFile%nsub,&
                & currentFile%lenf,currentFile%fn250(1:currentFile%lenf)
+          if (irc.ne.0) then
+             call observation_errorappend(crc250,myname)
+             call observation_errorappend(crc250," unable to write to "//path250(1:lenp))
+             call observation_errorappendi(crc250,irc)
+             call observation_errorappend(crc250,"\n")
+             return
+          end if
+          write(unitr,'(I0,X,A)',iostat=irc) &
+               & currentFile%lenm,currentFile%md50(1:currentFile%lenm)
           if (irc.ne.0) then
              call observation_errorappend(crc250,myname)
              call observation_errorappend(crc250," unable to write to "//path250(1:lenp))
@@ -922,6 +933,24 @@ CONTAINS
          end if
        end if
        !
+       read(unitr,'(A)',iostat=irc) buff250
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," unable to read (2) "//path250(1:lenp))
+          call observation_errorappendi(crc250,irc)
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       call chop0(buff250,250)
+       pos=0
+       opos=pos
+       call findDelimiter(buff250," ",pos)
+       read(buff250(opos+1:pos-1),*,iostat=irc)newFile%lenm
+       opos=pos
+       pos=length(buff250,250,10)
+       newFile%md50=buff250(opos+1:pos)
+       call chop0(newFile%md50,50)
+       !
        do jj=1,newFile%ncat
           allocate(newCat,stat=irc)
           if (irc.ne.0) then
@@ -1026,6 +1055,41 @@ CONTAINS
          & values(5),":",values(6),":",values(7),". Age:"//diff250(1:lend)
     if(obs_bdeb)write(*,*)myname,' *** Done.',irc
   end subroutine observation_loadCache
+  !
+  subroutine observation_parseMd5(css,crc250,irc)
+    type(obs_session), pointer :: css !  current session
+    character*250 :: crc250
+    integer :: irc
+    character*22 :: myname="observation_parseMd5"
+    character*32 :: md5(max(1,css%nFileIndexes))
+    integer :: ii
+    if(obs_bdeb)write(*,*)myname,' *** Entering.',irc,css%nFileIndexes
+    call observation_sortStack(css,crc250,irc)
+    if (irc.ne.0) then
+       call observation_errorappend(crc250,myname)
+       call observation_errorappend(crc250," Error return from observation_sortStack.")
+       call observation_errorappendi(crc250,irc)
+       call observation_errorappend(crc250,"\n")
+       return
+    end if
+    if (css%nFileIndexes.gt.0) then
+       do ii=1,css%nFileIndexes
+          md5(ii)=css%fileStack(ii)%ptr%md50
+       end do
+       call parse_setMd5(css%nFileIndexes,md5,crc250,irc)
+       if (irc.ne.0) then
+          call observation_errorappend(crc250,myname)
+          call observation_errorappend(crc250," Error return from parse_setMd5.")
+          call observation_errorappend(crc250,"\n")
+          return
+       end if
+       write(*,*)myname,'MD5 parsed:',css%nFileIndexes
+    else
+       write(*,*)myname,'No MD5 parsed. How strange.'
+    end if
+    if(obs_bdeb)write(*,*)myname,' *** Done.',irc
+    return
+  end subroutine observation_parseMd5
   !
   !###############################################################################
   !STACK ROUTINES
@@ -1189,9 +1253,10 @@ CONTAINS
   !
   ! Add bufr-file to the BUFR STACK
   !
-  subroutine observation_stackpush(css,path250,crc250,irc)
+  subroutine observation_stackpush(css,path250,md50,crc250,irc)
     type(obs_session), pointer :: css !  current session
     character*250 :: path250
+    character*50 :: md50
     character*250 :: crc250
     integer :: irc
     type(obs_file),pointer :: newFile
@@ -1234,6 +1299,9 @@ CONTAINS
        call chop0(newFile%fn250,250)
        newFile%lenf=length(newFile%fn250,250,20)
        newFile%tablepath=css%tablepath
+       newFile%md50=md50
+       call chop0(newFile%md50,50)
+       newFile%lenm=length(newFile%md50,50,20)
        !
        do jj=1,10
           newFile%ook(jj)=0
@@ -2389,49 +2457,51 @@ CONTAINS
           if (currentFile%ind_lim) then ! requested observations present?
              css%fileStackInd(ii,1)=ii
              css%fileStackInd(ii,2)=ii
-             buff=css%trg_val(css%ntrg)
-             luff=css%trg_vok(css%ntrg)
-             css%trg_val(css%ntrg)=currentFile%ind_start
-             css%trg_vok(css%ntrg)=.true.
-             !if (obs_bdeb) then
-             !   write(*,*)myname,' Eval:',css%ntrg,css%trg_val(css%ntrg),&
-             !        & "'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
-             !   do jj=1,css%ntrg
-             !      write(*,'(X,A,A,I0,A,F0.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
-             !   end do
-             !end if
-             if (css%ind_tset) then
-                !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
-                css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
-                if (irc.ne.0) then
-                   call observation_errorappend(crc250,myname)
-                   call observation_errorappend(crc250," Error return from evalf.")
-                   call observation_errorappendi(crc250,irc)
-                   call observation_errorappend(crc250,"\n")
-                   return
+             if (css%trg_set) then
+                buff=css%trg_val(css%ntrg)
+                luff=css%trg_vok(css%ntrg)
+                css%trg_val(css%ntrg)=currentFile%ind_start
+                css%trg_vok(css%ntrg)=.true.
+                !if (obs_bdeb) then
+                !   write(*,*)myname,' Eval:',css%ntrg,css%trg_val(css%ntrg),&
+                !        & "'"//css%ind_pt%funcStr100(1:css%ind_pt%lenf)//"'"
+                !   do jj=1,css%ntrg
+                !      write(*,'(X,A,A,I0,A,F0.10)')myname,'  Trg(',jj,')=',css%trg_val(jj)
+                !   end do
+                !end if
+                if (css%ind_tset) then
+                   !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
+                   css%fileStackSort(ii,1)=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
+                   if (irc.ne.0) then
+                      call observation_errorappend(crc250,myname)
+                      call observation_errorappend(crc250," Error return from evalf.")
+                      call observation_errorappendi(crc250,irc)
+                      call observation_errorappend(crc250,"\n")
+                      return
+                   end if
+                else
+                   css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
                 end if
-             else
-                css%fileStackSort(ii,1)=css%trg_val(css%ntrg)
-             end if
-             css%trg_val(css%ntrg)=currentFile%ind_stop
-             css%trg_vok(css%ntrg)=.true.
-             if (css%ind_tset) then
-                !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
-                css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
-                if (irc.ne.0) then
-                   call observation_errorappend(crc250,myname)
-                   call observation_errorappend(crc250," Error return from evalf.")
-                   call observation_errorappendi(crc250,irc)
-                   call observation_errorappend(crc250,"\n")
-                   return
+                css%trg_val(css%ntrg)=currentFile%ind_stop
+                css%trg_vok(css%ntrg)=.true.
+                if (css%ind_tset) then
+                   !if (obs_bdeb)write(*,*)myname,' Sort targets:',css%trg_val
+                   css%fileStackSort(ii,2)=parse_evalf(css%ind_pt,css%trg_val,crc250,irc)
+                   if (irc.ne.0) then
+                      call observation_errorappend(crc250,myname)
+                      call observation_errorappend(crc250," Error return from evalf.")
+                      call observation_errorappendi(crc250,irc)
+                      call observation_errorappend(crc250,"\n")
+                      return
+                   end if
+                else
+                   css%fileStackSort(ii,2)=css%trg_val(css%ntrg)
                 end if
-             else
-                css%fileStackSort(ii,2)=css%trg_val(css%ntrg)
-             end if
              !if (obs_bdeb)write(*,*)myname,'Eval:',ii,css%fileStackSort(ii,1),css%fileStackSort(ii,2),&
-              !    & currentFile%ind_start,currentFile%ind_stop
-             css%trg_val(css%ntrg)=buff
-             css%trg_vok(css%ntrg)=luff
+                !    & currentFile%ind_start,currentFile%ind_stop
+                css%trg_val(css%ntrg)=buff
+                css%trg_vok(css%ntrg)=luff
+             end if
           else
              if (obs_bdeb)then
                 write(*,*)myname,"Missing index limits in '"//&

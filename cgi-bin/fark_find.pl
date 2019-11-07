@@ -1,15 +1,16 @@
 #!/usr/bin/perl -w
 #
-use ExtUtils::testlib;
-use fark;
-use farkdata;
-#
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
 use Data::Dumper;
 use Time::HiRes qw( time );
+#
+use ExtUtils::testlib;
+use fark;
+use farkdata;
 use farkdir;
 #
 #sudo apt-get update
@@ -730,7 +731,11 @@ sub findJoinFile {
 	    chomp $row;
 	    # check for the attributes block...
 	    if ($mode==0) {
-		if ($row =~ /^# ATTRIBUTES:(\d+)/) {
+		if ($row =~ /^# TYPE:(\S+)/) {
+		    if ($debug) {print "Type: $row\n";}
+		    my $type=$1;
+		    $node->setAttribute("cat", $type//"debug");
+		} elsif ($row =~ /^# ATTRIBUTES:(\d+)/) {
 		    if ($debug) {print "Attribute: $row\n";}
 		    $lines=$1;
 		    if ($lines>0){$mode=1;}
@@ -761,10 +766,10 @@ sub findJoinFile {
 	    }
 	}
 	close($fh);
-	if ($passok) {
-	    # put xml-structure into file
-	    farkdir::docsave($fpath,$doc);
-	}
+	#if ($passok) {
+	#    # put xml-structure into file
+	#    farkdir::docsave($fpath,$doc);
+	#}
 	# report xml-structure
 	print $doc->toString . "\n";
     } else {

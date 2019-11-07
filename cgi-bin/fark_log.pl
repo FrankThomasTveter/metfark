@@ -1,11 +1,7 @@
 #!/usr/bin/perl -w
 #
-use ExtUtils::testlib;
-use fark;
-use farkdata;
-use farkdir;
-#
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 #use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
@@ -15,6 +11,11 @@ use Capture::Tiny 'capture_merged';
 use File::Basename;
 use File::Compare;
 use File::Copy;
+#
+use ExtUtils::testlib;
+use fark;
+use farkdata;
+use farkdir;
 #
 my $ref=CGI->new();
 my $param    = $ref->{param};

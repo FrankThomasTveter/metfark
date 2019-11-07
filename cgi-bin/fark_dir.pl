@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 #
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;

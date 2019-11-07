@@ -352,15 +352,17 @@ sub makePath{
 }
 
 sub touchFile {
+    use POSIX qw/ceil/;
     my $path=shift;
     my $offset=shift;
     my ($dir,$name)=splitName($path);
     if (! -d $dir) {makePath($dir);}
     #print "Touching $path\n";
     my $time = time();
-    if (defined $offset) {$time=$time - $offset * 86400.0;};
-    my $ref = File::Touch->new( mtime => $time );
+    my $sec=(defined $offset?ceil($offset * 86400.0):0.0);
+    my $ref = File::Touch->new( time => $time-$sec );
     if ($ref->touch($path)) {
+	#print "farkdir::offset = $sec (".($offset//"").") $path\n";
 	if (chmod 0777, $path) {
 	    #print "Touched $path\n";
 	    return 1;
@@ -368,8 +370,10 @@ sub touchFile {
 	    return 0;
 	}
     } else {
+	my $hrs=(defined $offset?ceil($offset * 24.0):0.0);
+	#print "farkdir::Offset = $hrs (".($offset//"").")\n";
 	if (defined $offset) {
-	    system "touch -d '".$offset." days ago' $path";
+	    system "touch -d '".$hrs." hours ago' $path";
 	} else {
 	    system "touch $path";
 	}

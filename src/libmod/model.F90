@@ -2151,7 +2151,7 @@ CONTAINS
     newTarget%prev%next => newTarget
     newTarget%next%prev => newTarget
     css%trg_set=.false.
-    if(mod_bdeb)write(*,*)myname,"Target: '"//n80(1:lenn)//"'",css%ntrg
+    if(mod_bdeb)write(*,*)myname,"Target-1: '"//n80(1:lenn)//"'",css%ntrg
     return
   end subroutine model_pushtarget
   !
@@ -2392,7 +2392,7 @@ CONTAINS
              css%trg_offset(ii)=0
              !
              css%trg_valset(ii)=.true.
-             if (mod_bdeb) write(*,'(2(X,A),X,I0,2(X,A))')myname,'Target:',II,&
+             if (mod_bdeb) write(*,'(2(X,A),X,I0,2(X,A))')myname,'Target-2:',II,&
                   & css%trg80(ii)(1:css%trg_lent(ii)),&
                   & css%trg_v80(ii)(1:css%trg_lenv(ii))
              !
@@ -2418,7 +2418,7 @@ CONTAINS
                    return
                 end if
                 css%trg_minset(ii)=.true.
-                if (mod_bdeb) write(*,*)myname,'Minval:',css%trg_minval(ii),css%trg_minset(ii)
+                if (mod_bdeb) write(*,*)myname,'Minval:',css%trg_minval(ii),css%trg_minset(ii),css%trg_min80(ii)(1:lens)
              else
                 css%trg_minset(ii)=.false.
              end if
@@ -2445,7 +2445,7 @@ CONTAINS
                    return
                 end if
                 css%trg_maxset(ii)=.true.
-                if (mod_bdeb) write(*,*)myname,'Maxval:',css%trg_maxval(ii),css%trg_maxset(ii)
+                if (mod_bdeb) write(*,*)myname,'Maxval:',css%trg_maxval(ii),css%trg_maxset(ii),css%trg_max80(ii)(1:lens)
              else
                 css%trg_maxset(ii)=.false.
              end if
@@ -2473,7 +2473,7 @@ CONTAINS
              call chop0(css%trg_v80(ii),80)
              css%trg_lenv(ii)=length(css%trg_v80(ii),80,10)
              css%trg_offset(ii)=0
-             if (mod_bdeb) write(*,'(2(X,A),X,I0,2(X,A))')myname,'Target:',II,&
+             if (mod_bdeb) write(*,'(2(X,A),X,I0,2(X,A))')myname,'Target-3:',II,&
                   & css%trg80(ii)(1:css%trg_lent(ii)),&
                   & css%trg_v80(ii)(1:css%trg_lenv(ii))
              !
@@ -2494,6 +2494,7 @@ CONTAINS
              css%trg_type(ii)=0 ! undefined
           end if
        end if
+       if (mod_bdeb) write(*,*)myname,'Closing plim.'
        call parse_close(plim,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)

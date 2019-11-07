@@ -401,6 +401,7 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"midnight(<offset_days>)","addValue('"+target+"','midnight()');","Midnight in seconds since 1970 (function)");
     addChildButton(item,"now(<offset_days>)","addValue('"+target+"','now()');","Start of request in seconds since 1970 (function)");
     addChildButton(item,"name(value)","addValue('"+target+"','name()');","Name of constant (function)");
+    addChildButton(item,"md5(oid)","addValue('"+target+"','md5()');","Md5 of the observation file (function)");
     addChildButton(item,"range(value,min,max)","addValue('"+target+"','range()');","Returns NA if value is outside range (function)");
     addChildButton(item,"precinct(lon_deg,lat_deg)","addValue('"+target+"','precinct(,)');","Find area-identification of location (function)");
     addChildButton(item,"vicinity(lon_deg,lat_deg,range_km)","addValue('"+target+"','vicinity(,,)');","Find area-identification of location\n and its vicinity (function)");
@@ -429,10 +430,12 @@ function addFunctionButtons( item, target) {
     addChildButton(item,"Finland","addValue('"+target+"','Finland');","Area identification for Finland (constant)");
 };
 
-function addLogicalButtons( item, target) {
+function addMessageButtons( item, target) {
     addChildButton(item,"msgmax(var(:))","addValue('"+target+"','msgmax()');","Maximum value of target in BUFR message (function)");
     addChildButton(item,"msgmin(var(:))","addValue('"+target+"','msgmin()');","Minimum value of target in BUFR message (function)");
     addChildButton(item,"msgclosest(var(:),trg1,trg2...)","addValue('"+target+"','msgclosest(,,)');","Value of target in BUFR message closest to (trg1,trg2...) (function)");
+}
+function addLogicalButtons( item, target) {
     addChildButton(item,"ismember(var,trg1,trg2...)","addValue('"+target+"','ismember(,,)');","Check if var equals (trg1,trg2...) (function)");
     addChildButton(item,"isabove(var,max1,max2...)","addValue('"+target+"','isabove(,)');","Check if var is above (max1,max2...) (function)");
     addChildButton(item,"isbelow(var,min1,min2...)","addValue('"+target+"','isbelow(,)');","Check if var is below (min1,min2...) (function)");
@@ -541,6 +544,8 @@ function showDropdown(target) {
 	join_showSet(item,target,arg);
     } else if (target === 'joinColoc') {
 	join_showColoc(item,target,arg);
+    } else if (target === 'joinFilter') {
+	join_showFilter(item,target,arg);
     } else if (target.substr(0,14) === 'joinExpression') {
 	join_showExpression(item,target,arg);
     } else if (target.substr(0,13) === 'joinAttribute') {
@@ -995,10 +1000,11 @@ function dataToJoin(data) {
 	}
 	var table=joins[ii].getAttribute("table")||"";
 	var graphics=joins[ii].getAttribute("graphics")||"";
+	var filter=joins[ii].getAttribute("filter")||"1";
 	var overwrite=joins[ii].getAttribute("overwrite")||"true";
 	var cat=joins[ii].getAttribute("cat");
 	if (cat) {
-	    join_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,overwrite:overwrite,cat:cat,min:{},max:{}};
+	    join_config[path]={dataset:{}, attributes:{},table:table,graphics:graphics,filter:filter,overwrite:overwrite,cat:cat,min:{},max:{}};
 	    join_config[path]["filterDir"]=
 		set(join_config[path]["filterDir"],joins[ii].getAttribute("filterDir"));
 	    join_config[path]["filterDirMin"]=

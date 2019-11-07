@@ -43,22 +43,26 @@ module parse
        parse_used,        & ! which targets are used?
        parse_EvalErrMsg,  &! Error message (Use only when EvalErrType>0)
        parse_date_and_time ! date and time which uses loop offset
+  !
   INTEGER, PUBLIC            :: EvalErrType ! =0: no error occured, >0: evaluation error
   !  !------- -------- --------- --------- --------- --------- --------- --------- -------
   !  PRIVATE
   !  SAVE
-  integer,                                  PARAMETER :: parse_laa=ichar('a')
-  integer,                                  PARAMETER :: parse_lzz=ichar('z')
-  integer,                                  PARAMETER :: parse_uaa=ichar('A')
-  integer,                                  PARAMETER :: parse_uzz=ichar('Z')
-  integer,                                  PARAMETER :: parse_und=ichar('_')
-  INTEGER(is),                              PARAMETER :: parse_delay       = 0,&
+  integer,PARAMETER :: parse_laa=ichar('a')
+  integer,PARAMETER :: parse_lzz=ichar('z')
+  integer,PARAMETER :: parse_uaa=ichar('A')
+  integer,PARAMETER :: parse_uzz=ichar('Z')
+  integer,PARAMETER :: parse_und=ichar('_')
+  INTEGER(is),PARAMETER :: &
+       parse_delay       = 0,&
        parse_empty       = 1,&
        parse_constant    = 2,&
        parse_internal    = 3,&
        parse_variable    = 4,&
        parse_expression  = 5
-  INTEGER(is),                              PARAMETER :: cImmed     = 1,          &
+  !
+  INTEGER(is),PARAMETER :: &
+       cImmed     = 1,          &
        cNeg       = 2,          &
        cAdd       = 3,          & 
        cSub       = 4,          & 
@@ -97,32 +101,35 @@ module parse
        cNow       = 37,         &
        cRound     = 38,         &
        cVarName   = 39,         &
-       cValidRange= 40,         &
-       cShpPre    = 41,         &
-       cShpVic    = 42,         &
-       ctd2q      = 43,         &
-       crh2td     = 44,         &
-       ctd2rh     = 45,         &
-       cq2rh      = 46,         &
-       ck2c       = 47,         &
-       cc2k       = 48,         &
-       cSinh      = 49,         &
-       cCosh      = 50,         &
-       cTanh      = 51,         &
-       cSin       = 52,         &
-       cCos       = 53,         &
-       cTan       = 54,         &
-       cAsin      = 55,         &
-       cAcos      = 56,         &
-       cAtan2     = 57,         &
-       cAtan      = 58,         &
-       VarBegin   = 59
-  CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops        = (/ '+',     &
+       cMd5       = 40,         &
+       cValidRange= 41,         &
+       cShpPre    = 42,         &
+       cShpVic    = 43,         &
+       ctd2q      = 44,         &
+       crh2td     = 45,         &
+       ctd2rh     = 46,         &
+       cq2rh      = 47,         &
+       ck2c       = 48,         &
+       cc2k       = 49,         &
+       cSinh      = 50,         &
+       cCosh      = 51,         &
+       cTanh      = 52,         &
+       cSin       = 53,         &
+       cCos       = 54,         &
+       cTan       = 55,         &
+       cAsin      = 56,         &
+       cAcos      = 57,         &
+       cAtan2     = 58,         &
+       cAtan      = 59,         &
+       VarBegin   = 60
+  CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops= (/ &
+       '+',     &
        '-',     &
        '*',     &
        '/',     &
        '^' /)
-  CHARACTER (LEN=10), DIMENSION(cAbs:cAtan), PARAMETER :: Funcs      = (/ 'abs       ', &
+  CHARACTER (LEN=10), DIMENSION(cAbs:cAtan), PARAMETER :: Funcs= (/ &
+       'abs       ', &
        'exp       ', &
        'log10     ', &
        'log       ', &
@@ -154,6 +161,7 @@ module parse
        'now       ', &
        'round     ', &
        'name      ', &
+       'md5       ', &
        'range     ', &
        'precinct  ', &
        'vicinity  ', &
@@ -173,11 +181,7 @@ module parse
        'acos      ', &
        'atan2     ', &
        'atan      ' /)
-  integer :: nconst =0 ! number of constant variables (including rerun)
-  integer :: srerun =0 ! start index for rerun variables
-  integer :: nrerun =0 ! number of rerun variables
-  CHARACTER (LEN=25), allocatable :: Const(:)
-  real(rn), allocatable  :: constval(:)
+  !
   type :: parse_shape
      integer :: index =0                    ! shape index 
      CHARACTER(len=:), allocatable :: name  ! name of shape...
@@ -208,8 +212,6 @@ module parse
      real ::    vicinitylon = -999.0D0
      integer :: vicinity = 0
   end type parse_shapefile
-  type(parse_shapefile) :: sf
-
   !
   TYPE,PUBLIC ::  parse_session
      INTEGER(is), DIMENSION(:), POINTER   :: ByteCode => null()
@@ -230,9 +232,20 @@ module parse
      character*100 :: funcStr100=""
      integer :: lenf =0
   END TYPE parse_session
+  !
   type parse_pointer
      type(parse_session), pointer  :: ptr => null()
   end type parse_pointer
+  !
+  type(parse_shapefile) :: sf
+  integer :: nconst =0 ! number of constant variables (including rerun)
+  integer :: srerun =0 ! start index for rerun variables
+  integer :: nrerun =0 ! number of rerun variables
+  CHARACTER (LEN=25), allocatable :: Const(:)
+  real(rn), allocatable  :: constval(:)
+  integer :: nmd5 = 0 ! number of md5 values
+  CHARACTER (LEN=32), allocatable :: md5(:)
+  integer, allocatable :: md5val(:)
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
   ! Rerun variables
@@ -245,6 +258,7 @@ module parse
   real,allocatable :: rerun_value(:)
   character*250 :: rerun_off250 =""
   integer :: rerun_leno=0
+  logical :: rerun_set =.false.
   type(parse_session), pointer :: rerun_offset => null()  ! offset parse pointer
   !
   !------- -------- --------- --------- --------- --------- --------- --------- -------
@@ -270,12 +284,15 @@ CONTAINS
     integer :: irc
     real :: offset
     real :: ss
+    character*22 :: myname ="parse_date..."
+    irc=0
     call parse_initialise()
     offset=parse_getTimeOffset(crc250,irc)
     ! retrieve date from julian days...
     call jd2date( days+offset,values(1),values(2),values(3),&
          & values(5),values(6),ss)
     values(7)=int(ss)
+    !write(*,*)myname,"Date:",rerun_set,offset,values(1),values(2),values(3),irc
     return
   end subroutine parse_date_and_time
 
@@ -316,7 +333,8 @@ CONTAINS
        const(1+nshp)='pi'
        const(2+nshp)='e'
        const(3+nshp)='na'
-       if(parse_bdeb)write(*,*)myname,"Nvar:",rerun_nvar,rerun_var80
+       if(parse_bdeb)write(*,*)myname,"Nvar:",rerun_nvar,&
+            & (rerun_var80(ii)(1:rerun_lenv(ii)),ii=1,rerun_nvar)
        do ii=1,rerun_nvar
           const(3+nshp+ii)=rerun_var80(ii)(1:rerun_lenv(ii))
        end do
@@ -645,6 +663,30 @@ CONTAINS
     !
   end subroutine parse_setshapefile
   !
+  subroutine parse_setMd5(inmd5,imd5,crc250,irc)
+    integer :: inmd5
+    character*32 :: imd5(inmd5)
+    character*250 :: crc250
+    integer :: irc
+    integer :: ii
+    character*22 :: myname="parse_setMd5"
+    ! set md5
+    if(parse_bdeb)write(*,*)myname,"Entering:",inmd5
+    if (allocated(md5))deallocate(md5)
+    if (allocated(md5val))deallocate(md5val)
+    ! create a md5ant variable with name shp%name... and value shp%index
+    nmd5=inmd5
+    allocate(md5(0:nmd5),md5val(0:nmd5))
+    md5(0)='unknown'
+    md5val(0)=0
+    do ii=1,nmd5
+       md5(ii)=camelCase(imd5(ii),32)
+       md5val(ii)=ii
+    end do
+    if(parse_bdeb)write(*,*)myname,"Added md5:",nmd5
+    return
+  end subroutine parse_setMd5
+  !
   subroutine parse_simplifyShapes(tol20,crc250,irc)
     use shape
     implicit none
@@ -801,7 +843,7 @@ CONTAINS
     return
   end function parse_string
   !
-  FUNCTION parse_evalf (css, Val, crc250,irc) RESULT (res)
+  FUNCTION parse_evalf (css, Val, crc250, irc) RESULT (res)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     ! Evaluate bytecode of ith function for the values passed in array Val(:)
     !----- -------- --------- --------- --------- --------- --------- --------- -------
@@ -825,6 +867,7 @@ CONTAINS
     integer :: lens
     integer, external :: length
     logical :: above,below,found
+    integer,dimension(8) :: values
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if (.not.associated(css)) then
        if(parse_bdeb)write(*,*)myname,"Input ",&
@@ -1112,8 +1155,9 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(val8(1)),real(val8(2)),&
-                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+             call parse_date_and_time(values)
+             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
+                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -1175,8 +1219,9 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(val8(1)),real(val8(2)),&
-                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+             call parse_date_and_time(values)
+             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
+                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -1212,8 +1257,10 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
-               &real(val8(3)),0.0D0,0.0D0,0.0D0)
+          call parse_date_and_time(values)
+          css%Stack(SP)=css%Stack(SP)*secperday+&
+               & parse_f1970(real(values(1)),real(values(2)),&
+               & real(values(3)),0.0D0,0.0D0,0.0D0)
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday             
           end do
@@ -1221,8 +1268,10 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
-               &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+          call parse_date_and_time(values)
+          css%Stack(SP)=css%Stack(SP)*secperday+&
+               & parse_f1970(real(values(1)),real(values(2)),&
+               & real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
@@ -1247,9 +1296,29 @@ CONTAINS
              allocate(character(len=css%clen) :: css%cbuff)
              css%cbuff=trim(getname25(css%Stack(SP)))
           else
-             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to names:",nargs
              irc=312
-             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shapes.")
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to names.")
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cMd5)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.1) then
+             if (parse_bdeb) write(*,*)"*** Found md5:",nint(css%stack(sp))
+             if (allocated(css%cbuff)) deallocate(css%cbuff)
+             css%clen=25
+             allocate(character(len=css%clen) :: css%cbuff)
+             css%cbuff=trim(getmd5(css%Stack(SP)))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to md5:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to md5.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -1523,6 +1592,7 @@ CONTAINS
     integer :: lens,imax
     integer, external :: length
     logical :: above,below,found
+    integer,dimension(8) :: values
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if (.not.associated(css)) then
        if(parse_bdeb)write(*,*)myname,"Input ",&
@@ -1808,8 +1878,9 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(val8(1)),real(val8(2)),&
-                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+             call parse_date_and_time(values)
+             css%Stack(SP)=css%Stack(SP)+parse_f1970(real(values(1)),real(values(2)),&
+                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_f1970(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -1871,8 +1942,9 @@ CONTAINS
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
           IF (NARGS.EQ.1) THEN ! dtg()
-             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(val8(1)),real(val8(2)),&
-                  &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+             call parse_date_and_time(values)
+             css%Stack(SP)=css%Stack(SP)+parse_fjulian(real(values(1)),real(values(2)),&
+                  &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
              css%Stack(SP)=parse_fjulian(css%Stack(SP), &
                   css%Stack(SP+1), &
@@ -1908,8 +1980,10 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
-               &real(val8(3)),0.0D0,0.0D0,0.0D0)
+          call parse_date_and_time(values)
+          css%Stack(SP)=css%Stack(SP)*secperday+&
+               & parse_f1970(real(values(1)),real(values(2)),&
+               & real(values(3)),0.0D0,0.0D0,0.0D0)
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
@@ -1917,8 +1991,10 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          css%Stack(SP)=css%Stack(SP)*secperday+parse_f1970(real(val8(1)),real(val8(2)),&
-               &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+          call parse_date_and_time(values)
+          css%Stack(SP)=css%Stack(SP)*secperday+&
+               & parse_f1970(real(values(1)),real(values(2)),&
+               & real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           do ii=1,nargs-1
              css%Stack(SP)=css%Stack(SP)+css%Stack(SP+ii)*secperday
           end do
@@ -1943,9 +2019,29 @@ CONTAINS
              allocate(character(len=css%clen) :: css%cbuff)
              css%cbuff=trim(getname25(css%Stack(SP)))
           else
-             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to names:",nargs
              irc=312
-             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shapes.")
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to names.")
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cMd5)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.1) then
+             if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stack(sp))
+             if (allocated(css%cbuff)) deallocate(css%cbuff)
+             css%clen=25
+             allocate(character(len=css%clen) :: css%cbuff)
+             css%cbuff=trim(getmd5(css%Stack(SP)))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to md5:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to md5.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -2220,6 +2316,7 @@ CONTAINS
     integer :: lens
     integer, external :: length
     character*12 :: myname ="parse_evala"
+    integer,dimension(8) :: values
     !----- -------- --------- --------- --------- --------- --------- --------- -------
     if (.not.associated(css)) then
        if(parse_bdeb)write(*,*)myname,"Input ",&
@@ -2687,8 +2784,9 @@ CONTAINS
           IF (NARGS.EQ.1) THEN ! dtg(days)
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
-                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_f1970(real(val8(1)),real(val8(2)),&
-                        &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+                   call parse_date_and_time(values)
+                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_f1970(real(values(1)),real(values(2)),&
+                        &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
                 END IF
              END DO
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
@@ -2785,8 +2883,9 @@ CONTAINS
           IF (NARGS.EQ.1) THEN ! dtg()
              DO JJ=1,NPOS
                 IF(SET(JJ))THEN
-                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_fjulian(real(val8(1)),real(val8(2)),&
-                        &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+                   call parse_date_and_time(values)
+                   css%Stacka(SP,JJ)=css%Stacka(SP,JJ)+parse_fjulian(real(values(1)),real(values(2)),&
+                        &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
                 END IF
              END DO
           ELSE IF (NARGS.EQ.6) THEN ! dtg(year,month,day,hour,min,sec)
@@ -2835,8 +2934,9 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          buff=parse_f1970(real(val8(1)),real(val8(2)),&
-               &real(val8(3)),0.0D0,0.0D0,0.0D0)
+          call parse_date_and_time(values)
+          buff=parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),0.0D0,0.0D0,0.0D0)
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 css%Stack(SP)=css%Stack(SP)*secperday+buff
@@ -2849,8 +2949,9 @@ CONTAINS
           AI=AI+1
           NARGS=css%ArgsByte(AI)
           SP=SP-NARGS+1
-          buff=parse_f1970(real(val8(1)),real(val8(2)),&
-               &real(val8(3)),real(val8(5)),real(val8(6)),real(val8(7)))
+          call parse_date_and_time(values)
+          buff=parse_f1970(real(values(1)),real(values(2)),&
+               &real(values(3)),real(values(5)),real(values(6)),real(values(7)))
           DO JJ=1,NPOS
              IF(SET(JJ))THEN
                 css%Stacka(SP,JJ)=css%Stacka(SP,JJ)*secperday+buff
@@ -2888,9 +2989,29 @@ CONTAINS
              allocate(character(len=css%clen) :: css%cbuff)
              css%cbuff=trim(getname25(css%Stacka(SP,1)))
           else
-             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to shapes:",nargs
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to names:",nargs
              irc=312
-             call parse_errorappend(crc250,myname//" Unexpected number of arguments to shapes.")
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to names.")
+             call parse_errorappendi(crc250,nargs)
+             call parse_errorappend(crc250,"\n")
+             EvalErrType=5
+             res=zero
+             RETURN
+          end if
+       CASE  (cMd5)
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          if (nargs.eq.1) then
+             if (parse_bdeb) write(*,*)"*** Found shape:",nint(css%stacka(sp,1))
+             if (allocated(css%cbuff)) deallocate(css%cbuff)
+             css%clen=25
+             allocate(character(len=css%clen) :: css%cbuff)
+             css%cbuff=trim(getmd5(css%Stacka(SP,1)))
+          else
+             if (parse_bdeb) write(*,*)"*** Unexpected number of arguments to md5:",nargs
+             irc=312
+             call parse_errorappend(crc250,myname//" Unexpected number of arguments to md5.")
              call parse_errorappendi(crc250,nargs)
              call parse_errorappend(crc250,"\n")
              EvalErrType=5
@@ -3516,7 +3637,15 @@ CONTAINS
     END IF
     IF (PRESENT(ibegin)) ibegin = ib
     IF (PRESENT(inext))  inext  = in
-    if (n.eq.0.and.parse_bdeb)write(*,*) myname,"No match for '"//str(ib:in-1)//"'"
+    if (n.eq.0.and.parse_bdeb)then
+       if (allocated(var)) then
+          DO j=lbound(var,1),ubound(Var,1)
+             write(*,*) myname,"Variable: '"//str(ib:in-1)//"' != '"//trim(Var(j))//"'",&
+                  & in-ib,len_trim(var(j))
+          END DO
+       end if
+       write(*,*) myname,"No match for '"//str(ib:in-1)//"'"
+    end if
     if(parse_bdeb)write(*,*)myname,"Done.",ib,in
   END FUNCTION parse_VariableIndex
   !
@@ -4646,6 +4775,20 @@ CONTAINS
     return
   end function getname25
   !
+  character*32 function getmd5(val)
+    implicit none
+    real :: val
+    integer :: jj
+    do jj=1,nmd5
+       if (abs(md5val(jj)-val).lt.1.0D-5) then
+          getmd5=md5(jj)
+          return
+       end if
+    end do
+    getmd5="undefined"
+    return
+  end function getmd5
+  !
   !
   !###############################################################################
   ! RERUN ROUTINES
@@ -4719,12 +4862,13 @@ CONTAINS
     call chop0(rerun_off250,250)
     rerun_leno=length(rerun_off250,250,10)
     if(parse_bdeb)write(*,*)myname,"Offset:'"//rerun_off250(1:rerun_leno)//"'",irc
-    if (associated(rerun_offset)) then
+    if (rerun_set) then
        call parse_close (rerun_offset,crc250,irc)
        if (irc.ne.0) then
           call parse_errorappend(crc250,"parse_close")
           return
        end if
+       rerun_set=.false.
     end if
     if (rerun_leno.gt.0) then
        call parse_open(rerun_offset,crc250,irc)
@@ -4749,6 +4893,7 @@ CONTAINS
           call parse_errorappend(crc250,"\n")
           return
        end if
+       rerun_set=.true.
     end if
     return
   end subroutine parse_setoffset
@@ -4757,18 +4902,27 @@ CONTAINS
     character*250 :: crc250
     integer :: irc
     character*22 :: myname="parse_gettimeoffset"
-    if (associated(rerun_offset)) then
+    !write(*,*) myname,'Entering:',rerun_set,'"'//rerun_off250(1:rerun_leno)//'"',&
+    !     & rerun_value,associated(rerun_offset),irc
+    if (rerun_set) then
+       rerun_set=.false.
        parse_gettimeoffset=parse_evalf(rerun_offset,rerun_value,crc250,irc)
        if (irc.ne.0) then
           call parse_errorappend(crc250,myname)
           call parse_errorappend(crc250," Error return from evalf.")
           call parse_errorappendi(crc250,irc)
           call parse_errorappend(crc250,"\n")
+          parse_gettimeoffset=0.0D0
+          rerun_set=.true.
+          !write(*,*) myname,'Error:',rerun_set,'"'//rerun_off250(1:rerun_leno)//'"',crc250
           return
        end if
+       rerun_set=.true.
     else
        parse_gettimeoffset=0.0D0
     end if
+    !write(*,*) myname,'Done:',rerun_set,'"'//rerun_off250(1:rerun_leno)//'"', &
+    !     & parse_gettimeoffset,irc
     return
   end function parse_gettimeoffset
   !

@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 #
 use strict;
+use lib "/home/ubuntu/perl5/lib/perl5/x86_64-linux-gnu-thread-multi";
 use CGI;
 use CGI::Carp 'fatalsToBrowser';
 use XML::LibXML;
@@ -605,6 +606,7 @@ sub saveJoin {
     my $password=($param->{password}[0] // "");
     my $table=($param->{table}[0] // "");
     my $graphics=($param->{graphics}[0] // "true");
+    my $filter=($param->{filter}[0] // "1");
     my $overwrite=($param->{overwrite}[0] // "");
     my $filterDir=($param->{filterDir}[0] // "");
     my $filterDirMin=($param->{filterDirMin}[0] // "");
@@ -663,6 +665,7 @@ sub saveJoin {
 	    $node->setAttribute("file",        $file);
 	    $node->setAttribute("table",       $table);
 	    $node->setAttribute("graphics",    $graphics);
+	    $node->setAttribute("filter",      $filter);
 	    $node->setAttribute("overwrite",   $overwrite);
 	    $node->setAttribute("filterDir",   $filterDir);
 	    $node->setAttribute("filterDirMin",$filterDirMin);

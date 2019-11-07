@@ -21,6 +21,7 @@ void mod_pushtarget_(int* mid,char* trg,char* var,char* min,char* max, char* crc
 void mod_setfilter_ (int* cid, char* flt,  char* crc250, int* irc, int len1, int len2);
 
 void obs_opensession_(int* oid,char* crc250,int* irc, int len1);
+void obs_parsemd5_(int* oid,char* crc250,int* irc, int len1);
 void obs_clearfilestack_(int* oid,char* crc250,int* irc, int len1);
 void obs_cleartargetstack_(int* oid,char* crc250,int* irc, int len1);
 void obs_closesession_(int* oid,char* crc250,int* irc, int len1);
@@ -29,7 +30,7 @@ void obs_makecache_(int* oid,char* path,char* crc250,int* irc, int len1,int len2
 void obs_peekfile_(int* oid,int* maxrep,int* nrep,char* rep250,char* crc250,int* irc,int len1,int len2);
 void obs_peekfilelen_(int* oid,int* maxrep,char* crc250,int* irc, int len1);
 void obs_popfile_(int* oid,char* path250,char* crc250,int* irc, int len1,int len2);
-void obs_pushfile_(int* oid,char* path,char* crc250,int* irc, int len1,int len2);
+void obs_pushfile_(int* oid,char* path,char* md, char* crc250,int* irc, int len1,int len2,int len3);
 void obs_pushtarget_(int* oid,char* trg,char* pos,char* descr,char* info,char* min,char* max, char* crc250,int* irc, int len1,int len2,int len3,int len4,int len5,int len6,int len7);
 void obs_settablepath_(int* oid,char* path250,char* crc250,int* irc, int len1,int len2);
 void obs_setindex_(int* oid,char* trg80,char* exp250, char* crc250,int* irc, int len1,int len2,int len3);
@@ -81,6 +82,7 @@ void tab_getgraphicsdir_(int* pid, char* fn250, char* crc250, int* irc, int len1
 void tab_streptablefile_(int* pid, char* crc250, int* irc, int len1);
 void tab_strepgraphicsdir_(int* pid, char* crc250, int* irc, int len1);
 void tab_setdebug_(int* ideb);
+void tab_setfilter_ (int* cid, char* flt,  char* crc250, int* irc, int len1, int len2);
 
 MODULE = fark		PACKAGE = fark
 
@@ -1005,6 +1007,30 @@ xs_clearObsFileStack(int oid);
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
 
+#
+#  "parseMd5" pushes observation file Md5 to the parser...
+#   Return array:
+#      (integer) error return code (0=ok).
+#      (string)  error return message
+
+void
+xs_parseMd5(int oid);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      obs_parsemd5_(&oid,crc250, &irc, 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      }
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
 #  "pushObsFile" adds obs file to the obs file stack.
 #      (string) ... paths to obs files.
 #   Return array:
@@ -1015,35 +1041,29 @@ xs_clearObsFileStack(int oid);
 #
 
 void
-xs_pushObsFile(int oid, ...);
+xs_pushObsFile(int oid, char *path, char *md);
     PREINIT:
       int  irc;
       char *crc250;
       int i;
       char *path250;
-      char* path;
-      int irc2;
+      char* md50;
     PPCODE:
       irc=0;
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       path250 = calloc(sizeof(char), 250);
-      for (i=1; i < items; i++) {
-         path= (char *)SvPV_nolen(ST(i));
-         strcpy(path250,path);
-	 irc2=0;
-         obs_pushfile_(&oid, path250, crc250, &irc2, 250, 250);
-         if(irc2 != 0) {
-	    irc=irc2;
-	    i=items;
-         }
-      }
+      strcpy(path250,path);
+      md50 = calloc(sizeof(char), 50);
+      strcpy(md50,md);
+      obs_pushfile_(&oid, path250, md50,crc250, &irc, 250, 50, 250);
       if (irc == 0) {
          strcpy(crc250,"");
       }
       EXTEND(SP, 2);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(md50);
       free(path250);
       free(crc250);
 
@@ -1350,6 +1370,7 @@ xs_setModelFilter(int cid, char *filter);
       PUSHs(sv_2mortal(newSViv(irc)));
       PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
       free(crc250);
+
 #
 #  "setObsFilter" defines observation filter
 #      (string) filtler.
@@ -1368,6 +1389,33 @@ xs_setObsFilter(int cid, char *filter);
       crc250 = calloc(sizeof(char), 250);
       strcpy(crc250,"");
       obs_setfilter_(&cid,filter, crc250, &irc, strlen(filter), 250);
+      if(irc == 0) {
+         strcpy(crc250,"");
+      };
+      EXTEND(SP, 2);
+      PUSHs(sv_2mortal(newSViv(irc)));
+      PUSHs(sv_2mortal(newSVpv(crc250,strlen(crc250))));
+      free(crc250);
+
+
+#
+#  "setTableFilter" defines filter
+#      (string) filter.
+#   Return array:
+#      (string)  result
+#      (integer) error return code (0=ok)
+#      (string)  error return message
+
+void
+xs_setTableFilter(int cid, char *filter);
+    PREINIT:
+      int  irc;
+      char *crc250;
+    PPCODE:
+      irc=0;
+      crc250 = calloc(sizeof(char), 250);
+      strcpy(crc250,"");
+      tab_setfilter_(&cid,filter, crc250, &irc, strlen(filter), 250);
       if(irc == 0) {
          strcpy(crc250,"");
       };

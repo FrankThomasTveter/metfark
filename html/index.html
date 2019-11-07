@@ -490,6 +490,23 @@
 		    <td style="min-width:25px;width:25px" align="right">
 		      <button onclick="showDropdown('colocModelFilter')" class="dropbtn" title="Show <model targets>)" class="dropbtn"
 			      title="Show available functions">&#9776;</button></td>
+
+		  </tr>
+		</table>
+	      </td>
+	    </tr>
+	    <tr id="colocDebugExpression">
+	      <td>Debug expression:</td>
+	      <td colspan="6"> 
+		<table width="100%" border="1" id="debugExpression"> 
+		  <tr>
+		    <td class="fill">
+		      <input id="colocDebugExp" value="" title="Expression to execute. Only internal variables are available">
+		      <div id="colocDebugExpDropdown" class="dropdown-content"></div>
+		    </td>
+		    <td style="min-width:25px;width:25px" align="center">
+		      <button onclick="showDropdown('colocDebugExp')" class="dropbtn"
+			      title="Show available functions">&#9776;</button></td>
 		    <td style="min-width:25px;width:25px" align="center">
 		      <button class="run" onclick="debugExp('colocDebugExp','colocDebugRes')" title="Send expression to server and display results">&#9654;</button></td>
 		    <td width="20%" id="colocDebugRes">0</td>
@@ -719,13 +736,32 @@
 	      </td>
 	    </tr>
 	    <tr id="displayJoinDataset">
-	      <td valign="top">Dataset:</td> <!-- tr style="display:none"-->
+	      <td valign="top">Columns:</td> <!-- tr style="display:none"-->
 	      <td colspan="6">
 		<table border="2" id="joinDatasetTable" width="100%">
 		  <tr style="background-color:#00b9f2" id="labelsJoinDataset"> 
 		    <th>Column</th>
 		    <th width="50%">Minimum</th>
 		    <th width="50%">Maximum</th>
+		  </tr>
+		</table>
+	      </td>
+	    </tr>
+	    <tr id="displayJoinFilter">
+	      <td valign="top">
+		Row filter:
+	      </td>
+	      <td colspan="6">
+		<table>
+		  <tr>
+		    <td width="100%">
+		      <textarea id="joinFilter" rows="2" style="position:relative;width:100%" onblur="join_setArray('filter',this.value);"
+				title="Join filter using column values. This filter is applied to each row in the join. The row is rejected if the filter expression returns 0."></textarea>
+		      <div id="joinFilterDropdown" class="dropdown-content"></div>
+		    </td>
+		    <td style="min-width:25px;width:25px" align="right">
+		      <button onclick="showDropdown('joinFilter')" class="dropbtn" title="Show <targets>" class="dropbtn"
+			      title="Show available functions">&#9776;</button></td>
 		  </tr>
 		</table>
 	      </td>

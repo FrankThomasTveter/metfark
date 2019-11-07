@@ -16,6 +16,7 @@ subroutine par_getoffset(off25,crc250, irc)
      return
   end if
   write(off25,'(F0.2)')offset
+  call chop0(off25,25)
   !write(*,*) myname,' Done.'
   return
 end subroutine par_getoffset

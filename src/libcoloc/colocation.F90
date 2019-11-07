@@ -2521,7 +2521,7 @@ CONTAINS
                 end if
                 cLoc=>cLoc%next
              end do
-             if(col_bdeb)write(*,*)myname,'Locations:',locid
+             if(col_bdeb)write(*,*)myname,' Locations:',locid
           end if
           !
           if (tmod.ne.0) then

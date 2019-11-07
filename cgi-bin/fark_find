@@ -4,7 +4,7 @@
 ##&debug=1
 
 
-./fark_find.pl '?type=joinfile&file=default.cfg&password=fark&target=%2Flustre%2FstoreA%2Fproject%2Fnwp%2Ffark%2F2019%2F10%2F22%2Fmeps_syno_003d_R.table&debug=1'
+./fark_find.pl '?type=joinfile&file=default.cfg&password=fark&target=%2Flustre%2FstoreA%2Fproject%2Fnwp%2Ffark%2Ftest%2Ftest.table&debug=1'
 
 
 
