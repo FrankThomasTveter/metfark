@@ -97,10 +97,10 @@
 		      <input id="modelIndexVariable" type="text" value="" 
 			     style="width:100%" onblur="model_setArray('indexVariable',this.value);model_checkVariable(this)"
 			     title="Epoch time:&#13;The value range of this <model variable> is used to &#13;sort the <NETCDF model files> in an index.&#13;This index is used during colocation to find &#13;matching <BUFR observation files>."/>
-		      <div id="modelIndexDropdown" class="dropdown-content"></div>
+		      <div id="modelIndexVariableDropdown" class="dropdown-content"></div>
 		    </td>
 		    <td align="center">
-		      <button onclick="showDropdown('modelIndex')" class="dropbtn"
+		      <button onclick="showDropdown('modelIndexVariable')" class="dropbtn"
 			      title="Show available <model variables>">&#9776;</button>
 		    </td>
 		  </tr>
@@ -313,7 +313,7 @@
 			title="Show available <setup files> and actions">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td>Model index file:</td>
+	      <td>Model setup file:</td>
 	      <td class="fill" colspan="2" width="100%">
 		<input id="colocModelConfigFile" type="text" value="" style="width:100%" disabled /> 
 		<div id="colocModelConfigFileDropdown" class="dropdown-content"></div>
@@ -323,7 +323,7 @@
 			title="Show available model <setup files>">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td>Observation index file:</td>
+	      <td>Observation setup file:</td>
 	      <td width="100%" colspan="2" class="fill">
 		<input id="colocObsConfigFile" type="text" value="" style="width:100%" disabled/> 
 		<div id="colocObsConfigFileDropdown" class="dropdown-content"></div>
@@ -575,7 +575,7 @@
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td style="white-space: nowrap;">Output plot directory:</td>
+	      <td style="white-space: nowrap;">Output plot prefix:</td>
 	      <td class="fill" width="100%" colspan="5">
 		<input id="tableGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="table_setArray('graphics',this.value);"
 		       title="Output <graphics file> directory pattern.&#13;This path is used as a prefix to the graphics output files.&#13;This path can be overridden in the plot setup."/> 
@@ -681,7 +681,7 @@
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td style="white-space: nowrap;">Output plot directory:</td>
+	      <td style="white-space: nowrap;">Output plot prefix:</td>
 	      <td class="fill" width="100%" colspan="5">
 		<input id="joinGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="join_setArray('graphics',this.value);"
 		       title="Output <graphics file> directory pattern.&#13;This path is used as a prefix to the graphics output files.&#13;This path can be overridden in the plot setup."/> 
@@ -924,7 +924,7 @@
 			title="Show directories and wildcards">&#9776;</button></td>
 	    </tr>
 	    <tr>
-	      <td style="white-space: nowrap;">Output directory:</td>
+	      <td style="white-space: nowrap;">Output plot prefix:</td>
 	      <td class="fill" width="100%" colspan="2">
 		<input id="plotGraphics" type="text" value="/elysium/data/default/YYYYMMDDHH.ps" onblur="plot_setArray('graphics',this.value);"
 		       title="Override the output directory given in the Table/Join setup"/> 

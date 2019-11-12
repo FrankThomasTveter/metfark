@@ -469,7 +469,7 @@ function showDropdown(target) {
 	model_showFilterDir(item,target,arg);
     } else if (target === 'modelFilterFile') {
 	model_showFilterFile(item,target,arg);
-    } else if (target === 'modelIndex') { 
+    } else if (target === 'modelIndexVariable') { 
 	model_showIndex(item,target,arg);
     } else if (target === 'obsConfigFile') {
 	obs_showConfigFile(item,target,arg);

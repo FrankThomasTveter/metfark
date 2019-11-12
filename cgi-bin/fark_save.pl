@@ -507,7 +507,7 @@ sub saveTable {
 	    }
 	    # check that output does not match output in other files...
 	    my $ofile=farkdir::checkClassForStrings($cls,$ifile,@ostrings);
-	    if ($ofile) {
+	    if ($ofile && "$overwrite" eq "true") {
 		farkdir::term("Output overlaps with '$ofile'");
 	    }
 	    $node->setAttribute("path",        $loc . $file);
@@ -654,7 +654,7 @@ sub saveJoin {
 	    }
 	    # check that output does not match output in other files...
 	    my $ofile=farkdir::checkClassForStrings($cls,$ifile,@ostrings);
-	    if ($ofile) {
+	    if ($ofile && "$overwrite" eq "true") {
 		farkdir::term("Output overlaps with '$ofile'");
 	    }
 	    $node->setAttribute("path",        $loc . $file);

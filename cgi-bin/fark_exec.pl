@@ -883,7 +883,7 @@ eval {
 	    #   my $cmd="Rscript --vanilla $fpath $tablefile $graphicsdir $test";
 	    #
 	} else {
-	    if($debug){print "****** Table file exists: '$tablefile'\n";}
+	    print "****** Table file exists: '$tablefile'\n";
 	    farkdir::touchFile($clsFillFile) || farkdir::term("$myname unable to touch '$clsFillFile'");
 	};
 	#
@@ -1001,8 +1001,8 @@ eval {
 	my $cls = shift;
 	my $test = shift;
 	my $abort         = shift // 0;
-	my $clsFillFile = shift;
-	my $logfile = shift;
+	my $clsFillFile   = shift;
+	my $logfile       = shift;
 	my $variable      = shift;
 	my $value         = shift;
 	my $offset        = shift;
@@ -1031,10 +1031,12 @@ eval {
 	print "Return code:  $ret\n";
 	if ($ret != 0) {
 	    farkdir::term("$myname failed command '$cmd'");
+	} else {
+	    farkdir::touchFile($clsFillFile) || farkdir::term("$myname unable to touch '$clsFillFile'");
 	}
 	print ">>>> Normal end of process...\n";
 	if($debug){print "processPlot Exiting.\n";}
-	return $cmd; # run system command afterwards
+	return; # no system command will be run afterwards (as opposed to return $cmd)
     };
     sub processRerun {
 	my $xmlfile = shift;

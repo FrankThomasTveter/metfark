@@ -386,6 +386,7 @@ function model_showConfigFile(item,target,arg) {
 		    // added=true;
 		    //}
 		    // add directories...
+		    var configfile=model_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -397,7 +398,10 @@ function model_showConfigFile(item,target,arg) {
 			//  dd=dd + file;
 			//}
 			//console.log("Adding dir button: ",dd,ii,dirs[ii]);
-			if (looksLikeFile(dd)) {
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"model_setConfigFile('"+dd+"');model_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"model_setConfigFile('"+dd+"');model_show();","Use <file>");
 			    added=true;
 			} else {

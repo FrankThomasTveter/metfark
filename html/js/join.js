@@ -74,7 +74,7 @@ function join_getObsConfigFile() {
 function join_setArray(parameter,value) {
     var file=join_getConfigFile();
     join_config[file][parameter]=decodeURI(value);
-    console.log("File:",file,parameter,value,JSON.stringify(join_config[file]));
+    //console.log("File:",file,parameter,value,JSON.stringify(join_config[file]));
 };
 
 function join_expandCat(cat) {
@@ -729,6 +729,7 @@ function join_showConfigFile(item,target,arg) {
 			} else if (root["type"] == "unknown") {
 			}
 		    };
+		    var configfile=join_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -740,7 +741,10 @@ function join_showConfigFile(item,target,arg) {
 			//  dd=dd + file;
 			//}
 			//console.log("Adding dir button: ",dd);
-			if (looksLikeFile(dd)) {
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"join_setConfigFile('"+dd+"');join_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"join_setConfigFile('"+dd+"');join_show();","Use <file>");
 			    added=true;
 			} else {

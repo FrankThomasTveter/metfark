@@ -1119,6 +1119,9 @@ function coloc_show() {
     showValue('colocModelConfigFile',coloc_config[file]["modelConfigFile"]["file"]);
     showValue('colocObsConfigFile',coloc_config[file]["obsConfigFile"]["file"]);
     showValue('colocXML',coloc_config[file]["xml"]);
+
+    //console.log("Setting XML:",file,coloc_config[file]["xml"],JSON.stringify(coloc_config[file]));
+
     showValue('colocModelFilter',coloc_config[file]["filter"]);
     showValue('colocObsFilter',coloc_config[file]["obsConfigFile"]["filter"]);
     coloc_showCOLOC();
@@ -1793,6 +1796,7 @@ function coloc_showConfigFile(item,target,arg) {
 		    //addChildButton(item,coloc,"coloc_setConfigFile('"+coloc+"');coloc_show();");
 		    //added=true;
 		    //}
+		    var configfile=coloc_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -1804,7 +1808,11 @@ function coloc_showConfigFile(item,target,arg) {
 			//  dd=dd + file;
 			//}
 			//console.log("Adding button: ",dd);
-			if (looksLikeFile(dd)) {
+			
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"coloc_setConfigFile('"+dd+"');coloc_show();","Use <file>");
 			    added=true;
 			} else {
@@ -1843,6 +1851,7 @@ function coloc_showModelConfigFile(item,target,arg) {
 		if (errors.length > 0 ) {
 		    item.classList.toggle("show");
 		    var msg=getErrorMessage(errors);
+		    showValue('colocModelConfigFile',"");
 		    alert("Unable to list '"+arg+"'\n"+msg);
 		} else {
 		    var ret=dataToArray(data,status,documentLog);
@@ -1865,6 +1874,7 @@ function coloc_showModelConfigFile(item,target,arg) {
 			addChildButton(item,"<up>","coloc_setConfig('modelConfigFile','file','"+dd+"');coloc_show();","Change to parent <directory");
 			added=true;
 		    }
+		    var configfile=coloc_getModelConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -1896,7 +1906,8 @@ function coloc_showModelConfigFile(item,target,arg) {
 		documentLog.innerHTML="";
 	    })
 	.error(
-	    function (error) { alert("Model request failed (system error)");}
+	    function (error) { showValue('colocModelConfigFile',"");
+			       alert("Model request failed (system error)");}
 	);
 };
 
@@ -1933,6 +1944,7 @@ function coloc_showObsConfigFile(item,target,arg) {
 		if (errors.length > 0 ) {
 		    item.classList.toggle("show");
 		    var msg=getErrorMessage(errors);
+		    showValue('colocObsConfigFile',"");
 		    alert("Unable to list '"+arg+"'\n"+msg);
 		} else {
 		    var ret=dataToArray(data,status,documentLog);
@@ -1955,6 +1967,7 @@ function coloc_showObsConfigFile(item,target,arg) {
 			addChildButton(item,"<up>","coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_show();","Change to parent <directory>");
 			added=true;
 		    }
+		    var configfile=coloc_getObsConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -1966,7 +1979,10 @@ function coloc_showObsConfigFile(item,target,arg) {
 			//     dd=dd + file;
 			// }
 			//console.log("Adding dir button: ",dd);
-			if (looksLikeFile(dd)) {
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"coloc_setConfig('obsConfigFile','file','"+dd+"');coloc_updateObsData('"+dd+"');coloc_show();","Use <file>");
 			    added=true;
 			} else {
@@ -1985,7 +2001,8 @@ function coloc_showObsConfigFile(item,target,arg) {
 		documentLog.innerHTML="";
 	    })
 	.error(
-	    function (error) { alert("Obs request failed (system error)");}
+	    function (error) { showValue('colocObsConfigFile',"");
+			       alert("Obs request failed (system error)");}
 	);
 };
 

@@ -561,6 +561,7 @@ function rerun_showConfigFile(item,target,arg) {
 		    // added=true;
 		    //}
 		    // add directories...
+		    var configfile=rerun_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -572,7 +573,10 @@ function rerun_showConfigFile(item,target,arg) {
 			//  dd=dd + file;
 			//}
 			//console.log("Adding dir button: ",dd,ii,dirs[ii]);
-			if (looksLikeFile(dd)) {
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"rerun_setConfigFile('"+dd+"');rerun_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"rerun_setConfigFile('"+dd+"');rerun_show();","Use <file>");
 			    added=true;
 			} else {
@@ -663,7 +667,10 @@ function rerun_showSetupFile(item,target,arg) {
 				    //dd=dd + file;
 				    //}
 				    //console.log("Adding dir button: ",dd,ii);
-				    if (looksLikeFile(dd)) {
+				    if (dd === arg) {
+					addChildButtonShaded(item,dd,"showValue('rerunSetupFile','"+dd+"');","Use <file>");
+					added=true;
+				    } else if (looksLikeFile(dd)) {
 					addChildButton(item,dd,"showValue('rerunSetupFile','"+dd+"');","Use <file>");
 					added=true;
 				    } else {

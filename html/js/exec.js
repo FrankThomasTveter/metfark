@@ -647,6 +647,7 @@ function exec_showConfigFile(item,target,arg) {
 		if (errors.length > 0 ) {
 		    item.classList.toggle("show");
 		    var msg=getErrorMessage(errors);
+		    showValue('execConfigFile',"");
 		    alert("Unable to list '"+arg+"'\n"+msg);
 		} else {
 		    var ret=dataToArray(data,status,documentLog);
@@ -654,6 +655,7 @@ function exec_showConfigFile(item,target,arg) {
 		    if (errors.length > 0 ) {
 			item.classList.toggle("show");
 			var msg=getErrorMessage(errors);
+			showValue('execConfigFile',"");
 			alert("Unable to list '"+arg+"', type '"+type+"' \n"+msg);
 		    } else if (ret[0] !== undefined) {
 			var root=ret[0]||{};
@@ -678,7 +680,8 @@ function exec_showConfigFile(item,target,arg) {
 			    //console.log("Adding clear: ",dd);
 			    addChildButton(item,"<up>","showValue('execConfigFile','');","Change to root <directory>");
 			    added=true;
-			}
+			};
+			var configfile=arg;
 			if (dirs.length > 0) {
 			    for (var ii=1;ii<dirs.length;ii++) {
 				var dir=dirs[ii];
@@ -692,7 +695,10 @@ function exec_showConfigFile(item,target,arg) {
 				    //dd=dd + file;
 				    //}
 				    //console.log("Adding dir button: ",dd,ii);
-				    if (looksLikeFile(dd)) {
+				    if (dd===configfile) {
+					addChildButtonShaded(item,dd,"showValue('execConfigFile','"+dd+"');","Use <file>");
+					added=true;
+				    } else if (looksLikeFile(dd)) {
 					addChildButton(item,dd,"showValue('execConfigFile','"+dd+"');","Use <file>");
 					added=true;
 				    } else {
@@ -710,7 +716,8 @@ function exec_showConfigFile(item,target,arg) {
 		documentLog.innerHTML="";
 	    })
 	.error(
-	    function (error) { alert("Exec request failed (system error)");}
+	    function (error) { showValue('execConfigFile',"");
+			       alert("Exec request failed (system error)");}
 	);
 };
 

@@ -903,6 +903,7 @@ function plot_showConfigFile(item,target,arg) {
 			} else if (root["type"] == "unknown") {
 			}
 		    };
+		    var configfile=plot_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -914,7 +915,10 @@ function plot_showConfigFile(item,target,arg) {
 			//  dd=dd + file;
 			//}
 			//console.log("Adding dir button: ",dd);
-			if (looksLikeFile(dd)) {
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"plot_setConfigFile('"+dd+"');plot_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"plot_setConfigFile('"+dd+"');plot_show();","Use <file>");
 			    added=true;
 			} else {

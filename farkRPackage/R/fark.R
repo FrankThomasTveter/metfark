@@ -130,6 +130,7 @@ closePlot <- function() {
 # return the data with only overlapping data present in all sets...
 overlap <- function (raw,setcol,selcols,sel) {
     trgcol = "index";
+    rawsel=c();
     if (missing(sel)) {
         rawsel=c();
         len=length(raw[,1]);
@@ -148,12 +149,14 @@ overlap <- function (raw,setcol,selcols,sel) {
     for (ss in sets) {
         selt = (rawsub[,setcol]==ss);
         newtrg=paste0(trgcol,ss);
-        rawset = rawsub[selt,];
+        iniset = rawsub[selt,];
+	dupset = duplicated(iniset[,selcols]);
+	rawset = iniset[!dupset,];
         colnames(rawset)[colnames(rawset)==trgcol] <- newtrg;
-        print (paste("Set",ss," found cnt:",length(rawset[,1])));
+        print (paste("Set",ss," found cnt:",length(iniset[,1]),"( duplicates=",length(iniset[dupset,][,1]),"), final=",length(rawset[,1])));
         setlist=append(setlist,list(rawset));
     };
-    rm(newtrg,rawsub,selt,rawset);gc(); # free memory
+    rm(newtrg,rawsub,selt,iniset,dupset,rawset);gc(); # free memory
     rawmerge = Reduce(function(x, y) merge(x, y, by=selcols), setlist)
     print (paste("Initial cnt:",length(rawmerge[,1])));
     data=list();
@@ -216,7 +219,7 @@ thinned <- function (len,ll) {
   } else {
     thin_raw <- thin_sample[ll];
   };
-  thin_n = min(c(500,length(thin_raw)));
+  thin_n = min(c(10000,length(thin_raw)));
   print (paste("Thinning:",nrow(raw),"->",length(thin_raw)," -> ",thin_n));
   thin_extract <- sample(thin_raw,thin_n, replace=FALSE)
   return (thin_extract);
@@ -588,7 +591,7 @@ scatterPlot <- function(filename,attr,leg,data,title,setcol,refcol,timecol,
         rr <- c();
         tcnt <- 0;
         for (ii in 1:length(isel)) { # loop over selections
-            dsel <- (isel[[ii]] & valid);
+	    dsel <- (isel[[ii]] & valid);
             td <- thinned(nrow(data[[1]]),dsel);
             for (dd in 1:length(data)) {  # loop over datasets
                 set=data[[dd]][1,setcol];

@@ -908,6 +908,7 @@ function table_showConfigFile(item,target,arg) {
 			} else if (root["type"] == "unknown") {
 			}
 		    };
+		    var configfile=table_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -918,8 +919,11 @@ function table_showConfigFile(item,target,arg) {
 			//if (dd.substr(dd.length-1) == "/" || dd == "") {
 			//  dd=dd + file;
 			//}
-			//console.log("Adding dir button: ",dd);
-			if (looksLikeFile(dd)) {
+			console.log("Adding dir button: ",dd,":",configfile, dd===file);
+			if (dd === configfile) {
+			    addChildButtonShaded(item,dd,"table_setConfigFile('"+dd+"');table_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"table_setConfigFile('"+dd+"');table_show();","Use <file>");
 			    added=true;
 			} else {
@@ -1177,6 +1181,7 @@ function table_showColoc(item,target,arg) {
 			added=true;
 		    }
 		    if (dirs.length > 0) {
+			var configfile=table_getColocConfigFile();
 			for (var ii=1;ii<dirs.length;ii++) {
 			    var dir=dirs[ii];
 			    if (root["loc"] == "" || root["loc"] == ".") {
@@ -1190,7 +1195,12 @@ function table_showColoc(item,target,arg) {
 				//}
 				//console.log("Adding dir button: ",dd,ii);
 				// colocation file 'dd' must be 'loaded' if it is selected....!!!
-				addChildButton(item,dd,"showValue('tableColoc','"+dd+"');table_loadColoc('"+dd+"');","Change <directory>");
+				
+				if (dd===configfile) {
+				    addChildButtonShaded(item,dd,"showValue('tableColoc','"+dd+"');table_loadColoc('"+dd+"');","Change <directory>");
+				}else {
+				    addChildButton(item,dd,"showValue('tableColoc','"+dd+"');table_loadColoc('"+dd+"');","Change <directory>");
+				};
 				added=true;
 			    }
 			}

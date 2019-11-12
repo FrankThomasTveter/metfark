@@ -581,6 +581,7 @@ function obs_showConfigFile(item,target,arg) {
 		    //addChildButton(item,obs,"obs_setConfigFile('"+obs+"');obs_show();");
 		    //added=true;
 		    //}
+		    var configfile=obs_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -592,7 +593,10 @@ function obs_showConfigFile(item,target,arg) {
 			//dd=dd + file;
 			//}
 			//console.log("Adding dir button: ",dd);
-			if (looksLikeFile(dd)) {
+			if (dd === configfile) {
+			    addChildButtonShaded(item,dd,"obs_setConfigFile('"+dd+"');obs_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"obs_setConfigFile('"+dd+"');obs_show();","Use <file>");
 			    added=true;
 			} else {

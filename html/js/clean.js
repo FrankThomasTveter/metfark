@@ -367,6 +367,7 @@ function clean_showConfigFile(item,target,arg) {
 		    // added=true;
 		    //}
 		    // add directories...
+		    var configfile=clean_getConfigFile();
 		    for (var ii=1;ii<dirs.length;ii++) {
 			var dir=dirs[ii];
 			if (root["loc"] == "" || root["loc"] == ".") {
@@ -378,7 +379,10 @@ function clean_showConfigFile(item,target,arg) {
 			//  dd=dd + file;
 			//}
 			//console.log("Adding dir button: ",dd,ii,dirs[ii]);
-			if (looksLikeFile(dd)) {
+			if (dd===configfile) {
+			    addChildButtonShaded(item,dd,"clean_setConfigFile('"+dd+"');clean_show();","Use <file>");
+			    added=true;
+			} else if (looksLikeFile(dd)) {
 			    addChildButton(item,dd,"clean_setConfigFile('"+dd+"');clean_show();","Use <file>");
 			    added=true;
 			} else {
@@ -398,7 +402,7 @@ function clean_showConfigFile(item,target,arg) {
 
 function clean_setArray(parameter,value) {
     var file=clean_getConfigFile();
-    console.log("File:",file,parameter,value,JSON.stringify(clean_config[file]));
+    //console.log("File:",file,parameter,value,JSON.stringify(clean_config[file]));
     clean_config[file][parameter]=decodeURI(value);
 };
 function clean_showFilterDir(item,target,arg) {

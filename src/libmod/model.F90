@@ -3961,6 +3961,7 @@ CONTAINS
     logical :: set(nexp)
     character(len=:), allocatable :: cbuff   ! parse string buffer
     integer :: ii
+    integer, external :: length
     do ii=1,css%cpsp
        call parse_evals(css%psp(ii)%ptr,css%mpo_val,css%mpo_vok,&
             & val(ii),set(ii),crc250,irc)
@@ -3973,8 +3974,10 @@ CONTAINS
        end if
        if (set(ii)) then
           if (parse_string(css%psp(ii)%ptr,cbuff)) then
-             cval50(ii)=cbuff
-             clen(ii)=len_trim(cbuff)
+             clen(ii)=min(50,len_trim(cbuff))
+             cval50(ii)=cbuff(1:clen(ii))
+             call chop0(cval50(ii),50)
+             clen(ii)=length(cval50(ii),50,10)
              deallocate(cbuff)
           else
              call model_wash(val(ii),cval50(ii),clen(ii))

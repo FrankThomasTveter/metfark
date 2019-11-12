@@ -85,43 +85,44 @@ module parse
        cand       = 21,         &
        cor        = 22,         &
        cnot       = 23,         &
-       c1970yy    = 24,         &
-       c1970mm    = 25,         &
-       c1970dd    = 26,         &
-       c1970hh    = 27,         &
-       c1970mi    = 28,         &
-       c1970      = 29,         &
-       cjulianyy  = 30,         &
-       cjulianmm  = 31,         &
-       cjuliandd  = 32,         &
-       cjulianhh  = 33,         &
-       cjulianmi  = 34,         &
-       cjulian    = 35,         &
-       cMidnight  = 36,         &
-       cNow       = 37,         &
-       cRound     = 38,         &
-       cVarName   = 39,         &
-       cMd5       = 40,         &
-       cValidRange= 41,         &
-       cShpPre    = 42,         &
-       cShpVic    = 43,         &
-       ctd2q      = 44,         &
-       crh2td     = 45,         &
-       ctd2rh     = 46,         &
-       cq2rh      = 47,         &
-       ck2c       = 48,         &
-       cc2k       = 49,         &
-       cSinh      = 50,         &
-       cCosh      = 51,         &
-       cTanh      = 52,         &
-       cSin       = 53,         &
-       cCos       = 54,         &
-       cTan       = 55,         &
-       cAsin      = 56,         &
-       cAcos      = 57,         &
-       cAtan2     = 58,         &
-       cAtan      = 59,         &
-       VarBegin   = 60
+       cset       = 24,         &
+       c1970yy    = 25,         &
+       c1970mm    = 26,         &
+       c1970dd    = 27,         &
+       c1970hh    = 28,         &
+       c1970mi    = 29,         &
+       c1970      = 30,         &
+       cjulianyy  = 31,         &
+       cjulianmm  = 32,         &
+       cjuliandd  = 33,         &
+       cjulianhh  = 34,         &
+       cjulianmi  = 35,         &
+       cjulian    = 36,         &
+       cMidnight  = 37,         &
+       cNow       = 38,         &
+       cRound     = 39,         &
+       cVarName   = 40,         &
+       cMd5       = 41,         &
+       cValidRange= 42,         &
+       cShpPre    = 43,         &
+       cShpVic    = 44,         &
+       ctd2q      = 45,         &
+       crh2td     = 46,         &
+       ctd2rh     = 47,         &
+       cq2rh      = 48,         &
+       ck2c       = 49,         &
+       cc2k       = 50,         &
+       cSinh      = 51,         &
+       cCosh      = 52,         &
+       cTanh      = 53,         &
+       cSin       = 54,         &
+       cCos       = 55,         &
+       cTan       = 56,         &
+       cAsin      = 57,         &
+       cAcos      = 58,         &
+       cAtan2     = 59,         &
+       cAtan      = 60,         &
+       VarBegin   = 61
   CHARACTER (LEN=1), DIMENSION(cAdd:cPow),  PARAMETER :: Ops= (/ &
        '+',     &
        '-',     &
@@ -145,6 +146,7 @@ module parse
        'and       ', &
        'or        ', &
        'not       ', &
+       'set       ', &
        'sec1970yy ', &
        'sec1970mm ', &
        'sec1970dd ', &
@@ -1125,6 +1127,11 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
+       CASE  (cset) ! dummy function, variable is checked when pushed to stack...
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
        CASE  (c1970yy)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -1848,6 +1855,11 @@ CONTAINS
           else
              css%Stack(SP)=0.0D0
           end if
+       CASE  (cset) ! dummy function, variable is checked when pushed to stack...
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          css%Stack(SP)=1.0D0
        CASE  (c1970yy)
           AI=AI+1
           NARGS=css%ArgsByte(AI)
@@ -2731,6 +2743,13 @@ CONTAINS
                    css%Stacka(SP,JJ)=0.0D0
                 end if
              END IF
+          END DO
+       CASE  (cset) ! dummy function, variable is checked when pushed to stack...
+          AI=AI+1
+          NARGS=css%ArgsByte(AI)
+          SP=SP-NARGS+1
+          DO JJ=1,NPOS
+             css%Stacka(SP,JJ)=1.0D0
           END DO
        CASE  (c1970yy)
           AI=AI+1

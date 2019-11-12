@@ -178,6 +178,7 @@ module table
      character*250, allocatable :: leg250(:)
      integer, allocatable :: lenl(:)
      integer, allocatable :: legind(:)
+     integer :: line
      integer :: ncol=0
      character*80, allocatable :: col80(:)
      integer, allocatable :: lenc(:)
@@ -893,9 +894,9 @@ CONTAINS
        return
     end if
     if (ncols.eq.0) then
-       write(ounit,'(X,A)',iostat=irc)"set"
+       write(ounit,'(A)',iostat=irc)"set"
     else
-       write(ounit,'(X,A)',iostat=irc,advance="no")"set"
+       write(ounit,'(A)',iostat=irc,advance="no")"set"
     end if
     do ii=1,ncols
        lenc=length(col80(ii),80,1)
@@ -3491,6 +3492,7 @@ CONTAINS
           call table_errorappend(crc250,"\n")
           return
        end if
+       currentFile%line=0
        ! read next line...
        if(table_bdeb)write(*,*)myname,'Looping:'//currentFile%fn250(1:currentFile%lenf)
        do while (table_readNextRow(tss,currentFile,cols,row1000,lenr,bok,crc250,irc))
@@ -3586,6 +3588,9 @@ CONTAINS
              last=.true.
           else if (buff1000(1:1).ne."#") then ! header row
              bdone=.true.
+             currentFile%line=currentFile%line+1
+          else
+             currentFile%line=currentFile%line+1
           end if
        end do
     end if
@@ -3597,6 +3602,8 @@ CONTAINS
        if (irc.ne.0) then
           irc=0
           last=.true.
+       else
+          currentFile%line=currentFile%line+1
        end if
        if (last) then
           if(table_bdeb)write(*,*)myname,'Closing:'//currentFile%fn250(1:currentFile%lenf)
@@ -3747,6 +3754,7 @@ CONTAINS
              if (tss%col_set) tss%col_vok(ii)=.false.
              call table_errorappend(crc250,myname)
              call table_errorappend(crc250,"Invalid column:")
+             call table_errorappendi(crc250,file%line)
              call table_errorappend(crc250,inp1000(1:100))
              irc=834
              return
@@ -3756,7 +3764,7 @@ CONTAINS
     end do
     !
     if (bok .and. tss%col_set) then
-       val=parse_evalf(tss%psf,tss%col_val,crc250,irc)
+       call parse_evals(tss%psf,tss%col_val,tss%col_vok,val,bok,crc250,irc)
        if (irc.ne.0) then
           call model_errorappend(crc250,myname)
           call model_errorappend(crc250," Error return from evalf.")
@@ -3765,7 +3773,7 @@ CONTAINS
           return
        end if
        !write(*,'(X,A,A,X,F0.2,X,I0,100(X,F0.2))') myname,"Filter value:",val,nint(val),tss%col_val
-       if (nint(val).ne.0) then
+       if (nint(val).ne.0.and.bok) then
           cols%cok(cols%ncols+1)=cols%cok(cols%ncols+1)+1
           cols%tok(cols%ncols+1)=cols%tok(cols%ncols+1)+1
        else 
